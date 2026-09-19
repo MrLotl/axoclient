@@ -1,4 +1,4 @@
-# Veröffentlicht eine neue AxoClient-Version: erstellt den Tag und schiebt ihn zu GitHub.
+﻿# Veröffentlicht eine neue AxoClient-Version: erstellt den Tag und schiebt ihn zu GitHub.
 # GitHub baut daraufhin die AxoClient.exe (siehe .github/workflows/release.yml).
 #
 # Aufruf:  .\release.ps1 0.2.0-alpha.1
@@ -9,8 +9,8 @@ $Version = $Version.TrimStart('v')
 if ($Version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$') {
     throw "Ungültige Version '$Version'. Beispiele: 0.2.0, 0.2.0-alpha.1, 1.0.0-beta.2"
 }
-git rev-parse --is-inside-work-tree *> $null
-if ($LASTEXITCODE -ne 0) {
+Set-Location $PSScriptRoot
+if (-not (Test-Path .git)) {
     throw 'Dieser Ordner ist noch kein Git-Repository. Einmalig: git init -b main; git add -A; git commit -m "AxoClient"'
 }
 if (-not (git remote)) {
