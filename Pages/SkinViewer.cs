@@ -129,16 +129,17 @@ public class SkinViewer : Grid
     private void AddCape(byte[] capePng)
     {
         byte[] texture;
+        int scale;
         try
         {
-            texture = ReadTexture(capePng);
+            texture = ReadCapeTexture(capePng, out scale);
         }
         catch
         {
             return;
         }
         var meshes = new Dictionary<uint, MeshGeometry3D>();
-        AddBox(texture, meshes, 0, 0, 10, 16, 1, -5, -16, -0.5, 0, false);
+        AddBox(texture, meshes, 0, 0, 10, 16, 1, -5, -16, -0.5, 0, false, scale);
 
         var cape = new Model3DGroup
         {
@@ -175,7 +176,7 @@ public class SkinViewer : Grid
     /// (x, y, z) die untere linke hintere Ecke; <paramref name="inflate"/> vergrößert ihn nach allen Seiten.
     /// </summary>
     private static void AddBox(byte[] skin, Dictionary<uint, MeshGeometry3D> meshes, int u, int v, int w, int h, int d,
-                               double x, double y, double z, double inflate, bool overlay)
+                               double x, double y, double z, double inflate, bool overlay, int scale = 1)
     {
         double x0 = x - inflate, x1 = x + w + inflate;
         double y0 = y - inflate, y1 = y + h + inflate;
@@ -184,15 +185,18 @@ public class SkinViewer : Grid
         // Eine Seite: tl/tr/bl sind die 3D-Ecken oben links, oben rechts, unten links (so wie in der Skin zu sehen)
         void Face(Point3D tl, Point3D tr, Point3D bl, int fu, int fv, int fw, int fh)
         {
-            Vector3D right = (tr - tl) / fw, down = (bl - tl) / fh;
-            for (var py = 0; py < fh; py++)
-            for (var px = 0; px < fw; px++)
+            // scale: Pixel je Textur-Einheit (HD-Umhänge werden in voller Auflösung gezeigt)
+            Vector3D right = (tr - tl) / (fw * scale), down = (bl - tl) / (fh * scale);
+            for (var py = 0; py < fh * scale; py++)
+            for (var px = 0; px < fw * scale; px++)
             {
-                var i = ((fv + py) * 64 + fu + px) * 4;
+                var i = ((fv * scale + py) * 64 * scale + fu * scale + px) * 4;
                 var alpha = skin[i + 3];
                 if (overlay && alpha < 128)
                     continue; // zweite Ebene: durchsichtige Pixel weglassen (die Grundebene ist immer deckend)
                 var argb = (uint)(skin[i + 2] << 16 | skin[i + 1] << 8 | skin[i]);
+                if (scale > 1)
+                    argb &= 0xF8F8F8; // HD: ähnliche Farben zusammenfassen, sonst entstehen tausende Einzelmodelle
                 if (!meshes.TryGetValue(argb, out var mesh))
                     meshes[argb] = mesh = new MeshGeometry3D();
 
