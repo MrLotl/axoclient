@@ -10,6 +10,9 @@ public class LauncherSettings
     public List<Installation> Installations { get; set; } = [];
     public string? SelectedInstallationId { get; set; }
     public bool ShowSnapshots { get; set; }
+
+    /// <summary>Bei Fabric nur Versionen zeigen, für die AxoClient die Mod mitbringt.</summary>
+    public bool AxoVersionsOnly { get; set; }
     public bool ShowOldVersions { get; set; }
 
     /// <summary>CurseForge wird nicht mehr unterstützt (bräuchte einen eigenen API-Schlüssel); wird nicht gespeichert.</summary>

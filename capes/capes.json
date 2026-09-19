@@ -1,4 +1,7 @@
 [
   { "id": "axolotl", "name": "Axolotl" },
-  { "id": "axolotl-dark", "name": "Axolotl Dunkel" }
+  { "id": "axolotl-dark", "name": "Axolotl Dunkel" },
+  { "id": "held", "name": "Heldencape" },
+  { "id": "phil-king", "name": "Phil Burgerking"},
+  { "id": "tim-gaming", "name": "Tim Vollert Gaming"}
 ]

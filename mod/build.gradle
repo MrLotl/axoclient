@@ -1,35 +1,71 @@
-plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+// Gebaut wird immer für eine Minecraft-Version: gradlew build -Pmc=1.21.8
+// Die Einstellungen dazu stehen in versions/<Version>.properties, der passende Code in src/<era>/.
+def mc = project.hasProperty('mc') ? project.mc : project.default_minecraft_version
+def settings = new Properties()
+file("versions/${mc}.properties").withInputStream { settings.load(it) }
+def era = settings.era
+def javaRelease = settings.java as int
+
+buildscript {
+	repositories {
+		maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+		mavenCentral()
+		gradlePluginPortal()
+	}
+	def loomVersion = new Properties()
+	def version = project.hasProperty('mc') ? project.mc : project.default_minecraft_version
+	file("versions/${version}.properties").withInputStream { loomVersion.load(it) }
+	dependencies {
+		classpath "net.fabricmc:fabric-loom:${loomVersion.loom}"
+	}
 }
 
-version = project.mod_version
+// "fabric-loom" ist die Variante für verschleierte Versionen (mit Namensliste),
+// "net.fabricmc.fabric-loom" die für Minecraft 26.x, wo der Code schon lesbare Namen hat.
+apply plugin: settings.yarn ? "fabric-loom" : "net.fabricmc.fabric-loom"
+
+version = "${project.mod_version}+${mc}"
 group = project.maven_group
 
 base {
 	archivesName = project.archives_base_name
 }
 
+sourceSets.main.java.srcDir "src/${era}/java"
+sourceSets.main.resources.srcDir "src/${era}/resources"
+
+repositories {
+	maven { name = "Fabric"; url = "https://maven.fabricmc.net/" }
+	mavenCentral()
+}
+
 dependencies {
-	// Minecraft 26.x ist nicht mehr verschleiert, daher sind keine Mappings nötig
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	minecraft "com.mojang:minecraft:${mc}"
+	// Ab Minecraft 26.x ist der Code nicht mehr verschleiert, vorher braucht es die Namensliste (Yarn)
+	if (settings.yarn)
+		mappings "net.fabricmc:yarn:${settings.yarn}:v2"
+	if (settings.yarn)
+		modImplementation "net.fabricmc:fabric-loader:${settings.loader}"
+	else
+		implementation "net.fabricmc:fabric-loader:${settings.loader}"
 	// Bewusst ohne Fabric API: Spieler brauchen außer Fabric nichts weiter
 }
 
 processResources {
-	def version = project.version
 	inputs.property "version", version
+	inputs.property "range", settings.range
+	inputs.property "java", settings.java
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version
+		expand "version": version, "range": settings.range, "java": settings.java
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = javaRelease
 }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = JavaVersion.toVersion(javaRelease)
+	targetCompatibility = JavaVersion.toVersion(javaRelease)
 }

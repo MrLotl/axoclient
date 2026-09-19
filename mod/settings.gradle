@@ -9,5 +9,16 @@ pluginManagement {
 	}
 }
 
+// Loom-Version je Minecraft-Version (ältere Versionen brauchen ein älteres Loom mit Yarn-Unterstützung)
+def mc = startParameter.projectProperties.get('mc')
+if (mc == null) {
+	def defaults = new Properties()
+	file('gradle.properties').withInputStream { defaults.load(it) }
+	mc = defaults.default_minecraft_version
+}
+def settings = new Properties()
+file("versions/${mc}.properties").withInputStream { settings.load(it) }
+gradle.beforeProject { project -> project.ext.loom_version = settings.loom }
+
 // Name der Mod
 rootProject.name = 'mclauncher-badge'

@@ -63,7 +63,9 @@
             <TextBlock Text="Minecraft-Version" Style="{StaticResource FieldLabel}"/>
             <ComboBox x:Name="VersionBox" Style="{StaticResource LauncherCombo}"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                <CheckBox x:Name="SnapshotsCheck" Content="Snapshots" Click="Filter_Click"/>
+                <CheckBox x:Name="AxoOnlyCheck" Content="Nur mit AxoClient-Funktionen" Click="Filter_Click"
+                          ToolTip="Nur Versionen, für die AxoClient die Mod mitbringt (Symbol in der Tabliste, Umhänge, Freunde)"/>
+                <CheckBox x:Name="SnapshotsCheck" Content="Snapshots" Margin="14,0,0,0" Click="Filter_Click"/>
                 <CheckBox x:Name="OldVersionsCheck" Content="Alpha/Beta" Margin="14,0,0,0" Click="Filter_Click"/>
             </StackPanel>
             <TextBlock x:Name="InfoText" Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,6,0,0"/>

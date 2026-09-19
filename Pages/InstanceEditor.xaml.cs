@@ -34,6 +34,7 @@ public partial class InstanceEditor : UserControl
         NameBox.Text = existing?.Name ?? "";
         _pendingIcon = null;
         _iconReset = false;
+        AxoOnlyCheck.IsChecked = app.Settings.AxoVersionsOnly;
         SnapshotsCheck.IsChecked = app.Settings.ShowSnapshots;
         OldVersionsCheck.IsChecked = app.Settings.ShowOldVersions;
         DeleteButton.Visibility = existing != null && app.Settings.Installations.Count > 1
@@ -151,6 +152,7 @@ public partial class InstanceEditor : UserControl
 
     private void Filter_Click(object sender, RoutedEventArgs e)
     {
+        _app.Settings.AxoVersionsOnly = AxoOnlyCheck.IsChecked == true;
         _app.Settings.ShowSnapshots = SnapshotsCheck.IsChecked == true;
         _app.Settings.ShowOldVersions = OldVersionsCheck.IsChecked == true;
         _app.Save();
@@ -164,6 +166,9 @@ public partial class InstanceEditor : UserControl
         // Forge veröffentlicht nur Vollversionen, Alpha/Beta gibt es nur ohne Mod-Loader
         SnapshotsCheck.IsEnabled = loader != LoaderType.Forge;
         OldVersionsCheck.IsEnabled = loader == LoaderType.Vanilla;
+        // Die AxoClient-Mod gibt es nur für Fabric
+        AxoOnlyCheck.IsEnabled = loader == LoaderType.Fabric;
+        var axoOnly = AxoOnlyCheck.IsChecked == true && AxoOnlyCheck.IsEnabled;
         InfoText.Text = loader == LoaderType.Vanilla
             ? ""
             : "Mods, Ressourcenpakete und Shader verwaltest du danach in den Tabs dieser Instanz.";
@@ -178,6 +183,8 @@ public partial class InstanceEditor : UserControl
             if (request != _loadRequest)
                 return; // inzwischen wurde etwas anderes gewählt
 
+            if (axoOnly)
+                versions = versions.Where(Badge.SupportedVersions.Contains).ToList();
             VersionBox.ItemsSource = versions;
             VersionBox.SelectedItem = versions.Contains(_version) ? _version : versions.FirstOrDefault();
         }
