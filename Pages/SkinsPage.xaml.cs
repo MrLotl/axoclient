@@ -100,7 +100,10 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
         if (png != null && SkinRenderer.RenderCape(png) is { } image)
         {
             var img = new Image { Source = image, Stretch = System.Windows.Media.Stretch.Uniform };
-            System.Windows.Media.RenderOptions.SetBitmapScalingMode(img, System.Windows.Media.BitmapScalingMode.NearestNeighbor);
+            // Kleine Pixel-Umhänge scharf vergrößern, HD-Umhänge beim Verkleinern glätten
+            System.Windows.Media.RenderOptions.SetBitmapScalingMode(img, image.PixelWidth > 20
+                ? System.Windows.Media.BitmapScalingMode.HighQuality
+                : System.Windows.Media.BitmapScalingMode.NearestNeighbor);
             preview.Children.Add(img);
         }
         else
