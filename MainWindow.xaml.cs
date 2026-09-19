@@ -52,7 +52,7 @@ public partial class MainWindow : Window, IDialogService
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        VersionText.Text = "Version " + Updater.CurrentVersion;
+        VersionText.Text = "Version " + Updater.CurrentVersion + (Updater.IsEnabled ? "" : " (lokal)");
         Updater.CleanUp();
         var updateCheck = CheckForUpdateAsync();
 
@@ -66,20 +66,38 @@ public partial class MainWindow : Window, IDialogService
         await updateCheck;
     }
 
+    private async void VersionText_Click(object sender, MouseButtonEventArgs e) => await CheckForUpdateAsync(manual: true);
+
     /// <summary>Fragt bei jedem Start auf GitHub nach einer neueren Version und bietet die Installation an.</summary>
-    private async Task CheckForUpdateAsync()
+    /// <param name="manual">Per Klick gestartet: dann auch "kein Update" und Fehler melden.</param>
+    private async Task CheckForUpdateAsync(bool manual = false)
     {
+        if (manual && !Updater.IsEnabled)
+        {
+            await ShowMessageAsync("Keine Update-Suche",
+                $"Diese Version ({Updater.CurrentVersion}) wurde lokal gebaut, z.B. aus Visual Studio, und sucht nicht " +
+                "nach Updates. Updates bekommt nur die AxoClient.exe von GitHub (Releases).");
+            return;
+        }
+
         UpdateInfo? update;
         try
         {
             update = await Updater.CheckAsync(_app.Http);
         }
-        catch
+        catch (Exception ex)
         {
-            return; // offline oder GitHub nicht erreichbar: einfach ohne Update weiter
+            // Beim Start still: offline oder GitHub nicht erreichbar, dann eben ohne Update weiter
+            if (manual)
+                await ShowMessageAsync("Update-Suche fehlgeschlagen", ex.Message);
+            return;
         }
         if (update == null)
+        {
+            if (manual)
+                await ShowMessageAsync("Kein Update", $"Du hast die neueste Version ({Updater.CurrentVersion}).");
             return;
+        }
 
         var notes = update.Notes.Trim();
         if (notes.Length > 600)

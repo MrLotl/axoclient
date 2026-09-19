@@ -92,7 +92,8 @@
 
                     <!-- Version ganz unten -->
                     <TextBlock x:Name="VersionText" DockPanel.Dock="Bottom" Foreground="{StaticResource MutedText}"
-                               FontSize="11" Margin="4,8,0,0"/>
+                               FontSize="11" Margin="4,8,0,0" Cursor="Hand" ToolTip="Klicken: nach Updates suchen"
+                               MouseLeftButtonUp="VersionText_Click"/>
 
                     <!-- Konto unten -->
                     <Border DockPanel.Dock="Bottom" Background="#14FFFFFF" CornerRadius="10" Padding="10">
