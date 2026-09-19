@@ -1,0 +1,157 @@
+<UserControl x:Class="McLauncher.Pages.InstancesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pages="clr-namespace:McLauncher.Pages">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+        <!-- Hintergrundfarbe je Loader für die Bildfläche ohne Weltbild -->
+        <Style x:Key="LoaderBadge" TargetType="Border">
+            <Setter Property="Background" Value="#3C3F45"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Loader}" Value="Fabric">
+                    <Setter Property="Background" Value="#8A6F4E"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Loader}" Value="Forge">
+                    <Setter Property="Background" Value="#2E5A88"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <ItemsPanelTemplate x:Key="ListPanel">
+            <StackPanel/>
+        </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="TilePanel">
+            <WrapPanel/>
+        </ItemsPanelTemplate>
+
+        <!-- Liste: kleines Bild, Name, Beschreibung, rechts "Spielen" -->
+        <DataTemplate x:Key="ListTemplate">
+            <DockPanel Background="Transparent" Cursor="Hand" MouseLeftButtonUp="Card_MouseLeftButtonUp"
+                       ToolTip="Klicken zum Bearbeiten">
+                <Border DockPanel.Dock="Left" Width="44" Height="44" CornerRadius="8" Margin="0,0,14,0"
+                        Style="{StaticResource LoaderBadge}">
+                    <Grid>
+                        <TextBlock Text="{Binding LoaderInitial}" Foreground="White" FontSize="18" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding Image}" Stretch="UniformToFill"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Grid>
+                </Border>
+                <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}" Background="{StaticResource Accent}"
+                        Content="Spielen" VerticalAlignment="Center" Cursor="Hand" Click="Play_Click"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Description}" Foreground="{StaticResource MutedText}"/>
+                </StackPanel>
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- Kacheln: großes Bild oben, darunter Name und "Spielen" -->
+        <DataTemplate x:Key="TileTemplate">
+            <StackPanel Width="190" Background="Transparent" Cursor="Hand" MouseLeftButtonUp="Card_MouseLeftButtonUp"
+                        ToolTip="Klicken zum Bearbeiten">
+                <Border Height="190" CornerRadius="6" Style="{StaticResource LoaderBadge}">
+                    <Grid>
+                        <TextBlock Text="{Binding LoaderInitial}" Foreground="White" FontSize="72" FontWeight="Bold"
+                                   Opacity="0.9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding Image}" Stretch="UniformToFill"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <!-- Loader-Plakette unten links -->
+                        <Border Background="#B31E1F22" CornerRadius="4" Padding="6,2" Margin="8"
+                                HorizontalAlignment="Left" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding Description}" Foreground="White" FontSize="11"/>
+                        </Border>
+                    </Grid>
+                </Border>
+                <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" Margin="2,10,2,8"/>
+                <Button Style="{StaticResource LauncherButton}" Background="{StaticResource Accent}"
+                        Content="Spielen" Cursor="Hand" Click="Play_Click"/>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource Card}">
+        <Grid>
+            <!-- Übersicht aller Instanzen -->
+            <DockPanel x:Name="OverviewPanel">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
+                            Background="{StaticResource Accent}" Click="New_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="Neue Instanz"/>
+                        </StackPanel>
+                    </Button>
+                    <!-- Umschalter Liste / Kacheln -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <RadioButton x:Name="ListViewToggle" Style="{StaticResource SegmentButton}" GroupName="InstanceView"
+                                     Padding="10,7" ToolTip="Liste" Checked="ViewToggle_Checked">
+                            <TextBlock Text="&#xE8FD;" FontFamily="{StaticResource IconFont}" FontSize="14"/>
+                        </RadioButton>
+                        <RadioButton x:Name="TileViewToggle" Style="{StaticResource SegmentButton}" GroupName="InstanceView"
+                                     Padding="10,7" ToolTip="Kacheln" Checked="ViewToggle_Checked">
+                            <TextBlock Text="&#xECA5;" FontFamily="{StaticResource IconFont}" FontSize="14"/>
+                        </RadioButton>
+                    </StackPanel>
+                    <TextBlock Text="Instanzen" Style="{StaticResource PageTitle}"/>
+                </DockPanel>
+
+                <ListBox x:Name="InstanceList" Style="{StaticResource CardList}"/>
+            </DockPanel>
+
+            <!-- Detailansicht einer Instanz -->
+            <DockPanel x:Name="DetailPanel" Visibility="Collapsed">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                    <Button DockPanel.Dock="Left" Style="{StaticResource IconButton}" Content="&#xE72B;"
+                            ToolTip="Zurück zu den Instanzen" Margin="0,0,12,0" Click="Back_Click"/>
+                    <StackPanel x:Name="DetailActions" DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Style="{StaticResource IconButton}" Content="&#xE838;" ToolTip="Spielordner öffnen"
+                                Margin="0,0,8,0" Click="Folder_Click"/>
+                        <Button Style="{StaticResource LauncherButton}" Background="{StaticResource Accent}"
+                                Content="Spielen" Click="DetailPlay_Click"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="DetailTitle" Style="{StaticResource PageTitle}" FontSize="20"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="DetailSubtitle" Foreground="{StaticResource MutedText}"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <StackPanel x:Name="DetailTabs" DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,14">
+                    <RadioButton x:Name="ModsTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Mods" Checked="DetailTab_Checked"/>
+                    <RadioButton x:Name="PacksTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Ressourcenpakete" Checked="DetailTab_Checked"/>
+                    <RadioButton x:Name="ShadersTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Shader" Checked="DetailTab_Checked"/>
+                    <RadioButton x:Name="WorldsTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Welten" Checked="DetailTab_Checked"/>
+                    <RadioButton x:Name="ServersTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Server" Checked="DetailTab_Checked"/>
+                    <RadioButton x:Name="TransferTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Übertragen" Checked="DetailTab_Checked"/>
+                    <RadioButton x:Name="SettingsTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Einstellungen" Checked="DetailTab_Checked"/>
+                </StackPanel>
+
+                <Grid>
+                    <pages:ContentPanel x:Name="ContentView"/>
+                    <pages:WorldsPanel x:Name="WorldsView" Visibility="Collapsed"/>
+                    <pages:ServersPanel x:Name="ServersView" Visibility="Collapsed"/>
+                    <ScrollViewer x:Name="TransferView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBar}"/>
+                        </ScrollViewer.Resources>
+                        <pages:TransferPanel x:Name="TransferContent"/>
+                    </ScrollViewer>
+                    <pages:InstanceEditor x:Name="Editor" Visibility="Collapsed"/>
+                </Grid>
+            </DockPanel>
+        </Grid>
+    </Border>
+</UserControl>

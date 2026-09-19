@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Sichtbarer Name: AxoClient (der C#-Namespace bleibt intern McLauncher) -->
+    <AssemblyName>AxoClient</AssemblyName>
+    <RootNamespace>McLauncher</RootNamespace>
+    <Product>AxoClient</Product>
+    <AssemblyTitle>AxoClient</AssemblyTitle>
+    <ApplicationIcon>Assets\axoclient.ico</ApplicationIcon>
+    <!-- Lokale Builds heißen 0.0.0-dev; beim Release setzt GitHub die Version aus dem Tag (z.B. v0.2.0-alpha.1) -->
+    <Version>0.0.0-dev</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- GitHub-Repository für die Update-Suche ("besitzer/name"); setzt der Release-Build automatisch -->
+    <AssemblyMetadata Include="UpdateRepo" Value="$(UpdateRepo)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CmlLib.Core" Version="4.0.6" />
+    <PackageReference Include="CmlLib.Core.Auth.Microsoft" Version="3.3.1" />
+    <PackageReference Include="CmlLib.Core.Installer.Forge" Version="1.1.1" />
+    <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\background.jpg" />
+    <Resource Include="Assets\axolotl.png" />
+    <Resource Include="Assets\axoclient.ico" />
+    <!-- Badge-Mod je Minecraft-Version (gebaut aus mod/), wird beim Spielstart in Fabric-Instanzen gelegt -->
+    <EmbeddedResource Include="Assets\mods\mclauncher-badge-*.jar" LogicalName="badge-mods/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Java-Mod und Cloudflare-Dienst sind eigene Projekte und gehören nicht in den C#-Build -->
+    <Compile Remove="mod\**;service\**;discord\**" />
+    <None Remove="mod\**;service\**;discord\**" />
+    <EmbeddedResource Remove="mod\**;service\**;discord\**" />
+    <Page Remove="mod\**;service\**;discord\**" />
+  </ItemGroup>
+
+</Project>
+
+

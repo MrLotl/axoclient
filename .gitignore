@@ -1,0 +1,14 @@
+# Build-Ausgaben
+bin/
+obj/
+publish/
+.vs/
+*.user
+
+# Mod (Gradle)
+mod/build/
+mod/.gradle/
+mod/run/
+
+# Sonstiges
+*.log

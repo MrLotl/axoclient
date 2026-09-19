@@ -1,0 +1,41 @@
+# Baut bei jedem Versions-Tag (z.B. v0.2.0-alpha.1) die AxoClient.exe und veröffentlicht sie als GitHub-Release.
+# Der Launcher findet das Release beim nächsten Start und bietet das Update an.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version aus dem Tag lesen
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: AxoClient.exe bauen
+        run: >
+          dotnet publish McLauncher.csproj -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:DebugType=none
+          -p:Version=${{ env.VERSION }} -p:UpdateRepo=${{ github.repository }}
+          -o publish
+
+      - name: Release veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/AxoClient.exe
+          name: AxoClient ${{ env.VERSION }}
+          generate_release_notes: true
+          # Versionen mit Zusatz (alpha, beta ...) werden als Vorabversion markiert
+          prerelease: ${{ contains(github.ref_name, '-') }}

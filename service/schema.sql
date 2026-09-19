@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS users (uuid TEXT PRIMARY KEY, name TEXT NOT NULL, last_seen INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS users_last_seen ON users (last_seen);
+CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, uuid TEXT NOT NULL, created INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS status (uuid TEXT PRIMARY KEY, server TEXT, version TEXT, updated INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS friends (owner TEXT NOT NULL, friend TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (owner, friend));
+CREATE INDEX IF NOT EXISTS friends_friend ON friends (friend);

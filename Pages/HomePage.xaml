@@ -1,0 +1,122 @@
+<UserControl x:Class="McLauncher.Pages.HomePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pages="clr-namespace:McLauncher.Pages">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Mitte: Name über dem Skin -->
+            <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock x:Name="PlayerName" Text="Nicht angemeldet" Foreground="White" FontSize="26"
+                           FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,12">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+                <pages:SkinViewer x:Name="SkinView" Width="300" Height="380"/>
+            </StackPanel>
+
+            <!-- Unten: Instanz + Start-Button + Fortschritt -->
+            <Border Grid.Row="1" HorizontalAlignment="Center" Width="440" Padding="20,16"
+                    Background="#991E1F22" CornerRadius="10">
+                <StackPanel>
+                    <ComboBox x:Name="InstallationBox" Style="{StaticResource LauncherCombo}" Height="42"
+                              Margin="0,0,0,12" SelectionChanged="InstallationBox_SelectionChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Description}" Foreground="{StaticResource SubtleText}"
+                                               FontSize="11"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button x:Name="PlayButton" Style="{StaticResource LauncherButton}"
+                            Background="{StaticResource Accent}"
+                            Content="Spielen" FontSize="18" FontWeight="SemiBold" Height="50"
+                            IsEnabled="False" Click="PlayButton_Click"/>
+                    <ProgressBar x:Name="Progress" Height="6" Margin="0,12,0,6" Maximum="100"
+                                 Background="#552B2D31" Foreground="{StaticResource Accent}" BorderThickness="0"/>
+                    <TextBlock x:Name="StatusText" Foreground="{StaticResource SubtleText}"
+                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Rechts: Freunde -->
+        <Border Grid.Column="1" Width="290" Margin="20,0,0,0" Padding="14" Background="#991E1F22" CornerRadius="10">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button x:Name="RefreshFriendsButton" Style="{StaticResource IconButton}" Width="30" Height="30"
+                                FontSize="12" Content="&#xE72C;" ToolTip="Aktualisieren" Click="RefreshFriends_Click"/>
+                        <Button x:Name="AddFriendButton" Style="{StaticResource IconButton}" Width="30" Height="30"
+                                FontSize="12" Content="&#xE8FA;" Margin="4,0,0,0" ToolTip="Freund hinzufügen"
+                                Click="AddFriend_Click"/>
+                    </StackPanel>
+                    <TextBlock x:Name="FriendsHeader" Text="Freunde" Foreground="White" FontSize="15"
+                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <TextBlock x:Name="FriendsInfo" DockPanel.Dock="Top" Foreground="{StaticResource MutedText}"
+                           TextWrapping="Wrap" Visibility="Collapsed"/>
+
+                <ListBox x:Name="FriendsList" Style="{StaticResource CardList}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <DockPanel>
+                                    <Image DockPanel.Dock="Left" Source="{Binding HeadUrl}" Width="32" Height="32"
+                                           Margin="0,0,10,0" VerticalAlignment="Top"
+                                           RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                        <Button Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="11"
+                                                Background="{StaticResource Accent}" Content="&#xE8FB;"
+                                                ToolTip="Anfrage annehmen" Click="AcceptFriend_Click"
+                                                Visibility="{Binding IsIncoming, Converter={StaticResource BoolToVisibility}}"/>
+                                        <Button Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="10"
+                                                Content="&#xE711;" Margin="4,0,0,0" ToolTip="{Binding RemoveText}"
+                                                Click="RemoveFriend_Click"/>
+                                    </StackPanel>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding StatusText}" FontSize="11" TextWrapping="Wrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Playing}" Value="True">
+                                                            <Setter Property="Foreground" Value="#6FCF97"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DockPanel>
+                                <Button Style="{StaticResource LauncherButton}" Background="{StaticResource Accent}"
+                                        Content="Beitreten" Padding="8,5" Margin="42,8,0,0" Click="JoinFriend_Click"
+                                        Visibility="{Binding CanJoin, Converter={StaticResource BoolToVisibility}}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

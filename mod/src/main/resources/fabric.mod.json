@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "mclauncher_badge",
+	"version": "${version}",
+	"name": "AxoClient",
+	"description": "Zeigt in der Tabliste ein kleines Axolotl neben Spielern, die AxoClient nutzen.",
+	"authors": ["AxoClient"],
+	"license": "CC0-1.0",
+	"icon": "assets/mclauncher_badge/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["de.mclauncher.badge.BadgeClient"]
+	},
+	"mixins": ["mclauncher_badge.mixins.json"],
+	"depends": {
+		"fabricloader": ">=0.19.0",
+		"minecraft": "~26.2",
+		"java": ">=25"
+	}
+}
