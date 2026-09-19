@@ -235,7 +235,34 @@ public class SkinViewer : Grid
         return skin;
     }
 
-    private static byte[] ReadTexture(byte[] png) => ReadTexture(png, out _);
+    /// <summary>
+    /// Umhang in voller Auflösung: Zeilenbreite 64 * <paramref name="scale"/> Pixel (128x64-Umhang: scale 2 usw.),
+    /// damit auch feine Motive wie ein Logo scharf bleiben.
+    /// </summary>
+    private static byte[] ReadCapeTexture(byte[] png, out int scale)
+    {
+        var decoded = new BitmapImage();
+        using (var ms = new MemoryStream(png))
+        {
+            decoded.BeginInit();
+            decoded.CacheOption = BitmapCacheOption.OnLoad;
+            decoded.StreamSource = ms;
+            decoded.EndInit();
+        }
+        var src = new FormatConvertedBitmap(decoded, PixelFormats.Bgra32, null, 0);
+        int sw = src.PixelWidth, sh = src.PixelHeight;
+        var raw = new byte[sw * sh * 4];
+        src.CopyPixels(raw, sw * 4, 0);
+
+        scale = Math.Clamp(sw / 64, 1, 8); // mehr als 8-fach bringt in der kleinen Ansicht nichts
+        var step = Math.Max(1, sw / (64 * scale));
+        int width = 64 * scale, height = 32 * scale;
+        var texture = new byte[width * height * 4];
+        for (var y = 0; y < height && y * step < sh; y++)
+        for (var x = 0; x < width && x * step < sw; x++)
+            Array.Copy(raw, ((y * step) * sw + x * step) * 4, texture, (y * width + x) * 4, 4);
+        return texture;
+    }
 
     /// <summary>
     /// Liest eine Skin- oder Umhang-Textur als 64x64 BGRA-Pixel (bei HD-Texturen jeder n-te Pixel).
