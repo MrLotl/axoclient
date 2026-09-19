@@ -11,7 +11,10 @@ public class LauncherSettings
     public string? SelectedInstallationId { get; set; }
     public bool ShowSnapshots { get; set; }
     public bool ShowOldVersions { get; set; }
-    public string? CurseForgeApiKey { get; set; }
+
+    /// <summary>CurseForge wird nicht mehr unterstützt (bräuchte einen eigenen API-Schlüssel); wird nicht gespeichert.</summary>
+    [JsonIgnore]
+    public string? CurseForgeApiKey => null;
 
     /// <summary>Instanzen als Kacheln statt als Liste anzeigen.</summary>
     public bool InstancesAsTiles { get; set; }
@@ -21,17 +24,17 @@ public class LauncherSettings
 
     // Axolotl-Symbol in der Tabliste (Badge-Mod + Cloudflare-Dienst)
     public bool BadgeEnabled { get; set; } = true;
-    public const string DefaultBadgeApiUrl = "https://mclauncher-badge.bernhardtfinn0.workers.dev";
-    public string? BadgeApiUrl { get; set; } = DefaultBadgeApiUrl;
+    [JsonIgnore] // fest eingebaut, nicht einstellbar
+    public string BadgeApiUrl => "https://mclauncher-badge.bernhardtfinn0.workers.dev";
 
     /// <summary>Anmelde-Token beim Dienst (für Freunde und Status) und für welchen Spieler es gilt.</summary>
     public string? BadgeToken { get; set; }
     public string? BadgeTokenUuid { get; set; }
 
-    // Discord-Status "Spielt AxoClient" (Application-ID aus dem Discord Developer Portal)
+    // Discord-Status "Spielt AxoClient"
     public bool DiscordEnabled { get; set; } = true;
-    public const string DefaultDiscordAppId = "1550925254124118067";
-    public string? DiscordAppId { get; set; } = DefaultDiscordAppId;
+    [JsonIgnore] // Application-ID der Discord-Anwendung "AxoClient", fest eingebaut
+    public string DiscordAppId => "1550925254124118067";
 
     // Spielstart
     public int MaxRamMb { get; set; } = 4096;
@@ -78,12 +81,6 @@ public class LauncherSettings
             });
         }
         settings.Version = null;
-
-        // Leere Felder (z.B. aus älteren Versionen) bekommen die eingebauten AxoClient-Standardwerte
-        if (string.IsNullOrWhiteSpace(settings.BadgeApiUrl))
-            settings.BadgeApiUrl = DefaultBadgeApiUrl;
-        if (string.IsNullOrWhiteSpace(settings.DiscordAppId))
-            settings.DiscordAppId = DefaultDiscordAppId;
 
         // Nach dem Umzug von ".mclauncher" nach ".axoclient" zeigen die Instanz-Pfade noch auf den alten Ordner
         if (!string.Equals(launcherDir, AppState.OldLauncherDir, StringComparison.OrdinalIgnoreCase))

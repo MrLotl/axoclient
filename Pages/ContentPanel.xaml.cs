@@ -9,7 +9,7 @@ namespace McLauncher.Pages;
 
 /// <summary>
 /// Mods, Ressourcenpakete oder Shader einer Instanz: installierte Liste (mit Version ändern, Updates, Reparatur)
-/// und rechts Suche auf Modrinth/CurseForge, Versionsauswahl oder Reparatur-Ergebnis.
+/// und rechts Suche auf Modrinth, Versionsauswahl oder Reparatur-Ergebnis.
 /// </summary>
 public partial class ContentPanel : UserControl
 {
@@ -51,7 +51,6 @@ public partial class ContentPanel : UserControl
         _type = type;
         _store = new ContentStore(inst, app.Http);
         _modrinth = new ModrinthProvider(app.Http);
-        ApiKeyBox.Text = app.Settings.CurseForgeApiKey ?? "";
         SearchBox.Text = "";
         StatusText.Text = "";
         UpdateBanner.Visibility = Visibility.Collapsed;
@@ -60,8 +59,6 @@ public partial class ContentPanel : UserControl
         RepairButton.Visibility = type == ContentType.Mod ? Visibility.Visible : Visibility.Collapsed;
         RepairButton.IsEnabled = UpdatesButton.IsEnabled = modsPossible;
 
-        // Die Quelle ist frei wählbar; vorausgewählt ist die übliche Plattform des Loaders
-        (inst.Loader == LoaderType.Forge ? CurseForgeSource : ModrinthSource).IsChecked = true;
         (app.Settings.ContentAsTiles ? TileViewToggle : ListViewToggle).IsChecked = true;
         _ready = true;
         _adding = false;
@@ -70,17 +67,17 @@ public partial class ContentPanel : UserControl
 
         SetSplit(false);
         ShowView(SearchView);
-        UpdateApiKeyPanel();
         RefreshInstalled();
     }
 
+    /// <summary>Anbieter für bereits installierte Einträge; CurseForge-Einträge lassen sich ohne Schlüssel nicht aktualisieren.</summary>
     private IContentProvider? ProviderFor(ContentSource source) =>
         source == ContentSource.Modrinth ? _modrinth
         : string.IsNullOrWhiteSpace(_app.Settings.CurseForgeApiKey) ? null
         : new CurseForgeProvider(_app.Http, _app.Settings.CurseForgeApiKey);
 
-    private IContentProvider? CurrentProvider =>
-        ProviderFor(ModrinthSource.IsChecked == true ? ContentSource.Modrinth : ContentSource.CurseForge);
+    /// <summary>Gesucht wird auf Modrinth (CurseForge bräuchte einen eigenen API-Schlüssel).</summary>
+    private IContentProvider? CurrentProvider => _modrinth;
 
     private IProgress<string> Status => new Progress<string>(t => StatusText.Text = t);
 
@@ -165,19 +162,6 @@ public partial class ContentPanel : UserControl
         UpdateAllButton.IsEnabled = FixButton.IsEnabled = RecheckButton.IsEnabled = !busy;
     }
 
-    private void Source_Checked(object sender, RoutedEventArgs e)
-    {
-        if (!_ready)
-            return;
-        UpdateApiKeyPanel();
-        _ = SearchAsync();
-    }
-
-    private void UpdateApiKeyPanel() =>
-        ApiKeyPanel.Visibility = CurseForgeSource.IsChecked == true && string.IsNullOrWhiteSpace(_app.Settings.CurseForgeApiKey)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-
     // ================= Installierte Inhalte =================
 
     private void RefreshInstalled()
@@ -258,7 +242,7 @@ public partial class ContentPanel : UserControl
             var missingKey = _installed.Count(i => i.Entry?.Source == ContentSource.CurseForge && ProviderFor(ContentSource.CurseForge) == null);
             StatusText.Text = (count == 0 ? "Alles ist auf dem neuesten Stand." : $"{count} Update(s) gefunden.")
                               + (unchecked_ > 0 ? $" {unchecked_} unbekannte Datei(en) konnten nicht geprüft werden." : "")
-                              + (missingKey > 0 ? $" {missingKey} CurseForge-Einträge brauchen einen API-Schlüssel." : "");
+                              + (missingKey > 0 ? $" {missingKey} Einträge von CurseForge können nicht geprüft werden." : "");
         }
         catch (Exception ex)
         {
@@ -331,8 +315,8 @@ public partial class ContentPanel : UserControl
             return;
         if (ProviderFor(entry.Source) is not { } provider)
         {
-            await _app.Dialogs.ShowMessageAsync("CurseForge-Schlüssel fehlt",
-                "Für Einträge von CurseForge wird ein API-Schlüssel benötigt (Einstellungen).");
+            await _app.Dialogs.ShowMessageAsync("Nicht möglich",
+                "Einträge von CurseForge unterstützt AxoClient nicht mehr. Lösche die Mod und installiere sie über die Suche (Modrinth) neu.");
             return;
         }
         await ShowVersionsAsync(new VersionTarget(provider, entry.ProjectId, entry.Title));
@@ -643,7 +627,7 @@ public partial class ContentPanel : UserControl
 
         if ((type == ContentType.Mod && _inst.Loader == LoaderType.Vanilla) || CurrentProvider is not { } provider)
         {
-            // Vanilla-Mods oder CurseForge ohne Schlüssel (Eingabefeld wird angezeigt)
+            // Vanilla-Instanz ohne Mod-Loader
             ResultsList.ItemsSource = null;
             Pager.Visibility = Visibility.Collapsed;
             return;
@@ -732,25 +716,6 @@ public partial class ContentPanel : UserControl
         var project = (ContentProject)((FrameworkElement)sender).DataContext;
         if (project.WebsiteUrl != null)
             OpenUrl(project.WebsiteUrl);
-    }
-
-    // ================= CurseForge-Schlüssel =================
-
-    private void SaveApiKey_Click(object sender, RoutedEventArgs e)
-    {
-        var key = ApiKeyBox.Text.Trim();
-        if (key.Length == 0)
-            return;
-        _app.Settings.CurseForgeApiKey = key;
-        _app.Save();
-        UpdateApiKeyPanel();
-        _ = SearchAsync();
-    }
-
-    private void Link_RequestNavigate(object sender, RequestNavigateEventArgs e)
-    {
-        OpenUrl(e.Uri.AbsoluteUri);
-        e.Handled = true;
     }
 
     private static void OpenUrl(string url) =>

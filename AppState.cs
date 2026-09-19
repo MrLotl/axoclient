@@ -104,6 +104,56 @@ public class AppState
         InstallationsChanged?.Invoke();
     }
 
+    // ---------- Laufende Spiele ----------
+
+    private readonly Dictionary<string, System.Diagnostics.Process> _runningGames = new();
+
+    /// <summary>Ein Spiel wurde gestartet oder beendet (im UI-Thread).</summary>
+    public event Action? RunningGamesChanged;
+
+    public bool IsRunning(Installation inst)
+    {
+        lock (_runningGames)
+            return _runningGames.TryGetValue(inst.Id, out var process) && !process.HasExited;
+    }
+
+    /// <summary>Merkt sich das gestartete Spiel, damit es angezeigt und beendet werden kann.</summary>
+    public void TrackGame(Installation inst, System.Diagnostics.Process process)
+    {
+        lock (_runningGames)
+            _runningGames[inst.Id] = process;
+        process.Exited += (_, _) => System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            lock (_runningGames)
+                if (_runningGames.TryGetValue(inst.Id, out var tracked) && tracked == process)
+                    _runningGames.Remove(inst.Id);
+            RunningGamesChanged?.Invoke();
+        });
+        RunningGamesChanged?.Invoke();
+    }
+
+    /// <summary>Beendet ein laufendes Spiel nach Rückfrage sofort.</summary>
+    public async Task StopGameAsync(Installation inst)
+    {
+        System.Diagnostics.Process? process;
+        lock (_runningGames)
+            _runningGames.TryGetValue(inst.Id, out process);
+        if (process == null || process.HasExited)
+            return;
+        if (!await Dialogs.ConfirmAsync("Minecraft beenden",
+                $"\"{inst.Name}\" sofort beenden?\n\nMinecraft speichert Welten alle paar Minuten automatisch; " +
+                "was seitdem passiert ist, kann verloren gehen.", "Beenden", danger: true))
+            return;
+        try
+        {
+            process.Kill(entireProcessTree: true);
+        }
+        catch
+        {
+            // schon beendet
+        }
+    }
+
     // ---------- Konto ----------
 
     public async Task<bool> TryRestoreSessionAsync()

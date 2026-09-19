@@ -18,7 +18,7 @@ public partial class HomePage
         }
         catch
         {
-            // Dienst nicht erreichbar; testen lässt sich das in den Einstellungen
+            // Dienst nicht erreichbar: dann eben ohne neues "zuletzt gesehen"
         }
     }
 
@@ -76,8 +76,8 @@ public partial class HomePage
             FriendsHeader.Text = "Freunde";
             ShowFriendsInfo(_app.Session == null
                 ? "Melde dich an, um deine Freunde zu sehen."
-                : "Richte unter Einstellungen den AxoClient-Dienst ein (\"Axolotl-Symbol in der Tabliste\"), " +
-                  "um Freunde hinzuzufügen und ihnen auf Server zu folgen.");
+                : "Schalte unter Einstellungen \"Axolotl-Symbol in der Tabliste\" ein, um Freunde hinzuzufügen " +
+                  "und ihnen auf Server zu folgen.");
             return;
         }
 

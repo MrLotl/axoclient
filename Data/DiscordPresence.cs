@@ -9,7 +9,7 @@ namespace McLauncher;
 /// Discord-Status ("Spielt AxoClient") über Rich Presence, solange ein vom Launcher gestartetes Spiel läuft.
 /// Auf einem Server bekommt der Status einen "Beitreten"-Knopf: Freunde, die darauf klicken, starten AxoClient
 /// (Discord öffnet ihn über ein registriertes Protokoll) und landen auf demselben Server.
-/// Der angezeigte Name und das Bild kommen von der Discord-Anwendung (Application-ID in den Einstellungen).
+/// Der angezeigte Name und das Bild kommen von der Discord-Anwendung "AxoClient" (ID fest eingebaut).
 /// </summary>
 public sealed class DiscordPresence : IDisposable
 {

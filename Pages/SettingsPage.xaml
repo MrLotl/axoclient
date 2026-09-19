@@ -43,26 +43,13 @@
                     <!-- Launcher -->
                     <TextBlock Text="Launcher" Style="{StaticResource SectionTitle}"/>
                     <CheckBox x:Name="MinimizeCheck" Content="Launcher nach dem Spielstart minimieren"
-                              Margin="0,0,0,16" Click="Check_Click"/>
-
-                    <TextBlock Text="CurseForge-API-Schlüssel" Style="{StaticResource FieldLabel}"/>
-                    <TextBox x:Name="CurseForgeKeyBox" Style="{StaticResource LauncherTextBox}" LostFocus="Text_LostFocus"/>
-                    <TextBlock Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,4,0,16" TextWrapping="Wrap">
-                        Wird für die CurseForge-Suche benötigt. Kostenlos unter
-                        <Hyperlink NavigateUri="https://console.curseforge.com/" RequestNavigate="Link_RequestNavigate"
-                                   Foreground="#6FCF97">console.curseforge.com</Hyperlink>.
-                    </TextBlock>
+                              Margin="0,0,0,22" Click="Check_Click"/>
 
                     <!-- Discord-Status -->
                     <TextBlock Text="Discord-Status" Style="{StaticResource SectionTitle}" Margin="0,6,0,10"/>
                     <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,12"
                                Text="Zeigt in Discord „Spielt AxoClient“ mit Axolotl-Bild, Instanz und Spielzeit, solange ein Spiel läuft (der Launcher muss dafür geöffnet bleiben, minimiert reicht)."/>
-                    <CheckBox x:Name="DiscordCheck" Content="Discord-Status anzeigen" Margin="0,0,0,12" Click="Check_Click"/>
-                    <TextBlock Text="Application-ID der Discord-Anwendung „AxoClient“" Style="{StaticResource FieldLabel}"/>
-                    <TextBox x:Name="DiscordAppIdBox" Style="{StaticResource LauncherTextBox}" LostFocus="Text_LostFocus"
-                             PreviewTextInput="Number_PreviewTextInput"/>
-                    <TextBlock Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,4,0,22" TextWrapping="Wrap"
-                               Text="Aus dem Discord Developer Portal – die Einrichtung steht in discord/ANLEITUNG.md."/>
+                    <CheckBox x:Name="DiscordCheck" Content="Discord-Status anzeigen" Margin="0,0,0,22" Click="Check_Click"/>
 
                     <!-- Axolotl-Symbol in der Tabliste -->
                     <TextBlock Text="Axolotl-Symbol in der Tabliste" Style="{StaticResource SectionTitle}" Margin="0,6,0,10"/>
@@ -70,18 +57,10 @@
                         <Image DockPanel.Dock="Left" Source="Assets/axolotl.png" Width="32" Height="32" Margin="0,0,12,0"
                                RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Top"/>
                         <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12"
-                                   Text="Spieler, die diesen Launcher nutzen, bekommen in der Tabliste ein kleines Axolotl oben rechts am Kopf. Funktioniert in Fabric-Instanzen mit Minecraft 26.2 auf Servern, die Spielerköpfe anzeigen."/>
+                                   Text="Spieler, die AxoClient nutzen, bekommen in der Tabliste das Axolotl neben ihrem Kopf. Funktioniert in Fabric-Instanzen mit Minecraft 26.2 auf Servern, die Spielerköpfe anzeigen. Wird auch für die Freundesliste auf der Startseite gebraucht."/>
                     </DockPanel>
-                    <CheckBox x:Name="BadgeCheck" Content="Symbol anzeigen und mich als Launcher-Nutzer anmelden"
-                              Margin="0,0,0,12" Click="Check_Click"/>
-                    <TextBlock Text="Adresse des Symbol-Dienstes (Cloudflare Worker)" Style="{StaticResource FieldLabel}"/>
-                    <DockPanel Margin="0,0,0,4">
-                        <Button x:Name="BadgeTestButton" DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
-                                Content="Verbindung testen" Margin="8,0,0,0" Click="BadgeTest_Click"/>
-                        <TextBox x:Name="BadgeUrlBox" Style="{StaticResource LauncherTextBox}" LostFocus="Text_LostFocus"/>
-                    </DockPanel>
-                    <TextBlock Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,0,0,22" TextWrapping="Wrap"
-                               Text="z.B. https://mclauncher-badge.deinname.workers.dev – die Einrichtung steht in service/ANLEITUNG.md."/>
+                    <CheckBox x:Name="BadgeCheck" Content="Symbol anzeigen und mich als AxoClient-Nutzer anmelden"
+                              Margin="0,0,0,22" Click="Check_Click"/>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
                         <Button Style="{StaticResource LauncherButton}" Click="OpenLauncherFolder_Click">

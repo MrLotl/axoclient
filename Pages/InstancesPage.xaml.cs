@@ -8,8 +8,10 @@ using System.Windows.Media.Imaging;
 namespace McLauncher.Pages;
 
 /// <summary>Anzeige einer Instanz in Liste/Kacheln; Bild = eigenes Bild oder Vorschaubild der zuletzt gespielten Welt.</summary>
-public class InstanceCard(Installation installation)
+public class InstanceCard(Installation installation, bool running)
 {
+    public bool IsRunning { get; } = running;
+    public string PlayText => IsRunning ? McLauncher.Pages.PlayButtons.StopText : McLauncher.Pages.PlayButtons.PlayText;
     public Installation Installation { get; } = installation;
     public string Name => Installation.Name;
     public string Description => Installation.Description;
@@ -48,6 +50,7 @@ public partial class InstancesPage : UserControl
     {
         _app = app;
         _app.InstallationsChanged += RefreshList;
+        _app.RunningGamesChanged += RefreshList;
         (app.Settings.InstancesAsTiles ? TileViewToggle : ListViewToggle).IsChecked = true;
         ApplyViewMode();
         RefreshList();
@@ -55,11 +58,12 @@ public partial class InstancesPage : UserControl
 
     private void RefreshList()
     {
-        InstanceList.ItemsSource = _app.Settings.Installations.Select(i => new InstanceCard(i)).ToList();
+        InstanceList.ItemsSource = _app.Settings.Installations.Select(i => new InstanceCard(i, _app.IsRunning(i))).ToList();
         if (_current != null)
         {
             DetailTitle.Text = _current.Name;
             DetailSubtitle.Text = _current.Description;
+            PlayButtons.Apply(DetailPlayButton, _app.IsRunning(_current));
         }
     }
 
@@ -115,7 +119,11 @@ public partial class InstancesPage : UserControl
     private void Play_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true; // Klick nicht zusätzlich als Karten-Klick werten
-        PlayRequested?.Invoke(((InstanceCard)((FrameworkElement)sender).DataContext).Installation, null);
+        var inst = ((InstanceCard)((FrameworkElement)sender).DataContext).Installation;
+        if (_app.IsRunning(inst))
+            _ = _app.StopGameAsync(inst);
+        else
+            PlayRequested?.Invoke(inst, null);
     }
 
     // ---------- Detailansicht ----------
@@ -123,6 +131,7 @@ public partial class InstancesPage : UserControl
     private void ShowDetail(Installation inst, bool openSettings = false)
     {
         _current = inst;
+        PlayButtons.Apply(DetailPlayButton, _app.IsRunning(inst));
         DetailTitle.Text = inst.Name;
         DetailSubtitle.Text = inst.Description;
         DetailTabs.Visibility = Visibility.Visible;
@@ -189,7 +198,11 @@ public partial class InstancesPage : UserControl
 
     private void DetailPlay_Click(object sender, RoutedEventArgs e)
     {
-        if (_current != null)
+        if (_current == null)
+            return;
+        if (_app.IsRunning(_current))
+            _ = _app.StopGameAsync(_current);
+        else
             PlayRequested?.Invoke(_current, null);
     }
 

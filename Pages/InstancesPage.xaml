@@ -19,6 +19,17 @@
             </Style.Triggers>
         </Style>
 
+        <!-- "Spielen" auf den Karten: rot mit Stopp-Quadrat, solange die Instanz läuft -->
+        <Style x:Key="CardPlayButton" TargetType="Button" BasedOn="{StaticResource LauncherButton}">
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource Danger}"/>
+                    <Setter Property="ToolTip" Value="Minecraft beenden"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <ItemsPanelTemplate x:Key="ListPanel">
             <StackPanel/>
         </ItemsPanelTemplate>
@@ -39,8 +50,8 @@
                                RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Grid>
                 </Border>
-                <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}" Background="{StaticResource Accent}"
-                        Content="Spielen" VerticalAlignment="Center" Cursor="Hand" Click="Play_Click"/>
+                <Button DockPanel.Dock="Right" Style="{StaticResource CardPlayButton}" Content="{Binding PlayText}"
+                        VerticalAlignment="Center" Cursor="Hand" Click="Play_Click"/>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15" FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"/>
@@ -68,8 +79,8 @@
                 </Border>
                 <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15" FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis" Margin="2,10,2,8"/>
-                <Button Style="{StaticResource LauncherButton}" Background="{StaticResource Accent}"
-                        Content="Spielen" Cursor="Hand" Click="Play_Click"/>
+                <Button Style="{StaticResource CardPlayButton}" Content="{Binding PlayText}" Cursor="Hand"
+                        Click="Play_Click"/>
             </StackPanel>
         </DataTemplate>
     </UserControl.Resources>
@@ -112,8 +123,8 @@
                     <StackPanel x:Name="DetailActions" DockPanel.Dock="Right" Orientation="Horizontal">
                         <Button Style="{StaticResource IconButton}" Content="&#xE838;" ToolTip="Spielordner öffnen"
                                 Margin="0,0,8,0" Click="Folder_Click"/>
-                        <Button Style="{StaticResource LauncherButton}" Background="{StaticResource Accent}"
-                                Content="Spielen" Click="DetailPlay_Click"/>
+                        <Button x:Name="DetailPlayButton" Style="{StaticResource LauncherButton}"
+                                Background="{StaticResource Accent}" Content="Spielen" Click="DetailPlay_Click"/>
                     </StackPanel>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock x:Name="DetailTitle" Style="{StaticResource PageTitle}" FontSize="20"

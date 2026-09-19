@@ -35,11 +35,8 @@ public partial class SettingsPage : UserControl
         WidthBox.Text = s.GameWidth > 0 ? s.GameWidth.ToString() : "";
         HeightBox.Text = s.GameHeight > 0 ? s.GameHeight.ToString() : "";
         MinimizeCheck.IsChecked = s.MinimizeOnLaunch;
-        CurseForgeKeyBox.Text = s.CurseForgeApiKey ?? "";
         DiscordCheck.IsChecked = s.DiscordEnabled;
-        DiscordAppIdBox.Text = s.DiscordAppId ?? "";
         BadgeCheck.IsChecked = s.BadgeEnabled;
-        BadgeUrlBox.Text = s.BadgeApiUrl ?? "";
         _loading = false;
         UpdateRamText();
     }
@@ -72,56 +69,11 @@ public partial class SettingsPage : UserControl
         s.GameWidth = int.TryParse(WidthBox.Text, out var w) ? w : 0;
         s.GameHeight = int.TryParse(HeightBox.Text, out var h) ? h : 0;
         s.MinimizeOnLaunch = MinimizeCheck.IsChecked == true;
-        s.CurseForgeApiKey = string.IsNullOrWhiteSpace(CurseForgeKeyBox.Text) ? null : CurseForgeKeyBox.Text.Trim();
         s.DiscordEnabled = DiscordCheck.IsChecked == true;
-        s.DiscordAppId = string.IsNullOrWhiteSpace(DiscordAppIdBox.Text) ? LauncherSettings.DefaultDiscordAppId : DiscordAppIdBox.Text.Trim();
         s.BadgeEnabled = BadgeCheck.IsChecked == true;
-        s.BadgeApiUrl = string.IsNullOrWhiteSpace(BadgeUrlBox.Text) ? LauncherSettings.DefaultBadgeApiUrl : BadgeUrlBox.Text.Trim().TrimEnd('/');
         _app.Save();
-    }
-
-    /// <summary>Prüft den Symbol-Dienst und meldet den Spieler direkt an (zeigt das Ergebnis als Popup).</summary>
-    private async void BadgeTest_Click(object sender, RoutedEventArgs e)
-    {
-        SaveAll();
-        if (_app.Settings.BadgeApiUrl is not { } url)
-        {
-            await _app.Dialogs.ShowMessageAsync("Adresse fehlt", "Bitte zuerst die Adresse des Symbol-Dienstes eintragen.");
-            return;
-        }
-
-        BadgeTestButton.IsEnabled = false;
-        try
-        {
-            await Badge.CheckServiceAsync(_app.Http, url);
-            if (_app.Session == null)
-            {
-                await _app.Dialogs.ShowMessageAsync("Dienst erreichbar",
-                    "Der Symbol-Dienst antwortet. Melde dich links unten an, damit du als Launcher-Nutzer eingetragen wirst.");
-                return;
-            }
-            await Badge.RegisterAsync(_app.Http, await _app.GetFreshSessionAsync(), url);
-            await _app.Dialogs.ShowMessageAsync("Alles bereit",
-                $"Der Symbol-Dienst funktioniert und {_app.Session.Username} ist als Launcher-Nutzer eingetragen.\n\n" +
-                "Starte eine Fabric-26.2-Instanz: Die Mod wird automatisch hinzugefügt, und in der Tabliste erscheint " +
-                "das Axolotl bei allen, die den Launcher nutzen.");
-        }
-        catch (Exception ex)
-        {
-            await _app.Dialogs.ShowMessageAsync("Test fehlgeschlagen", ex.Message);
-        }
-        finally
-        {
-            BadgeTestButton.IsEnabled = true;
-        }
     }
 
     private void OpenLauncherFolder_Click(object sender, RoutedEventArgs e) =>
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppState.LauncherDir}\"") { UseShellExecute = true });
-
-    private void Link_RequestNavigate(object sender, RequestNavigateEventArgs e)
-    {
-        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-        e.Handled = true;
-    }
 }

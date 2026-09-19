@@ -168,35 +168,10 @@
             <!-- Ansicht 1: Suche -->
             <DockPanel x:Name="SearchView">
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Margin="0,0,10,0">
-                        <RadioButton x:Name="ModrinthSource" Style="{StaticResource SegmentButton}"
-                                     GroupName="Source" Content="Modrinth" Checked="Source_Checked"/>
-                        <RadioButton x:Name="CurseForgeSource" Style="{StaticResource SegmentButton}"
-                                     GroupName="Source" Content="CurseForge" Checked="Source_Checked"/>
-                    </StackPanel>
                     <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}"
                             Content="&#xE721;" ToolTip="Suchen" Click="Search_Click"/>
                     <TextBox x:Name="SearchBox" Style="{StaticResource LauncherTextBox}" KeyDown="SearchBox_KeyDown"/>
                 </DockPanel>
-
-                <!-- CurseForge-Schlüssel -->
-                <Border x:Name="ApiKeyPanel" DockPanel.Dock="Top" Background="#14FFFFFF" CornerRadius="8"
-                        Padding="12" Margin="0,0,0,10" Visibility="Collapsed">
-                    <StackPanel>
-                        <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap">
-                            Für CurseForge wird ein kostenloser API-Schlüssel benötigt. Du bekommst ihn unter
-                            <Hyperlink NavigateUri="https://console.curseforge.com/" RequestNavigate="Link_RequestNavigate"
-                                       Foreground="#6FCF97">console.curseforge.com</Hyperlink>
-                            (Anmelden → API Keys). Du kannst ihn auch später unter Einstellungen ändern.
-                        </TextBlock>
-                        <DockPanel Margin="0,10,0,0">
-                            <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
-                                    Background="{StaticResource Accent}" Content="Speichern" Margin="8,0,0,0"
-                                    Click="SaveApiKey_Click"/>
-                            <TextBox x:Name="ApiKeyBox" Style="{StaticResource LauncherTextBox}"/>
-                        </DockPanel>
-                    </StackPanel>
-                </Border>
 
                 <TextBlock x:Name="ResultsEmpty" DockPanel.Dock="Top" Foreground="{StaticResource MutedText}"
                            TextWrapping="Wrap" Visibility="Collapsed"/>

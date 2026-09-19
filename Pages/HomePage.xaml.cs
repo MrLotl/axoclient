@@ -24,6 +24,7 @@ public partial class HomePage : UserControl
         _app = app;
         _app.AccountChanged += UpdateAccount;
         _app.InstallationsChanged += RefreshInstallations;
+        _app.RunningGamesChanged += UpdateControls;
         RefreshInstallations();
         UpdateAccount();
 
@@ -61,17 +62,31 @@ public partial class HomePage : UserControl
 
     private void UpdateControls()
     {
-        PlayButton.IsEnabled = !_busy && _app.Session != null && _app.SelectedInstallation != null;
+        var running = _app.SelectedInstallation is { } inst && _app.IsRunning(inst);
+        PlayButtons.Apply(PlayButton, running);
+        PlayButton.IsEnabled = !_busy && (running || (_app.Session != null && _app.SelectedInstallation != null));
         InstallationBox.IsEnabled = !_busy;
     }
 
-    private void PlayButton_Click(object sender, RoutedEventArgs e) => _ = PlayAsync();
+    private void PlayButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_app.SelectedInstallation is { } inst && _app.IsRunning(inst))
+            _ = _app.StopGameAsync(inst);
+        else
+            _ = PlayAsync();
+    }
 
     /// <summary>Installiert (falls nötig) und startet die ausgewählte Instanz, optional direkt in Welt/Server.</summary>
     public async Task PlayAsync(QuickPlay? quickPlay = null)
     {
         if (_busy || _app.Session == null || _app.SelectedInstallation is not { } inst)
             return;
+        if (_app.IsRunning(inst))
+        {
+            await _app.Dialogs.ShowMessageAsync("Läuft bereits",
+                $"\"{inst.Name}\" läuft schon. Beende es zuerst, um es neu zu starten.");
+            return;
+        }
 
         _busy = true;
         UpdateControls();
@@ -98,6 +113,7 @@ public partial class HomePage : UserControl
             process.Start();
             _app.Discord.GameStarted(_app.Settings, inst, quickPlay);
             GameStatusWatcher.Watch(_app, inst, quickPlay, process);
+            _app.TrackGame(inst, process);
             _ = RegisterQuietlyAsync();
             Progress.Value = 100;
             StatusText.Text = quickPlay?.Server is { } server ? $"{inst.Name} startet und verbindet mit {server}."
