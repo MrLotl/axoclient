@@ -31,8 +31,8 @@ public final class BadgeService {
 	private static final long ERROR_RETRY_MILLIS = TimeUnit.MINUTES.toMillis(1);
 	private static final int MAX_BATCH = 90; // Cloudflare D1 erlaubt höchstens 100 Parameter pro Abfrage
 
-	/** Ergebnis je Spieler: hat Symbol? + gültig bis. */
-	private record Entry(boolean badge, long validUntil) {}
+	/** Ergebnis je Spieler: hat Symbol?, AxoClient-Umhang (oder null) + gültig bis. */
+	private record Entry(boolean badge, String cape, long validUntil) {}
 
 	private static final Map<UUID, Entry> CACHE = new ConcurrentHashMap<>();
 	private static final Set<UUID> QUEUE = ConcurrentHashMap.newKeySet();
@@ -58,12 +58,23 @@ public final class BadgeService {
 
 	/** Soll neben diesem Spieler das Symbol erscheinen? Blockiert nie. */
 	public static boolean hasBadge(UUID player) {
+		Entry entry = lookup(player);
+		return entry != null && entry.badge();
+	}
+
+	/** Gewählter AxoClient-Umhang des Spielers oder null. Blockiert nie. */
+	public static String capeOf(UUID player) {
+		Entry entry = lookup(player);
+		return entry != null ? entry.cape() : null;
+	}
+
+	private static Entry lookup(UUID player) {
 		if (checkUri == null || player == null)
-			return false;
+			return null;
 		Entry entry = CACHE.get(player);
 		if (entry == null || entry.validUntil() < System.currentTimeMillis())
 			QUEUE.add(player); // (erneut) abfragen; bis dahin gilt das bisherige Ergebnis
-		return entry != null && entry.badge();
+		return entry;
 	}
 
 	private static void flush() {
@@ -91,16 +102,21 @@ public final class BadgeService {
 			if (response.statusCode() != 200)
 				throw new IllegalStateException("HTTP " + response.statusCode());
 
+			JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
 			Set<String> users = new HashSet<>();
-			JsonParser.parseString(response.body()).getAsJsonObject().getAsJsonArray("users")
-				.forEach(element -> users.add(element.getAsString()));
-			for (UUID id : batch)
-				CACHE.put(id, new Entry(users.contains(compact(id)), now + CACHE_MILLIS));
+			json.getAsJsonArray("users").forEach(element -> users.add(element.getAsString()));
+			// Ältere Dienst-Versionen liefern noch keine Umhänge
+			JsonObject capes = json.has("capes") ? json.getAsJsonObject("capes") : new JsonObject();
+			for (UUID id : batch) {
+				String key = compact(id);
+				String cape = capes.has(key) ? capes.get(key).getAsString() : null;
+				CACHE.put(id, new Entry(users.contains(key), cape, now + CACHE_MILLIS));
+			}
 		} catch (Exception e) {
 			// Dienst nicht erreichbar: bisherige Ergebnisse behalten, in einer Minute erneut versuchen
 			for (UUID id : batch) {
 				Entry old = CACHE.get(id);
-				CACHE.put(id, new Entry(old != null && old.badge(), now + ERROR_RETRY_MILLIS));
+				CACHE.put(id, new Entry(old != null && old.badge(), old != null ? old.cape() : null, now + ERROR_RETRY_MILLIS));
 			}
 		}
 	}

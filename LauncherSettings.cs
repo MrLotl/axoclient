@@ -27,6 +27,9 @@ public class LauncherSettings
     [JsonIgnore] // fest eingebaut, nicht einstellbar
     public string BadgeApiUrl => "https://mclauncher-badge.bernhardtfinn0.workers.dev";
 
+    [JsonIgnore] // AxoClient-Umhänge: Ordner capes/ im GitHub-Repository
+    public string CapesUrl => "https://raw.githubusercontent.com/MrLotl/axoclient/main/capes/";
+
     /// <summary>Anmelde-Token beim Dienst (für Freunde und Status) und für welchen Spieler es gilt.</summary>
     public string? BadgeToken { get; set; }
     public string? BadgeTokenUuid { get; set; }

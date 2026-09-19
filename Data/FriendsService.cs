@@ -101,6 +101,19 @@ public class FriendsService(AppState app)
         });
     }
 
+    /// <summary>Gewählter AxoClient-Umhang (ID) oder null.</summary>
+    public async Task<string?> GetCapeAsync()
+    {
+        using var json = await PostAsync("/cape", new());
+        return json.RootElement.GetProperty("cape").GetString();
+    }
+
+    /// <summary>AxoClient-Umhang wählen (null = keiner).</summary>
+    public async Task SetCapeAsync(string? capeId)
+    {
+        using var _ = await PostAsync("/cape", new() { ["cape"] = capeId });
+    }
+
     private async Task<JsonDocument> PostAsync(string path, Dictionary<string, object?> body, bool retried = false)
     {
         if (!Available)

@@ -59,8 +59,8 @@ Eine eigene Domain wird **nicht** benötigt.
 Für die Freundesliste auf der Startseite braucht der Dienst neuen Code und drei neue Tabellen:
 
 1. **Worker → Edit code**: den Code komplett durch den aktuellen Inhalt von `worker.js` ersetzen, **Deploy**.
-2. **D1 → mclauncher-badge → Console**: die Zeilen 3 bis 6 aus `schema.sql` einzeln ausführen
-   (`tokens`, `status`, `friends` und der Index). Alle Zeilen können gefahrlos erneut ausgeführt werden.
+2. **D1 → mclauncher-badge → Console**: die Zeilen 3 bis 7 aus `schema.sql` einzeln ausführen
+   (`tokens`, `status`, `friends`, der Index und `capes`). Alle Zeilen können gefahrlos erneut ausgeführt werden.
 3. Den Launcher neu starten.
 
 Gespeichert werden zusätzlich: ein Anmelde-Token (nur als Hash), der aktuelle Server samt Minecraft-Version,

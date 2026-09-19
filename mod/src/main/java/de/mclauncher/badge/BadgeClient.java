@@ -21,6 +21,7 @@ public class BadgeClient implements ClientModInitializer {
 			api = readConfig();
 		BadgeService.start(api);
 		ServerStatus.start();
+		CapeTextures.start(System.getProperty("axoclient.capes"));
 	}
 
 	private static String readConfig() {

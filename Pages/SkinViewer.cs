@@ -10,7 +10,7 @@ namespace McLauncher.Pages;
 
 /// <summary>
 /// 3D-Ansicht einer Minecraft-Figur, die sich mit der Maus drehen lässt (Ziehen; Doppelklick setzt zurück).
-/// Die Skin-Textur wird auf sechs Quader (Kopf, Körper, Arme, Beine) samt zweiter Ebene (Hut, Jacke ...) gelegt.
+/// Die Skin-Textur wird auf sechs Quader (Kopf, Körper, Arme, Beine) samt zweiter Ebene gelegt, optional mit Umhang.
 /// </summary>
 public class SkinViewer : Grid
 {
@@ -77,8 +77,8 @@ public class SkinViewer : Grid
         };
     }
 
-    /// <summary>Setzt die anzuzeigende Skin-Textur (PNG). Ohne Skin bleibt die Ansicht leer.</summary>
-    public void SetSkin(byte[]? png, bool slim)
+    /// <summary>Setzt Skin (PNG) und optional den Umhang (PNG). Ohne Skin bleibt die Ansicht leer.</summary>
+    public void SetSkin(byte[]? png, bool slim, byte[]? capePng = null)
     {
         _figure.Children.Clear();
         if (png == null)
@@ -116,6 +116,49 @@ public class SkinViewer : Grid
         Box(0, 32, 4, 12, 4, -4, 0, -2, 0.25, true);           // rechte Hose
         Box(0, 48, 4, 12, 4, 0, 0, -2, 0.25, true);            // linke Hose
 
+        AddMeshes(_figure, meshes);
+
+        if (capePng != null)
+            AddCape(capePng);
+    }
+
+    /// <summary>
+    /// Umhang hinter dem Rücken: 10x16x1 Pixel, oben an den Schultern befestigt und leicht nach hinten geneigt.
+    /// Wie in Minecraft ist er um 180° gedreht, damit die Außenseite (Textur ab 1,1) nach hinten zeigt.
+    /// </summary>
+    private void AddCape(byte[] capePng)
+    {
+        byte[] texture;
+        try
+        {
+            texture = ReadTexture(capePng);
+        }
+        catch
+        {
+            return;
+        }
+        var meshes = new Dictionary<uint, MeshGeometry3D>();
+        AddBox(texture, meshes, 0, 0, 10, 16, 1, -5, -16, -0.5, 0, false);
+
+        var cape = new Model3DGroup
+        {
+            Transform = new Transform3DGroup
+            {
+                Children =
+                {
+                    new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), 180)),
+                    new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), 8)), // unten etwas abstehend
+                    new TranslateTransform3D(0, 24, -2.85) // Oberkante an den Schultern, hinter der Jacke
+                }
+            }
+        };
+        AddMeshes(cape, meshes);
+        _figure.Children.Add(cape);
+    }
+
+    /// <summary>Ein Modell je Farbe; die Rückseite bekommt dieselbe Farbe.</summary>
+    private static void AddMeshes(Model3DGroup group, Dictionary<uint, MeshGeometry3D> meshes)
+    {
         foreach (var (argb, mesh) in meshes)
         {
             mesh.Freeze();
@@ -123,7 +166,7 @@ public class SkinViewer : Grid
             brush.Freeze();
             var material = new DiffuseMaterial(brush);
             material.Freeze();
-            _figure.Children.Add(new GeometryModel3D(mesh, material) { BackMaterial = material });
+            group.Children.Add(new GeometryModel3D(mesh, material) { BackMaterial = material });
         }
     }
 
@@ -179,6 +222,23 @@ public class SkinViewer : Grid
     /// </summary>
     private static byte[] ReadSkin(byte[] png)
     {
+        var skin = ReadTexture(png, out var legacy);
+        if (legacy)
+        {
+            MirrorLimb(skin, 0, 16, 16, 48); // Bein
+            MirrorLimb(skin, 40, 16, 32, 48); // Arm
+        }
+        return skin;
+    }
+
+    private static byte[] ReadTexture(byte[] png) => ReadTexture(png, out _);
+
+    /// <summary>
+    /// Liest eine Skin- oder Umhang-Textur als 64x64 BGRA-Pixel (bei HD-Texturen jeder n-te Pixel).
+    /// <paramref name="halfHeight"/>: Die Textur ist nur halb so hoch wie breit (alter Skin bzw. Umhang).
+    /// </summary>
+    private static byte[] ReadTexture(byte[] png, out bool halfHeight)
+    {
         var decoded = new BitmapImage();
         using (var ms = new MemoryStream(png))
         {
@@ -193,19 +253,14 @@ public class SkinViewer : Grid
         src.CopyPixels(raw, sw * 4, 0);
 
         var scale = Math.Max(1, sw / 64);
-        var legacy = sh * 2 == sw;
+        halfHeight = sh * 2 == sw;
+        int rows = Math.Min(64, sh / scale), cols = Math.Min(64, sw / scale);
 
-        var skin = new byte[64 * 64 * 4];
-        for (var y = 0; y < (legacy ? 32 : 64); y++)
-        for (var x = 0; x < 64; x++)
-            Array.Copy(raw, ((y * scale) * sw + x * scale) * 4, skin, (y * 64 + x) * 4, 4);
-
-        if (legacy)
-        {
-            MirrorLimb(skin, 0, 16, 16, 48); // Bein
-            MirrorLimb(skin, 40, 16, 32, 48); // Arm
-        }
-        return skin;
+        var texture = new byte[64 * 64 * 4];
+        for (var y = 0; y < rows; y++)
+        for (var x = 0; x < cols; x++)
+            Array.Copy(raw, ((y * scale) * sw + x * scale) * 4, texture, (y * 64 + x) * 4, 4);
+        return texture;
     }
 
     /// <summary>Kopiert einen 4x12x4-Quader an eine andere Stelle und spiegelt ihn (alte Skins haben nur rechte Gliedmaßen).</summary>

@@ -20,6 +20,30 @@ public static class SkinRenderer
         return head;
     }
 
+    /// <summary>Außenseite eines Umhangs (10x16 Pixel ab 1,1 der Textur), z.B. als Vorschaubild.</summary>
+    public static BitmapSource? RenderCape(byte[] png)
+    {
+        try
+        {
+            var decoded = new BitmapImage();
+            using (var ms = new MemoryStream(png))
+            {
+                decoded.BeginInit();
+                decoded.CacheOption = BitmapCacheOption.OnLoad;
+                decoded.StreamSource = ms;
+                decoded.EndInit();
+            }
+            var scale = Math.Max(1, decoded.PixelWidth / 64); // HD-Umhänge
+            var cape = new CroppedBitmap(decoded, new System.Windows.Int32Rect(scale, scale, 10 * scale, 16 * scale));
+            cape.Freeze();
+            return cape;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static BitmapSource RenderFront(byte[] png, bool slim)
     {
         var decoded = new BitmapImage();

@@ -8,7 +8,11 @@ using CmlLib.Core.Auth.Microsoft;
 
 namespace McLauncher;
 
-public record CapeInfo(string Id, string Alias, bool Active);
+public record CapeInfo(string Id, string Alias, bool Active, string? Url)
+{
+    /// <summary>Textur des Umhangs (PNG), falls sie geladen werden konnte.</summary>
+    public byte[]? Png { get; init; }
+}
 
 public class ProfileInfo
 {
@@ -17,6 +21,9 @@ public class ProfileInfo
     public BitmapSource? SkinFront { get; init; }
     public BitmapSource? Head { get; init; }
     public List<CapeInfo> Capes { get; init; } = [];
+
+    /// <summary>Textur des gerade getragenen Umhangs (oder null).</summary>
+    public byte[]? ActiveCapePng => Capes.FirstOrDefault(c => c.Active)?.Png;
 }
 
 public interface IDialogService
@@ -162,6 +169,7 @@ public class AppState
         {
             Session = await LoginHandler.AuthenticateSilently();
             await RefreshProfileAsync();
+            _ = RefreshClientCapesAsync();
             return true;
         }
         catch
@@ -176,6 +184,7 @@ public class AppState
     {
         Session = await LoginHandler.AuthenticateInteractively();
         await RefreshProfileAsync();
+        _ = RefreshClientCapesAsync();
     }
 
     public async Task LogoutAsync()
@@ -183,6 +192,7 @@ public class AppState
         await LoginHandler.Signout();
         Session = null;
         Profile = null;
+        ClientCapeId = null;
         AccountChanged?.Invoke();
     }
 
@@ -193,6 +203,49 @@ public class AppState
         return Session;
     }
 
+    // ---------- AxoClient-Umhänge ----------
+
+    /// <summary>Alle verfügbaren AxoClient-Umhänge (aus dem GitHub-Repository).</summary>
+    public List<ClientCape> ClientCapes { get; private set; } = [];
+
+    /// <summary>Gewählter AxoClient-Umhang (ID) oder null.</summary>
+    public string? ClientCapeId { get; private set; }
+
+    /// <summary>
+    /// Umhang für die 3D-Figur: ein AxoClient-Umhang hat Vorrang, so wie ihn AxoClient-Spieler im Spiel sehen.
+    /// </summary>
+    public byte[]? DisplayCapePng =>
+        ClientCapes.FirstOrDefault(c => c.Id == ClientCapeId)?.Png ?? Profile?.ActiveCapePng;
+
+    /// <summary>Lädt die Umhang-Liste und die eigene Auswahl neu (Fehler: bisheriger Stand bleibt).</summary>
+    public async Task RefreshClientCapesAsync()
+    {
+        try
+        {
+            ClientCapes = await McLauncher.ClientCapes.LoadAsync(Http, Settings.CapesUrl);
+        }
+        catch
+        {
+            // GitHub nicht erreichbar
+        }
+        try
+        {
+            ClientCapeId = Friends.Available ? await Friends.GetCapeAsync() : null;
+        }
+        catch
+        {
+            // Dienst nicht erreichbar oder noch ohne Umhang-Funktion
+        }
+        AccountChanged?.Invoke();
+    }
+
+    public async Task SetClientCapeAsync(string? capeId)
+    {
+        await Friends.SetCapeAsync(capeId);
+        ClientCapeId = capeId;
+        AccountChanged?.Invoke();
+    }
+
     // ---------- Profil: Skin & Umhang ----------
 
     public async Task RefreshProfileAsync()
@@ -200,7 +253,15 @@ public class AppState
         try
         {
             using var json = await SendProfileRequestAsync(HttpMethod.Get, "");
-            Profile = ParseProfile(json, await DownloadActiveSkinAsync(json));
+            var profile = ParseProfile(json, await DownloadActiveSkinAsync(json));
+            Profile = new ProfileInfo
+            {
+                SkinPng = profile.SkinPng,
+                SkinSlim = profile.SkinSlim,
+                SkinFront = profile.SkinFront,
+                Head = profile.Head,
+                Capes = await DownloadCapesAsync(profile.Capes)
+            };
         }
         catch
         {
@@ -253,6 +314,22 @@ public class AppState
             : null;
     }
 
+    /// <summary>Lädt die Texturen aller Umhänge (für die Vorschau); fehlgeschlagene bleiben ohne Bild.</summary>
+    private async Task<List<CapeInfo>> DownloadCapesAsync(List<CapeInfo> capes) =>
+        (await Task.WhenAll(capes.Select(async cape =>
+        {
+            if (cape.Url == null)
+                return cape;
+            try
+            {
+                return cape with { Png = await Http.GetByteArrayAsync(cape.Url) };
+            }
+            catch
+            {
+                return cape;
+            }
+        }))).ToList();
+
     private static ProfileInfo ParseProfile(JsonDocument json, byte[]? skinPng)
     {
         var root = json.RootElement;
@@ -264,7 +341,8 @@ public class AppState
             ? capeArray.EnumerateArray().Select(c => new CapeInfo(
                 c.GetProperty("id").GetString()!,
                 c.TryGetProperty("alias", out var a) ? a.GetString() ?? "Umhang" : "Umhang",
-                c.GetProperty("state").GetString() == "ACTIVE")).ToList()
+                c.GetProperty("state").GetString() == "ACTIVE",
+                c.TryGetProperty("url", out var u) ? u.GetString() : null)).ToList()
             : [];
 
         return new ProfileInfo

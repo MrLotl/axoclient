@@ -53,7 +53,7 @@ public partial class HomePage : UserControl
     private void UpdateAccount()
     {
         PlayerName.Text = _app.Session?.Username ?? "Nicht angemeldet";
-        SkinView.SetSkin(_app.Profile?.SkinPng, _app.Profile?.SkinSlim ?? false);
+        SkinView.SetSkin(_app.Profile?.SkinPng, _app.Profile?.SkinSlim ?? false, _app.DisplayCapePng);
         if (!_busy)
             StatusText.Text = _app.Session == null ? "Bitte links unten anmelden." : "Bereit";
         UpdateControls();

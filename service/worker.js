@@ -41,6 +41,8 @@ export default {
         return await addFriend(request, env);
       if (request.method === "POST" && url.pathname === "/friends/remove")
         return await removeFriend(request, env);
+      if (request.method === "POST" && url.pathname === "/cape")
+        return await cape(request, env);
       return json({ error: "Nicht gefunden" }, 404);
     } catch (e) {
       return json({ error: "Interner Fehler: " + e.message }, 500);
@@ -112,15 +114,21 @@ async function check(request, env) {
     ? [...new Set(body.uuids.filter(u => typeof u === "string" && /^[0-9a-f]{32}$/.test(u)))].slice(0, MAX_UUIDS)
     : [];
   if (uuids.length === 0)
-    return json({ users: [] });
+    return json({ users: [], capes: {} });
 
   const since = Date.now() - ACTIVE_DAYS * 24 * 60 * 60 * 1000;
   const placeholders = uuids.map((_, i) => "?" + (i + 2)).join(",");
   const { results } = await env.DB.prepare(
-    `SELECT uuid FROM users WHERE last_seen > ?1 AND uuid IN (${placeholders})`
+    `SELECT u.uuid, c.cape FROM users u LEFT JOIN capes c ON c.uuid = u.uuid ` +
+    `WHERE u.last_seen > ?1 AND u.uuid IN (${placeholders})`
   ).bind(since, ...uuids).all();
 
-  return json({ users: results.map(r => r.uuid) });
+  // AxoClient-Umhänge der gefundenen Spieler (uuid -> Umhang-ID)
+  const capes = {};
+  for (const r of results)
+    if (r.cape)
+      capes[r.uuid] = r.cape;
+  return json({ users: results.map(r => r.uuid), capes });
 }
 
 function base64ToBytes(text) {
@@ -232,4 +240,28 @@ async function removeFriend(request, env) {
 async function sha256(text) {
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(hash)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+// ---------- AxoClient-Umhänge ----------
+// Die Bilder liegen im GitHub-Repository (capes/); der Dienst merkt sich nur, wer welchen Umhang trägt.
+
+/** Ohne "cape" im Body: aktuellen Umhang liefern. Mit "cape" (ID oder null): setzen bzw. ablegen. */
+async function cape(request, env) {
+  const { body, me, error } = await authenticate(request, env);
+  if (error)
+    return error;
+  if (!("cape" in body)) {
+    const row = await env.DB.prepare("SELECT cape FROM capes WHERE uuid = ?1").bind(me).first();
+    return json({ cape: row ? row.cape : null });
+  }
+  if (body.cape === null) {
+    await env.DB.prepare("DELETE FROM capes WHERE uuid = ?1").bind(me).run();
+    return json({ ok: true, cape: null });
+  }
+  if (typeof body.cape !== "string" || !/^[a-z0-9_-]{1,32}$/.test(body.cape))
+    return json({ error: "Ungültiger Umhang" }, 400);
+  await env.DB.prepare(
+    "INSERT INTO capes (uuid, cape) VALUES (?1, ?2) ON CONFLICT(uuid) DO UPDATE SET cape = excluded.cape"
+  ).bind(me, body.cape).run();
+  return json({ ok: true, cape: body.cape });
 }

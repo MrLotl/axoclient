@@ -101,6 +101,7 @@ public class GameInstaller(string sharedDir, HttpClient http)
         if (Badge.IsActiveFor(inst, settings))
         {
             jvmArguments.Add(new MArgument(Badge.JvmArgument(settings)));
+            jvmArguments.Add(new MArgument($"-Daxoclient.capes={settings.CapesUrl}"));
         }
         if (jvmArguments.Count > 0)
             option.ExtraJvmArguments = jvmArguments;
