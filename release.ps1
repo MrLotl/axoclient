@@ -13,8 +13,8 @@ function Fail([string]$message) {
     exit 1
 }
 
-function Git {
-    & git @args 2>&1 | ForEach-Object { Write-Host $_ }
+function Invoke-Git {
+    & git.exe @args 2>&1 | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) {
         Fail "Befehl fehlgeschlagen: git $args"
     }
@@ -28,17 +28,17 @@ if ($Version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$') {
 if (-not (Test-Path .git)) {
     Fail 'Dieser Ordner ist noch kein Git-Repository. Einmalig: git init -b main; git add -A; git commit -m "AxoClient"'
 }
-if (-not (git remote)) {
+if (-not (git.exe remote)) {
     Fail 'Es ist noch kein GitHub-Repository verbunden. Einmalig: git remote add origin https://github.com/NAME/axoclient.git; git push -u origin main'
 }
-if (git status --porcelain) {
+if (git.exe status --porcelain) {
     Fail 'Es gibt noch nicht committete Änderungen. Bitte zuerst committen (git add -A; git commit -m "...").'
 }
-if (git tag --list "v$Version") {
+if (git.exe tag --list "v$Version") {
     Fail "Version v$Version gibt es schon."
 }
 
-Git push
-Git tag "v$Version"
-Git push origin "v$Version"
+Invoke-Git push
+Invoke-Git tag "v$Version"
+Invoke-Git push origin "v$Version"
 Write-Host "v$Version wurde hochgeladen. Den Build siehst du auf GitHub unter 'Actions', danach unter 'Releases'." -ForegroundColor Green
