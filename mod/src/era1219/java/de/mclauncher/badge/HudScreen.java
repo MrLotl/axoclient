@@ -2,6 +2,7 @@ package de.mclauncher.badge;
 
 import de.mclauncher.badge.hud.HudEditor;
 import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.gui.DrawContext;
@@ -50,6 +51,11 @@ public class HudScreen extends Screen {
 		if (click.button() == 0)
 			editor.mouseUp();
 		return click.button() == 0 || super.mouseReleased(click);
+	}
+
+	@Override
+	public boolean charTyped(CharInput input) {
+		return editor.charTyped(input.codepoint()) || super.charTyped(input);
 	}
 
 	@Override

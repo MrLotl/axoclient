@@ -154,6 +154,8 @@
                 </DockPanel>
 
                 <StackPanel x:Name="DetailTabs" DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,14">
+                    <RadioButton x:Name="OverviewTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Übersicht" Checked="DetailTab_Checked"/>
                     <RadioButton x:Name="ModsTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
                                  Content="Mods" Checked="DetailTab_Checked"/>
                     <RadioButton x:Name="PacksTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
@@ -171,7 +173,8 @@
                 </StackPanel>
 
                 <Grid>
-                    <pages:ContentPanel x:Name="ContentView"/>
+                    <pages:InstanceOverview x:Name="OverviewView"/>
+                    <pages:ContentPanel x:Name="ContentView" Visibility="Collapsed"/>
                     <pages:WorldsPanel x:Name="WorldsView" Visibility="Collapsed"/>
                     <pages:ServersPanel x:Name="ServersView" Visibility="Collapsed"/>
                     <ScrollViewer x:Name="TransferView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">

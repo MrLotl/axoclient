@@ -39,9 +39,6 @@
                                 Background="#0DFFFFFF" Drop="DropZone_Drop" DragOver="DropZone_DragOver"
                                 MouseLeftButtonUp="DropZone_Click" BorderBrush="#44FFFFFF" BorderThickness="1.5">
                             <DockPanel>
-                                <Image x:Name="NewSkinPreview" DockPanel.Dock="Left" Width="48" Height="96"
-                                       Margin="0,0,16,0" RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                       Visibility="Collapsed"/>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock x:Name="DropText" Foreground="White" FontWeight="SemiBold"
                                                Text="Skin-Datei (PNG) hierher ziehen oder klicken"/>
@@ -52,6 +49,10 @@
                         </Border>
 
                         <StackPanel x:Name="NewSkinOptions" Visibility="Collapsed" Margin="0,12,0,0">
+                            <Border Background="#14FFFFFF" CornerRadius="10" Padding="10" Margin="0,0,0,12"
+                                    HorizontalAlignment="Left">
+                                <pages:SkinViewer x:Name="NewSkinPreview" Width="170" Height="230"/>
+                            </Border>
                             <TextBlock Text="Name" Style="{StaticResource FieldLabel}"/>
                             <TextBox x:Name="NewSkinName" Style="{StaticResource LauncherTextBox}" Margin="0,0,0,12"/>
                             <TextBlock Text="Modell" Style="{StaticResource FieldLabel}"/>

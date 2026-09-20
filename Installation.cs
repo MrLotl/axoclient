@@ -22,6 +22,16 @@ public class Installation
 
     public string GameDir { get; set; } = "";
 
+    /// <summary>Eigener Arbeitsspeicher (MB) für diese Instanz; null = Wert aus den Launcher-Einstellungen.</summary>
+    public int? MaxRamMb { get; set; }
+
+    // Statistik (wird beim Spielen gepflegt)
+    public long PlayTimeSeconds { get; set; }
+    public int LaunchCount { get; set; }
+    public DateTime? LastPlayedUtc { get; set; }
+    public int CrashCount { get; set; }
+    public DateTime? LastCrashUtc { get; set; }
+
     /// <summary>Eigenes Bild (Dateiname unter ".axoclient/icons"); null = automatisch das Weltbild.</summary>
     public string? IconFile { get; set; }
 

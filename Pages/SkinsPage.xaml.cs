@@ -237,7 +237,6 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
         ClassicRadio.IsChecked = true;
         UpdateNewPreview();
         DropText.Text = Path.GetFileName(path);
-        NewSkinPreview.Visibility = Visibility.Visible;
         NewSkinOptions.Visibility = Visibility.Visible;
     }
 
@@ -246,7 +245,7 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
     private void UpdateNewPreview()
     {
         if (_newSkin != null)
-            NewSkinPreview.Source = SkinRenderer.RenderFront(_newSkin, SlimRadio.IsChecked == true);
+            NewSkinPreview.SetSkin(_newSkin, SlimRadio.IsChecked == true);
     }
 
     private string NewName => string.IsNullOrWhiteSpace(NewSkinName.Text) ? "Skin" : NewSkinName.Text.Trim();
@@ -276,7 +275,7 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
     private void ResetNewSkin()
     {
         _newSkin = null;
-        NewSkinPreview.Visibility = Visibility.Collapsed;
+        NewSkinPreview.SetSkin(null, false);
         NewSkinOptions.Visibility = Visibility.Collapsed;
         DropText.Text = "Skin-Datei (PNG) hierher ziehen oder klicken";
     }

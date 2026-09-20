@@ -1,5 +1,6 @@
 package de.mclauncher.badge.hud;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -34,6 +35,14 @@ public final class HudConfig {
 	public static final int MIN_CORNER = 0;
 	public static final int MAX_CORNER = 10;
 
+	/** Höchstens so viele Farbregeln je Anzeige. */
+	public static final int MAX_RULES = 4;
+	public static final int MAX_DECIMALS = 3;
+	/** Trenner zwischen den Koordinaten nebeneinander. */
+	public static final String[] SEPARATORS = { " / ", " | ", ", ", "  " };
+	public static final String[] SEPARATOR_NAMES = { "/", "|", ",", "Leerzeichen" };
+	public static final String[] ALIGN_NAMES = { "Links", "Mitte", "Rechts" };
+
 	/** Zustand und Aussehen einer einzelnen Anzeige. */
 	public static final class Entry {
 		public boolean enabled;
@@ -56,6 +65,36 @@ public final class HudConfig {
 		/** Frei gewählte Textfarbe als 0xRRGGBB. */
 		public int textRgb;
 		public boolean shadow;
+
+		// ---- Text und Format ----
+		/** Kurzen Namen vor den Wert schreiben ("Ping: 45 ms"). */
+		public boolean labels;
+		/** Einheit hinter den Wert schreiben. */
+		public boolean units;
+		/** Nachkommastellen bei Koordinaten, Winkel, Tempo, Speicher. */
+		public int decimals;
+		/** Nummer der Darstellung, siehe HudModule.variants. */
+		public int variant;
+		/** Koordinaten untereinander statt in einer Zeile. */
+		public boolean stacked;
+		/** Trenner bei Koordinaten in einer Zeile, siehe SEPARATORS. */
+		public int separator;
+		/** Welche Achsen die Koordinaten zeigen (X, Y, Z). */
+		public final boolean[] axes = { true, true, true };
+		/** Himmelsrichtung hinter den Koordinaten. */
+		public boolean facing;
+		/** Ausrichtung mehrzeiliger Texte: 0 links, 1 Mitte, 2 rechts. */
+		public int align;
+
+		// ---- Farbe nach Wert und Sichtbarkeit ----
+		public boolean rulesOn;
+		public int ruleCount;
+		/** Ab diesem Wert gilt die Farbe daneben. */
+		public final int[] ruleAt = new int[MAX_RULES];
+		public final int[] ruleRgb = new int[MAX_RULES];
+		/** 0 immer zeigen, 1 nur unter der Grenze, 2 nur ab der Grenze. */
+		public int showMode;
+		public int showLimit;
 
 		// ---- nur bei Anzeigen mit HudModule.equipment ----
 		/** Ausrüstung untereinander statt nebeneinander. */
@@ -85,6 +124,12 @@ public final class HudConfig {
 			this.vertical = false;
 			this.percent = true;
 			this.split = false;
+			this.labels = false;
+			this.units = true;
+			this.decimals = module == HudModule.COORDS ? 0 : 1;
+			this.variant = 0;
+			this.showLimit = module.metric == null ? 0 : module.metric.max() / 2;
+			seedRules(module);
 			for (HudSlot slot : HudSlot.values()) {
 				this.slots[slot.ordinal()] = slot.defaultEnabled;
 				// Beim ersten Zerlegen stehen die Stücke untereinander, damit sie sich nicht überdecken
@@ -108,6 +153,35 @@ public final class HudConfig {
 			return 0xFF000000 | (textRgb & 0xFFFFFF);
 		}
 
+		/** Setzt die Standardregeln der Anzeige (Ping grün bis rot usw.). */
+		public void seedRules(HudModule module) {
+			if (module.metric == null)
+				return;
+			ruleCount = Math.min(MAX_RULES, module.metric.defaultAt().length);
+			for (int i = 0; i < ruleCount; i++) {
+				ruleAt[i] = module.metric.defaultAt()[i];
+				ruleRgb[i] = module.metric.defaultRgb()[i];
+			}
+		}
+
+		/** Textfarbe für einen gemessenen Wert; ohne Regeln die gewählte Farbe. */
+		public int colorFor(Double value, int fallbackArgb) {
+			if (!rulesOn || value == null || ruleCount == 0)
+				return fallbackArgb;
+			int best = -1;
+			for (int i = 0; i < ruleCount; i++)
+				if (value >= ruleAt[i] && (best < 0 || ruleAt[i] >= ruleAt[best]))
+					best = i;
+			return best < 0 ? fallbackArgb : 0xFF000000 | (ruleRgb[best] & 0xFFFFFF);
+		}
+
+		/** Ob die Anzeige bei diesem Wert im Bild steht ("nur bei Bedarf"). */
+		public boolean visibleFor(Double value) {
+			if (showMode == 0 || value == null)
+				return true;
+			return showMode == 1 ? value < showLimit : value >= showLimit;
+		}
+
 		/** Ob der Platz gezeigt werden soll; unbekannte Nummern zählen als "aus". */
 		public boolean slotEnabled(int slot) {
 			return slot >= 0 && slot < slots.length && slots[slot];
@@ -125,9 +199,18 @@ public final class HudConfig {
 	/** Zuletzt benutzte Art, Farben einzustellen: 0 = RGB, 1 = HSL, 2 = Hex. */
 	public int colorMode;
 
+	/** Name des zuletzt geladenen oder gespeicherten Profils (nur zur Anzeige), sonst leer. */
+	public String activeProfile = "";
+
 	private HudConfig(Path file) {
 		this.file = file;
 		reset();
+		HudText.bind(this);
+	}
+
+	/** Ordner mit den gespeicherten Profilen. */
+	public Path profilesDir() {
+		return file.getParent().resolve("axoclient-hud-profiles");
 	}
 
 	/** Lädt die Einstellungen; bei Fehlern (oder beim ersten Start) gelten die Standardwerte. */
@@ -136,18 +219,24 @@ public final class HudConfig {
 		try {
 			if (!Files.exists(config.file))
 				return config;
-			JsonObject json = JsonParser.parseString(Files.readString(config.file, StandardCharsets.UTF_8))
-				.getAsJsonObject();
-			config.readGlobals(json);
-			for (HudModule module : HudModule.values()) {
-				if (!json.has(module.id))
-					continue;
-				config.readEntry(config.entries.get(module), json.getAsJsonObject(module.id));
-			}
+			config.apply(JsonParser.parseString(Files.readString(config.file, StandardCharsets.UTF_8))
+				.getAsJsonObject());
 		} catch (Exception e) {
 			config.reset(); // kaputte Datei: lieber von vorn als gar keine Anzeigen
 		}
 		return config;
+	}
+
+	/**
+	 * Übernimmt Einstellungen aus JSON (Datei oder Profil) über die aktuellen. Fehlendes bleibt wie es
+	 * war; wer alles ersetzen will, ruft vorher {@link #reset()}.
+	 */
+	public void apply(JsonObject json) {
+		readGlobals(json);
+		for (HudModule module : HudModule.values()) {
+			if (json.has(module.id) && json.get(module.id).isJsonObject())
+				readEntry(entries.get(module), json.getAsJsonObject(module.id));
+		}
 	}
 
 	private void readGlobals(JsonObject json) {
@@ -162,6 +251,8 @@ public final class HudConfig {
 			snap = json.get("einrasten").getAsBoolean();
 		if (json.has("farbmodus"))
 			colorMode = Math.max(0, Math.min(2, json.get("farbmodus").getAsInt()));
+		if (json.has("profil"))
+			activeProfile = json.get("profil").getAsString();
 	}
 
 	private void readEntry(Entry entry, JsonObject saved) {
@@ -199,6 +290,42 @@ public final class HudConfig {
 			entry.textRgb = saved.get("textRgb").getAsInt() & 0xFFFFFF;
 		if (saved.has("shadow"))
 			entry.shadow = saved.get("shadow").getAsBoolean();
+		if (saved.has("labels"))
+			entry.labels = saved.get("labels").getAsBoolean();
+		if (saved.has("units"))
+			entry.units = saved.get("units").getAsBoolean();
+		if (saved.has("decimals"))
+			entry.decimals = Math.max(0, Math.min(MAX_DECIMALS, saved.get("decimals").getAsInt()));
+		if (saved.has("variant"))
+			entry.variant = Math.max(0, saved.get("variant").getAsInt());
+		if (saved.has("stacked"))
+			entry.stacked = saved.get("stacked").getAsBoolean();
+		if (saved.has("separator"))
+			entry.separator = HudSkin.wrap(saved.get("separator").getAsInt(), SEPARATORS.length);
+		if (saved.has("facing"))
+			entry.facing = saved.get("facing").getAsBoolean();
+		if (saved.has("align"))
+			entry.align = HudSkin.wrap(saved.get("align").getAsInt(), ALIGN_NAMES.length);
+		if (saved.has("axes") && saved.get("axes").isJsonArray()) {
+			JsonArray axes = saved.getAsJsonArray("axes");
+			for (int i = 0; i < entry.axes.length && i < axes.size(); i++)
+				entry.axes[i] = axes.get(i).getAsBoolean();
+		}
+		if (saved.has("farbregeln"))
+			entry.rulesOn = saved.get("farbregeln").getAsBoolean();
+		if (saved.has("regeln") && saved.get("regeln").isJsonArray()) {
+			JsonArray rules = saved.getAsJsonArray("regeln");
+			entry.ruleCount = Math.min(MAX_RULES, rules.size());
+			for (int i = 0; i < entry.ruleCount; i++) {
+				JsonObject rule = rules.get(i).getAsJsonObject();
+				entry.ruleAt[i] = rule.get("ab").getAsInt();
+				entry.ruleRgb[i] = rule.get("farbe").getAsInt() & 0xFFFFFF;
+			}
+		}
+		if (saved.has("zeigen"))
+			entry.showMode = Math.max(0, Math.min(2, saved.get("zeigen").getAsInt()));
+		if (saved.has("grenze"))
+			entry.showLimit = saved.get("grenze").getAsInt();
 		if (!saved.has("slots"))
 			return;
 		JsonObject slots = saved.getAsJsonObject("slots");
@@ -215,8 +342,8 @@ public final class HudConfig {
 		}
 	}
 
-	public void save() {
-		try {
+	/** Alle Einstellungen als JSON – für die Datei und für Profile. */
+	public JsonObject toJson() {
 			JsonObject json = new JsonObject();
 			JsonObject raster = new JsonObject();
 			raster.addProperty("an", grid);
@@ -224,9 +351,16 @@ public final class HudConfig {
 			json.add("raster", raster);
 			json.addProperty("einrasten", snap);
 			json.addProperty("farbmodus", colorMode);
+			json.addProperty("profil", activeProfile);
 
 			for (HudModule module : HudModule.values())
 				json.add(module.id, write(entries.get(module)));
+			return json;
+	}
+
+	public void save() {
+		try {
+			JsonObject json = toJson();
 			Files.createDirectories(file.getParent());
 			Files.writeString(file, json.toString(), StandardCharsets.UTF_8);
 		} catch (IOException e) {
@@ -250,6 +384,29 @@ public final class HudConfig {
 		saved.addProperty("border", entry.border);
 		saved.addProperty("textRgb", entry.textRgb);
 		saved.addProperty("shadow", entry.shadow);
+		saved.addProperty("labels", entry.labels);
+		saved.addProperty("units", entry.units);
+		saved.addProperty("decimals", entry.decimals);
+		saved.addProperty("variant", entry.variant);
+		saved.addProperty("stacked", entry.stacked);
+		saved.addProperty("separator", entry.separator);
+		saved.addProperty("facing", entry.facing);
+		saved.addProperty("align", entry.align);
+		JsonArray axes = new JsonArray();
+		for (boolean axis : entry.axes)
+			axes.add(axis);
+		saved.add("axes", axes);
+		saved.addProperty("farbregeln", entry.rulesOn);
+		JsonArray rules = new JsonArray();
+		for (int i = 0; i < entry.ruleCount; i++) {
+			JsonObject rule = new JsonObject();
+			rule.addProperty("ab", entry.ruleAt[i]);
+			rule.addProperty("farbe", entry.ruleRgb[i]);
+			rules.add(rule);
+		}
+		saved.add("regeln", rules);
+		saved.addProperty("zeigen", entry.showMode);
+		saved.addProperty("grenze", entry.showLimit);
 		JsonObject slots = new JsonObject();
 		for (HudSlot slot : HudSlot.values()) {
 			JsonObject one = new JsonObject();
@@ -270,6 +427,7 @@ public final class HudConfig {
 		gridSize = 8;
 		snap = true;
 		colorMode = 0;
+		activeProfile = "";
 	}
 
 	public Entry get(HudModule module) {

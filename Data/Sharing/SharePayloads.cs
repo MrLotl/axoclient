@@ -276,11 +276,15 @@ public sealed class OverlayPayload : SharePayload
     /// <summary>Aus welcher Instanz sie stammen (nur zur Anzeige).</summary>
     public string Name { get; set; } = "";
 
+    /// <summary>Name des Profils, falls ein Profil geteilt wird (leer = die aktiven Einstellungen).</summary>
+    public string ProfileName { get; set; } = "";
+
     public JsonElement Config { get; set; }
 
     public override void Validate()
     {
         Name = ShareValidation.CleanText(Name, 60);
+        ProfileName = OverlayConfigFile.CleanProfileName(ProfileName);
         if (Config.ValueKind != JsonValueKind.Object)
             throw new ShareFormatException("Die Overlay-Einstellungen sind leer oder beschädigt.");
         if (Config.GetRawText().Length > ShareValidation.MaxOverlayChars)

@@ -78,7 +78,7 @@ public final class AxoHud {
 
 		if (client.level != null) {
 			texts.put(HudModule.WORLD_TIME, HudText.worldTime(client.level.getOverworldClockTime()));
-			texts.put(HudModule.BIOME, biome(client.level, player.blockPosition()));
+			texts.put(HudModule.BIOME, HudText.biome(biome(client.level, player.blockPosition())));
 		}
 		if (client.getConnection() != null) {
 			PlayerInfo info = client.getConnection().getPlayerInfo(player.getUUID());

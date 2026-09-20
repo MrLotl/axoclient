@@ -3,6 +3,7 @@ package de.mclauncher.badge;
 import de.mclauncher.badge.hud.HudEditor;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -50,6 +51,11 @@ public class HudScreen extends Screen {
 		if (event.button() == 0)
 			editor.mouseUp();
 		return event.button() == 0 || super.mouseReleased(event);
+	}
+
+	@Override
+	public boolean charTyped(CharacterEvent event) {
+		return editor.charTyped(event.codepoint()) || super.charTyped(event);
 	}
 
 	@Override

@@ -75,7 +75,7 @@ public class GameInstaller(string sharedDir, HttpClient http)
         var option = new MLaunchOption
         {
             Session = session,
-            MaximumRamMb = settings.MaxRamMb,
+            MaximumRamMb = inst.MaxRamMb ?? settings.MaxRamMb,
             FullScreen = settings.FullScreen
         };
         if (settings.GameWidth > 0 && settings.GameHeight > 0)

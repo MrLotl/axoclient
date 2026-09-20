@@ -65,6 +65,8 @@ public partial class InstancesPage : UserControl
             DetailTitle.Text = _current.Name;
             DetailSubtitle.Text = _current.Description;
             PlayButtons.Apply(DetailPlayButton, _app.IsRunning(_current));
+            if (OverviewView.IsVisible)
+                OverviewView.Refresh();
         }
     }
 
@@ -127,7 +129,7 @@ public partial class InstancesPage : UserControl
         DetailSubtitle.Text = "Name, Mod-Loader und Minecraft-Version wählen";
         DetailTabs.Visibility = Visibility.Collapsed;
         DetailActions.Visibility = Visibility.Collapsed;
-        ContentView.Visibility = WorldsView.Visibility = ServersView.Visibility = TransferView.Visibility =
+        OverviewView.Visibility = ContentView.Visibility = WorldsView.Visibility = ServersView.Visibility = TransferView.Visibility =
             Visibility.Collapsed;
         Editor.Visibility = Visibility.Visible;
         Editor.Edit(_app, null);
@@ -158,10 +160,9 @@ public partial class InstancesPage : UserControl
         OverviewPanel.Visibility = Visibility.Collapsed;
         DetailPanel.Visibility = Visibility.Visible;
 
-        // Vanilla hat keine Mods, daher mit Ressourcenpaketen beginnen
-        var tab = openSettings ? SettingsTab : inst.Loader == LoaderType.Vanilla ? PacksTab : ModsTab;
+        var tab = openSettings ? SettingsTab : OverviewTab;
         _switchingTab = true;
-        foreach (var t in new[] { ModsTab, PacksTab, ShadersTab, WorldsTab, ServersTab, TransferTab, SettingsTab })
+        foreach (var t in new[] { OverviewTab, ModsTab, PacksTab, ShadersTab, WorldsTab, ServersTab, TransferTab, SettingsTab })
             t.IsChecked = t == tab;
         _switchingTab = false;
         ShowTab();
@@ -178,6 +179,7 @@ public partial class InstancesPage : UserControl
         if (_current == null)
             return;
 
+        OverviewView.Visibility = OverviewTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         var content = ModsTab.IsChecked == true || PacksTab.IsChecked == true || ShadersTab.IsChecked == true;
         ContentView.Visibility = content ? Visibility.Visible : Visibility.Collapsed;
         WorldsView.Visibility = WorldsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -185,7 +187,9 @@ public partial class InstancesPage : UserControl
         TransferView.Visibility = TransferTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         Editor.Visibility = SettingsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
-        if (content)
+        if (OverviewTab.IsChecked == true)
+            OverviewView.Show(_app, _current);
+        else if (content)
         {
             var type = ModsTab.IsChecked == true ? ContentType.Mod
                 : ShadersTab.IsChecked == true ? ContentType.Shader

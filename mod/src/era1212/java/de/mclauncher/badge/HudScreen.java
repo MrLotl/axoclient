@@ -49,6 +49,11 @@ public class HudScreen extends Screen {
 	}
 
 	@Override
+	public boolean charTyped(char chr, int modifiers) {
+		return editor.charTyped(chr) || super.charTyped(chr, modifiers);
+	}
+
+	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		return editor.keyPressed(keyCode) || super.keyPressed(keyCode, scanCode, modifiers);
 	}

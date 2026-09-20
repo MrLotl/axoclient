@@ -30,6 +30,8 @@
                     <TextBlock Text="Spielfenster" Style="{StaticResource SectionTitle}"/>
                     <CheckBox x:Name="FullScreenCheck" Content="Im Vollbild starten" Margin="0,0,0,12"
                               Click="Check_Click"/>
+                    <CheckBox x:Name="MaximizeCheck" Content="Maximiert starten (Fenster füllt den Bildschirm)" Margin="0,0,0,12"
+                              Click="Check_Click"/>
                     <TextBlock Text="Fenstergröße (leer = Standard)" Style="{StaticResource FieldLabel}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
                         <TextBox x:Name="WidthBox" Style="{StaticResource LauncherTextBox}" Width="100"

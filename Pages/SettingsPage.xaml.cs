@@ -32,6 +32,7 @@ public partial class SettingsPage : UserControl
 
         JvmArgsBox.Text = s.JvmArguments;
         FullScreenCheck.IsChecked = s.FullScreen;
+        MaximizeCheck.IsChecked = s.MaximizeOnLaunch;
         WidthBox.Text = s.GameWidth > 0 ? s.GameWidth.ToString() : "";
         HeightBox.Text = s.GameHeight > 0 ? s.GameHeight.ToString() : "";
         MinimizeCheck.IsChecked = s.MinimizeOnLaunch;
@@ -66,6 +67,7 @@ public partial class SettingsPage : UserControl
         var s = _app.Settings;
         s.JvmArguments = JvmArgsBox.Text.Trim();
         s.FullScreen = FullScreenCheck.IsChecked == true;
+        s.MaximizeOnLaunch = MaximizeCheck.IsChecked == true;
         s.GameWidth = int.TryParse(WidthBox.Text, out var w) ? w : 0;
         s.GameHeight = int.TryParse(HeightBox.Text, out var h) ? h : 0;
         s.MinimizeOnLaunch = MinimizeCheck.IsChecked == true;

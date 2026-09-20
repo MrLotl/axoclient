@@ -124,6 +124,11 @@ public class AppState
     /// <summary>Ein Spiel wurde gestartet oder beendet (im UI-Thread).</summary>
     public event Action? RunningGamesChanged;
 
+    /// <summary>Ein Spiel ist mit einem Fehlercode beendet worden (im UI-Thread).</summary>
+    public event Action<Installation>? GameCrashed;
+
+    private readonly HashSet<string> _stopRequested = [];
+
     public bool IsRunning(Installation inst)
     {
         lock (_runningGames)
@@ -133,14 +138,37 @@ public class AppState
     /// <summary>Merkt sich das gestartete Spiel, damit es angezeigt und beendet werden kann.</summary>
     public void TrackGame(Installation inst, System.Diagnostics.Process process)
     {
+        var startedAt = DateTime.UtcNow;
+        inst.LaunchCount++;
+        inst.LastPlayedUtc = startedAt;
+        Save();
         lock (_runningGames)
             _runningGames[inst.Id] = process;
         process.Exited += (_, _) => System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
         {
+            inst.PlayTimeSeconds += (long)Math.Max(0, (DateTime.UtcNow - startedAt).TotalSeconds);
+            var crashed = false;
+            try
+            {
+                // Ein vom Nutzer beendetes Spiel (Kill) hat einen Exit-Code ungleich 0, ist aber kein Absturz
+                crashed = process.ExitCode != 0 && !_stopRequested.Remove(inst.Id);
+            }
+            catch
+            {
+                // Code nicht lesbar
+            }
+            if (crashed)
+            {
+                inst.CrashCount++;
+                inst.LastCrashUtc = DateTime.UtcNow;
+            }
+            Save();
             lock (_runningGames)
                 if (_runningGames.TryGetValue(inst.Id, out var tracked) && tracked == process)
                     _runningGames.Remove(inst.Id);
             RunningGamesChanged?.Invoke();
+            if (crashed)
+                GameCrashed?.Invoke(inst);
         });
         RunningGamesChanged?.Invoke();
     }
@@ -157,6 +185,7 @@ public class AppState
                 $"\"{inst.Name}\" sofort beenden?\n\nMinecraft speichert Welten alle paar Minuten automatisch; " +
                 "was seitdem passiert ist, kann verloren gehen.", "Beenden", danger: true))
             return;
+        _stopRequested.Add(inst.Id);
         try
         {
             process.Kill(entireProcessTree: true);
@@ -249,7 +278,30 @@ public class AppState
     {
         await Friends.SetCapeAsync(capeId);
         ClientCapeId = capeId;
+        TellRunningGamesAboutCape(capeId);
         AccountChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Laufende Spiele bekommen den neuen Umhang über eine kleine Datei im Spielordner (die Mod liest sie jede Sekunde),
+    /// damit er sofort im Spiel erscheint. Andere Spieler sehen ihn nach wenigen Sekunden.
+    /// </summary>
+    private void TellRunningGamesAboutCape(string? capeId)
+    {
+        var uuid = Session?.UUID?.Replace("-", "").ToLowerInvariant();
+        if (string.IsNullOrEmpty(uuid))
+            return;
+        foreach (var inst in Settings.Installations.Where(IsRunning))
+        {
+            try
+            {
+                File.WriteAllText(Path.Combine(inst.GameDir, "axoclient-cape.txt"), uuid + "\n" + (capeId ?? ""));
+            }
+            catch
+            {
+                // Ordner nicht beschreibbar: die Mod fragt den Dienst ohnehin alle paar Sekunden
+            }
+        }
     }
 
     // ---------- Profil: Skin & Umhang ----------

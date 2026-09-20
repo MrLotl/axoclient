@@ -83,7 +83,7 @@ public final class AxoHud {
 
 		if (client.world != null) {
 			texts.put(HudModule.WORLD_TIME, HudText.worldTime(client.world.getTimeOfDay()));
-			texts.put(HudModule.BIOME, biome(client.world, player.getBlockPos()));
+			texts.put(HudModule.BIOME, HudText.biome(biome(client.world, player.getBlockPos())));
 		}
 		if (client.getNetworkHandler() != null) {
 			PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(player.getUuid());

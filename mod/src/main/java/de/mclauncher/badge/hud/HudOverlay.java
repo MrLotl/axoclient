@@ -15,6 +15,8 @@ public final class HudOverlay {
 	 * Vergrößern würde die Lücke darunter mitwachsen.
 	 */
 	public static final int LINE = 8;
+	/** Abstand von einer Textzeile zur nächsten, wenn ein Text mehrere Zeilen hat. */
+	public static final int LINE_STEP = 10;
 
 	/** Kantenlänge eines Ausrüstungsbildes und der Platz, den eines samt Abstand belegt. */
 	public static final int ICON = 16;
@@ -44,6 +46,8 @@ public final class HudOverlay {
 			if (!config.isEnabled(module))
 				continue;
 			HudConfig.Entry entry = config.get(module);
+			if (!editor && !entry.visibleFor(metricOf(module, painter, entry)))
+				continue; // "nur bei Bedarf": gerade nicht nötig
 			if (module.equipment && entry.split) {
 				for (HudSlot slot : HudSlot.values()) {
 					if (!entry.slots[slot.ordinal()])
@@ -90,8 +94,18 @@ public final class HudOverlay {
 		int color = entry.textArgb();
 		if (!element.module().equipment) {
 			String text = texts.get(element.module());
-			if (text != null && !text.isEmpty())
-				painter.text(text, x, y, color, entry.shadow);
+			if (text == null || text.isEmpty())
+				return;
+			color = entry.colorFor(HudText.metric(element.module()), color);
+			String[] lines = text.split("\n");
+			int widest = 0;
+			for (String line : lines)
+				widest = Math.max(widest, painter.textWidth(line));
+			for (int i = 0; i < lines.length; i++) {
+				int spare = widest - painter.textWidth(lines[i]);
+				int offset = entry.align == 1 ? spare / 2 : entry.align == 2 ? spare : 0;
+				painter.text(lines[i], x + offset, y + i * LINE_STEP, color, entry.shadow);
+			}
 			return;
 		}
 		if (element.isSlot()) {
@@ -124,7 +138,7 @@ public final class HudOverlay {
 			return;
 		int valueX = below ? x + (ICON - painter.textWidth(value)) / 2 : x + SLOT;
 		int valueY = below ? y + ICON + 2 : y + (ICON - 8) / 2;
-		painter.text(value, valueX, valueY, color, entry.shadow);
+		painter.text(value, valueX, valueY, entry.colorFor(percentOf(value), color), entry.shadow);
 	}
 
 	/**
@@ -136,7 +150,7 @@ public final class HudOverlay {
 		HudConfig.Entry entry = config.get(element.module());
 		float factor = entry.factor();
 		int width = Math.round(width(config, element, painter, texts) * factor);
-		int height = Math.round(height(config, element, painter) * factor);
+		int height = Math.round(height(config, element, painter, texts) * factor);
 		// Die Hintergrundfläche steht über den Inhalt hinaus und soll auch im Bild bleiben
 		int pad = entry.background ? pad(entry) : 0;
 		return new int[] {
@@ -176,7 +190,12 @@ public final class HudOverlay {
 		HudConfig.Entry entry = config.get(element.module());
 		if (!element.module().equipment) {
 			String text = texts.get(element.module());
-			return text == null || text.isEmpty() ? 0 : painter.textWidth(text);
+			if (text == null || text.isEmpty())
+				return 0;
+			int widest = 0;
+			for (String line : text.split("\n"))
+				widest = Math.max(widest, painter.textWidth(line));
+			return widest;
 		}
 		int value = entry.percent ? SLOT - ICON + painter.textWidth(WIDEST_PERCENT) : 0;
 		if (element.isSlot())
@@ -190,10 +209,14 @@ public final class HudOverlay {
 	}
 
 	/** Höhe ohne die eingestellte Größe. */
-	public static int height(HudConfig config, HudElement element, HudPainter painter) {
+	public static int height(HudConfig config, HudElement element, HudPainter painter,
+							Map<HudModule, String> texts) {
 		HudConfig.Entry entry = config.get(element.module());
-		if (!element.module().equipment)
-			return LINE;
+		if (!element.module().equipment) {
+			String text = texts.get(element.module());
+			int lines = text == null || text.isEmpty() ? 1 : text.split("\n").length;
+			return LINE + (lines - 1) * LINE_STEP;
+		}
 		if (element.isSlot())
 			return ICON;
 		if (entry.vertical)
@@ -208,6 +231,32 @@ public final class HudOverlay {
 			if (entry.slots[slot.ordinal()] && painter.hasEquipment(slot.ordinal()))
 				count++;
 		return count;
+	}
+
+	/** Der Zahlenwert einer Anzeige für Farbregeln und "nur bei Bedarf"; bei der Ausrüstung der schlechteste Platz. */
+	public static Double metricOf(HudModule module, HudPainter painter, HudConfig.Entry entry) {
+		if (!module.equipment)
+			return HudText.metric(module);
+		Double worst = null;
+		for (HudSlot slot : HudSlot.values()) {
+			if (!entry.slots[slot.ordinal()])
+				continue;
+			Double percent = percentOf(painter.durability(slot.ordinal()));
+			if (percent != null && (worst == null || percent < worst))
+				worst = percent;
+		}
+		return worst;
+	}
+
+	/** "87%" als Zahl, sonst null. */
+	private static Double percentOf(String value) {
+		if (value == null || !value.endsWith("%"))
+			return null;
+		try {
+			return Double.parseDouble(value.substring(0, value.length() - 1).trim());
+		} catch (NumberFormatException e) {
+			return null;
+		}
 	}
 
 	/** Hält die Anzeige im Bild, auch wenn sich die Fenstergröße geändert hat. */

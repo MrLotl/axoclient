@@ -27,7 +27,10 @@ import java.util.concurrent.TimeUnit;
  * unbekannte Spieler werden gesammelt und alle paar Sekunden gebündelt im Hintergrund abgefragt.
  */
 public final class BadgeService {
-	private static final long CACHE_MILLIS = TimeUnit.MINUTES.toMillis(10);
+	/** So schnell erscheint ein geänderter Umhang bei anderen Spielern (der Dienst wird nur gebündelt gefragt). */
+	private static final long CACHE_MILLIS = TimeUnit.SECONDS.toMillis(15);
+	/** Der Launcher legt hier ab, wenn der Spieler seinen Umhang ändert – dann gilt das sofort. */
+	private static final String LOCAL_CAPE_FILE = "axoclient-cape.txt";
 	private static final long ERROR_RETRY_MILLIS = TimeUnit.MINUTES.toMillis(1);
 	private static final int MAX_BATCH = 90; // Cloudflare D1 erlaubt höchstens 100 Parameter pro Abfrage
 
@@ -54,6 +57,7 @@ public final class BadgeService {
 			return thread;
 		});
 		executor.scheduleWithFixedDelay(BadgeService::flush, 1, 2, TimeUnit.SECONDS);
+		executor.scheduleWithFixedDelay(BadgeService::readLocalCape, 1, 1, TimeUnit.SECONDS);
 	}
 
 	/** Soll neben diesem Spieler das Symbol erscheinen? Blockiert nie. */
@@ -118,6 +122,34 @@ public final class BadgeService {
 				Entry old = CACHE.get(id);
 				CACHE.put(id, new Entry(old != null && old.badge(), old != null ? old.cape() : null, now + ERROR_RETRY_MILLIS));
 			}
+		}
+	}
+
+	private static long localCapeStamp;
+
+	/**
+	 * Der Launcher schreibt "<uuid>
+<umhang>" nach axoclient-cape.txt im Spielordner, sobald der Spieler seinen
+	 * Umhang ändert. So sieht er ihn im laufenden Spiel sofort, ohne auf die nächste Abfrage zu warten.
+	 */
+	private static void readLocalCape() {
+		try {
+			java.nio.file.Path file = java.nio.file.Path.of(System.getProperty("user.dir")).resolve(LOCAL_CAPE_FILE);
+			if (!java.nio.file.Files.exists(file))
+				return;
+			long stamp = java.nio.file.Files.getLastModifiedTime(file).toMillis();
+			if (stamp == localCapeStamp)
+				return;
+			localCapeStamp = stamp;
+			String[] lines = java.nio.file.Files.readString(file).split("\\R", -1);
+			if (lines.length == 0 || !lines[0].trim().matches("[0-9a-f]{32}"))
+				return;
+			String hex = lines[0].trim();
+			UUID id = UUID.fromString(hex.replaceFirst("(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)", "$1-$2-$3-$4-$5"));
+			String cape = lines.length > 1 && !lines[1].isBlank() ? lines[1].trim() : null;
+			CACHE.put(id, new Entry(true, cape, System.currentTimeMillis() + CACHE_MILLIS));
+		} catch (Exception ignored) {
+			// Datei gerade in Arbeit oder nicht lesbar: beim nächsten Mal
 		}
 	}
 

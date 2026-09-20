@@ -72,6 +72,81 @@ public static class OverlayConfigFile
         File.WriteAllText(path, config.GetRawText());
     }
 
+    // ---------- Profile: config/axoclient-hud-profiles/<Name>.json ----------
+
+    /// <summary>Höchstlänge eines Profilnamens (wie in der Mod).</summary>
+    public const int MaxProfileName = 24;
+
+    public static string ProfilesDir(Installation inst) => Path.Combine(inst.GameDir, "config", "axoclient-hud-profiles");
+
+    /// <summary>Nur Buchstaben, Ziffern, Leerzeichen, - und _ (es wird ein Dateiname); leer, wenn nichts übrig bleibt.</summary>
+    public static string CleanProfileName(string? name)
+    {
+        var clean = new string((name ?? "").Where(c => char.IsLetterOrDigit(c) || c is ' ' or '-' or '_').ToArray()).Trim();
+        return clean.Length > MaxProfileName ? clean[..MaxProfileName].Trim() : clean;
+    }
+
+    /// <summary>Namen der gespeicherten Profile, alphabetisch.</summary>
+    public static List<string> ProfileNames(Installation inst)
+    {
+        try
+        {
+            var dir = ProfilesDir(inst);
+            return Directory.Exists(dir)
+                ? Directory.GetFiles(dir, "*.json").Select(Path.GetFileNameWithoutExtension).OfType<string>()
+                    .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase).ToList()
+                : [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    public static JsonElement? ReadProfile(Installation inst, string name)
+    {
+        try
+        {
+            var clean = CleanProfileName(name);
+            var path = Path.Combine(ProfilesDir(inst), clean + ".json");
+            if (clean.Length == 0 || !File.Exists(path))
+                return null;
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            return doc.RootElement.ValueKind == JsonValueKind.Object ? doc.RootElement.Clone() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Legt ein Profil an (ein gleichnamiges wird ersetzt). Liefert den tatsächlichen Namen.</summary>
+    public static string WriteProfile(Installation inst, string name, JsonElement config)
+    {
+        var clean = CleanProfileName(name);
+        if (clean.Length == 0)
+            clean = "Profil";
+        Directory.CreateDirectory(ProfilesDir(inst));
+        File.WriteAllText(Path.Combine(ProfilesDir(inst), clean + ".json"), config.GetRawText());
+        return clean;
+    }
+
+    public static bool DeleteProfile(Installation inst, string name)
+    {
+        try
+        {
+            var path = Path.Combine(ProfilesDir(inst), CleanProfileName(name) + ".json");
+            if (!File.Exists(path))
+                return false;
+            File.Delete(path);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     /// <summary>Wie viele Anzeigen in den Einstellungen eingeschaltet sind (für die Vorschau).</summary>
     public static int CountEnabled(JsonElement config) =>
         config.ValueKind != JsonValueKind.Object

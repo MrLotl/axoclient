@@ -48,6 +48,9 @@ public class LauncherSettings
     public int GameWidth { get; set; }  // 0 = Standard
     public int GameHeight { get; set; } // 0 = Standard
     public bool FullScreen { get; set; }
+
+    /// <summary>Spielfenster nach dem Start maximieren (nicht im Vollbild).</summary>
+    public bool MaximizeOnLaunch { get; set; }
     public bool MinimizeOnLaunch { get; set; } = true;
 
     // Nur zum Übernehmen der Version aus älteren Launcher-Versionen (vor den Installationen)

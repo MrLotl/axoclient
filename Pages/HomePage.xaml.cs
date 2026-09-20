@@ -25,6 +25,7 @@ public partial class HomePage : UserControl
         _app.AccountChanged += UpdateAccount;
         _app.InstallationsChanged += RefreshInstallations;
         _app.RunningGamesChanged += UpdateControls;
+        _app.GameCrashed += OnGameCrashed;
         RefreshInstallations();
         UpdateAccount();
 
@@ -118,6 +119,8 @@ public partial class HomePage : UserControl
             process.Exited += (_, _) => _app.Discord.GameExited();
             process.Start();
             _app.Discord.GameStarted(_app.Settings, inst, quickPlay);
+            if (_app.Settings.MaximizeOnLaunch && !_app.Settings.FullScreen)
+                GameWindow.MaximizeWhenReady(process);
             GameStatusWatcher.Watch(_app, inst, quickPlay, process);
             _app.TrackGame(inst, process);
             _ = RegisterQuietlyAsync();

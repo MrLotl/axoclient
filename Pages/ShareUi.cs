@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,6 +21,12 @@ internal static class ShareUi
     }
 
     private sealed record ProjectName(string Id, string Title);
+
+    /// <summary>Eine Zeile bei der Overlay-Auswahl: die aktiven Einstellungen (Profil = null) oder ein Profil.</summary>
+    private sealed record OverlaySource(string? Profile)
+    {
+        public override string ToString() => Profile ?? "Aktuelle Einstellungen";
+    }
 
     // ================= Freunde =================
 
@@ -106,8 +113,9 @@ internal static class ShareUi
     /// Teilen-Dialog für eine Instanz. Ohne <paramref name="inst"/> lässt sich die Instanz im Dialog wählen
     /// (z.B. wenn er von der Freundesliste aus geöffnet wird).
     /// </summary>
-    public static Task ShareInstanceAsync(AppState app, Installation? inst = null, string? preselectFriend = null) =>
-        GuardAsync(app, () => ShareInstanceCoreAsync(app, inst, preselectFriend));
+    public static Task ShareInstanceAsync(AppState app, Installation? inst = null, string? preselectFriend = null,
+        string? overlayProfile = null) =>
+        GuardAsync(app, () => ShareInstanceCoreAsync(app, inst, preselectFriend, overlayProfile));
 
     /// <summary>Empfiehlt einen einzelnen Mod, ein Ressourcenpaket, einen Shader oder ein Modpack von Modrinth.</summary>
     public static Task ShareContentAsync(AppState app, ContentPayload payload, string? preselectFriend = null) =>
@@ -129,7 +137,8 @@ internal static class ShareUi
 
     // ================= Senden: Instanz oder Overlay =================
 
-    private static async Task ShareInstanceCoreAsync(AppState app, Installation? inst, string? preselectFriend)
+    private static async Task ShareInstanceCoreAsync(AppState app, Installation? inst, string? preselectFriend,
+        string? overlayProfile)
     {
         var choices = app.Settings.Installations.Select(i => new InstanceChoice(i)).ToList();
         if (choices.Count == 0)
@@ -148,10 +157,17 @@ internal static class ShareUi
 
         // Was: ganze Instanz oder nur das Overlay
         var whatGroup = Guid.NewGuid().ToString("N");
-        var whole = Ui.Choice("Ganze Instanz", whatGroup, true);
-        var overlayOnly = Ui.Choice("Nur das Overlay", whatGroup);
+        var whole = Ui.Choice("Ganze Instanz", whatGroup, overlayProfile == null);
+        var overlayOnly = Ui.Choice("Nur das Overlay", whatGroup, overlayProfile != null);
         form.Children.Add(Ui.Label("Was möchtest du teilen?"));
         form.Children.Add(Ui.Row(whole, overlayOnly));
+
+        // Beim Overlay: die aktiven Einstellungen oder eines der gespeicherten Profile
+        var overlaySource = Ui.Combo(new List<object>());
+        var overlayPanel = new StackPanel();
+        overlayPanel.Children.Add(Ui.Label("Welches Overlay?"));
+        overlayPanel.Children.Add(overlaySource);
+        form.Children.Add(overlayPanel);
 
         var mods = Ui.Check("Mods");
         var packs = Ui.Check("Ressourcenpakete");
@@ -193,6 +209,11 @@ internal static class ShareUi
         void RefreshItems()
         {
             var target = Current();
+            var sources = new List<object> { new OverlaySource(null) };
+            sources.AddRange(OverlayConfigFile.ProfileNames(target).Select(n => new OverlaySource(n)));
+            overlaySource.ItemsSource = sources;
+            overlaySource.SelectedItem = sources.OfType<OverlaySource>().FirstOrDefault(s => s.Profile == overlayProfile)
+                                         ?? sources[0];
             var store = new ContentStore(target, app.Http);
             var modCount = CountFiles(store, ContentType.Mod);
             var packCount = CountFiles(store, ContentType.ResourcePack);
@@ -211,6 +232,7 @@ internal static class ShareUi
         void RefreshVisibility()
         {
             items.Visibility = whole.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            overlayPanel.Visibility = overlayOnly.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             friendPanel.Visibility = toFriends.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             fileNote.Visibility = toFile.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -223,6 +245,10 @@ internal static class ShareUi
         RefreshItems();
         RefreshVisibility();
 
+        JsonElement? ChosenOverlay() => (overlaySource.SelectedItem as OverlaySource)?.Profile is { } profile
+            ? OverlayConfigFile.ReadProfile(Current(), profile)
+            : OverlayConfigFile.Read(Current());
+
         bool AnyItem() => new[] { mods, packs, shaders, servers, options, overlay }.Any(b => b.IsEnabled && b.IsChecked == true);
 
         bool Validate()
@@ -232,7 +258,7 @@ internal static class ShareUi
                 reason = "Wähle mindestens einen Freund aus.";
             else if (whole.IsChecked == true && !AnyItem())
                 reason = "Wähle aus, was geteilt werden soll.";
-            else if (overlayOnly.IsChecked == true && OverlayConfigFile.Read(Current()) == null)
+            else if (overlayOnly.IsChecked == true && ChosenOverlay() == null)
                 reason = "Für diese Instanz gibt es noch keine Overlay-Einstellungen. Öffne im Spiel mit der rechten " +
                          "Umschalttaste das Overlay-Menü und speichere sie dort.";
             problemText.Text = reason ?? "";
@@ -246,6 +272,7 @@ internal static class ShareUi
         // ---- Auswerten ----
         var source = Current();
         var onlyOverlay = overlayOnly.IsChecked == true;
+        var chosenProfile = (overlaySource.SelectedItem as OverlaySource)?.Profile;
         var exportOptions = new ExportOptions(
             mods.IsEnabled && mods.IsChecked == true, packs.IsEnabled && packs.IsChecked == true,
             shaders.IsEnabled && shaders.IsChecked == true, servers.IsEnabled && servers.IsChecked == true,
@@ -259,7 +286,7 @@ internal static class ShareUi
             {
                 Title = "Paket speichern",
                 Filter = "AxoClient-Paket (*.json)|*.json",
-                FileName = SafeFileName(source.Name) + (onlyOverlay ? "-overlay" : "") + ".axoclient.json"
+                FileName = SafeFileName(chosenProfile ?? source.Name) + (onlyOverlay ? "-overlay" : "") + ".axoclient.json"
             };
             if (save.ShowDialog(Application.Current.MainWindow) != true)
                 return;
@@ -267,25 +294,28 @@ internal static class ShareUi
         }
 
         var report = await UiRun.RunAsync(app, "Paket wird vorbereitet",
-            progress => BuildAndDeliverAsync(app, source, onlyOverlay, exportOptions, recipients, filePath, progress),
+            progress => BuildAndDeliverAsync(app, source, onlyOverlay ? chosenProfile ?? "" : null, exportOptions, recipients, filePath,
+                progress),
             "Teilen fehlgeschlagen");
         if (report != null)
             await UiRun.ShowReportAsync(app, "Geteilt", report);
     }
 
-    private static async Task<List<string>> BuildAndDeliverAsync(AppState app, Installation inst, bool overlayOnly,
+    private static async Task<List<string>> BuildAndDeliverAsync(AppState app, Installation inst, string? overlayOnly,
         ExportOptions options, List<FriendInfo> recipients, string? filePath, WorkProgress progress)
     {
         var report = new List<string>();
         string kind, title, json;
-        if (overlayOnly)
+        if (overlayOnly != null)
         {
-            var config = OverlayConfigFile.Read(inst)
-                         ?? throw new InvalidOperationException("Für diese Instanz gibt es noch keine Overlay-Einstellungen.");
-            var payload = new OverlayPayload { Name = inst.Name, Config = config };
+            // "" = aktive Einstellungen, sonst der Name eines Profils
+            var config = (overlayOnly.Length == 0 ? OverlayConfigFile.Read(inst) : OverlayConfigFile.ReadProfile(inst, overlayOnly))
+                         ?? throw new InvalidOperationException("Diese Overlay-Einstellungen gibt es nicht (mehr).");
+            var payload = new OverlayPayload { Name = inst.Name, ProfileName = overlayOnly, Config = config };
             payload.Validate();
-            (kind, title, json) = (ShareKinds.Overlay, $"Overlay aus {inst.Name}", ShareJson.Write(payload));
-            report.Add($"Overlay-Einstellungen aus \"{inst.Name}\" ({OverlayConfigFile.CountEnabled(config)} Anzeigen eingeschaltet).");
+            var label = overlayOnly.Length == 0 ? "Overlay" : $"Overlay-Profil {payload.ProfileName}";
+            (kind, title, json) = (ShareKinds.Overlay, $"{label} aus {inst.Name}", ShareJson.Write(payload));
+            report.Add($"{label} aus \"{inst.Name}\" ({OverlayConfigFile.CountEnabled(config)} Anzeigen eingeschaltet).");
         }
         else
         {
@@ -560,25 +590,61 @@ internal static class ShareUi
     private static async Task<bool> ReceiveOverlayAsync(AppState app, OverlayPayload payload, string source)
     {
         var count = OverlayConfigFile.CountEnabled(payload.Config);
+        var what = payload.ProfileName.Length > 0 ? $"Overlay-Profil \"{payload.ProfileName}\"" : "Overlay-Einstellungen";
         var target = await ChooseInstanceAsync(app, "Overlay übernehmen",
-            $"Overlay-Einstellungen {source}" + (payload.Name.Length > 0 ? $" (aus \"{payload.Name}\")" : "") +
-            $": {count} Anzeigen eingeschaltet.\n\nIn welche Instanz sollen sie übernommen werden? " +
-            "Die bisherigen Einstellungen bleiben als Sicherung (.bak) erhalten.",
-            _ => true, preferred: i => Badge.IsActiveFor(i, app.Settings), confirmText: "Übernehmen");
+            $"{what} {source}" + (payload.Name.Length > 0 ? $" (aus \"{payload.Name}\")" : "") +
+            $": {count} Anzeigen eingeschaltet.\n\nIn welche Instanz sollen sie übernommen werden?",
+            _ => true, preferred: i => Badge.IsActiveFor(i, app.Settings), confirmText: "Weiter");
         if (target == null)
             return false;
 
-        if (app.IsRunning(target))
+        // Als Profil ablegen (zum Umschalten im Spiel) und/oder gleich aktivieren
+        var existing = OverlayConfigFile.ProfileNames(target);
+        var nameBox = Ui.Input(payload.ProfileName.Length > 0 ? payload.ProfileName
+            : payload.Name.Length > 0 ? OverlayConfigFile.CleanProfileName("Overlay " + payload.Name) : "Overlay");
+        var asProfile = Ui.Check("Als Profil speichern");
+        var activate = Ui.Check("Sofort aktivieren (ersetzt die aktuellen Einstellungen, Sicherung als .bak)", false);
+        var note = Ui.Note("", 6, 11);
+        var form = new StackPanel();
+        form.Children.Add(asProfile);
+        form.Children.Add(Ui.Label("Name des Profils"));
+        form.Children.Add(nameBox);
+        form.Children.Add(activate);
+        form.Children.Add(note);
+
+        bool Validate()
+        {
+            var name = OverlayConfigFile.CleanProfileName(nameBox.Text);
+            nameBox.IsEnabled = asProfile.IsChecked == true;
+            note.Text = asProfile.IsChecked == true && existing.Contains(name, StringComparer.OrdinalIgnoreCase)
+                ? $"Ein Profil \"{name}\" gibt es schon; es wird ersetzt."
+                : "";
+            return activate.IsChecked == true || (asProfile.IsChecked == true && name.Length > 0);
+        }
+
+        nameBox.TextChanged += (_, _) => Validate();
+        asProfile.Click += (_, _) => Validate();
+        activate.Click += (_, _) => Validate();
+        Validate();
+        if (!await app.Dialogs.ShowFormAsync("Overlay übernehmen", form, "Übernehmen", Validate))
+            return false;
+
+        var doActivate = activate.IsChecked == true;
+        if (doActivate && app.IsRunning(target))
         {
             await app.Dialogs.ShowMessageAsync("Minecraft läuft noch",
                 $"\"{target.Name}\" läuft gerade und würde die Einstellungen beim Schließen wieder überschreiben. " +
-                "Beende das Spiel und öffne das Paket danach erneut.");
+                "Beende das Spiel und öffne das Paket danach erneut, oder speichere es nur als Profil.");
             return false;
         }
 
+        string? savedAs = null;
         try
         {
-            OverlayConfigFile.Write(target, payload.Config);
+            if (asProfile.IsChecked == true)
+                savedAs = OverlayConfigFile.WriteProfile(target, nameBox.Text, payload.Config);
+            if (doActivate)
+                OverlayConfigFile.Write(target, payload.Config);
         }
         catch (IOException ex)
         {
@@ -586,12 +652,15 @@ internal static class ShareUi
             return false;
         }
 
-        await app.Dialogs.ShowMessageAsync("Overlay übernommen",
-            $"Die Overlay-Einstellungen gelten jetzt in \"{target.Name}\"." +
-            (Badge.IsActiveFor(target, app.Settings)
-                ? ""
-                : "\n\nAchtung: Das Overlay gibt es nur mit Fabric und einer Minecraft-Version, für die AxoClient die Mod " +
-                  "mitbringt. In dieser Instanz bleibt es zunächst ohne Wirkung."));
+        var lines = new List<string>();
+        if (savedAs != null)
+            lines.Add($"Profil \"{savedAs}\" gespeichert. Im Spiel (rechte Umschalttaste → Profile) lässt es sich laden.");
+        if (doActivate)
+            lines.Add($"Die Einstellungen gelten jetzt in \"{target.Name}\".");
+        if (!Badge.IsActiveFor(target, app.Settings))
+            lines.Add("Achtung: Das Overlay gibt es nur mit Fabric und einer Minecraft-Version, für die AxoClient die Mod " +
+                      "mitbringt. In dieser Instanz bleibt es zunächst ohne Wirkung.");
+        await app.Dialogs.ShowMessageAsync("Overlay übernommen", string.Join("\n\n", lines));
         return true;
     }
 
