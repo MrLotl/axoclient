@@ -74,6 +74,7 @@ public partial class HomePage
         {
             FriendsList.ItemsSource = null;
             FriendsHeader.Text = "Freunde";
+            SharesPanel.Visibility = Visibility.Collapsed;
             ShowFriendsInfo(_app.Session == null
                 ? "Melde dich an, um deine Freunde zu sehen."
                 : "Schalte unter Einstellungen \"Axolotl-Symbol in der Tabliste\" ein, um Freunde hinzuzufügen " +
@@ -82,6 +83,7 @@ public partial class HomePage
         }
 
         _loadingFriends = true;
+        _ = RefreshSharesAsync(); // Postfach im selben Takt wie die Freundesliste
         try
         {
             var friends = await _app.Friends.GetFriendsAsync();

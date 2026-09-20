@@ -50,18 +50,18 @@ public class GameInstaller(string sharedDir, HttpClient http)
         {
             case LoaderType.Fabric:
                 status.Report("Installiere Fabric...");
-                versionName = await InstallFabricAsync(path, inst.MinecraftVersion);
+                versionName = await InstallFabricAsync(path, inst.MinecraftVersion, inst.LoaderVersion);
                 break;
 
             case LoaderType.Forge:
                 status.Report("Installiere Forge (kann beim ersten Mal etwas dauern)...");
-                versionName = await new ForgeInstaller(launcher).Install(inst.MinecraftVersion, new ForgeInstallOptions
+                versionName = await InstallForgeAsync(launcher, inst, new ForgeInstallOptions
                 {
                     FileProgress = fileProgress,
                     ByteProgress = byteProgress,
                     InstallerOutput = status,
                     SkipIfAlreadyInstalled = true
-                });
+                }, status);
                 break;
 
             default:
@@ -109,41 +109,83 @@ public class GameInstaller(string sharedDir, HttpClient http)
         return await launcher.BuildProcessAsync(versionName, option);
     }
 
+    /// <summary>Loader-Versionen kommen aus Modpack-Dateien und landen in Adressen und Ordnernamen: nur harmlose Zeichen.</summary>
+    public static bool IsSafeLoaderVersion(string? version) =>
+        version is { Length: > 0 and <= 40 } && System.Text.RegularExpressions.Regex.IsMatch(version, @"^[A-Za-z0-9._+\-]+$");
+
     /// <summary>
-    /// Holt das Versionsprofil des neuesten stabilen Fabric-Loaders und legt es als eigene Version ab.
-    /// CmlLib erbt den Rest (Spiel, Assets) automatisch über "inheritsFrom".
+    /// Forge in der festen Version der Instanz (z.B. aus einem Modpack). Gibt es sie nicht mehr, wird die
+    /// empfohlene Version für die Minecraft-Version genommen, statt den Start ganz scheitern zu lassen.
     /// </summary>
-    private async Task<string> InstallFabricAsync(MinecraftPath path, string mcVersion)
+    private static async Task<string> InstallForgeAsync(MinecraftLauncher launcher, Installation inst,
+        ForgeInstallOptions options, IProgress<string> status)
+    {
+        var forge = new ForgeInstaller(launcher);
+        if (IsSafeLoaderVersion(inst.LoaderVersion))
+        {
+            try
+            {
+                return await forge.Install(inst.MinecraftVersion, inst.LoaderVersion!, options);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                status.Report($"Forge {inst.LoaderVersion} nicht verfügbar, nehme die empfohlene Version...");
+            }
+        }
+        return await forge.Install(inst.MinecraftVersion, options);
+    }
+
+    /// <summary>
+    /// Holt das Versionsprofil des Fabric-Loaders (die feste Version der Instanz, sonst der neueste stabile)
+    /// und legt es als eigene Version ab. CmlLib erbt den Rest (Spiel, Assets) automatisch über "inheritsFrom".
+    /// </summary>
+    private async Task<string> InstallFabricAsync(MinecraftPath path, string mcVersion, string? pinnedLoader = null)
     {
         try
         {
+            if (IsSafeLoaderVersion(pinnedLoader))
+            {
+                try
+                {
+                    return await WriteFabricProfileAsync(path, mcVersion, pinnedLoader!);
+                }
+                catch (HttpRequestException)
+                {
+                    // Diese Loader-Version gibt es (nicht mehr): stattdessen die neueste nehmen
+                }
+            }
+
             using var loaders = JsonDocument.Parse(
                 await http.GetStringAsync($"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}"));
             var entries = loaders.RootElement.EnumerateArray().Select(e => e.GetProperty("loader")).ToList();
             if (entries.Count == 0)
                 throw new InvalidOperationException($"Fabric unterstützt Minecraft {mcVersion} nicht.");
             var loader = entries.FirstOrDefault(l => l.GetProperty("stable").GetBoolean(), entries[0]);
-            var loaderVersion = loader.GetProperty("version").GetString();
-
-            var profile = await http.GetStringAsync(
-                $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{loaderVersion}/profile/json");
-            using var profileJson = JsonDocument.Parse(profile);
-            var id = profileJson.RootElement.GetProperty("id").GetString()!;
-
-            var jsonPath = path.GetVersionJsonPath(id);
-            Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
-            await File.WriteAllTextAsync(jsonPath, profile);
-            return id;
+            return await WriteFabricProfileAsync(path, mcVersion, loader.GetProperty("version").GetString()!);
         }
         catch (HttpRequestException)
         {
             // Offline: bereits installierten Fabric-Loader für diese Version verwenden
             var installed = Directory.Exists(path.Versions)
                 ? new DirectoryInfo(path.Versions).GetDirectories($"fabric-loader-*-{mcVersion}")
-                    .OrderByDescending(d => d.LastWriteTime).FirstOrDefault()
+                    .OrderByDescending(d => d.Name == $"fabric-loader-{pinnedLoader}-{mcVersion}") // die feste Version zuerst
+                    .ThenByDescending(d => d.LastWriteTime).FirstOrDefault()
                 : null;
             return installed?.Name ?? throw new InvalidOperationException(
                 "Fabric konnte nicht geladen werden und ist für diese Version noch nicht installiert.");
         }
+    }
+
+    private async Task<string> WriteFabricProfileAsync(MinecraftPath path, string mcVersion, string loaderVersion)
+    {
+        var profile = await http.GetStringAsync(
+            $"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}/{loaderVersion}/profile/json");
+        using var profileJson = JsonDocument.Parse(profile);
+        var id = profileJson.RootElement.GetProperty("id").GetString()!;
+
+        var jsonPath = path.GetVersionJsonPath(id);
+        Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
+        await File.WriteAllTextAsync(jsonPath, profile);
+        return id;
     }
 }

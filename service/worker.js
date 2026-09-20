@@ -7,6 +7,7 @@
 //                    Der Dienst braucht dafür keine Verbindung zu Mojang (Cloudflare wird dort blockiert),
 //                    und das Minecraft-Token kommt nie hier an.
 // POST /check     { uuids: [...] } -> welche dieser Spieler nutzen den Launcher?
+// POST /share/... -> Pakete (Instanz, Overlay, Mod, Server) an Freunde schicken und abholen (siehe unten)
 // GET  /                           -> Statusanzeige (zum Testen im Browser)
 
 const ACTIVE_DAYS = 30;               // wer so lange nicht gespielt hat, verliert das Symbol
@@ -15,6 +16,14 @@ const MAX_CLOCK_SKEW = 5 * 60 * 1000; // so weit darf die Uhr des Spielers abwei
 const TOKEN_DAYS = 60;                // so lange gilt ein Anmelde-Token des Launchers
 const ONLINE_MILLIS = 150 * 1000;     // der Launcher meldet sich jede Minute, danach gilt man als offline
 const MAX_FRIENDS = 200;
+
+// Geteilte Pakete (Instanzen, Overlay, Mods, Server) von Freund zu Freund
+const MAX_SHARE_CHARS = 250000;       // so gross darf ein Paket hoechstens sein (der Launcher kennt dasselbe Limit)
+const MAX_INBOX = 40;                 // so viele offene Pakete kann eine Person hoechstens haben
+const MAX_PENDING_PER_PAIR = 8;       // davon hoechstens so viele von derselben Person
+const MAX_SENDS_PER_HOUR = 30;        // und so viele kann man pro Stunde verschicken
+const SHARE_DAYS = 14;                // danach verfaellt ein nicht abgeholtes Paket
+const SHARE_KINDS = ["instance", "overlay", "content", "server"];
 
 // Mojangs öffentliche Schlüssel für Spieler-Zertifikate (https://api.minecraftservices.com/publickeys,
 // "playerCertificateKeys"). Ändert Mojang sie irgendwann, hier aktualisieren.
@@ -43,6 +52,14 @@ export default {
         return await removeFriend(request, env);
       if (request.method === "POST" && url.pathname === "/cape")
         return await cape(request, env);
+      if (request.method === "POST" && url.pathname === "/share/send")
+        return await sendShare(request, env);
+      if (request.method === "POST" && url.pathname === "/share/inbox")
+        return await shareInbox(request, env);
+      if (request.method === "POST" && url.pathname === "/share/get")
+        return await getShare(request, env);
+      if (request.method === "POST" && url.pathname === "/share/delete")
+        return await deleteShare(request, env);
       return json({ error: "Nicht gefunden" }, 404);
     } catch (e) {
       return json({ error: "Interner Fehler: " + e.message }, 500);
@@ -264,4 +281,132 @@ async function cape(request, env) {
     "INSERT INTO capes (uuid, cape) VALUES (?1, ?2) ON CONFLICT(uuid) DO UPDATE SET cape = excluded.cape"
   ).bind(me, body.cape).run();
   return json({ ok: true, cape: body.cape });
+}
+
+// ---------- Geteilte Pakete ----------
+// Freunde können sich Instanzen, Overlay-Einstellungen, Mods und Server schicken. Der Dienst reicht die Pakete nur
+// weiter (ein Postfach je Person): nur zwischen gegenseitigen Freunden, begrenzt in Größe und Menge, und nach
+// SHARE_DAYS Tagen verfallen sie. Was drin steht, wertet allein der Launcher des Empfängers aus und prüft es dabei.
+
+let sharesReady = null;
+
+/** Legt die Tabelle beim ersten Gebrauch an, damit nach dem Deploy kein Schritt in der Konsole nötig ist. */
+function ensureShares(env) {
+  sharesReady ??= env.DB.batch([
+    env.DB.prepare(
+      "CREATE TABLE IF NOT EXISTS shares (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT NOT NULL, " +
+      "recipient TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, payload TEXT NOT NULL, created INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS shares_recipient ON shares (recipient, created)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS shares_sender ON shares (sender, created)")
+  ]).catch(e => { sharesReady = null; throw e; });
+  return sharesReady;
+}
+
+/** Nur Pakete von Personen, mit denen man (noch) gegenseitig befreundet ist. `me` ist der Empfänger (?1). */
+const MUTUAL_SENDER =
+  "EXISTS (SELECT 1 FROM friends f WHERE f.owner = s.sender AND f.friend = ?1) " +
+  "AND EXISTS (SELECT 1 FROM friends f WHERE f.owner = ?1 AND f.friend = s.sender)";
+
+async function sendShare(request, env) {
+  const { body, me, error } = await authenticate(request, env);
+  if (error)
+    return error;
+  await ensureShares(env);
+
+  if (typeof body.to !== "string" || !/^[0-9a-f]{32}$/.test(body.to))
+    return json({ error: "Ungültiger Empfänger" }, 400);
+  if (body.to === me)
+    return json({ error: "Du kannst dir nichts selbst schicken." }, 400);
+  if (!SHARE_KINDS.includes(body.kind))
+    return json({ error: "Unbekannte Art von Paket" }, 400);
+  if (typeof body.payload !== "string" || body.payload.length === 0)
+    return json({ error: "Leeres Paket" }, 400);
+  if (body.payload.length > MAX_SHARE_CHARS)
+    return json({ error: "Das Paket ist zu groß zum Verschicken." }, 413);
+
+  // Es muss ein AxoClient-Paket der angegebenen Art sein (mehr prüft der Dienst nicht, der Launcher prüft den Rest)
+  let parsed = null;
+  try { parsed = JSON.parse(body.payload); } catch { /* wird unten abgelehnt */ }
+  if (!parsed || typeof parsed !== "object" || parsed.format !== "axoclient-" + body.kind)
+    return json({ error: "Das ist kein gültiges AxoClient-Paket." }, 400);
+
+  const title = (typeof body.title === "string" ? body.title : "")
+    .replace(/\p{Cc}/gu, "").trim().slice(0, 100) || body.kind;
+
+  const pair = await env.DB.prepare(
+    "SELECT EXISTS (SELECT 1 FROM friends WHERE owner = ?1 AND friend = ?2) AS a, " +
+    "EXISTS (SELECT 1 FROM friends WHERE owner = ?2 AND friend = ?1) AS b"
+  ).bind(me, body.to).first();
+  if (!pair || !pair.a || !pair.b)
+    return json({ error: "Ihr müsst euch gegenseitig als Freunde hinzugefügt haben, um etwas zu teilen." }, 403);
+
+  const now = Date.now();
+  await env.DB.prepare("DELETE FROM shares WHERE created < ?1").bind(now - SHARE_DAYS * 86400000).run();
+
+  const counts = await env.DB.prepare(
+    "SELECT (SELECT COUNT(*) FROM shares WHERE recipient = ?1) AS inbox, " +
+    "(SELECT COUNT(*) FROM shares WHERE recipient = ?1 AND sender = ?2) AS pair, " +
+    "(SELECT COUNT(*) FROM shares WHERE sender = ?2 AND created > ?3) AS hour"
+  ).bind(body.to, me, now - 3600000).first();
+  if (counts.inbox >= MAX_INBOX)
+    return json({ error: "Das Postfach deines Freundes ist voll." }, 429);
+  if (counts.pair >= MAX_PENDING_PER_PAIR)
+    return json({ error: "Dein Freund hat noch zu viele ungelesene Pakete von dir. Warte, bis er sie abgeholt hat." }, 429);
+  if (counts.hour >= MAX_SENDS_PER_HOUR)
+    return json({ error: "Du hast in der letzten Stunde zu viel verschickt. Versuche es später noch einmal." }, 429);
+
+  await env.DB.prepare(
+    "INSERT INTO shares (sender, recipient, kind, title, payload, created) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+  ).bind(me, body.to, body.kind, title, body.payload, now).run();
+  return json({ ok: true });
+}
+
+/** Liste der Pakete für mich, ohne Inhalt (den holt der Launcher erst, wenn man ein Paket öffnet). */
+async function shareInbox(request, env) {
+  const { me, error } = await authenticate(request, env);
+  if (error)
+    return error;
+  await ensureShares(env);
+
+  await env.DB.prepare("DELETE FROM shares WHERE recipient = ?1 AND created < ?2")
+    .bind(me, Date.now() - SHARE_DAYS * 86400000).run();
+  const { results } = await env.DB.prepare(
+    "SELECT s.id, s.kind, s.title, s.created, length(s.payload) AS size, u.uuid AS from_uuid, u.name AS from_name " +
+    "FROM shares s JOIN users u ON u.uuid = s.sender " +
+    "WHERE s.recipient = ?1 AND " + MUTUAL_SENDER + " ORDER BY s.created DESC LIMIT 100"
+  ).bind(me).all();
+
+  return json({
+    shares: results.map(r => ({
+      id: r.id, kind: r.kind, title: r.title, size: r.size, created: r.created,
+      fromUuid: r.from_uuid, fromName: r.from_name
+    }))
+  });
+}
+
+async function getShare(request, env) {
+  const { body, me, error } = await authenticate(request, env);
+  if (error)
+    return error;
+  await ensureShares(env);
+  if (!Number.isSafeInteger(body.id) || body.id <= 0)
+    return json({ error: "Ungültige Anfrage" }, 400);
+
+  const row = await env.DB.prepare(
+    "SELECT s.kind, s.payload FROM shares s WHERE s.id = ?2 AND s.recipient = ?1 AND " + MUTUAL_SENDER
+  ).bind(me, body.id).first();
+  if (!row)
+    return json({ error: "Dieses Paket gibt es nicht mehr." }, 404);
+  return json({ kind: row.kind, payload: row.payload });
+}
+
+async function deleteShare(request, env) {
+  const { body, me, error } = await authenticate(request, env);
+  if (error)
+    return error;
+  await ensureShares(env);
+  if (!Number.isSafeInteger(body.id) || body.id <= 0)
+    return json({ error: "Ungültige Anfrage" }, 400);
+  await env.DB.prepare("DELETE FROM shares WHERE id = ?1 AND recipient = ?2").bind(body.id, me).run();
+  return json({ ok: true });
 }

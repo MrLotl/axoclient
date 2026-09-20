@@ -2,7 +2,7 @@
 	"required": true,
 	"package": "de.mclauncher.badge.mixin",
 	"compatibilityLevel": "JAVA_21",
-	"client": ["EntityRendererMixin", "MinecraftClientMixin", "PlayerListEntryMixin", "PlayerListHudMixin"],
+	"client": ["EntityRendererMixin", "InGameHudMixin", "GameMenuScreenMixin", "MinecraftClientMixin", "PlayerListEntryMixin", "PlayerListHudMixin"],
 	"injectors": {
 		"defaultRequire": 1
 	}

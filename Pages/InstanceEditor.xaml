@@ -64,7 +64,7 @@
             <ComboBox x:Name="VersionBox" Style="{StaticResource LauncherCombo}"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                 <CheckBox x:Name="AxoOnlyCheck" Content="Nur mit AxoClient-Funktionen" Click="Filter_Click"
-                          ToolTip="Nur Versionen, für die AxoClient die Mod mitbringt (Symbol in der Tabliste, Umhänge, Freunde)"/>
+                          ToolTip="Nur Versionen, für die AxoClient die Mod mitbringt (Symbol in der Tabliste, Umhänge, Freunde, Anzeigen wie FPS und Ping)"/>
                 <CheckBox x:Name="SnapshotsCheck" Content="Snapshots" Margin="14,0,0,0" Click="Filter_Click"/>
                 <CheckBox x:Name="OldVersionsCheck" Content="Alpha/Beta" Margin="14,0,0,0" Click="Filter_Click"/>
             </StackPanel>

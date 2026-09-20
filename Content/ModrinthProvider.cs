@@ -46,6 +46,87 @@ public class ModrinthProvider(HttpClient http) : IContentProvider
         return new SearchPage(items, json.RootElement.GetProperty("total_hits").GetInt32());
     }
 
+    /// <summary>
+    /// Sucht Modpacks (unabhängig von einer Instanz). Es werden nur Packs für Fabric oder Forge gezeigt,
+    /// weil AxoClient keine anderen Mod-Loader starten kann.
+    /// </summary>
+    public async Task<SearchPage> SearchModpacksAsync(string query, int page, int pageSize)
+    {
+        var facets = new List<string[]>
+        {
+            new[] { "project_type:modpack" },
+            new[] { "categories:fabric", "categories:forge" } // innerhalb einer Gruppe gilt "oder"
+        };
+        var url = $"{Api}/search?limit={pageSize}&offset={page * pageSize}" +
+                  $"&index={(string.IsNullOrWhiteSpace(query) ? "downloads" : "relevance")}" +
+                  $"&query={Uri.EscapeDataString(query)}" +
+                  $"&facets={Uri.EscapeDataString(JsonSerializer.Serialize(facets))}";
+
+        using var json = await GetJsonAsync(url);
+        var items = json.RootElement.GetProperty("hits").EnumerateArray().Select(hit => new ContentProject
+        {
+            Id = hit.GetProperty("project_id").GetString()!,
+            Title = hit.GetProperty("title").GetString()!,
+            Source = ContentSource.Modrinth,
+            Author = hit.GetProperty("author").GetString() ?? "",
+            Description = hit.GetProperty("description").GetString() ?? "",
+            IconUrl = NullIfEmpty(hit.GetProperty("icon_url").GetString()),
+            Downloads = hit.GetProperty("downloads").GetInt64(),
+            WebsiteUrl = $"https://modrinth.com/modpack/{hit.GetProperty("slug").GetString()}",
+            Tags = ModpackTags(hit)
+        }).ToList();
+        return new SearchPage(items, json.RootElement.GetProperty("total_hits").GetInt32());
+    }
+
+    private static string ModpackTags(JsonElement hit)
+    {
+        var loaders = hit.TryGetProperty("categories", out var categories)
+            ? categories.EnumerateArray().Select(c => c.GetString()).Where(c => c is "fabric" or "forge")
+                .Select(c => c == "fabric" ? "Fabric" : "Forge").Distinct().ToList()
+            : [];
+        // Die Minecraft-Versionen stehen von alt nach neu, die letzte ist also die neueste
+        var newest = hit.TryGetProperty("versions", out var versions) && versions.GetArrayLength() > 0
+            ? versions[versions.GetArrayLength() - 1].GetString()
+            : null;
+        return string.Join(" · ", new[] { string.Join(", ", loaders), newest == null ? "" : $"bis {newest}" }
+            .Where(s => s.Length > 0));
+    }
+
+    /// <summary>Alle Versionen eines Projekts (neueste zuerst), ohne Filter auf eine Instanz.</summary>
+    public async Task<List<ContentVersion>> GetProjectVersionsAsync(string projectId)
+    {
+        using var json = await GetJsonAsync($"{Api}/project/{Uri.EscapeDataString(projectId)}/version");
+        return json.RootElement.EnumerateArray().Select(ParseVersion).OrderByDescending(v => v.Date).ToList();
+    }
+
+    /// <summary>
+    /// Mehrere Versionen auf einmal anhand ihrer Kennungen (Kennung → Version). Gelöschte fehlen im Ergebnis.
+    /// </summary>
+    public async Task<Dictionary<string, ContentVersion>> GetVersionsByIdsAsync(IEnumerable<string> versionIds)
+    {
+        var result = new Dictionary<string, ContentVersion>();
+        foreach (var chunk in versionIds.Distinct().Chunk(50))
+        {
+            using var json = await GetJsonAsync($"{Api}/versions?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}");
+            foreach (var version in json.RootElement.EnumerateArray().Select(ParseVersion))
+                result[version.Id] = version;
+        }
+        return result;
+    }
+
+    /// <summary>Namen mehrerer Projekte auf einmal (Projekt-Kennung → Titel); unbekannte fehlen im Ergebnis.</summary>
+    public async Task<Dictionary<string, string>> GetProjectTitlesAsync(IEnumerable<string> projectIds)
+    {
+        var result = new Dictionary<string, string>();
+        foreach (var chunk in projectIds.Distinct().Chunk(50))
+        {
+            using var json = await GetJsonAsync($"{Api}/projects?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}");
+            foreach (var project in json.RootElement.EnumerateArray())
+                result[project.GetProperty("id").GetString()!] = project.GetProperty("title").GetString() ?? "";
+        }
+        return result;
+    }
+
     public async Task<List<ContentVersion>> GetVersionsAsync(string projectId, ContentType type, Installation inst)
     {
         var url = $"{Api}/project/{projectId}/version" +
@@ -111,6 +192,7 @@ public class ModrinthProvider(HttpClient http) : IContentProvider
             Name = v.GetProperty("version_number").GetString()!,
             FileName = file.GetProperty("filename").GetString()!,
             DownloadUrl = file.GetProperty("url").GetString(),
+            Size = file.TryGetProperty("size", out var size) && size.ValueKind == JsonValueKind.Number ? size.GetInt64() : 0,
             Date = v.GetProperty("date_published").GetDateTime(),
             Channel = v.GetProperty("version_type").GetString() ?? "release",
             GameVersions = v.GetProperty("game_versions").EnumerateArray().Select(g => g.GetString()!).ToList(),

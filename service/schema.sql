@@ -5,3 +5,6 @@ CREATE TABLE IF NOT EXISTS status (uuid TEXT PRIMARY KEY, server TEXT, version T
 CREATE TABLE IF NOT EXISTS friends (owner TEXT NOT NULL, friend TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (owner, friend));
 CREATE INDEX IF NOT EXISTS friends_friend ON friends (friend);
 CREATE TABLE IF NOT EXISTS capes (uuid TEXT PRIMARY KEY, cape TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS shares (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT NOT NULL, recipient TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, payload TEXT NOT NULL, created INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS shares_recipient ON shares (recipient, created);
+CREATE INDEX IF NOT EXISTS shares_sender ON shares (sender, created);

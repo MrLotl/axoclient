@@ -34,6 +34,10 @@ base {
 sourceSets.main.java.srcDir "src/${era}/java"
 sourceSets.main.resources.srcDir "src/${era}/resources"
 
+// Einzelne Klassen, die sich innerhalb eines Standes noch unterscheiden (z.B. die Anzeige-Einhängung in 26.1)
+if (settings.extra)
+	sourceSets.main.java.srcDir "src/${settings.extra}/java"
+
 repositories {
 	maven { name = "Fabric"; url = "https://maven.fabricmc.net/" }
 	mavenCentral()

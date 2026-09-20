@@ -33,6 +33,13 @@
                             ToolTip="{Binding UpdateText}" Click="UpdateOne_Click"
                             Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibility}}"/>
                     <Button Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="12"
+                            Content="&#xE72D;" Margin="4,0,0,0" Click="ShareInstalled_Click"
+                            IsEnabled="{Binding CanShare}">
+                        <Button.ToolTip>
+                            <ToolTip Content="Einem Freund empfehlen (nur bei Inhalten von Modrinth)"/>
+                        </Button.ToolTip>
+                    </Button>
+                    <Button Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="12"
                             Content="&#xE81C;" Margin="4,0,0,0" Click="ChangeVersion_Click"
                             IsEnabled="{Binding CanChangeVersion}">
                         <Button.ToolTip>
@@ -81,6 +88,9 @@
                             Background="{StaticResource Accent}" Content="&#xE896;" Margin="0,0,4,0"
                             ToolTip="{Binding UpdateText}" Click="UpdateOne_Click"
                             Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="12"
+                            Content="&#xE72D;" Margin="0,0,4,0" ToolTip="Einem Freund empfehlen" Click="ShareInstalled_Click"
+                            IsEnabled="{Binding CanShare}"/>
                     <Button Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="12"
                             Content="&#xE81C;" Margin="0,0,4,0" ToolTip="Version ändern" Click="ChangeVersion_Click"
                             IsEnabled="{Binding CanChangeVersion}"/>

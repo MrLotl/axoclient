@@ -16,6 +16,10 @@ public class Installation
     public string Name { get; set; } = "";
     public LoaderType Loader { get; set; } = LoaderType.Vanilla;
     public string MinecraftVersion { get; set; } = "26.2";
+
+    /// <summary>Feste Version des Mod-Loaders (z.B. aus einem Modpack); null = jeweils die neueste passende.</summary>
+    public string? LoaderVersion { get; set; }
+
     public string GameDir { get; set; } = "";
 
     /// <summary>Eigenes Bild (Dateiname unter ".axoclient/icons"); null = automatisch das Weltbild.</summary>

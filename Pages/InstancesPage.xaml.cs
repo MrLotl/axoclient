@@ -35,6 +35,7 @@ public partial class InstancesPage : UserControl
         InitializeComponent();
         WorldsView.PlayWorldRequested += (inst, world) => PlayRequested?.Invoke(inst, new QuickPlay(World: world));
         ServersView.JoinRequested += (inst, server) => PlayRequested?.Invoke(inst, new QuickPlay(Server: server));
+        ModpackView.Closed += ShowList;
         Editor.Saved += Editor_Saved;
         Editor.Deleted += _ => ShowList();
         Editor.Cancelled += () =>
@@ -98,7 +99,25 @@ public partial class InstancesPage : UserControl
     {
         _current = null;
         DetailPanel.Visibility = Visibility.Collapsed;
+        ModpackView.Visibility = Visibility.Collapsed;
         OverviewPanel.Visibility = Visibility.Visible;
+    }
+
+    private void Modpacks_Click(object sender, RoutedEventArgs e)
+    {
+        OverviewPanel.Visibility = Visibility.Collapsed;
+        DetailPanel.Visibility = Visibility.Collapsed;
+        ModpackView.Visibility = Visibility.Visible;
+        ModpackView.Show(_app);
+    }
+
+    /// <summary>Öffnet eine Datei: Instanz oder Overlay von einem Freund (.json) bzw. ein Modpack (.mrpack).</summary>
+    private async void Import_Click(object sender, RoutedEventArgs e) => await ShareUi.ImportFileAsync(_app);
+
+    private async void Share_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current != null)
+            await ShareUi.ShareInstanceAsync(_app, _current);
     }
 
     private void New_Click(object sender, RoutedEventArgs e)

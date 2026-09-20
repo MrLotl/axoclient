@@ -33,6 +33,12 @@ public interface IDialogService
 
     Task<bool> ShowFormAsync(string title, System.Windows.FrameworkElement content, string confirmText,
         Func<bool>? validate = null);
+
+    /// <summary>
+    /// Zeigt einen Fortschrittsdialog mit "Abbrechen", solange die Arbeit läuft. Bei Abbruch wird
+    /// <see cref="OperationCanceledException"/> ausgelöst (über <see cref="WorkProgress.Cancel"/>).
+    /// </summary>
+    Task<T> RunWithProgressAsync<T>(string title, Func<WorkProgress, Task<T>> work);
 }
 
 /// <summary>Gemeinsamer Zustand aller Seiten: Einstellungen, Konto, Profil und Dienste.</summary>

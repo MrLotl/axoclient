@@ -311,6 +311,26 @@ public partial class ContentPanel : UserControl
             await ShowVersionsAsync(new VersionTarget(provider, project.Id, project.Title));
     }
 
+    /// <summary>Empfiehlt einen installierten Mod, ein Paket oder einen Shader einem Freund (genau diese Version).</summary>
+    private async void ShareInstalled_Click(object sender, RoutedEventArgs e)
+    {
+        var item = (InstalledItem)((FrameworkElement)sender).DataContext;
+        if (item.Entry is not { Source: ContentSource.Modrinth } entry)
+            return;
+        await ShareUi.ShareContentAsync(_app, new ContentPayload
+        {
+            Kind = item.Type switch
+            {
+                ContentType.Mod => SharedContentKind.Mod,
+                ContentType.Shader => SharedContentKind.Shader,
+                _ => SharedContentKind.ResourcePack
+            },
+            ProjectId = entry.ProjectId,
+            VersionId = entry.VersionId,
+            Title = entry.Title
+        });
+    }
+
     private async void ChangeVersion_Click(object sender, RoutedEventArgs e)
     {
         var item = (InstalledItem)((FrameworkElement)sender).DataContext;

@@ -60,6 +60,12 @@ public class ContentProject : INotifyPropertyChanged
     public long Downloads { get; init; }
     public string? WebsiteUrl { get; init; }
 
+    /// <summary>Kurzinfo unter dem Namen, z.B. "Fabric, Forge · bis 1.21.1" (bei Modpacks).</summary>
+    public string Tags { get; init; } = "";
+
+    /// <summary>Die Kurzinfo mit Trennpunkt davor, zum Anhängen an die Download-Zahl.</summary>
+    public string TagsSuffix => Tags.Length > 0 ? "  ·  " + Tags : "";
+
     public string DownloadsText => Downloads switch
     {
         >= 1_000_000 => $"{Downloads / 1_000_000.0:0.#} Mio. Downloads",
@@ -100,6 +106,9 @@ public class ContentVersion
     public required string FileName { get; init; }
     public string? DownloadUrl { get; init; }
     public DateTime Date { get; init; }
+
+    /// <summary>Größe der Datei in Bytes (0 = unbekannt), für die Fortschrittsanzeige.</summary>
+    public long Size { get; init; }
 
     /// <summary>release, beta oder alpha</summary>
     public string Channel { get; init; } = "release";

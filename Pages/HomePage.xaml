@@ -81,6 +81,42 @@
                 <TextBlock x:Name="FriendsInfo" DockPanel.Dock="Top" Foreground="{StaticResource MutedText}"
                            TextWrapping="Wrap" Visibility="Collapsed"/>
 
+                <!-- Postfach: was Freunde geschickt haben (Instanz, Overlay, Mod, Server) -->
+                <Border x:Name="SharesPanel" DockPanel.Dock="Top" Visibility="Collapsed" Background="#223BA55C"
+                        BorderBrush="#553BA55C" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock x:Name="SharesHeader" Text="Geteilt mit dir" Foreground="White" FontWeight="SemiBold"
+                                   Margin="0,0,0,4"/>
+                        <ItemsControl x:Name="SharesList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,6,0,0">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding Icon}"
+                                                       FontFamily="{StaticResource IconFont}" FontSize="18"
+                                                       Foreground="#6FCF97" Margin="0,2,10,0" VerticalAlignment="Top"/>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}" Foreground="White"
+                                                           FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Summary}" FontSize="11"
+                                                           Foreground="{StaticResource MutedText}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="28,6,0,0">
+                                            <Button Style="{StaticResource LauncherButton}"
+                                                    Background="{StaticResource Accent}" Content="Öffnen"
+                                                    Padding="10,5" Click="OpenShare_Click"/>
+                                            <Button Style="{StaticResource LauncherButton}" Content="Verwerfen"
+                                                    Padding="10,5" Margin="6,0,0,0" Click="DismissShare_Click"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
                 <ListBox x:Name="FriendsList" Style="{StaticResource CardList}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -90,6 +126,11 @@
                                            Margin="0,0,10,0" VerticalAlignment="Top"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor"/>
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                        <Button Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="11"
+                                                Content="&#xE72D;" Margin="0,0,4,0"
+                                                ToolTip="Etwas mit diesem Freund teilen (Instanz, Overlay)"
+                                                Click="ShareWithFriend_Click"
+                                                Visibility="{Binding IsFriend, Converter={StaticResource BoolToVisibility}}"/>
                                         <Button Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="11"
                                                 Background="{StaticResource Accent}" Content="&#xE8FB;"
                                                 ToolTip="Anfrage annehmen" Click="AcceptFriend_Click"

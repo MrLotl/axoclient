@@ -36,6 +36,8 @@
                             </Grid>
                         </Border>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource IconButton}" Content="&#xE72D;"
+                                    ToolTip="Einem Freund schicken" Margin="0,0,6,0" Click="Share_Click"/>
                             <Button Style="{StaticResource IconButton}" Content="&#xE70F;" ToolTip="Bearbeiten"
                                     Margin="0,0,6,0" Click="Edit_Click"/>
                             <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Entfernen"

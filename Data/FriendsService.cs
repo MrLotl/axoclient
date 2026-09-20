@@ -20,6 +20,9 @@ public class FriendInfo
 
     public string HeadUrl => $"https://mc-heads.net/avatar/{Uuid}/64";
     public bool IsIncoming => State == "incoming";
+
+    /// <summary>Gegenseitig befreundet – nur dann lässt sich etwas teilen.</summary>
+    public bool IsFriend => State == "friend";
     public bool CanJoin => Playing && Server != null;
 
     public string StatusText => State switch
@@ -40,6 +43,36 @@ public class FriendInfo
 
     /// <summary>Sortierung: wer auf einem Server spielt zuerst, Anfragen an dich zuletzt oben ... usw.</summary>
     public int SortKey => CanJoin ? 0 : Playing ? 1 : State == "incoming" ? 2 : State == "friend" ? 3 : 4;
+}
+
+/// <summary>Ein Eintrag im Postfach: etwas, das dir ein Freund geschickt hat (der Inhalt wird erst beim Öffnen geholt).</summary>
+public class ShareInfo
+{
+    public required long Id { get; init; }
+    public required string FromUuid { get; init; }
+    public required string FromName { get; init; }
+    public required string Kind { get; init; }
+    public required string Title { get; init; }
+    public int Size { get; init; }
+    public DateTime Created { get; init; }
+
+    public string HeadUrl => $"https://mc-heads.net/avatar/{FromUuid}/64";
+    public string Icon => ShareKinds.Icon(Kind);
+
+    /// <summary>Zeile unter dem Titel, z.B. "Instanz von Steve · vor 5 Min."</summary>
+    public string Summary => $"{ShareKinds.Label(Kind)} von {FromName} · {Ago}";
+
+    private string Ago
+    {
+        get
+        {
+            var age = DateTime.Now - Created;
+            return age.TotalMinutes < 1 ? "gerade eben"
+                : age.TotalMinutes < 60 ? $"vor {(int)age.TotalMinutes} Min."
+                : age.TotalHours < 24 ? $"vor {(int)age.TotalHours} Std."
+                : $"vor {(int)age.TotalDays} Tagen";
+        }
+    }
 }
 
 /// <summary>
@@ -112,6 +145,63 @@ public class FriendsService(AppState app)
     public async Task SetCapeAsync(string? capeId)
     {
         using var _ = await PostAsync("/cape", new() { ["cape"] = capeId });
+    }
+
+    // ---------- Teilen ----------
+
+    /// <summary>Schickt ein Paket an einen Freund (nur an gegenseitige Freunde möglich).</summary>
+    public async Task SendShareAsync(string toUuid, string kind, string title, string payload)
+    {
+        using var _ = await ShareCallAsync("/share/send", new()
+        {
+            ["to"] = toUuid,
+            ["kind"] = kind,
+            ["title"] = title,
+            ["payload"] = payload
+        });
+    }
+
+    /// <summary>Was dir Freunde geschickt haben und du noch nicht abgeholt oder verworfen hast (neueste zuerst).</summary>
+    public async Task<List<ShareInfo>> GetInboxAsync()
+    {
+        using var json = await ShareCallAsync("/share/inbox", new());
+        return json.RootElement.GetProperty("shares").EnumerateArray().Select(s => new ShareInfo
+        {
+            Id = s.GetProperty("id").GetInt64(),
+            FromUuid = s.GetProperty("fromUuid").GetString()!,
+            FromName = s.GetProperty("fromName").GetString()!,
+            Kind = s.GetProperty("kind").GetString()!,
+            Title = ShareValidation.CleanText(s.GetProperty("title").GetString(), 100),
+            Size = s.GetProperty("size").GetInt32(),
+            Created = DateTimeOffset.FromUnixTimeMilliseconds(s.GetProperty("created").GetInt64()).LocalDateTime
+        }).ToList();
+    }
+
+    /// <summary>Der Inhalt eines Pakets als JSON-Text (noch ungeprüft, siehe <see cref="ShareJson"/>).</summary>
+    public async Task<string> GetSharePayloadAsync(long id)
+    {
+        using var json = await ShareCallAsync("/share/get", new() { ["id"] = id });
+        return json.RootElement.GetProperty("payload").GetString()!;
+    }
+
+    public async Task DeleteShareAsync(long id)
+    {
+        using var _ = await ShareCallAsync("/share/delete", new() { ["id"] = id });
+    }
+
+    /// <summary>Wie <see cref="PostAsync"/>, aber mit einer verständlichen Meldung, wenn der Dienst das Teilen noch nicht kennt.</summary>
+    private async Task<JsonDocument> ShareCallAsync(string path, Dictionary<string, object?> body)
+    {
+        try
+        {
+            return await PostAsync(path, body);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "Nicht gefunden")
+        {
+            throw new InvalidOperationException(
+                "Der AxoClient-Dienst kennt das Teilen noch nicht. Bitte den aktuellen Code aus service/worker.js deployen " +
+                "(siehe service/ANLEITUNG.md).");
+        }
     }
 
     private async Task<JsonDocument> PostAsync(string path, Dictionary<string, object?> body, bool retried = false)

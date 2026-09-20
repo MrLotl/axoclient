@@ -10,6 +10,7 @@ public partial class MainWindow : Window, IDialogService
     private readonly AppState _app;
     private TaskCompletionSource<bool>? _dialogResult;
     private Func<bool>? _dialogValidate;
+    private CancellationTokenSource? _progressCancel;
 
     /// <summary>Fertig, sobald die gespeicherte Anmeldung wiederhergestellt wurde (oder das fehlschlug).</summary>
     private readonly TaskCompletionSource _sessionRestored = new();
@@ -248,9 +249,17 @@ public partial class MainWindow : Window, IDialogService
     private Task<bool> ShowDialog(string title, string? text, string confirmText, bool showCancel, bool danger,
         FrameworkElement? content = null, Func<bool>? validate = null)
     {
-        _dialogResult?.TrySetResult(false); // höchstens ein Dialog gleichzeitig
-        _dialogResult = new TaskCompletionSource<bool>();
+        // RunContinuationsAsynchronously: der Code nach "await ShowDialog" läuft erst, wenn CloseDialog fertig ist.
+        // Sonst könnte er sofort den nächsten Dialog öffnen, und CloseDialog würde dessen Zustand danach löschen.
+        var previous = _dialogResult;
+        _dialogResult = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        previous?.TrySetResult(false); // höchstens ein Dialog gleichzeitig
         _dialogValidate = validate;
+
+        ProgressPanel.Visibility = Visibility.Collapsed; // ein Fortschrittsdialog davor hat das verändert
+        DialogOk.Visibility = Visibility.Visible;
+        DialogCancel.Content = "Abbrechen";
+        DialogCancel.IsEnabled = true;
 
         DialogTitle.Text = title;
         DialogText.Text = text ?? "";
@@ -274,20 +283,96 @@ public partial class MainWindow : Window, IDialogService
         DialogOverlay.Visibility = Visibility.Collapsed;
         DialogContent.Content = null;
         _dialogValidate = null;
-        _dialogResult?.TrySetResult(result);
+        var finished = _dialogResult;
         _dialogResult = null;
+        finished?.TrySetResult(result);
     }
 
     private void DialogOk_Click(object sender, RoutedEventArgs e) => CloseDialog(true);
 
-    private void DialogCancel_Click(object sender, RoutedEventArgs e) => CloseDialog(false);
+    private void DialogCancel_Click(object sender, RoutedEventArgs e)
+    {
+        if (_progressCancel != null)
+            CancelProgress();
+        else
+            CloseDialog(false);
+    }
+
+    /// <summary>Bricht die laufende Arbeit ab; der Dialog schließt sich, sobald sie darauf reagiert hat.</summary>
+    private void CancelProgress()
+    {
+        if (_progressCancel is not { IsCancellationRequested: false } cts)
+            return;
+        DialogCancel.IsEnabled = false;
+        DialogProgressText.Text = "Wird abgebrochen...";
+        cts.Cancel();
+    }
+
+    public async Task<T> RunWithProgressAsync<T>(string title, Func<WorkProgress, Task<T>> work)
+    {
+        var previous = _dialogResult;
+        _dialogResult = null;
+        _dialogValidate = null;
+        previous?.TrySetResult(false); // höchstens ein Dialog gleichzeitig
+
+        using var cts = new CancellationTokenSource();
+        _progressCancel = cts;
+
+        DialogTitle.Text = title;
+        DialogTextScroller.Visibility = Visibility.Collapsed;
+        DialogContent.Content = null;
+        DialogContent.Visibility = Visibility.Collapsed;
+        DialogOk.Visibility = Visibility.Collapsed;
+        DialogCancel.Content = "Abbrechen";
+        DialogCancel.IsEnabled = true;
+        DialogCancel.Visibility = Visibility.Visible;
+        DialogProgress.IsIndeterminate = true;
+        DialogProgress.Value = 0;
+        DialogProgressText.Text = "";
+        ProgressPanel.Visibility = Visibility.Visible;
+        DialogOverlay.Visibility = Visibility.Visible;
+
+        // Progress<T> meldet auf den Thread zurück, in dem es erzeugt wurde (hier: UI-Thread)
+        var progress = new WorkProgress(
+            new Progress<string>(text =>
+            {
+                if (!cts.IsCancellationRequested)
+                    DialogProgressText.Text = text;
+            }),
+            new Progress<double>(fraction =>
+            {
+                DialogProgress.IsIndeterminate = false;
+                DialogProgress.Value = Math.Clamp(fraction, 0, 1) * 100;
+            }),
+            cts.Token);
+        try
+        {
+            return await work(progress);
+        }
+        finally
+        {
+            DialogOverlay.Visibility = Visibility.Collapsed;
+            ProgressPanel.Visibility = Visibility.Collapsed;
+            DialogOk.Visibility = Visibility.Visible;
+            _progressCancel = null;
+        }
+    }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        // Enter = bestätigen, Escape = abbrechen (auch während man in einem Eingabefeld tippt)
         if (DialogOverlay.Visibility == Visibility.Visible && e.Key is Key.Escape or Key.Enter)
         {
-            CloseDialog(e.Key == Key.Enter);
+            if (_progressCancel != null)
+            {
+                // Fortschrittsdialog: Escape bricht die Arbeit ab, Enter tut nichts
+                if (e.Key == Key.Escape)
+                    CancelProgress();
+            }
+            else
+            {
+                // Enter = bestätigen, Escape = abbrechen (auch während man in einem Eingabefeld tippt)
+                CloseDialog(e.Key == Key.Enter);
+            }
             e.Handled = true;
             return;
         }

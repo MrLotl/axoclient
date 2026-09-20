@@ -71,6 +71,12 @@ public partial class ServersPanel : UserControl
 
     private void Join_Click(object sender, RoutedEventArgs e) => JoinRequested?.Invoke(_inst, ServerOf(sender).Address);
 
+    private async void Share_Click(object sender, RoutedEventArgs e)
+    {
+        var server = ServerOf(sender);
+        await ShareUi.ShareServerAsync(_app, server.Name, server.Address);
+    }
+
     // ---------- Hinzufügen / Bearbeiten (Popup) ----------
 
     private async void Add_Click(object sender, RoutedEventArgs e) =>

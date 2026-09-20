@@ -51,6 +51,9 @@ public class InstalledItem : INotifyPropertyChanged
 
     public bool CanChangeVersion => Entry != null;
 
+    /// <summary>Teilen geht nur, wenn Modrinth die Datei kennt: der Empfänger lädt sie von dort.</summary>
+    public bool CanShare => Entry is { Source: ContentSource.Modrinth };
+
     public string SourceText => Entry == null
         ? $"Manuell · {FileName}"
         : $"{Entry.Source} · {Entry.VersionName ?? FileName}";
@@ -235,7 +238,8 @@ public class ContentStore(Installation inst, HttpClient http)
     /// Bei Mods werden benötigte Abhängigkeiten mitinstalliert.
     /// </summary>
     public async Task InstallAsync(IContentProvider provider, string projectId, string title, ContentType type,
-        IProgress<string> status, HashSet<string>? visited = null, ContentVersion? version = null, bool replace = false)
+        IProgress<string> status, HashSet<string>? visited = null, ContentVersion? version = null, bool replace = false,
+        bool withDependencies = true)
     {
         visited ??= [];
         if (!visited.Add(projectId) || (!replace && IsInstalled(provider.Source, projectId)))
@@ -288,7 +292,7 @@ public class ContentStore(Installation inst, HttpClient http)
         });
         SaveIndex(index);
 
-        if (type != ContentType.Mod)
+        if (type != ContentType.Mod || !withDependencies)
             return;
         foreach (var dependencyId in version.RequiredProjectIds)
         {
@@ -297,6 +301,75 @@ public class ContentStore(Installation inst, HttpClient http)
             var (id, depTitle) = await provider.GetProjectInfoAsync(dependencyId);
             await InstallAsync(provider, id, depTitle, ContentType.Mod, status, visited);
         }
+    }
+
+    /// <summary>Eine bereits aufgelöste Version, die installiert werden soll (siehe <see cref="InstallManyAsync"/>).</summary>
+    public record PlannedInstall(ContentType Type, string ProjectId, string Title, ContentVersion Version, bool Enabled = true);
+
+    /// <summary>
+    /// Lädt viele bereits bekannte Versionen parallel herunter. Anders als <see cref="InstallAsync"/> löst das keine
+    /// Abhängigkeiten auf und ersetzt nichts Vorhandenes; gedacht für eine frische Instanz. Dass die Herkunftsliste
+    /// erst am Ende einmal geschrieben wird, macht paralleles Laden erst sicher.
+    /// Fehler einzelner Dateien brechen nicht ab, sondern kommen als Text zurück.
+    /// </summary>
+    public async Task<List<string>> InstallManyAsync(IReadOnlyList<PlannedInstall> plans, WorkProgress progress,
+        int parallel = 6)
+    {
+        var failures = new List<string>();
+        var entries = new List<InstalledContent>();
+        var done = 0;
+        using var gate = new SemaphoreSlim(parallel);
+
+        await Task.WhenAll(plans.Select(async plan =>
+        {
+            await gate.WaitAsync(progress.Cancel);
+            try
+            {
+                progress.Cancel.ThrowIfCancellationRequested();
+                var version = plan.Version;
+                if (version.DownloadUrl == null)
+                    throw new InvalidOperationException("Der Autor erlaubt keine Downloads über andere Launcher.");
+                // Der Dateiname kommt von Modrinth, wird aber trotzdem nicht blind als Pfad benutzt
+                var name = Path.GetFileName(version.FileName);
+                if (name.Length == 0 || name != version.FileName || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                    throw new InvalidOperationException("Ungültiger Dateiname.");
+
+                var target = Path.Combine(FolderOf(plan.Type), name + (plan.Enabled ? "" : DisabledSuffix));
+                await Downloads.DownloadToFileAsync(http, version.DownloadUrl, target, null, progress.Cancel);
+                lock (entries)
+                    entries.Add(new InstalledContent
+                    {
+                        FileName = name,
+                        Type = plan.Type,
+                        Source = ContentSource.Modrinth,
+                        ProjectId = plan.ProjectId,
+                        Title = plan.Title,
+                        VersionId = version.Id,
+                        VersionName = version.Name,
+                        VersionDate = version.Date
+                    });
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lock (failures)
+                    failures.Add($"{plan.Title} ({ex.Message})");
+            }
+            finally
+            {
+                gate.Release();
+                var finished = Interlocked.Increment(ref done);
+                progress.Text.Report($"Lade Inhalte... {finished} von {plans.Count}");
+                progress.Fraction.Report((double)finished / plans.Count);
+            }
+        }));
+
+        if (entries.Count > 0)
+            AddIndexEntries(entries);
+        return failures;
     }
 
     /// <summary>Installiert ein Projekt über seinen Kurznamen (z.B. "iris" bei Modrinth).</summary>
@@ -318,19 +391,22 @@ public class ContentStore(Installation inst, HttpClient http)
 
         var hashes = unknown.ToDictionary(i => i, i => Sha1(i.FullPath));
         var found = await modrinth.LookupByHashAsync(hashes.Values);
+        // Namen in einem Rutsch holen statt pro Datei eine eigene Anfrage (bei großen Modpacks sonst hunderte)
+        var titles = found.Count == 0
+            ? []
+            : await modrinth.GetProjectTitlesAsync(found.Values.Select(v => v.ProjectId));
         var entries = new List<InstalledContent>();
         foreach (var (item, hash) in hashes)
         {
             if (!found.TryGetValue(hash, out var version))
                 continue;
-            var (_, title) = await modrinth.GetProjectInfoAsync(version.ProjectId);
             entries.Add(new InstalledContent
             {
                 FileName = item.FileName,
                 Type = type,
                 Source = ContentSource.Modrinth,
                 ProjectId = version.ProjectId,
-                Title = title,
+                Title = titles.TryGetValue(version.ProjectId, out var title) && title.Length > 0 ? title : item.DisplayName,
                 VersionId = version.Id,
                 VersionName = version.Name,
                 VersionDate = version.Date

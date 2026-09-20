@@ -214,8 +214,7 @@ public partial class InstanceEditor : UserControl
         if (isNew)
         {
             // Eigener, eindeutiger Spielordner für Welten, Mods und Optionen
-            var safeName = string.Concat(inst.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
-            inst.GameDir = Path.Combine(AppState.LauncherDir, "instances", $"{safeName}-{inst.Id}");
+            inst.GameDir = InstanceFactory.NewGameDir(inst.Name, inst.Id);
             _app.Settings.Installations.Add(inst);
         }
 

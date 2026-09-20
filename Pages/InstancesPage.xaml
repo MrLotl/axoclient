@@ -98,6 +98,23 @@
                             <TextBlock Text="Neue Instanz"/>
                         </StackPanel>
                     </Button>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}" Margin="0,0,8,0"
+                            ToolTip="Instanz oder Modpack aus einer Datei öffnen (.json von einem Freund, .mrpack von Modrinth)"
+                            Click="Import_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8B5;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="Importieren"/>
+                        </StackPanel>
+                    </Button>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}" Margin="0,0,8,0"
+                            ToolTip="Fertige Modpacks von Modrinth installieren" Click="Modpacks_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="Modpacks"/>
+                        </StackPanel>
+                    </Button>
                     <!-- Umschalter Liste / Kacheln -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center">
                         <RadioButton x:Name="ListViewToggle" Style="{StaticResource SegmentButton}" GroupName="InstanceView"
@@ -121,6 +138,9 @@
                     <Button DockPanel.Dock="Left" Style="{StaticResource IconButton}" Content="&#xE72B;"
                             ToolTip="Zurück zu den Instanzen" Margin="0,0,12,0" Click="Back_Click"/>
                     <StackPanel x:Name="DetailActions" DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Style="{StaticResource IconButton}" Content="&#xE72D;"
+                                ToolTip="Instanz teilen: an Freunde senden oder als Datei speichern"
+                                Margin="0,0,8,0" Click="Share_Click"/>
                         <Button Style="{StaticResource IconButton}" Content="&#xE838;" ToolTip="Spielordner öffnen"
                                 Margin="0,0,8,0" Click="Folder_Click"/>
                         <Button x:Name="DetailPlayButton" Style="{StaticResource LauncherButton}"
@@ -163,6 +183,9 @@
                     <pages:InstanceEditor x:Name="Editor" Visibility="Collapsed"/>
                 </Grid>
             </DockPanel>
+
+            <!-- Modpacks von Modrinth -->
+            <pages:ModpackPanel x:Name="ModpackView" Visibility="Collapsed"/>
         </Grid>
     </Border>
 </UserControl>
