@@ -26,11 +26,20 @@ public final class HudOverlay {
 	/** Rand der Hintergrundfläche um den Inhalt, bei Größe 100 %. */
 	public static final int BACKGROUND_PAD = 3;
 
+	/** Gesetzt, solange das Bearbeiten-Fenster offen ist: dann bekommen auch leere Anzeigen (Scoreboard) eine Größe. */
+	public static boolean sampleMode;
+	private static final int SAMPLE_WIDTH = 84;
+	private static final int SAMPLE_HEIGHT = 45;
+
 	private HudOverlay() {}
 
 	public static void draw(HudConfig config, HudPainter painter, Map<HudModule, String> texts,
 							int screenWidth, int screenHeight) {
-		for (HudElement element : elements(config, painter, texts, false))
+		sampleMode = false;
+		HudProfiles.applyPending(config);
+		List<HudElement> shown = elements(config, painter, texts, false);
+		drawGroups(config, shown, painter, texts, screenWidth, screenHeight);
+		for (HudElement element : shown)
 			draw(config, element, painter, texts, box(config, element, painter, texts, screenWidth, screenHeight));
 	}
 
@@ -66,11 +75,39 @@ public final class HudOverlay {
 		return elements;
 	}
 
+	/** Die gemeinsamen Hintergründe aller Gruppen; gehört hinter alle Anzeigen. */
+	public static void drawGroups(HudConfig config, List<HudElement> elements, HudPainter painter,
+								  Map<HudModule, String> texts, int screenWidth, int screenHeight) {
+		for (HudConfig.Group group : config.groups) {
+			int left = Integer.MAX_VALUE;
+			int top = Integer.MAX_VALUE;
+			int right = Integer.MIN_VALUE;
+			int bottom = Integer.MIN_VALUE;
+			for (HudElement element : elements) {
+				if (!group.members.contains(element.module()))
+					continue;
+				int[] box = box(config, element, painter, texts, screenWidth, screenHeight);
+				left = Math.min(left, box[0]);
+				top = Math.min(top, box[1]);
+				right = Math.max(right, box[0] + box[2]);
+				bottom = Math.max(bottom, box[1] + box[3]);
+			}
+			if (left > right)
+				continue;
+			int corner = HudConfig.clampCorner(group.corner);
+			HudSkin.rounded(painter, left - BACKGROUND_PAD, top - BACKGROUND_PAD, right - left + 2 * BACKGROUND_PAD,
+				bottom - top + 2 * BACKGROUND_PAD, corner, group.argb());
+			if (group.border)
+				HudSkin.outline(painter, left - BACKGROUND_PAD, top - BACKGROUND_PAD, right - left + 2 * BACKGROUND_PAD,
+					bottom - top + 2 * BACKGROUND_PAD, corner, 0x99FFFFFF);
+		}
+	}
+
 	/** Zeichnet ein Stück samt Hintergrund an der Stelle, die {@link #box} geliefert hat. */
 	public static void draw(HudConfig config, HudElement element, HudPainter painter,
 							Map<HudModule, String> texts, int[] box) {
 		HudConfig.Entry entry = config.get(element.module());
-		if (entry.background) {
+		if (entry.background && config.groupOf(element.module()) == null) {
 			int pad = pad(entry);
 			int backX = box[0] - pad;
 			int backY = box[1] - pad;
@@ -92,6 +129,27 @@ public final class HudOverlay {
 	private static void content(HudConfig.Entry entry, HudElement element, HudPainter painter,
 								Map<HudModule, String> texts, int x, int y) {
 		int color = entry.textArgb();
+		if (element.module() == HudModule.EFFECTS && entry.variant == 0) {
+			// Die Symbole zeichnet Minecraft selbst (verschoben); im Editor nur Platzhalter
+			if (painter.effectsSize() == null)
+				for (int i = 0; i < 2; i++)
+					HudSkin.rounded(painter, x + i * 25, y, 24, 24, 3, 0x66000000);
+			return;
+		}
+		if (element.module() == HudModule.SCOREBOARD) {
+			if (painter.scoreboardSize() != null) {
+				painter.scoreboard(x, y);
+				return;
+			}
+			painter.text("Scoreboard", x + (SAMPLE_WIDTH - painter.textWidth("Scoreboard")) / 2, y + 1, color, false);
+			for (int i = 1; i < 5; i++)
+				painter.text("Beispiel", x, y + i * (LINE + 1) + 1, color, false);
+			return;
+		}
+		if (element.module().keys) {
+			drawKeys(entry, painter, x, y);
+			return;
+		}
 		if (!element.module().equipment) {
 			String text = texts.get(element.module());
 			if (text == null || text.isEmpty())
@@ -154,8 +212,10 @@ public final class HudOverlay {
 		// Die Hintergrundfläche steht über den Inhalt hinaus und soll auch im Bild bleiben
 		int pad = entry.background ? pad(entry) : 0;
 		return new int[] {
-			pad + clamp(position(entry, element, true) - pad, width + 2 * pad, screenWidth),
-			pad + clamp(position(entry, element, false) - pad, height + 2 * pad, screenHeight),
+			pad + clamp(toLeft(entry.anchorX, position(entry, element, true), width + 2 * pad, screenWidth, pad),
+				width + 2 * pad, screenWidth),
+			pad + clamp(toLeft(entry.anchorY, position(entry, element, false), height + 2 * pad, screenHeight, pad),
+				height + 2 * pad, screenHeight),
 			width,
 			height
 		};
@@ -173,21 +233,68 @@ public final class HudOverlay {
 		return horizontal ? entry.slotX[element.slot()] : entry.slotY[element.slot()];
 	}
 
-	/** Verschiebt ein Stück an eine neue Stelle. */
-	public static void move(HudConfig.Entry entry, HudElement element, int x, int y) {
+	/**
+	 * Linke bzw. obere Kante der Hintergrundfläche aus der gespeicherten Position. Anker 0: ab dem Bildrand, 1: ab
+	 * der Mitte, 2: ab dem gegenüberliegenden Rand.
+	 */
+	public static int toLeft(int anchor, int stored, int size, int screen, int pad) {
+		return switch (anchor) {
+			case 1 -> (screen - size) / 2 + stored;
+			case 2 -> screen - size - stored;
+			default -> stored - pad;
+		};
+	}
+
+	/** Umkehrung von {@link #toLeft}. */
+	public static int toStored(int anchor, int left, int size, int screen, int pad) {
+		return switch (anchor) {
+			case 1 -> left - (screen - size) / 2;
+			case 2 -> screen - size - left;
+			default -> left + pad;
+		};
+	}
+
+	/** Drittel des Bildes, in dem die Mitte des Stücks liegt: 0, 1 oder 2. */
+	private static int zone(int center, int screen) {
+		return center < screen / 3 ? 0 : center > screen * 2 / 3 ? 2 : 1;
+	}
+
+	/**
+	 * Verschiebt ein Stück an eine neue Stelle (x, y = linke obere Ecke des Inhalts auf dem Bildschirm). Mit
+	 * automatischem Anker wird dabei der nächstgelegene gewählt.
+	 */
+	public static void move(HudConfig.Entry entry, HudElement element, int x, int y, int boxWidth, int boxHeight,
+							int screenWidth, int screenHeight) {
+		if (entry.autoAnchor) {
+			entry.anchorX = zone(x + boxWidth / 2, screenWidth);
+			entry.anchorY = zone(y + boxHeight / 2, screenHeight);
+		}
+		int pad = entry.background ? pad(entry) : 0;
+		int storedX = toStored(entry.anchorX, x - pad, boxWidth + 2 * pad, screenWidth, pad);
+		int storedY = toStored(entry.anchorY, y - pad, boxHeight + 2 * pad, screenHeight, pad);
 		if (element.isSlot()) {
-			entry.slotX[element.slot()] = x;
-			entry.slotY[element.slot()] = y;
+			entry.slotX[element.slot()] = storedX;
+			entry.slotY[element.slot()] = storedY;
 			return;
 		}
-		entry.x = x;
-		entry.y = y;
+		entry.x = storedX;
+		entry.y = storedY;
 	}
 
 	/** Breite ohne die eingestellte Größe. */
 	public static int width(HudConfig config, HudElement element, HudPainter painter,
 							Map<HudModule, String> texts) {
 		HudConfig.Entry entry = config.get(element.module());
+		if (element.module() == HudModule.EFFECTS && entry.variant == 0) {
+			int[] size = painter.effectsSize();
+			return size != null ? size[0] : sampleMode ? 49 : 0;
+		}
+		if (element.module() == HudModule.SCOREBOARD) {
+			int[] size = painter.scoreboardSize();
+			return size != null ? size[0] : sampleMode ? SAMPLE_WIDTH : 0;
+		}
+		if (element.module().keys)
+			return KEYS_WIDTH;
 		if (!element.module().equipment) {
 			String text = texts.get(element.module());
 			if (text == null || text.isEmpty())
@@ -212,6 +319,16 @@ public final class HudOverlay {
 	public static int height(HudConfig config, HudElement element, HudPainter painter,
 							Map<HudModule, String> texts) {
 		HudConfig.Entry entry = config.get(element.module());
+		if (element.module() == HudModule.EFFECTS && entry.variant == 0) {
+			int[] size = painter.effectsSize();
+			return size != null ? size[1] : 24;
+		}
+		if (element.module() == HudModule.SCOREBOARD) {
+			int[] size = painter.scoreboardSize();
+			return size != null ? size[1] : SAMPLE_HEIGHT;
+		}
+		if (element.module().keys)
+			return keysHeight(entry);
 		if (!element.module().equipment) {
 			String text = texts.get(element.module());
 			int lines = text == null || text.isEmpty() ? 1 : text.split("\n").length;
@@ -231,6 +348,58 @@ public final class HudOverlay {
 			if (entry.slots[slot.ordinal()] && painter.hasEquipment(slot.ordinal()))
 				count++;
 		return count;
+	}
+
+	// ---------- Tastenanzeige ----------
+
+	private static final int KEY = 16;
+	private static final int KEY_GAP = 2;
+	private static final int KEYS_WIDTH = 3 * KEY + 2 * KEY_GAP;
+	private static final int SPACE_HEIGHT = 8;
+
+	/** Höhe der Tastenanzeige: WASD, dazu je nach Darstellung Maus und Leertaste. */
+	private static int keysHeight(HudConfig.Entry entry) {
+		int height = 2 * KEY + KEY_GAP;
+		if (entry.variant == 2)
+			height += KEY_GAP + SPACE_HEIGHT;
+		if (entry.variant != 1)
+			height += KEY_GAP + KEY;
+		return height;
+	}
+
+	private static void drawKeys(HudConfig.Entry entry, HudPainter painter, int x, int y) {
+		int color = entry.textArgb();
+		drawKey(entry, painter, "W", HudInput.isDown(HudInput.FORWARD), x + KEY + KEY_GAP, y, KEY, KEY, color);
+		int row = y + KEY + KEY_GAP;
+		drawKey(entry, painter, "A", HudInput.isDown(HudInput.LEFT), x, row, KEY, KEY, color);
+		drawKey(entry, painter, "S", HudInput.isDown(HudInput.BACK), x + KEY + KEY_GAP, row, KEY, KEY, color);
+		drawKey(entry, painter, "D", HudInput.isDown(HudInput.RIGHT), x + 2 * (KEY + KEY_GAP), row, KEY, KEY, color);
+		row += KEY + KEY_GAP;
+		if (entry.variant == 2) {
+			drawKey(entry, painter, "", HudInput.isDown(HudInput.JUMP), x, row, KEYS_WIDTH, SPACE_HEIGHT, color);
+			row += SPACE_HEIGHT + KEY_GAP;
+		}
+		if (entry.variant != 1) {
+			int half = (KEYS_WIDTH - KEY_GAP) / 2;
+			drawKey(entry, painter, HudInput.cps(HudInput.ATTACK) + "", HudInput.isDown(HudInput.ATTACK), x, row, half, KEY, color);
+			drawKey(entry, painter, HudInput.cps(HudInput.USE) + "", HudInput.isDown(HudInput.USE), x + half + KEY_GAP, row,
+				KEYS_WIDTH - half - KEY_GAP, KEY, color);
+		}
+	}
+
+	/** Schriftfarbe auf der gedrückten Taste: dunkel auf hellem, hell auf dunklem Grund. */
+	private static int pressedText(int rgb) {
+		int luminance = (((rgb >> 16) & 255) * 30 + ((rgb >> 8) & 255) * 59 + (rgb & 255) * 11) / 100;
+		return luminance > 140 ? 0xFF000000 : 0xFFFFFFFF;
+	}
+
+	/** Eine Taste: gedrückt heller, mit Beschriftung mittig. */
+	private static void drawKey(HudConfig.Entry entry, HudPainter painter, String label, boolean pressed, int x, int y,
+								int width, int height, int color) {
+		HudSkin.rounded(painter, x, y, width, height, 2, pressed ? 0xAA000000 | (entry.pressRgb & 0xFFFFFF) : 0x66000000);
+		if (!label.isEmpty())
+			painter.text(label, x + (width - painter.textWidth(label)) / 2, y + (height - LINE) / 2 + 1,
+				pressed ? pressedText(entry.pressRgb) : color, false);
 	}
 
 	/** Der Zahlenwert einer Anzeige für Farbregeln und "nur bei Bedarf"; bei der Ausrüstung der schlechteste Platz. */

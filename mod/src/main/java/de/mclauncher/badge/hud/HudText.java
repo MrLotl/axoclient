@@ -124,14 +124,6 @@ public final class HudText {
 		return entry.labels ? HudModule.DIRECTION.shortLabel + ": " + value : value;
 	}
 
-	/** Dreh- und Neigungswinkel in Grad, wie im Debug-Bildschirm. */
-	public static String angle(float yaw, float pitch) {
-		HudConfig.Entry entry = entry(HudModule.ANGLE);
-		float turned = ((yaw % 360.0F) + 540.0F) % 360.0F - 180.0F;
-		String value = number(turned, entry.decimals) + " / " + number(pitch, entry.decimals);
-		return entry.labels ? HudModule.ANGLE.shortLabel + ": " + value : value;
-	}
-
 	/**
 	 * Waagerechte Geschwindigkeit in Blöcken je Sekunde. Wird aus der zurückgelegten Strecke
 	 * gemessen, weil die Geschwindigkeit des Spielers auf der Spielerseite nicht verlässlich ist.
@@ -198,6 +190,87 @@ public final class HudText {
 			case 2 -> decorate(HudModule.MEMORY, entry, Math.round(used * 100.0 / Math.max(0.001, max)) + "%", null);
 			default -> decorate(HudModule.MEMORY, entry, number(used, decimals) + " / " + number(max, decimals), "GB");
 		};
+	}
+
+	/** Auslastung des Prozessors (ganzes System oder nur Minecraft); null, solange es keine Messung gibt. */
+	public static String cpu() {
+		HudConfig.Entry entry = entry(HudModule.CPU);
+		Double value = HudSystem.cpu(entry.variant == 1);
+		if (value == null) {
+			METRICS.remove(HudModule.CPU);
+			return null;
+		}
+		METRICS.put(HudModule.CPU, value);
+		return decorate(HudModule.CPU, entry, Long.toString(Math.round(value)), HudModule.CPU.unit);
+	}
+
+	/** Auslastung der Grafikkarte; null, wenn sie sich auf diesem Rechner nicht messen lässt. */
+	public static String gpu() {
+		HudConfig.Entry entry = entry(HudModule.GPU);
+		Double value = HudSystem.gpu();
+		if (value == null) {
+			METRICS.remove(HudModule.GPU);
+			return null;
+		}
+		METRICS.put(HudModule.GPU, value);
+		return decorate(HudModule.GPU, entry, Long.toString(Math.round(value)), HudModule.GPU.unit);
+	}
+
+	/** Klicks pro Sekunde, links und rechts. */
+	public static String cps() {
+		HudConfig.Entry entry = entry(HudModule.CPS);
+		int left = HudInput.cps(HudInput.ATTACK);
+		int right = HudInput.cps(HudInput.USE);
+		String value = switch (entry.variant) {
+			case 1 -> Integer.toString(left);
+			case 2 -> Integer.toString(right);
+			case 3 -> Integer.toString(left + right);
+			default -> left + " | " + right;
+		};
+		return decorate(HudModule.CPS, entry, value, HudModule.CPS.unit);
+	}
+
+	/** Ein Trank- oder Statuseffekt mit Rest-Dauer in Ticks (-1 = unendlich). */
+	public record EffectLine(String name, int level, int ticks) {}
+
+	/** Aktive Effekte untereinander mit Stufe und Restzeit; null, wenn keiner wirkt. */
+	public static String effects(java.util.List<EffectLine> lines) {
+		if (lines == null || lines.isEmpty())
+			return null;
+		StringBuilder text = new StringBuilder();
+		for (EffectLine line : lines) {
+			if (text.length() > 0)
+				text.append('\n');
+			text.append(line.name());
+			if (line.level() > 1)
+				text.append(' ').append(roman(line.level()));
+			text.append("  ").append(line.ticks() < 0 || line.ticks() > 20 * 3600 ? "--" : duration(line.ticks()));
+		}
+		return text.toString();
+	}
+
+	private static String duration(int ticks) {
+		int seconds = (ticks + 19) / 20;
+		return seconds >= 3600
+			? String.format("%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
+			: String.format("%d:%02d", seconds / 60, seconds % 60);
+	}
+
+	private static String roman(int level) {
+		String[] numerals = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };
+		return level >= 1 && level <= numerals.length ? numerals[level - 1] : Integer.toString(level);
+	}
+
+	/** Lichtlevel am Standort des Spielers: Blocklicht (0-15) und Himmelslicht. */
+	public static String light(int block, int sky) {
+		METRICS.put(HudModule.LIGHT, (double) block);
+		HudConfig.Entry entry = entry(HudModule.LIGHT);
+		String value = switch (entry.variant) {
+			case 1 -> "Block " + block + " / Himmel " + sky;
+			case 2 -> Integer.toString(Math.max(block, sky));
+			default -> Integer.toString(block);
+		};
+		return entry.labels ? HudModule.LIGHT.shortLabel + ": " + value : value;
 	}
 
 	/** Name des Bioms, auf Wunsch mit Beschriftung; null, wenn er sich nicht ermitteln ließ. */

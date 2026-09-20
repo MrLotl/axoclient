@@ -47,29 +47,6 @@
                 </DockPanel>
             </Border>
 
-            <TextBlock Text="Overlay-Profile" Style="{StaticResource SectionTitle}" Margin="0,20,0,8"/>
-            <Border Background="#14FFFFFF" CornerRadius="10" Padding="14,12">
-                <StackPanel>
-                    <TextBlock x:Name="ProfilesText" Foreground="{StaticResource SubtleText}" TextWrapping="Wrap"
-                               Margin="0,0,0,4"/>
-                    <ItemsControl x:Name="ProfileList">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <DockPanel Margin="0,6,0,0">
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="30"
-                                            Height="30" FontSize="12" Content="&#xE74D;" Margin="6,0,0,0"
-                                            ToolTip="Profil löschen" Click="DeleteProfile_Click"/>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
-                                            Content="Teilen" Padding="12,6" Click="ShareProfile_Click"
-                                            ToolTip="An Freunde senden oder als Datei speichern"/>
-                                    <TextBlock Text="{Binding}" Foreground="White" FontWeight="SemiBold"
-                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                </DockPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

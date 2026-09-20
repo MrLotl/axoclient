@@ -162,6 +162,8 @@
                                  Content="Ressourcenpakete" Checked="DetailTab_Checked"/>
                     <RadioButton x:Name="ShadersTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
                                  Content="Shader" Checked="DetailTab_Checked"/>
+                    <RadioButton x:Name="OverlayTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
+                                 Content="Overlay" Checked="DetailTab_Checked"/>
                     <RadioButton x:Name="WorldsTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
                                  Content="Welten" Checked="DetailTab_Checked"/>
                     <RadioButton x:Name="ServersTab" Style="{StaticResource SegmentButton}" GroupName="InstanceTab"
@@ -175,6 +177,7 @@
                 <Grid>
                     <pages:InstanceOverview x:Name="OverviewView"/>
                     <pages:ContentPanel x:Name="ContentView" Visibility="Collapsed"/>
+                    <pages:OverlayPanel x:Name="OverlayView" Visibility="Collapsed"/>
                     <pages:WorldsPanel x:Name="WorldsView" Visibility="Collapsed"/>
                     <pages:ServersPanel x:Name="ServersView" Visibility="Collapsed"/>
                     <ScrollViewer x:Name="TransferView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">

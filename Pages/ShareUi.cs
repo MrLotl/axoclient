@@ -630,6 +630,10 @@ internal static class ShareUi
             return false;
 
         var doActivate = activate.IsChecked == true;
+        var config = OverlayProfile.Parse(payload.Config.GetRawText());
+        config.Root.Remove("server"); // Server des Absenders gelten nicht für dich
+        config.Root.Remove("profil");
+        var received = System.Text.Json.JsonDocument.Parse(config.ToJson()).RootElement;
         if (doActivate && app.IsRunning(target))
         {
             await app.Dialogs.ShowMessageAsync("Minecraft läuft noch",
@@ -642,9 +646,9 @@ internal static class ShareUi
         try
         {
             if (asProfile.IsChecked == true)
-                savedAs = OverlayConfigFile.WriteProfile(target, nameBox.Text, payload.Config);
+                savedAs = OverlayConfigFile.WriteProfile(target, nameBox.Text, received);
             if (doActivate)
-                OverlayConfigFile.Write(target, payload.Config);
+                OverlayConfigFile.Write(target, received);
         }
         catch (IOException ex)
         {

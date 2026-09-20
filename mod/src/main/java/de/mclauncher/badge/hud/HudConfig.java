@@ -66,6 +66,12 @@ public final class HudConfig {
 		public int textRgb;
 		public boolean shadow;
 
+		// ---- Anker: die Position gilt ab Bildrand (0), Bildmitte (1) oder gegenüberliegendem Rand (2) ----
+		public int anchorX;
+		public int anchorY;
+		/** Beim Verschieben den nächstgelegenen Anker wählen. */
+		public boolean autoAnchor;
+
 		// ---- Text und Format ----
 		/** Kurzen Namen vor den Wert schreiben ("Ping: 45 ms"). */
 		public boolean labels;
@@ -95,6 +101,8 @@ public final class HudConfig {
 		/** 0 immer zeigen, 1 nur unter der Grenze, 2 nur ab der Grenze. */
 		public int showMode;
 		public int showLimit;
+		/** Farbe einer gedrückten Taste (Tastenanzeige) als 0xRRGGBB. */
+		public int pressRgb = 0xFFFFFF;
 
 		// ---- nur bei Anzeigen mit HudModule.equipment ----
 		/** Ausrüstung untereinander statt nebeneinander. */
@@ -124,12 +132,28 @@ public final class HudConfig {
 			this.vertical = false;
 			this.percent = true;
 			this.split = false;
-			this.labels = false;
+			this.labels = module == HudModule.LIGHT;
 			this.units = true;
 			this.decimals = module == HudModule.COORDS ? 0 : 1;
 			this.variant = 0;
 			this.showLimit = module.metric == null ? 0 : module.metric.max() / 2;
 			seedRules(module);
+			if (module == HudModule.EFFECTS) {
+				// Wie in Minecraft: oben rechts
+				this.anchorX = 2;
+				this.x = 1;
+				this.y = 1;
+			}
+			if (module == HudModule.SCOREBOARD) {
+				// Wie in Minecraft: am rechten Rand, in der Mitte
+				this.anchorX = 2;
+				this.anchorY = 1;
+				this.x = 3;
+				this.y = 0;
+				// Und mit dem dunklen Hintergrund, den Minecraft sonst selbst zeichnet
+				this.background = true;
+				this.backgroundAlpha = 30;
+			}
 			for (HudSlot slot : HudSlot.values()) {
 				this.slots[slot.ordinal()] = slot.defaultEnabled;
 				// Beim ersten Zerlegen stehen die Stücke untereinander, damit sie sich nicht überdecken
@@ -201,6 +225,58 @@ public final class HudConfig {
 
 	/** Name des zuletzt geladenen oder gespeicherten Profils (nur zur Anzeige), sonst leer. */
 	public String activeProfile = "";
+	/** Gruppen: mehrere Anzeigen mit einem gemeinsamen Hintergrund, die zusammen wandern. */
+	public final java.util.List<Group> groups = new java.util.ArrayList<>();
+
+	/** Eine Gruppe von Anzeigen samt gemeinsamer Hintergrundfläche. */
+	public static final class Group {
+		public final java.util.List<HudModule> members = new java.util.ArrayList<>();
+		public int alpha = 45;
+		public int rgb = 0x000000;
+		public int corner = 4;
+		public boolean border;
+
+		public int argb() {
+			return (Math.max(0, Math.min(100, alpha)) * 255 / 100) << 24 | (rgb & 0xFFFFFF);
+		}
+	}
+
+	/** Die Gruppe, zu der eine Anzeige gehört, sonst null. */
+	public Group groupOf(HudModule module) {
+		for (Group group : groups)
+			if (group.members.contains(module))
+				return group;
+		return null;
+	}
+
+	/** Fasst Anzeigen zu einer Gruppe zusammen; der Hintergrund der ersten mit Hintergrund wird übernommen. */
+	public Group makeGroup(java.util.Collection<HudModule> modules) {
+		Group group = new Group();
+		for (HudModule module : HudModule.values()) {
+			if (!modules.contains(module))
+				continue;
+			Group old = groupOf(module);
+			if (old != null)
+				old.members.remove(module);
+			group.members.add(module);
+		}
+		groups.removeIf(g -> g.members.size() < 2);
+		for (HudModule module : group.members) {
+			Entry entry = entries.get(module);
+			if (entry.background && group.rgb == 0 && group.alpha == 45) {
+				group.alpha = entry.backgroundAlpha;
+				group.rgb = entry.backgroundRgb;
+				group.corner = entry.corner;
+				group.border = entry.border;
+			}
+			entry.background = false;
+		}
+		groups.add(group);
+		return group;
+	}
+
+	/** Server, auf denen dieses Profil automatisch gilt (Adresse oder Domain). */
+	public final java.util.List<String> servers = new java.util.ArrayList<>();
 
 	private HudConfig(Path file) {
 		this.file = file;
@@ -217,13 +293,16 @@ public final class HudConfig {
 	public static HudConfig load(Path gameDir) {
 		HudConfig config = new HudConfig(gameDir.resolve("config").resolve("axoclient-hud.json"));
 		try {
-			if (!Files.exists(config.file))
+			if (!Files.exists(config.file)) {
+				HudProfiles.ensureDefault(config);
 				return config;
+			}
 			config.apply(JsonParser.parseString(Files.readString(config.file, StandardCharsets.UTF_8))
 				.getAsJsonObject());
 		} catch (Exception e) {
 			config.reset(); // kaputte Datei: lieber von vorn als gar keine Anzeigen
 		}
+		HudProfiles.ensureDefault(config);
 		return config;
 	}
 
@@ -253,6 +332,35 @@ public final class HudConfig {
 			colorMode = Math.max(0, Math.min(2, json.get("farbmodus").getAsInt()));
 		if (json.has("profil"))
 			activeProfile = json.get("profil").getAsString();
+		if (json.has("gruppen") && json.get("gruppen").isJsonArray()) {
+			groups.clear();
+			for (var element : json.getAsJsonArray("gruppen")) {
+				JsonObject saved = element.getAsJsonObject();
+				Group group = new Group();
+				if (saved.has("mitglieder"))
+					for (var id : saved.getAsJsonArray("mitglieder"))
+						for (HudModule module : HudModule.values())
+							if (module.id.equals(id.getAsString()) && groupOf(module) == null
+								&& !group.members.contains(module))
+								group.members.add(module);
+				if (saved.has("alpha"))
+					group.alpha = Math.max(0, Math.min(100, saved.get("alpha").getAsInt()));
+				if (saved.has("rgb"))
+					group.rgb = saved.get("rgb").getAsInt() & 0xFFFFFF;
+				if (saved.has("corner"))
+					group.corner = clampCorner(saved.get("corner").getAsInt());
+				if (saved.has("border"))
+					group.border = saved.get("border").getAsBoolean();
+				if (group.members.size() >= 2)
+					groups.add(group);
+			}
+		}
+		if (json.has("server") && json.get("server").isJsonArray()) {
+			servers.clear();
+			for (var element : json.getAsJsonArray("server"))
+				if (servers.size() < 8 && !element.getAsString().isBlank())
+					servers.add(element.getAsString().trim());
+		}
 	}
 
 	private void readEntry(Entry entry, JsonObject saved) {
@@ -290,6 +398,12 @@ public final class HudConfig {
 			entry.textRgb = saved.get("textRgb").getAsInt() & 0xFFFFFF;
 		if (saved.has("shadow"))
 			entry.shadow = saved.get("shadow").getAsBoolean();
+		if (saved.has("ankerX"))
+			entry.anchorX = HudSkin.wrap(saved.get("ankerX").getAsInt(), 3);
+		if (saved.has("ankerY"))
+			entry.anchorY = HudSkin.wrap(saved.get("ankerY").getAsInt(), 3);
+		if (saved.has("autoAnker"))
+			entry.autoAnchor = saved.get("autoAnker").getAsBoolean();
 		if (saved.has("labels"))
 			entry.labels = saved.get("labels").getAsBoolean();
 		if (saved.has("units"))
@@ -324,6 +438,8 @@ public final class HudConfig {
 		}
 		if (saved.has("zeigen"))
 			entry.showMode = Math.max(0, Math.min(2, saved.get("zeigen").getAsInt()));
+		if (saved.has("tastenfarbe"))
+			entry.pressRgb = saved.get("tastenfarbe").getAsInt() & 0xFFFFFF;
 		if (saved.has("grenze"))
 			entry.showLimit = saved.get("grenze").getAsInt();
 		if (!saved.has("slots"))
@@ -352,6 +468,22 @@ public final class HudConfig {
 			json.addProperty("einrasten", snap);
 			json.addProperty("farbmodus", colorMode);
 			json.addProperty("profil", activeProfile);
+			JsonArray serverList = new JsonArray();
+			servers.forEach(serverList::add);
+			json.add("server", serverList);
+			JsonArray groupList = new JsonArray();
+			for (Group group : groups) {
+				JsonObject saved = new JsonObject();
+				JsonArray ids = new JsonArray();
+				group.members.forEach(m -> ids.add(m.id));
+				saved.add("mitglieder", ids);
+				saved.addProperty("alpha", group.alpha);
+				saved.addProperty("rgb", group.rgb);
+				saved.addProperty("corner", group.corner);
+				saved.addProperty("border", group.border);
+				groupList.add(saved);
+			}
+			json.add("gruppen", groupList);
 
 			for (HudModule module : HudModule.values())
 				json.add(module.id, write(entries.get(module)));
@@ -363,6 +495,7 @@ public final class HudConfig {
 			JsonObject json = toJson();
 			Files.createDirectories(file.getParent());
 			Files.writeString(file, json.toString(), StandardCharsets.UTF_8);
+			HudProfiles.writeActive(this, json);
 		} catch (IOException e) {
 			// Nicht schreibbar: die Einstellungen gelten dann nur bis zum Spielende
 		}
@@ -384,6 +517,9 @@ public final class HudConfig {
 		saved.addProperty("border", entry.border);
 		saved.addProperty("textRgb", entry.textRgb);
 		saved.addProperty("shadow", entry.shadow);
+		saved.addProperty("ankerX", entry.anchorX);
+		saved.addProperty("ankerY", entry.anchorY);
+		saved.addProperty("autoAnker", entry.autoAnchor);
 		saved.addProperty("labels", entry.labels);
 		saved.addProperty("units", entry.units);
 		saved.addProperty("decimals", entry.decimals);
@@ -407,6 +543,7 @@ public final class HudConfig {
 		saved.add("regeln", rules);
 		saved.addProperty("zeigen", entry.showMode);
 		saved.addProperty("grenze", entry.showLimit);
+		saved.addProperty("tastenfarbe", entry.pressRgb);
 		JsonObject slots = new JsonObject();
 		for (HudSlot slot : HudSlot.values()) {
 			JsonObject one = new JsonObject();
@@ -423,11 +560,11 @@ public final class HudConfig {
 	public void reset() {
 		for (HudModule module : HudModule.values())
 			entries.put(module, new Entry(module));
+		groups.clear();
 		grid = false;
 		gridSize = 8;
 		snap = true;
 		colorMode = 0;
-		activeProfile = "";
 	}
 
 	public Entry get(HudModule module) {

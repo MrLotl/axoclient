@@ -129,7 +129,7 @@ public partial class InstancesPage : UserControl
         DetailSubtitle.Text = "Name, Mod-Loader und Minecraft-Version wählen";
         DetailTabs.Visibility = Visibility.Collapsed;
         DetailActions.Visibility = Visibility.Collapsed;
-        OverviewView.Visibility = ContentView.Visibility = WorldsView.Visibility = ServersView.Visibility = TransferView.Visibility =
+        OverviewView.Visibility = OverlayView.Visibility = ContentView.Visibility = WorldsView.Visibility = ServersView.Visibility = TransferView.Visibility =
             Visibility.Collapsed;
         Editor.Visibility = Visibility.Visible;
         Editor.Edit(_app, null);
@@ -162,7 +162,7 @@ public partial class InstancesPage : UserControl
 
         var tab = openSettings ? SettingsTab : OverviewTab;
         _switchingTab = true;
-        foreach (var t in new[] { OverviewTab, ModsTab, PacksTab, ShadersTab, WorldsTab, ServersTab, TransferTab, SettingsTab })
+        foreach (var t in new[] { OverviewTab, ModsTab, PacksTab, ShadersTab, OverlayTab, WorldsTab, ServersTab, TransferTab, SettingsTab })
             t.IsChecked = t == tab;
         _switchingTab = false;
         ShowTab();
@@ -180,6 +180,7 @@ public partial class InstancesPage : UserControl
             return;
 
         OverviewView.Visibility = OverviewTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        OverlayView.Visibility = OverlayTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         var content = ModsTab.IsChecked == true || PacksTab.IsChecked == true || ShadersTab.IsChecked == true;
         ContentView.Visibility = content ? Visibility.Visible : Visibility.Collapsed;
         WorldsView.Visibility = WorldsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -196,6 +197,8 @@ public partial class InstancesPage : UserControl
                 : ContentType.ResourcePack;
             ContentView.Show(_app, _current, type);
         }
+        else if (OverlayTab.IsChecked == true)
+            OverlayView.Show(_app, _current);
         else if (WorldsTab.IsChecked == true)
             WorldsView.Show(_app, _current);
         else if (ServersTab.IsChecked == true)

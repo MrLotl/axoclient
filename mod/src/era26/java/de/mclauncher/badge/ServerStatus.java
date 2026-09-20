@@ -40,6 +40,7 @@ public final class ServerStatus {
 			: "";
 		if (address.equals(written))
 			return;
+		de.mclauncher.badge.hud.HudProfiles.serverChanged(address);
 		try {
 			Path file = minecraft.gameDirectory.toPath().resolve(FILE_NAME);
 			Path temp = file.resolveSibling(FILE_NAME + ".tmp");

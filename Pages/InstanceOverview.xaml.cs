@@ -61,8 +61,6 @@ public partial class InstanceOverview : UserControl
             ? $"Letzter Absturz {FormatAgo(crash)}. Die Analyse sucht die Ursache und kann sie direkt beheben."
             : "Kein Absturz aufgezeichnet. Die Analyse liest trotzdem das letzte Log, falls etwas nicht stimmt.";
 
-        RefreshProfiles();
-
         var (mods, worlds, size) = await Task.Run(() => Measure(inst));
         if (request != _request)
             return;
@@ -71,33 +69,6 @@ public partial class InstanceOverview : UserControl
         stats.Add(new Stat("Ordnergröße", FormatSize(size)));
         stats.Add(new Stat("Loader", inst.Loader == LoaderType.Vanilla ? "Vanilla" : inst.Loader.ToString()));
         StatsList.ItemsSource = stats;
-    }
-
-    private void RefreshProfiles()
-    {
-        if (_inst == null)
-            return;
-        var names = OverlayConfigFile.ProfileNames(_inst);
-        ProfileList.ItemsSource = names;
-        ProfilesText.Text = names.Count == 0
-            ? "Noch keine Profile. Im Spiel (rechte Umschalttaste → Profile) speicherst du deine Anzeigen als Profil, z.B. \"PvP\" oder \"Bauen\". Hier kannst du sie dann an Freunde schicken."
-            : "Im Spiel unter \"Profile\" wechselst du zwischen ihnen. Mit \"Teilen\" gehen sie an Freunde oder in eine Datei.";
-    }
-
-    private async void ShareProfile_Click(object sender, RoutedEventArgs e)
-    {
-        if (_inst != null && ((FrameworkElement)sender).DataContext is string name)
-            await ShareUi.ShareInstanceAsync(_app, _inst, overlayProfile: name);
-    }
-
-    private async void DeleteProfile_Click(object sender, RoutedEventArgs e)
-    {
-        if (_inst == null || ((FrameworkElement)sender).DataContext is not string name)
-            return;
-        if (!await _app.Dialogs.ConfirmAsync("Profil löschen", $"Das Overlay-Profil \"{name}\" löschen?", "Löschen", danger: true))
-            return;
-        OverlayConfigFile.DeleteProfile(_inst, name);
-        RefreshProfiles();
     }
 
     private static (int Mods, int Worlds, long Size) Measure(Installation inst)

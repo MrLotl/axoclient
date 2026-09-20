@@ -77,6 +77,73 @@ public static class OverlayConfigFile
     /// <summary>Höchstlänge eines Profilnamens (wie in der Mod).</summary>
     public const int MaxProfileName = 24;
 
+    /// <summary>Dieses Profil gibt es immer; es gilt überall, wo kein anderes Profil eingestellt ist.</summary>
+    public const string DefaultProfile = "Standard";
+
+    /// <summary>Legt "Standard" an, falls es fehlt (aus den aktuellen Einstellungen, sonst leer = Standardwerte der Mod).</summary>
+    public static void EnsureDefaultProfile(Installation inst)
+    {
+        try
+        {
+            var path = Path.Combine(ProfilesDir(inst), DefaultProfile + ".json");
+            if (File.Exists(path))
+                return;
+            Directory.CreateDirectory(ProfilesDir(inst));
+            File.WriteAllText(path, Read(inst)?.GetRawText() ?? "{}");
+        }
+        catch (IOException)
+        {
+            // nicht schreibbar: es geht auch ohne
+        }
+    }
+
+    /// <summary>Name des Profils, das im Spiel gerade gilt (steht in den aktiven Einstellungen).</summary>
+    public static string ActiveProfile(Installation inst)
+    {
+        try
+        {
+            if (Read(inst) is { } config && config.TryGetProperty("profil", out var name) && name.ValueKind == JsonValueKind.String
+                && CleanProfileName(name.GetString()) is { Length: > 0 } clean)
+                return clean;
+        }
+        catch (InvalidOperationException)
+        {
+            // kaputte Datei
+        }
+        return DefaultProfile;
+    }
+
+    /// <summary>Speichert ein Profil; gilt es gerade im Spiel, folgen auch die aktiven Einstellungen.</summary>
+    public static void SaveProfile(Installation inst, string name, OverlayProfile profile)
+    {
+        var clean = CleanProfileName(name);
+        if (clean.Length == 0)
+            return;
+        Directory.CreateDirectory(ProfilesDir(inst));
+        File.WriteAllText(Path.Combine(ProfilesDir(inst), clean + ".json"), profile.ToJson());
+        if (ActiveProfile(inst).Equals(clean, StringComparison.OrdinalIgnoreCase))
+            WriteActive(inst, clean, profile);
+    }
+
+    /// <summary>Macht ein Profil zum aktiven: die Mod liest es beim nächsten Start.</summary>
+    public static void Activate(Installation inst, string name)
+    {
+        var clean = CleanProfileName(name);
+        var profile = ReadProfile(inst, clean);
+        if (profile == null)
+            return;
+        WriteActive(inst, clean, OverlayProfile.Parse(profile.Value.GetRawText()));
+    }
+
+    private static void WriteActive(Installation inst, string name, OverlayProfile profile)
+    {
+        var copy = OverlayProfile.Parse(profile.ToJson());
+        copy.Root["profil"] = name;
+        var path = PathOf(inst);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, copy.ToJson());
+    }
+
     public static string ProfilesDir(Installation inst) => Path.Combine(inst.GameDir, "config", "axoclient-hud-profiles");
 
     /// <summary>Nur Buchstaben, Ziffern, Leerzeichen, - und _ (es wird ein Dateiname); leer, wenn nichts übrig bleibt.</summary>
@@ -94,7 +161,7 @@ public static class OverlayConfigFile
             var dir = ProfilesDir(inst);
             return Directory.Exists(dir)
                 ? Directory.GetFiles(dir, "*.json").Select(Path.GetFileNameWithoutExtension).OfType<string>()
-                    .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase).ToList()
+                    .OrderBy(n => n != DefaultProfile).ThenBy(n => n, StringComparer.CurrentCultureIgnoreCase).ToList()
                 : [];
         }
         catch
@@ -133,6 +200,8 @@ public static class OverlayConfigFile
 
     public static bool DeleteProfile(Installation inst, string name)
     {
+        if (CleanProfileName(name).Equals(DefaultProfile, StringComparison.OrdinalIgnoreCase))
+            return false; // "Standard" bleibt immer
         try
         {
             var path = Path.Combine(ProfilesDir(inst), CleanProfileName(name) + ".json");

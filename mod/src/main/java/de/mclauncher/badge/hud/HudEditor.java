@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  * Fenster und das Zeichnen.
  */
 public final class HudEditor {
-	private static final int WIDTH = 336;
+	private static final int WIDTH = 360;
 	private static final int PAD = 8;
 	private static final int COL_GAP = 8;
 	private static final int LEFT_WIDTH = 128;
@@ -56,14 +56,14 @@ public final class HudEditor {
 	private static final int MODE_HEX = 2;
 
 	/** Was gerade mit der Maus gezogen wird. */
-	private enum Drag { NONE, ELEMENT, SLIDER }
+	private enum Drag { NONE, ELEMENT, SLIDER, BAND, GROUP }
 
 	/** Welcher Regler gezogen wird. */
-	private enum Slider { SIZE, ALPHA, CORNER, GRID, RED, GREEN, BLUE, HUE, SATURATION, LIGHTNESS, WIDGET }
+	private enum Slider { GROUP_ALPHA, SIZE, ALPHA, CORNER, GRID, RED, GREEN, BLUE, HUE, SATURATION, LIGHTNESS, WIDGET }
 
 	/** Die Seiten der rechten Spalte. */
 	private enum Page {
-		STYLE("Stil"), FORMAT("Text"), RULES("Regeln"), PROFILES("Profile");
+		STYLE("Stil"), FORMAT("Text"), RULES("Regeln"), PLACE("Ort"), PROFILES("Profile");
 
 		final String label;
 
@@ -73,7 +73,7 @@ public final class HudEditor {
 	}
 
 	/** Für welche Farbe der Wähler gerade offen ist. */
-	private enum Colour { NONE, TEXT, BACKGROUND, RULE }
+	private enum Colour { NONE, TEXT, BACKGROUND, RULE, GROUP, PRESS }
 
 	private final HudConfig config;
 	private HudModule selected = HudModule.values()[0];
@@ -90,6 +90,11 @@ public final class HudEditor {
 	private String profilePick = "";
 	private boolean confirmDelete;
 	private Widget activeWidget;
+	/** Zuletzt gesehene Umgebung (zum Umrechnen der Position beim Anker-Wechsel). */
+	private HudPainter ctxPainter;
+	private Map<HudModule, String> ctxTexts;
+	private int ctxWidth;
+	private int ctxHeight;
 	/** Zuletzt gelesene Profilnamen (nicht bei jedem Bild neu von der Platte). */
 	private List<String> profiles;
 	/** Rückmeldung auf der Profilseite ("Gespeichert" usw.). */
@@ -109,6 +114,17 @@ public final class HudEditor {
 	private int trackWidth;
 
 	private HudElement dragged;
+	private HudConfig.Group groupToEdit;
+	/** Mehrere gewählte Stücke (Auswahlrahmen aufziehen), die zusammen verschoben werden. */
+	private final java.util.Set<HudElement> multi = new java.util.HashSet<>();
+	private final Map<HudElement, int[]> groupStart = new java.util.HashMap<>();
+	private int bandX0;
+	private int bandY0;
+	private int bandX1;
+	private int bandY1;
+	private int groupGrabX;
+	private int groupGrabY;
+	private HudElement groupLeader;
 	private int grabX;
 	private int grabY;
 	private int guideX = -1;
@@ -116,18 +132,25 @@ public final class HudEditor {
 
 	public HudEditor(HudConfig config) {
 		this.config = config;
+		open.add(categoryOf(selected));
+		HudOverlay.sampleMode = true;
 	}
 
 	// ---------- Zeichnen ----------
 
 	public void render(HudPainter painter, Map<HudModule, String> texts, int width, int height,
 					   int mouseX, int mouseY) {
+		ctxWidth = width;
+		ctxHeight = height;
+		HudOverlay.sampleMode = true;
 		Map<HudModule, String> shown = withPlaceholders(texts);
 		painter.fill(0, 0, width, height, HudSkin.SCRIM);
 		if (editing && drag == Drag.ELEMENT)
 			HudSnap.drawGrid(config, painter, width, height);
 
-		for (HudElement element : HudOverlay.elements(config, painter, shown, true)) {
+		List<HudElement> all = HudOverlay.elements(config, painter, shown, true);
+		HudOverlay.drawGroups(config, all, painter, shown, width, height);
+		for (HudElement element : all) {
 			int[] box = HudOverlay.box(config, element, painter, shown, width, height);
 			if (editing)
 				renderFrame(painter, element, box, mouseX, mouseY);
@@ -137,7 +160,20 @@ public final class HudEditor {
 		if (editing) {
 			if (drag == Drag.ELEMENT)
 				HudSnap.drawGuides(painter, guideX, guideY, width, height);
+			if (drag == Drag.BAND) {
+				int x = Math.min(bandX0, bandX1);
+				int y = Math.min(bandY0, bandY1);
+				int w = Math.abs(bandX1 - bandX0);
+				int h = Math.abs(bandY1 - bandY0);
+				painter.fill(x, y, w, h, HudSkin.ACCENT_FAINT);
+				HudSkin.outline(painter, x, y, Math.max(1, w), Math.max(1, h), 0, HudSkin.ACCENT);
+			}
+			renderGroupPanel(painter, bar(width, height), mouseX, mouseY);
 			renderBar(painter, bar(width, height), mouseX, mouseY);
+			if (picker == Colour.GROUP && (currentGroup() == null || currentGroup() != groupToEdit))
+				picker = Colour.NONE;
+			if (picker == Colour.GROUP)
+				renderPicker(painter, pick(null, height), mouseX, mouseY);
 			return;
 		}
 
@@ -151,7 +187,8 @@ public final class HudEditor {
 	/** Rahmen um ein Stück, solange man es anfassen kann. */
 	private void renderFrame(HudPainter painter, HudElement element, int[] box, int mouseX, int mouseY) {
 		boolean hovered = drag == Drag.NONE && inside(mouseX, mouseY, box, 3);
-		boolean active = element.equals(dragged) || element.module() == selected;
+		boolean active = element.equals(dragged) || multi.contains(element)
+			|| (multi.isEmpty() && element.module() == selected);
 		if (!hovered && !active)
 			return;
 		HudConfig.Entry entry = config.get(element.module());
@@ -187,17 +224,58 @@ public final class HudEditor {
 			inside(mouseX, mouseY, layout.doneX, layout.buttonY, layout.smallWidth, BUTTON), true);
 	}
 
+	private static final String[] CATEGORY_NAMES = { "Leistung", "Position", "Zeit", "Kampf", "Bildschirm" };
+	private static final HudModule[][] CATEGORIES = {
+		{ HudModule.FPS, HudModule.PING, HudModule.CPU, HudModule.GPU, HudModule.MEMORY },
+		{ HudModule.COORDS, HudModule.CHUNK, HudModule.DIRECTION, HudModule.SPEED, HudModule.BIOME, HudModule.LIGHT },
+		{ HudModule.TIME, HudModule.WORLD_TIME },
+		{ HudModule.ARMOR, HudModule.CPS, HudModule.KEYS },
+		{ HudModule.EFFECTS, HudModule.SCOREBOARD }
+	};
+	/** Aufgeklappte Gruppen der Anzeigenliste. */
+	private final java.util.Set<Integer> open = new java.util.HashSet<>();
+
+	private static int categoryOf(HudModule module) {
+		for (int i = 0; i < CATEGORIES.length; i++)
+			for (HudModule member : CATEGORIES[i])
+				if (member == module)
+					return i;
+		return 0;
+	}
+
+	/** Die Zeilen der Anzeigenliste: Gruppenüberschriften (Integer) und darunter, wenn aufgeklappt, die Anzeigen. */
+	private List<Object> leftRows() {
+		List<Object> rows = new ArrayList<>();
+		for (int i = 0; i < CATEGORIES.length; i++) {
+			rows.add(i);
+			if (open.contains(i))
+				rows.addAll(java.util.Arrays.asList(CATEGORIES[i]));
+		}
+		return rows;
+	}
+
 	private void renderModules(HudPainter painter, Layout layout, int mouseX, int mouseY) {
-		HudModule[] modules = HudModule.values();
-		for (int i = 0; i < modules.length; i++) {
-			HudModule module = modules[i];
+		List<Object> rows = leftRows();
+		for (int i = 0; i < rows.size(); i++) {
 			int rowY = layout.rowsY + i * ROW;
 			boolean hovered = inside(mouseX, mouseY, layout.leftX, rowY, LEFT_WIDTH, ROW);
+			if (rows.get(i) instanceof Integer category) {
+				int on = 0;
+				for (HudModule member : CATEGORIES[category])
+					if (config.isEnabled(member))
+						on++;
+				painter.text((open.contains(category) ? "v " : "> ") + CATEGORY_NAMES[category], layout.leftX + 3,
+					rowY + 2, hovered ? HudSkin.TEXT : HudSkin.ACCENT);
+				HudSkin.right(painter, on + "/" + CATEGORIES[category].length, layout.leftX + LEFT_WIDTH - 3, rowY + 2,
+					HudSkin.MUTED);
+				continue;
+			}
+			HudModule module = (HudModule) rows.get(i);
 			if (module == selected) {
 				HudSkin.rounded(painter, layout.leftX, rowY, LEFT_WIDTH, ROW, 2, HudSkin.ACCENT_FAINT);
 				painter.fill(layout.leftX, rowY + 2, 2, ROW - 4, HudSkin.ACCENT);
 			}
-			HudSkin.toggleRow(painter, layout.leftX + 3, rowY, LEFT_WIDTH - 3, ROW, module.label,
+			HudSkin.toggleRow(painter, layout.leftX + 7, rowY, LEFT_WIDTH - 7, ROW, module.label,
 				config.isEnabled(module), hovered);
 		}
 	}
@@ -311,8 +389,104 @@ public final class HudEditor {
 			value / (float) max, hovered, PICKER_LABEL, PICKER_VALUE);
 	}
 
+	// ---------- Gruppen ----------
+
+	private static final int PANEL_GAP = 18;
+
+	/** Die Gruppe, die gerade gewählt ist (alle gewählten Anzeigen gehören ihr), sonst null. */
+	private HudConfig.Group currentGroup() {
+		HudConfig.Group group = null;
+		for (HudElement element : multi) {
+			HudConfig.Group of = config.groupOf(element.module());
+			if (of == null || (group != null && of != group))
+				return null;
+			group = of;
+		}
+		return group;
+	}
+
+	private java.util.Set<HudModule> multiModules() {
+		java.util.Set<HudModule> modules = new java.util.HashSet<>();
+		for (HudElement element : multi)
+			modules.add(element.module());
+		return modules;
+	}
+
+	private boolean panelVisible() {
+		return editing && multiModules().size() > 1;
+	}
+
+	private int panelY(Bar bar) {
+		return bar.y - PANEL_GAP - BAR_HEIGHT;
+	}
+
+	private void renderGroupPanel(HudPainter painter, Bar bar, int mouseX, int mouseY) {
+		if (!panelVisible())
+			return;
+		int y = panelY(bar);
+		int rowY = y + (BAR_HEIGHT - ROW) / 2;
+		HudSkin.card(painter, bar.x, y, BAR_WIDTH, BAR_HEIGHT);
+		HudConfig.Group group = currentGroup();
+		int buttonY = y + (BAR_HEIGHT - BUTTON) / 2;
+		int px = bar.x + PAD;
+		HudSkin.button(painter, px, buttonY, 82, BUTTON, group == null ? "Gruppe bilden" : "Auflösen",
+			inside(mouseX, mouseY, px, buttonY, 82, BUTTON), group == null);
+		if (group == null)
+			return;
+		int trackX = px + 90;
+		HudSkin.slider(painter, trackX, rowY + 3, 60, HudSkin.TRACK_HEIGHT, group.alpha / 100.0F,
+			drag == Drag.SLIDER && slider == Slider.GROUP_ALPHA || inside(mouseX, mouseY, trackX, rowY, 60, ROW));
+		HudSkin.right(painter, group.alpha + " %", trackX + 60 + 26, rowY + 2, HudSkin.TEXT_DIM);
+		int swatchX = trackX + 60 + 34;
+		HudSkin.rounded(painter, swatchX, rowY + 1, 16, ROW - 2, 2, 0xFF000000 | group.rgb);
+		HudSkin.outline(painter, swatchX, rowY + 1, 16, ROW - 2, 2, HudSkin.BORDER);
+		HudSkin.toggleRow(painter, swatchX + 22, rowY, 56, ROW, "Rahmen", group.border,
+			inside(mouseX, mouseY, swatchX + 22, rowY, 56, ROW));
+	}
+
+	/** Klick im Gruppenfeld. @return true, wenn getroffen */
+	private boolean clickGroupPanel(Bar bar, int mouseX, int mouseY) {
+		if (!panelVisible())
+			return false;
+		int y = panelY(bar);
+		if (!inside(mouseX, mouseY, bar.x, y, BAR_WIDTH, BAR_HEIGHT))
+			return false;
+		int rowY = y + (BAR_HEIGHT - ROW) / 2;
+		int buttonY = y + (BAR_HEIGHT - BUTTON) / 2;
+		int px = bar.x + PAD;
+		HudConfig.Group group = currentGroup();
+		if (inside(mouseX, mouseY, px, buttonY, 82, BUTTON)) {
+			if (group == null)
+				config.makeGroup(multiModules());
+			else
+				config.groups.remove(group);
+			config.save();
+			return true;
+		}
+		if (group == null)
+			return true;
+		int trackX = px + 90;
+		if (inside(mouseX, mouseY, trackX - 2, rowY, 64, ROW)) {
+			groupToEdit = group;
+			startTrack(Slider.GROUP_ALPHA, trackX, 60, mouseX);
+			return true;
+		}
+		int swatchX = trackX + 60 + 34;
+		if (inside(mouseX, mouseY, swatchX, rowY, 18, ROW)) {
+			groupToEdit = group;
+			if (picker == Colour.GROUP)
+				picker = Colour.NONE;
+			else
+				startPicker(Colour.GROUP);
+		} else if (inside(mouseX, mouseY, swatchX + 22, rowY, 56, ROW)) {
+			group.border = !group.border;
+			config.save();
+		}
+		return true;
+	}
+
 	private void renderBar(HudPainter painter, Bar bar, int mouseX, int mouseY) {
-		HudSkin.centered(painter, "Anzeigen mit der Maus ziehen · rechte Maustaste stellt eine zurück",
+		HudSkin.centered(painter, "Ziehen · leere Fläche aufziehen wählt mehrere (dann Gruppe bilden) · Rechtsklick setzt zurück",
 			bar.x + BAR_WIDTH / 2, bar.y - 13, HudSkin.MUTED);
 		HudSkin.card(painter, bar.x, bar.y, BAR_WIDTH, BAR_HEIGHT);
 
@@ -335,8 +509,22 @@ public final class HudEditor {
 	/** @return true, wenn das ganze Fenster geschlossen werden soll. */
 	public boolean mouseDown(HudPainter painter, Map<HudModule, String> texts, int width, int height,
 							 int mouseX, int mouseY) {
+		ctxPainter = painter;
+		ctxTexts = texts;
+		ctxWidth = width;
+		ctxHeight = height;
 		if (editing) {
 			Bar bar = bar(width, height);
+			if (picker == Colour.GROUP) {
+				Pick pick = pick(null, height);
+				if (inside(mouseX, mouseY, pick.x, pick.y, PICKER_WIDTH, pick.height)) {
+					clickPicker(pick, mouseX, mouseY);
+					return false;
+				}
+				picker = Colour.NONE;
+			}
+			if (clickGroupPanel(bar, mouseX, mouseY))
+					return false;
 			if (inside(mouseX, mouseY, bar.x, bar.y, BAR_WIDTH, BAR_HEIGHT)) {
 				clickBar(bar, mouseX, mouseY);
 				return false;
@@ -370,11 +558,15 @@ public final class HudEditor {
 		List<HudElement> elements = HudOverlay.elements(config, painter, shown, true);
 		for (int i = elements.size() - 1; i >= 0; i--) {
 			HudElement element = elements.get(i);
-			if (!inside(mouseX, mouseY, HudOverlay.box(config, element, painter, shown, width, height), 3))
+			int[] box = HudOverlay.box(config, element, painter, shown, width, height);
+			if (!inside(mouseX, mouseY, box, 3))
 				continue;
 			HudModule module = element.module();
-			HudOverlay.move(config.get(module), element, module.defaultX,
-				module.defaultY + (element.isSlot() ? element.slot() * 18 : 0));
+			HudConfig.Entry entry = config.get(module);
+			entry.anchorX = 0; // zurück an den Standardplatz: oben links
+			entry.anchorY = 0;
+			HudOverlay.move(entry, element, module.defaultX,
+				module.defaultY + (element.isSlot() ? element.slot() * 18 : 0), box[2], box[3], width, height);
 			config.save();
 			return;
 		}
@@ -382,14 +574,20 @@ public final class HudEditor {
 
 	/** @return true, wenn das ganze Fenster geschlossen werden soll. */
 	private boolean clickMenu(Layout layout, int mouseX, int mouseY) {
-		HudModule[] modules = HudModule.values();
-		for (int i = 0; i < modules.length; i++) {
+		List<Object> rows = leftRows();
+		for (int i = 0; i < rows.size(); i++) {
 			if (!inside(mouseX, mouseY, layout.leftX, layout.rowsY + i * ROW, LEFT_WIDTH, ROW))
 				continue;
-			selected = modules[i];
+			if (rows.get(i) instanceof Integer category) {
+				if (!open.remove(category))
+					open.add(category);
+				return false;
+			}
+			HudModule module = (HudModule) rows.get(i);
+			selected = module;
 			// Klick aufs Kästchen schaltet ein und aus, sonst nur auswählen
-			if (inside(mouseX, mouseY, layout.leftX, layout.rowsY + i * ROW, 17, ROW)) {
-				HudConfig.Entry entry = config.get(modules[i]);
+			if (inside(mouseX, mouseY, layout.leftX, layout.rowsY + i * ROW, 24, ROW)) {
+				HudConfig.Entry entry = config.get(module);
 				entry.enabled = !entry.enabled;
 				config.save();
 			}
@@ -469,6 +667,7 @@ public final class HudEditor {
 			return changed(config::reset);
 		if (inside(mouseX, mouseY, layout.editX, layout.buttonY, layout.editWidth, BUTTON)) {
 			editing = true;
+			multi.clear();
 			return false;
 		}
 		if (inside(mouseX, mouseY, layout.doneX, layout.buttonY, layout.smallWidth, BUTTON)) {
@@ -532,6 +731,10 @@ public final class HudEditor {
 			}
 			if (nameFocus) {
 				nameFocus = false;
+				return true;
+			}
+			if (editing && !multi.isEmpty()) {
+				multi.clear();
 				return true;
 			}
 			if (editing) {
@@ -604,6 +807,12 @@ public final class HudEditor {
 		switch (drag) {
 			case SLIDER -> applySlider(mouseX);
 			case ELEMENT -> dragElement(painter, texts, width, height, mouseX, mouseY);
+			case BAND -> {
+				bandX1 = mouseX;
+				bandY1 = mouseY;
+				selectBand(painter, texts, width, height);
+			}
+			case GROUP -> dragGroup(width, height, mouseX, mouseY);
 			default -> {
 			}
 		}
@@ -615,6 +824,8 @@ public final class HudEditor {
 		drag = Drag.NONE;
 		dragged = null;
 		activeWidget = null;
+		groupLeader = null;
+		groupStart.clear();
 		guideX = -1;
 		guideY = -1;
 		config.save();
@@ -638,11 +849,79 @@ public final class HudEditor {
 			if (!inside(mouseX, mouseY, box, 3))
 				continue;
 			selected = element.module();
+			HudConfig.Group own = config.groupOf(element.module());
+			if (own != null && !multi.contains(element)) {
+				// Zu einer Gruppe gehörig: die ganze Gruppe wird gegriffen
+				multi.clear();
+				for (HudElement member : elements)
+					if (own.members.contains(member.module()))
+						multi.add(member);
+			}
+			if (multi.size() > 1 && multi.contains(element)) {
+				// Ein gewähltes Stück gegriffen: alle gewählten wandern mit
+				groupStart.clear();
+				for (HudElement member : multi)
+					groupStart.put(member, HudOverlay.box(config, member, painter, shown, width, height));
+				groupLeader = element;
+				groupGrabX = mouseX;
+				groupGrabY = mouseY;
+				drag = Drag.GROUP;
+				return;
+			}
+			multi.clear();
 			dragged = element;
 			drag = Drag.ELEMENT;
 			grabX = mouseX - box[0];
 			grabY = mouseY - box[1];
 			return;
+		}
+		// Leere Fläche: Auswahlrahmen aufziehen
+		multi.clear();
+		drag = Drag.BAND;
+		bandX0 = mouseX;
+		bandY0 = mouseY;
+		bandX1 = mouseX;
+		bandY1 = mouseY;
+	}
+
+	/** Wählt alle Stücke, die der Auswahlrahmen berührt. */
+	private void selectBand(HudPainter painter, Map<HudModule, String> texts, int width, int height) {
+		Map<HudModule, String> shown = withPlaceholders(texts);
+		int left = Math.min(bandX0, bandX1);
+		int top = Math.min(bandY0, bandY1);
+		int right = Math.max(bandX0, bandX1);
+		int bottom = Math.max(bandY0, bandY1);
+		multi.clear();
+		for (HudElement element : HudOverlay.elements(config, painter, shown, true)) {
+			int[] box = HudOverlay.box(config, element, painter, shown, width, height);
+			if (box[0] <= right && box[0] + box[2] >= left && box[1] <= bottom && box[1] + box[3] >= top) {
+				multi.add(element);
+				selected = element.module();
+			}
+		}
+	}
+
+	/** Verschiebt alle gewählten Stücke um dieselbe Strecke; das gegriffene rastet am Raster ein. */
+	private void dragGroup(int width, int height, int mouseX, int mouseY) {
+		if (groupLeader == null)
+			return;
+		int dx = mouseX - groupGrabX;
+		int dy = mouseY - groupGrabY;
+		int[] lead = groupStart.get(groupLeader);
+		if (lead != null && config.grid) {
+			int size = HudConfig.clampGrid(config.gridSize);
+			dx = Math.round((lead[0] + dx) / (float) size) * size - lead[0];
+			dy = Math.round((lead[1] + dy) / (float) size) * size - lead[1];
+		}
+		// Nicht über den Bildrand hinaus: die Gruppe als Ganzes begrenzen
+		for (int[] box : groupStart.values()) {
+			dx = Math.max(-box[0], Math.min(dx, width - box[2] - box[0]));
+			dy = Math.max(-box[1], Math.min(dy, height - box[3] - box[1]));
+		}
+		for (Map.Entry<HudElement, int[]> member : groupStart.entrySet()) {
+			int[] box = member.getValue();
+			HudOverlay.move(config.get(member.getKey().module()), member.getKey(), box[0] + dx, box[1] + dy, box[2],
+				box[3], width, height);
 		}
 	}
 
@@ -661,7 +940,7 @@ public final class HudEditor {
 			others, width, height);
 		guideX = snapped.guideX;
 		guideY = snapped.guideY;
-		HudOverlay.move(config.get(dragged.module()), dragged, snapped.x, snapped.y);
+		HudOverlay.move(config.get(dragged.module()), dragged, snapped.x, snapped.y, box[2], box[3], width, height);
 	}
 
 	// ---------- Regler ----------
@@ -707,6 +986,10 @@ public final class HudEditor {
 			(mouseX - (trackX + 1)) / (float) Math.max(1, trackWidth - 2)));
 		HudConfig.Entry entry = config.get(selected);
 		switch (slider) {
+			case GROUP_ALPHA -> {
+				if (groupToEdit != null)
+					groupToEdit.alpha = step(progress, 0, 100, 5);
+			}
 			case SIZE -> entry.scale = HudConfig.clampScale(
 				step(progress, HudConfig.MIN_SCALE, HudConfig.MAX_SCALE, HudConfig.SCALE_STEP));
 			case ALPHA -> entry.backgroundAlpha = step(progress, 0, 100, 5);
@@ -750,6 +1033,10 @@ public final class HudEditor {
 	// ---------- Farbe ----------
 
 	private int colour() {
+		if (picker == Colour.GROUP)
+			return groupToEdit == null ? 0 : groupToEdit.rgb;
+		if (picker == Colour.PRESS)
+			return config.get(selected).pressRgb;
 		HudConfig.Entry entry = config.get(selected);
 		if (picker == Colour.RULE)
 			return entry.ruleRgb[Math.max(0, Math.min(HudConfig.MAX_RULES - 1, pickerRule))];
@@ -757,6 +1044,15 @@ public final class HudEditor {
 	}
 
 	private void setColour(int rgb) {
+		if (picker == Colour.GROUP) {
+			if (groupToEdit != null)
+				groupToEdit.rgb = rgb & 0xFFFFFF;
+			return;
+		}
+		if (picker == Colour.PRESS) {
+			config.get(selected).pressRgb = rgb & 0xFFFFFF;
+			return;
+		}
 		HudConfig.Entry entry = config.get(selected);
 		if (picker == Colour.RULE)
 			entry.ruleRgb[Math.max(0, Math.min(HudConfig.MAX_RULES - 1, pickerRule))] = rgb & 0xFFFFFF;
@@ -780,6 +1076,10 @@ public final class HudEditor {
 
 	/** Schließt den Farbwähler, wenn seine Zeile gerade nicht mehr da ist. */
 	private void closePickerIfGone(Layout layout) {
+		if (picker == Colour.GROUP)
+			picker = Colour.NONE;
+		if (picker == Colour.PRESS && (page != Page.FORMAT || !selected.keys))
+			picker = Colour.NONE;
 		if (picker == Colour.BACKGROUND && (page != Page.STYLE || layout.alphaY < 0))
 			picker = Colour.NONE;
 		if (picker == Colour.TEXT && page != Page.STYLE)
@@ -880,6 +1180,7 @@ public final class HudEditor {
 		switch (page) {
 			case FORMAT -> formatRows(rows, entry);
 			case RULES -> ruleRows(rows, entry);
+			case PLACE -> placeRows(rows, entry);
 			case PROFILES -> profileRows(rows);
 			default -> {
 			}
@@ -907,11 +1208,26 @@ public final class HudEditor {
 			rows.cycle("Format", names[Math.min(entry.variant, names.length - 1)],
 				() -> entry.variant = (entry.variant + 1) % names.length);
 		}
+		if (selected.keys) {
+			Widget press = rows.cycle("Farbe beim Klick", HudSkin.hex(entry.pressRgb), () -> {
+				if (picker == Colour.PRESS)
+					picker = Colour.NONE;
+				else
+					startPicker(Colour.PRESS);
+			});
+			press.swatch = 0xFF000000 | entry.pressRgb;
+			press.rule = -2;
+			return;
+		}
+		if (selected == HudModule.EFFECTS) {
+			rows.info(entry.variant == 0 ? "Wie in Minecraft; Größe unter \"Stil\"." : "Zeigt Stufe und Restzeit als Text.");
+			return;
+		}
 		rows.add(rows.toggle("Beschriftung davor", entry.labels, () -> entry.labels = !entry.labels));
 		if (selected.unit != null)
 			rows.add(rows.toggle("Einheit dahinter", entry.units, () -> entry.units = !entry.units));
 
-		boolean hasDecimals = selected == HudModule.COORDS || selected == HudModule.ANGLE
+		boolean hasDecimals = selected == HudModule.COORDS
 			|| selected == HudModule.SPEED || selected == HudModule.MEMORY;
 		if (hasDecimals) {
 			int minimum = selected == HudModule.MEMORY ? 1 : 0;
@@ -1014,37 +1330,107 @@ public final class HudEditor {
 	private void profileRows(Rows rows) {
 		if (profiles == null)
 			profiles = HudProfiles.list(config);
-		rows.info("Aktiv: " + (config.activeProfile.isEmpty() ? "-" : config.activeProfile));
+		rows.info("Aktiv: " + (config.activeProfile.isEmpty() ? HudProfiles.DEFAULT : config.activeProfile));
+		rows.info("Änderungen gelten für das aktive Profil.");
+		rows.gap(2);
+
+		// Server: nur für Profile außer "Standard" (das gilt überall sonst)
+		if (!HudProfiles.DEFAULT.equals(config.activeProfile) && !config.activeProfile.isEmpty()) {
+			rows.heading("Automatisch auf diesen Servern");
+			if (config.servers.isEmpty())
+				rows.info("Keiner - das Profil wechselt nur von Hand.");
+			for (String server : config.servers)
+				rows.info(server.length() > 30 ? server.substring(0, 29) + "..." : server);
+			String current = HudProfiles.currentServer();
+			Widget add = rows.button(current.isEmpty() ? "Nicht auf einem Server" : "Diesen Server hinzufügen", false, () -> {
+				if (!current.isEmpty() && config.servers.size() < 8 && config.servers.stream()
+						.noneMatch(s -> HudProfiles.normalize(s).equals(HudProfiles.normalize(current))))
+					config.servers.add(current);
+			});
+			add.cols = 2;
+			rows.add(add);
+			Widget clear = rows.button("Leeren", false, config.servers::clear);
+			clear.col = 1;
+			clear.cols = 2;
+			rows.add(clear);
+			rows.gap(4);
+		}
+
+		rows.heading("Neues Profil aus dem Aktuellen");
 		Widget field = new Widget(Widget.Kind.FIELD, "");
 		field.value = profileName.isEmpty() && !nameFocus ? "Name eingeben..." : profileName;
 		field.height = FIELD_HEIGHT + 3;
 		field.click = () -> nameFocus = true;
 		rows.add(field);
-		rows.add(rows.button("Aktuelles als Profil speichern", true, this::saveProfile));
+		rows.add(rows.button("Anlegen", true, this::saveProfile));
 		rows.gap(2);
-		rows.heading(profiles.isEmpty() ? "Noch keine Profile gespeichert" : "Gespeicherte Profile");
+		rows.heading("Profile");
 		for (int i = 0; i < Math.min(5, profiles.size()); i++) {
 			String name = profiles.get(i);
-			rows.add(rows.toggle(name, name.equals(profilePick), () -> {
-				profilePick = name;
-				profileName = name;
-				confirmDelete = false;
-			}));
+			rows.add(rows.toggle(name + (name.equals(config.activeProfile) ? "  (aktiv)" : ""),
+				name.equals(profilePick), () -> {
+					profilePick = name;
+					confirmDelete = false;
+				}));
 		}
 		if (profiles.size() > 5)
 			rows.info("... und " + (profiles.size() - 5) + " weitere (im Launcher)");
 		if (!profilePick.isEmpty() && profiles.contains(profilePick)) {
 			rows.gap(2);
 			Widget load = rows.button("Laden", true, this::loadProfile);
-			load.cols = 2;
+			load.cols = HudProfiles.DEFAULT.equals(profilePick) ? 1 : 2;
 			rows.add(load);
-			Widget delete = rows.button(confirmDelete ? "Wirklich?" : "Löschen", false, this::deleteProfile);
-			delete.col = 1;
-			delete.cols = 2;
-			rows.add(delete);
+			if (!HudProfiles.DEFAULT.equals(profilePick)) {
+				Widget delete = rows.button(confirmDelete ? "Wirklich?" : "Löschen", false, this::deleteProfile);
+				delete.col = 1;
+				delete.cols = 2;
+				rows.add(delete);
+			}
 		}
 		if (!status.isEmpty())
 			rows.info(status);
+	}
+
+	/** Anker und Abstand: wo die Anzeige am Bildschirm hängt. */
+	private void placeRows(Rows rows, HudConfig.Entry entry) {
+		String[] horizontal = { "Links", "Mitte", "Rechts" };
+		String[] vertical = { "Oben", "Mitte", "Unten" };
+		rows.info("Die Position gilt ab diesem Rand:");
+		rows.cycle("Waagerecht", horizontal[entry.anchorX], () -> reanchor(selected, (entry.anchorX + 1) % 3, entry.anchorY));
+		rows.cycle("Senkrecht", vertical[entry.anchorY], () -> reanchor(selected, entry.anchorX, (entry.anchorY + 1) % 3));
+		rows.add(rows.toggle("Automatisch beim Verschieben", entry.autoAnchor, () -> entry.autoAnchor = !entry.autoAnchor));
+		rows.gap(3);
+		rows.info("Abstand: " + entry.x + " / " + entry.y + " px");
+		rows.gap(3);
+		rows.info("Ein Anker hält den Abstand zum Rand oder");
+		rows.info("zur Mitte, auch wenn das Fenster größer");
+		rows.info("oder kleiner wird.");
+	}
+
+	/** Anker wechseln, ohne dass die Anzeige im Bild springt. */
+	private void reanchor(HudModule module, int anchorX, int anchorY) {
+		HudConfig.Entry entry = config.get(module);
+		if (ctxPainter == null) {
+			entry.anchorX = anchorX;
+			entry.anchorY = anchorY;
+			return;
+		}
+		Map<HudModule, String> shown = withPlaceholders(ctxTexts);
+		List<HudElement> parts = new ArrayList<>();
+		parts.add(HudElement.of(module));
+		if (module.equipment)
+			for (HudSlot slot : HudSlot.values())
+				parts.add(new HudElement(module, slot.ordinal()));
+		int[][] boxes = new int[parts.size()][];
+		for (int i = 0; i < boxes.length; i++)
+			boxes[i] = HudOverlay.box(config, parts.get(i), ctxPainter, shown, ctxWidth, ctxHeight);
+		entry.anchorX = anchorX;
+		entry.anchorY = anchorY;
+		boolean auto = entry.autoAnchor;
+		entry.autoAnchor = false;
+		for (int i = 0; i < boxes.length; i++)
+			HudOverlay.move(entry, parts.get(i), boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3], ctxWidth, ctxHeight);
+		entry.autoAnchor = auto;
 	}
 
 	private void saveProfile() {
@@ -1080,10 +1466,11 @@ public final class HudEditor {
 
 	/** Höhe der Zeile der Farbregel, für die der Wähler offen ist; -1, wenn es sie nicht gibt. */
 	private int pickerRowY(Layout layout) {
-		if (page != Page.RULES || layout.widgets == null)
+		boolean press = picker == Colour.PRESS;
+		if (page != (press ? Page.FORMAT : Page.RULES) || layout.widgets == null)
 			return -1;
 		for (Widget widget : layout.widgets)
-			if (widget.kind == Widget.Kind.RULE && widget.rule == pickerRule)
+			if (press ? widget.rule == -2 : widget.kind == Widget.Kind.RULE && widget.rule == pickerRule)
 				return layout.widgetsY + widget.y;
 		return -1;
 	}
@@ -1098,7 +1485,7 @@ public final class HudEditor {
 				case HEADING -> HudSkin.heading(painter, widget.label, x + 2, y + 2);
 				case INFO -> painter.text(widget.label, x + 2, y + 2, HudSkin.TEXT_DIM);
 				case TOGGLE -> HudSkin.toggleRow(painter, x, y, cell, ROW, widget.label, widget.on, hovered);
-				case CYCLE -> HudSkin.cycleRow(painter, x, y, cell, ROW, widget.label, widget.value, 0, hovered);
+				case CYCLE -> HudSkin.cycleRow(painter, x, y, cell, ROW, widget.label, widget.value, widget.swatch, hovered);
 				case BUTTON -> HudSkin.button(painter, x + (widget.col > 0 ? 2 : 0), y,
 					cell - (widget.cols > 1 ? 2 : 0), BUTTON, widget.label, hovered, widget.primary);
 				case FIELD -> HudSkin.field(painter, x, y, cell, FIELD_HEIGHT, widget.value, nameFocus);
@@ -1231,11 +1618,16 @@ public final class HudEditor {
 		Pick pick = new Pick();
 		int content = config.colorMode == MODE_HEX ? FIELD_HEIGHT : 3 * ROW;
 		pick.height = 2 * PICKER_PAD + ROW + 4 + content + 4 + SWATCH;
-		pick.x = layout.rightX + RIGHT_WIDTH - PICKER_WIDTH;
-		int rowY = picker == Colour.RULE ? pickerRowY(layout)
+		pick.x = layout == null ? 0 : layout.rightX + RIGHT_WIDTH - PICKER_WIDTH;
+		int rowY = picker == Colour.GROUP ? 0 : picker == Colour.RULE || picker == Colour.PRESS ? pickerRowY(layout)
 			: picker == Colour.BACKGROUND ? layout.backColorY : layout.textColorY;
 		// Unter der Zeile, wenn dort Platz ist, sonst darüber
-		pick.y = rowY + ROW + 2 + pick.height <= screenHeight
+		if (picker == Colour.GROUP) {
+			Bar b = bar(ctxWidth, ctxHeight);
+			pick.x = b.x + BAR_WIDTH - PICKER_WIDTH;
+			rowY = panelY(b) - pick.height - 2 - ROW - 2;
+		}
+		pick.y = picker == Colour.GROUP ? Math.max(0, rowY + ROW + 2) : rowY + ROW + 2 + pick.height <= screenHeight
 			? rowY + ROW + 2
 			: Math.max(0, rowY - pick.height - 2);
 		pick.innerX = pick.x + PICKER_PAD;
@@ -1321,7 +1713,7 @@ public final class HudEditor {
 
 		int left = top;
 		layout.rowsY = left;
-		left += HudModule.values().length * ROW + GAP;
+		left += leftRows().size() * ROW + GAP;
 		layout.copyLineY = left;
 		left += 1 + GAP;
 		layout.copyY = left;

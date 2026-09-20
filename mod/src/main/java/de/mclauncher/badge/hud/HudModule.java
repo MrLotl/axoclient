@@ -11,7 +11,6 @@ public enum HudModule {
 		new String[] { "Chunk und Position", "Nur Chunk", "Nur Position im Chunk" }, null, null),
 	DIRECTION("richtung", "Blickrichtung", "Richtung", 4, 40, false, false,
 		new String[] { "Mit Achse", "Kurz (N, O, S, W)", "Nur Name" }, null, null),
-	ANGLE("blickwinkel", "Blickwinkel", "Winkel", 4, 112, false, false, null, null, null),
 	SPEED("geschwindigkeit", "Geschwindigkeit", "Tempo", 4, 124, false, false,
 		new String[] { "Blöcke pro Sekunde", "km/h" },
 		new Metric(40, 1, new int[] { 0, 5, 12 }, new int[] { Metric.WHITE, Metric.GREEN, Metric.YELLOW }), "B/s"),
@@ -24,7 +23,22 @@ public enum HudModule {
 		new String[] { "Belegt / Maximal", "Nur belegt", "Prozent" },
 		new Metric(100, 5, new int[] { 0, 70, 90 }, new int[] { Metric.GREEN, Metric.YELLOW, Metric.RED }), "GB"),
 	ARMOR("ruestung", "Ausrüstung", "", 4, 68, true, true, null,
-		new Metric(100, 5, new int[] { 0, 25, 60 }, new int[] { Metric.RED, Metric.YELLOW, Metric.GREEN }), null);
+		new Metric(100, 5, new int[] { 0, 25, 60 }, new int[] { Metric.RED, Metric.YELLOW, Metric.GREEN }), null),
+	CPS("cps", "Klicks pro Sekunde", "CPS", 4, 172, false, false,
+		new String[] { "Links | Rechts", "Nur links", "Nur rechts", "Summe" }, null, "CPS"),
+	KEYS("tasten", "Tasten", "", 4, 184, false, false,
+		new String[] { "WASD und Maus", "Nur WASD", "WASD, Leertaste, Maus" }, null, null, true),
+	EFFECTS("effekte", "Effekte", "", 4, 244, true, false, new String[] { "Symbole (wie Minecraft)", "Text" }, null, null),
+	LIGHT("licht", "Lichtlevel", "Licht", 4, 220, false, false,
+		new String[] { "Block", "Block und Himmel", "Gesamt" },
+		new Metric(15, 1, new int[] { 0, 1, 8 }, new int[] { Metric.RED, Metric.YELLOW, Metric.GREEN }), null),
+	CPU("cpu", "CPU-Auslastung", "CPU", 4, 256, false, false,
+		new String[] { "Gesamtes System", "Nur Minecraft" },
+		new Metric(100, 5, new int[] { 0, 60, 85 }, new int[] { Metric.GREEN, Metric.YELLOW, Metric.RED }), "%"),
+	GPU("gpu", "GPU-Auslastung", "GPU", 4, 268, false, false, null,
+		new Metric(100, 5, new int[] { 0, 60, 85 }, new int[] { Metric.GREEN, Metric.YELLOW, Metric.RED }), "%"),
+	SCOREBOARD("scoreboard", "Scoreboard", "", 0, 0, true, false, null, null, null);
+
 
 	/**
 	 * Was sich für Farbregeln und "nur bei Bedarf" messen lässt: ein Zahlenwert mit Bereich und
@@ -59,9 +73,16 @@ public enum HudModule {
 	public final Metric metric;
 	/** Einheit hinter dem Wert; null, wenn es keine gibt. */
 	public final String unit;
+	/** Ob die Anzeige gezeichnet statt geschrieben wird (Tasten). */
+	public final boolean keys;
 
 	HudModule(String id, String label, String shortLabel, int defaultX, int defaultY, boolean defaultEnabled,
 			  boolean equipment, String[] variants, Metric metric, String unit) {
+		this(id, label, shortLabel, defaultX, defaultY, defaultEnabled, equipment, variants, metric, unit, false);
+	}
+
+	HudModule(String id, String label, String shortLabel, int defaultX, int defaultY, boolean defaultEnabled,
+			  boolean equipment, String[] variants, Metric metric, String unit, boolean keys) {
 		this.id = id;
 		this.label = label;
 		this.shortLabel = shortLabel;
@@ -72,5 +93,6 @@ public enum HudModule {
 		this.variants = variants;
 		this.metric = metric;
 		this.unit = unit;
+		this.keys = keys;
 	}
 }
