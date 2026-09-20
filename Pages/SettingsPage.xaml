@@ -57,7 +57,7 @@
                         <Image DockPanel.Dock="Left" Source="Assets/axolotl.png" Width="32" Height="32" Margin="0,0,12,0"
                                RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Top"/>
                         <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12"
-                                   Text="Spieler, die AxoClient nutzen, bekommen in der Tabliste das Axolotl neben ihrem Kopf. Funktioniert in Fabric-Instanzen mit Minecraft 26.2 auf Servern, die Spielerköpfe anzeigen. Wird auch für die Freundesliste auf der Startseite gebraucht."/>
+                                   Text="Spieler, die AxoClient nutzen, bekommen in der Tabliste das Axolotl neben ihrem Kopf. Funktioniert in Fabric-Instanzen mit unterstützter Minecraft-Version (siehe Häkchen bei der Versionsauswahl) auf Servern, die Spielerköpfe anzeigen. Wird auch für die Freundesliste auf der Startseite gebraucht."/>
                     </DockPanel>
                     <CheckBox x:Name="BadgeCheck" Content="Symbol anzeigen und mich als AxoClient-Nutzer anmelden"
                               Margin="0,0,0,22" Click="Check_Click"/>

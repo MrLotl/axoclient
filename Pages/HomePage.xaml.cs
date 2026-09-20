@@ -31,7 +31,12 @@ public partial class HomePage : UserControl
         // Freundesliste regelmäßig aktualisieren, solange die Startseite sichtbar ist
         _friendsTimer.Tick += (_, _) => _ = RefreshFriendsAsync();
         _friendsTimer.Start();
-        IsVisibleChanged += (_, _) => _ = RefreshFriendsAsync();
+        IsVisibleChanged += (_, _) =>
+        {
+            _ = RefreshFriendsAsync();
+            if (IsVisible)
+                RefreshServers();
+        };
     }
 
     private void RefreshInstallations()
@@ -42,6 +47,7 @@ public partial class HomePage : UserControl
         InstallationBox.SelectedItem = _app.SelectedInstallation;
         _refreshing = false;
         UpdateControls();
+        RefreshServers();
     }
 
     private void InstallationBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

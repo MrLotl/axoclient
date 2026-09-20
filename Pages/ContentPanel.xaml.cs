@@ -178,6 +178,9 @@ public partial class ContentPanel : UserControl
         InstalledEmpty.Visibility = _installed.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         UpdateUpdateBanner();
         UpdateHint();
+
+        // Shader und viele Pakete haben kein Bild in der Datei: dann von Modrinth nachladen
+        _ = _store.LoadMissingIconsAsync(_installed, _modrinth);
     }
 
     private async void ToggleInstalled_Click(object sender, RoutedEventArgs e)

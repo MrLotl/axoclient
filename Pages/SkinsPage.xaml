@@ -117,7 +117,7 @@
                         <TextBlock Text="AxoClient-Umhänge" Style="{StaticResource SectionTitle}" Margin="0,24,0,4"/>
                         <TextBlock x:Name="ClientCapesHint" Foreground="{StaticResource MutedText}" FontSize="12"
                                    TextWrapping="Wrap" Margin="0,0,0,10"
-                                   Text="Sehen alle, die AxoClient nutzen (Fabric-Instanzen mit Minecraft 26.2). Ein AxoClient-Umhang wird dort statt deines Minecraft-Umhangs angezeigt."/>
+                                   Text="Sehen alle, die AxoClient nutzen (Fabric-Instanzen mit unterstützter Minecraft-Version). Ein AxoClient-Umhang wird dort statt deines Minecraft-Umhangs angezeigt."/>
                         <WrapPanel x:Name="ClientCapePanel"/>
 
                         <TextBlock x:Name="StatusText" Foreground="{StaticResource SubtleText}" Margin="0,16,0,0"

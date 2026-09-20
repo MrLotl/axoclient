@@ -24,10 +24,28 @@ public static class Badge
     public static bool IsConfigured(LauncherSettings settings) =>
         settings.BadgeEnabled && !string.IsNullOrWhiteSpace(settings.BadgeApiUrl);
 
+    /// <summary>
+    /// Welche mitgelieferte Mod zu welcher Minecraft-Version passt. Eine Mod deckt meist mehrere Versionen ab,
+    /// weil sich Minecraft dazwischen nicht geändert hat (die Bereiche stehen auch in mod/versions/*.properties).
+    /// </summary>
+    private static readonly Dictionary<string, string> ModForVersion = new()
+    {
+        ["26.3"] = "26.3",
+        ["26.2"] = "26.2",
+        ["26.1"] = "26.1", ["26.1.1"] = "26.1", ["26.1.2"] = "26.1",
+        ["1.21.11"] = "1.21.11", ["1.21.10"] = "1.21.11", ["1.21.9"] = "1.21.11",
+        ["1.21.8"] = "1.21.8", ["1.21.7"] = "1.21.8", ["1.21.6"] = "1.21.8",
+        ["1.21.5"] = "1.21.4", ["1.21.4"] = "1.21.4", ["1.21.3"] = "1.21.4", ["1.21.2"] = "1.21.4",
+        ["1.21.1"] = "1.21.1", ["1.21"] = "1.21.1"
+    };
+
     /// <summary>Für welche Minecraft-Versionen der Launcher eine Badge-Mod mitbringt.</summary>
-    public static IEnumerable<string> SupportedVersions => Assembly.GetExecutingAssembly().GetManifestResourceNames()
-        .Where(n => n.StartsWith("badge-mods/mclauncher-badge-") && n.EndsWith(".jar"))
-        .Select(n => n["badge-mods/mclauncher-badge-".Length..^".jar".Length]);
+    public static IEnumerable<string> SupportedVersions => ModForVersion
+        .Where(entry => Assembly.GetExecutingAssembly()
+            .GetManifestResourceNames().Contains(ResourceName(entry.Value)))
+        .Select(entry => entry.Key);
+
+    private static string ResourceName(string modVersion) => $"badge-mods/mclauncher-badge-{modVersion}.jar";
 
     public static bool IsActiveFor(Installation inst, LauncherSettings settings) =>
         IsConfigured(settings) && inst.Loader == LoaderType.Fabric && SupportedVersions.Contains(inst.MinecraftVersion);
@@ -44,7 +62,7 @@ public static class Badge
         }
 
         using var resource = Assembly.GetExecutingAssembly()
-            .GetManifestResourceStream($"badge-mods/mclauncher-badge-{inst.MinecraftVersion}.jar")!;
+            .GetManifestResourceStream(ResourceName(ModForVersion[inst.MinecraftVersion]))!;
         using var buffer = new MemoryStream();
         resource.CopyTo(buffer);
         var bytes = buffer.ToArray();

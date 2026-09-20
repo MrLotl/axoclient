@@ -56,7 +56,7 @@ public class PlayerListHudMixin {
 									  @Local PlayerListEntry entry) {
 		original.call(context, skin, x, y, size, hat, upsideDown, color);
 		if (mclauncher$has(entry) && BadgeTexture.get() instanceof Identifier badge) {
-			context.drawTexture(RenderPipelines.GUI_TEXTURED, badge, x + size + 1, y, 0.0F, 0.0F, W, H, 60, 46);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, badge, x + size + 1, y, 0.0F, 0.0F, W, H, 60, 46, 60, 46);
 		}
 	}
 

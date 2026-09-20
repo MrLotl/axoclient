@@ -13,14 +13,26 @@ public static class ContentIcons
     {
         try
         {
-            var bytes = Directory.Exists(path) ? ReadFromFolder(path) : ReadFromZip(path, type);
-            if (bytes == null)
-                return null;
+            return FromBytes(Directory.Exists(path) ? ReadFromFolder(path) : ReadFromZip(path, type));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Bild aus Rohdaten (z.B. vom Anbieter heruntergeladen); null, wenn das Format nicht lesbar ist.</summary>
+    public static BitmapSource? FromBytes(byte[]? bytes)
+    {
+        if (bytes == null || bytes.Length == 0)
+            return null;
+        try
+        {
             var image = new BitmapImage();
             using var ms = new MemoryStream(bytes);
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 64;
+            image.DecodePixelWidth = 128; // reicht auch für die Kacheln, spart aber Speicher bei großen Bildern
             image.StreamSource = ms;
             image.EndInit();
             image.Freeze();
@@ -32,22 +44,53 @@ public static class ContentIcons
         }
     }
 
+    /// <summary>Namen, unter denen Pakete und Shader ihr Bild ablegen.</summary>
+    private static readonly string[] PackIconNames = ["pack.png", "icon.png", "preview.png", "screenshot.png", "thumbnail.png"];
+
     private static byte[]? ReadFromFolder(string folder)
     {
-        var file = Path.Combine(folder, "pack.png");
-        return File.Exists(file) ? File.ReadAllBytes(file) : null;
+        foreach (var name in PackIconNames)
+        {
+            var file = Path.Combine(folder, name);
+            if (File.Exists(file))
+                return File.ReadAllBytes(file);
+        }
+        return null;
     }
 
     private static byte[]? ReadFromZip(string path, ContentType type)
     {
         using var zip = ZipFile.OpenRead(path);
-        if (type != ContentType.Mod)
-            return Read(zip, "pack.png");
+        if (type == ContentType.Mod)
+        {
+            foreach (var candidate in IconPathsOfMod(zip))
+                if (Read(zip, candidate) is { } bytes)
+                    return bytes;
+            return null;
+        }
 
-        foreach (var candidate in IconPathsOfMod(zip))
+        foreach (var candidate in IconPathsOfPack(zip))
             if (Read(zip, candidate) is { } bytes)
                 return bytes;
         return null;
+    }
+
+    /// <summary>
+    /// Bildpfade in einem Paket oder Shader. Viele Shader-Archive haben einen Unterordner
+    /// (z.B. "ComplementaryShaders/shaders/..."), daher wird auch eine Ebene tiefer gesucht.
+    /// </summary>
+    private static IEnumerable<string> IconPathsOfPack(ZipArchive zip)
+    {
+        foreach (var name in PackIconNames)
+            yield return name;
+
+        var nested = zip.Entries
+            .Select(e => e.FullName)
+            .Where(full => PackIconNames.Any(name => full.EndsWith('/' + name, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(full => full.Count(c => c == '/'))
+            .ToList();
+        foreach (var full in nested)
+            yield return full;
     }
 
     /// <summary>Mögliche Icon-Pfade laut fabric.mod.json / quilt.mod.json / mods.toml.</summary>

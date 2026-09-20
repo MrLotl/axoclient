@@ -41,13 +41,14 @@ repositories {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${mc}"
-	// Ab Minecraft 26.x ist der Code nicht mehr verschleiert, vorher braucht es die Namensliste (Yarn)
-	if (settings.yarn)
+	if (settings.yarn) {
+		// Verschleierte Version: Namensliste (Yarn) nötig, und der Loader wird mit umgeschrieben
 		mappings "net.fabricmc:yarn:${settings.yarn}:v2"
-	if (settings.yarn)
 		modImplementation "net.fabricmc:fabric-loader:${settings.loader}"
-	else
+	} else {
+		// Minecraft 26.x: der Code hat schon lesbare Namen
 		implementation "net.fabricmc:fabric-loader:${settings.loader}"
+	}
 	// Bewusst ohne Fabric API: Spieler brauchen außer Fabric nichts weiter
 }
 

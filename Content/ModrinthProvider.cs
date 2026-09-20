@@ -120,6 +120,19 @@ public class ModrinthProvider(HttpClient http) : IContentProvider
         };
     }
 
+    /// <summary>Adressen der Profilbilder mehrerer Projekte (Projekt-Id → Bildadresse); Projekte ohne Bild fehlen.</summary>
+    public async Task<Dictionary<string, string>> GetIconUrlsAsync(IEnumerable<string> projectIds)
+    {
+        var ids = projectIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        using var json = await GetJsonAsync($"{Api}/projects?ids={Uri.EscapeDataString(JsonSerializer.Serialize(ids))}");
+        return json.RootElement.EnumerateArray()
+            .Where(p => NullIfEmpty(p.GetProperty("icon_url").GetString()) != null)
+            .ToDictionary(p => p.GetProperty("id").GetString()!, p => p.GetProperty("icon_url").GetString()!);
+    }
+
     public async Task<(string Id, string Title)> GetProjectInfoAsync(string idOrSlug)
     {
         using var json = await GetJsonAsync($"{Api}/project/{idOrSlug}");

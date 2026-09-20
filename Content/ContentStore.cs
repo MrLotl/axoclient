@@ -33,8 +33,21 @@ public class InstalledItem : INotifyPropertyChanged
     /// <summary>Herkunft (null = manuell hinzugefügt, Quelle unbekannt).</summary>
     public InstalledContent? Entry { get; init; }
 
-    /// <summary>Profilbild aus der Datei selbst (null = keines vorhanden).</summary>
-    public System.Windows.Media.Imaging.BitmapSource? Icon { get; init; }
+    private System.Windows.Media.Imaging.BitmapSource? _icon;
+
+    /// <summary>
+    /// Profilbild: zuerst aus der Datei selbst, sonst später vom Anbieter nachgeladen
+    /// (Shader und viele Ressourcenpakete haben kein Bild in der Datei).
+    /// </summary>
+    public System.Windows.Media.Imaging.BitmapSource? Icon
+    {
+        get => _icon;
+        set
+        {
+            _icon = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Icon)));
+        }
+    }
 
     public bool CanChangeVersion => Entry != null;
 
@@ -153,6 +166,59 @@ public class ContentStore(Installation inst, HttpClient http)
             })
             .OrderBy(i => i.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    /// <summary>Ordner für nachgeladene Profilbilder (Shader und viele Pakete bringen keines mit).</summary>
+    private string IconCacheDir => Path.Combine(inst.GameDir, "launcher-icons");
+
+    private string CachedIconPath(string projectId) => Path.Combine(IconCacheDir, projectId + ".png");
+
+    /// <summary>
+    /// Holt fehlende Profilbilder von Modrinth nach und legt sie neben der Instanz ab, damit sie
+    /// beim nächsten Mal sofort da sind. Fehler werden übergangen (dann bleibt das Ersatzsymbol stehen).
+    /// </summary>
+    public async Task LoadMissingIconsAsync(IEnumerable<InstalledItem> items, ModrinthProvider modrinth)
+    {
+        var pending = new List<InstalledItem>();
+        foreach (var item in items.Where(i => i.Icon == null && i.Entry is { Source: ContentSource.Modrinth }))
+        {
+            var cached = CachedIconPath(item.Entry!.ProjectId);
+            if (File.Exists(cached))
+                item.Icon = ContentIcons.FromBytes(File.ReadAllBytes(cached));
+            if (item.Icon == null)
+                pending.Add(item);
+        }
+        if (pending.Count == 0)
+            return;
+
+        Dictionary<string, string> urls;
+        try
+        {
+            urls = await modrinth.GetIconUrlsAsync(pending.Select(i => i.Entry!.ProjectId));
+        }
+        catch
+        {
+            return; // offline oder Modrinth gerade nicht erreichbar
+        }
+
+        foreach (var item in pending)
+        {
+            if (!urls.TryGetValue(item.Entry!.ProjectId, out var url))
+                continue;
+            try
+            {
+                var bytes = await http.GetByteArrayAsync(url);
+                if (ContentIcons.FromBytes(bytes) is not { } image)
+                    continue; // z.B. webp, das Windows nicht anzeigen kann
+                item.Icon = image;
+                Directory.CreateDirectory(IconCacheDir);
+                await File.WriteAllBytesAsync(CachedIconPath(item.Entry.ProjectId), bytes);
+            }
+            catch
+            {
+                // einzelnes Bild fehlt: nicht schlimm
+            }
+        }
     }
 
     public bool IsInstalled(ContentSource source, string projectId) =>

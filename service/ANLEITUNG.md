@@ -41,15 +41,15 @@ Eine eigene Domain wird **nicht** benötigt.
 1. Die Adresse des Workers kopieren. Sie steht oben beim Worker und sieht so aus:
    `https://mclauncher-badge.DEIN-NAME.workers.dev`
 2. Im Browser öffnen. Es muss erscheinen: `{"ok":true,"service":"mclauncher-badge"}`
-3. Im Launcher unter **Einstellungen → Axolotl-Symbol in der Tabliste** die Adresse eintragen und
-   **Verbindung testen** klicken. Bei Erfolg steht dort „Alles bereit“.
+3. Die Adresse ist im Launcher fest eingebaut (`LauncherSettings.BadgeApiUrl`); bei einem eigenen Worker
+   dort anpassen.
 
 ## Wie es danach funktioniert
 
-- Beim Start einer **Fabric-Instanz mit Minecraft 26.2** legt der Launcher die Mod automatisch in den
-  mods-Ordner und meldet dich beim Dienst an. Bei anderen Instanzen wird nichts verändert.
-- Im Spiel zeigt die Tabliste bei allen Spielern, die den Launcher (mit derselben Dienst-Adresse) nutzen,
-  oben rechts am Kopf ein kleines Axolotl.
+- Beim Start einer **Fabric-Instanz mit unterstützter Minecraft-Version** (26.3, 26.2, 26.1, 1.21.11,
+  1.21.8, 1.21.4, 1.21.1) legt der Launcher die Mod automatisch in den mods-Ordner und meldet dich beim
+  Dienst an. Bei anderen Instanzen wird nichts verändert.
+- Im Spiel zeigt die Tabliste bei allen Spielern, die AxoClient nutzen, neben dem Kopf ein kleines Axolotl.
 - Die Köpfe (und damit das Symbol) zeigt Minecraft nur auf Servern mit Online-Modus bzw. im eigenen
   LAN/Einzelspieler an.
 - Wer 30 Tage nicht mit dem Launcher gespielt hat, verliert das Symbol, bis er wieder spielt.

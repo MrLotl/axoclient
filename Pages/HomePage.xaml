@@ -57,8 +57,14 @@
             </Border>
         </Grid>
 
-        <!-- Rechts: Freunde -->
-        <Border Grid.Column="1" Width="290" Margin="20,0,0,0" Padding="14" Background="#991E1F22" CornerRadius="10">
+        <!-- Rechts: oben Freunde, unten die Server der gewählten Instanz -->
+        <Grid Grid.Column="1" Width="290" Margin="20,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Padding="14" Background="#991E1F22" CornerRadius="10">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
@@ -118,5 +124,56 @@
                 </ListBox>
             </DockPanel>
         </Border>
+
+            <!-- Server der gewählten Instanz: ein Klick startet sie und verbindet direkt -->
+            <Border Grid.Row="1" Margin="0,12,0,0" Padding="14" Background="#991E1F22" CornerRadius="10">
+                <DockPanel MaxHeight="260">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <Button x:Name="RefreshServersButton" DockPanel.Dock="Right"
+                                Style="{StaticResource IconButton}" Width="30" Height="30" FontSize="12"
+                                Content="&#xE72C;" ToolTip="Aktualisieren" Click="RefreshServers_Click"/>
+                        <TextBlock x:Name="ServersHeader" Text="Server" Foreground="White" FontSize="15"
+                                   FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <TextBlock x:Name="ServersInfo" DockPanel.Dock="Top" Foreground="{StaticResource MutedText}"
+                               TextWrapping="Wrap" Visibility="Collapsed"/>
+
+                    <ListBox x:Name="ServerList" Style="{StaticResource CardList}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <Border DockPanel.Dock="Left" Width="32" Height="32" CornerRadius="4"
+                                            Background="#22FFFFFF" Margin="0,0,10,0" VerticalAlignment="Top"
+                                            ClipToBounds="True">
+                                        <Image Source="{Binding Icon}" Stretch="UniformToFill"
+                                               RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                    </Border>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
+                                            Background="{StaticResource Accent}" Content="Beitreten" Padding="8,5"
+                                            VerticalAlignment="Top" Margin="8,0,0,0" Click="JoinServer_Click"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Online}" Value="True">
+                                                            <Setter Property="Foreground" Value="#6FCF97"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>
