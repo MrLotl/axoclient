@@ -47,3 +47,14 @@ public class ShareInfo
     public string Icon => ShareKinds.Icon(Kind);
     public string Summary => $"{ShareKinds.Label(Kind)} von {FromName} · {Formats.Ago(CreatedUtc)}";
 }
+
+public record CapeStatus(string? CapeId, string? Role)
+{
+    public bool IsOwner => Role == "owner";
+    public bool IsAdmin => Role is "admin" or "owner";
+}
+
+public record AdminInfo(string Uuid, string Name)
+{
+    public string HeadUrl => $"https://mc-heads.net/avatar/{Uuid}/64";
+}

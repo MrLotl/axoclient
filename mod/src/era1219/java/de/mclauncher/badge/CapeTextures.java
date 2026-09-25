@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
- * AxoClient-Umhänge: Die Bilder liegen im GitHub-Repository (Ordner capes/, Adresse vom Launcher als
+ * AxoClient-Umhänge: Die Bilder liefert der AxoClient-Dienst (Admins laden sie im Launcher hoch; Adresse vom Launcher als
  * -Daxoclient.capes=...). Jedes Bild wird beim ersten Bedarf im Hintergrund geladen und dann als Textur angemeldet.
  */
 public final class CapeTextures {

@@ -15,12 +15,9 @@ Eine eigene Domain wird **nicht** benötigt.
 
 1. Im Dashboard links **Storage & Databases → D1 SQL Database** öffnen.
 2. **Create** klicken, als Namen `mclauncher-badge` eingeben, **Create** bestätigen.
-3. In der neuen Datenbank den Tab **Console** öffnen.
-4. Die beiden Zeilen aus `schema.sql` (liegt neben dieser Anleitung) **einzeln nacheinander** einfügen und
-   jeweils **Execute** klicken. Mit `/tables` lässt sich prüfen, ob die Tabelle `users` angelegt wurde.
 
-   Gespeichert werden je Spieler: `uuid` (Minecraft-UUID ohne Bindestriche), `name` (Spielername, nur zur
-   Übersicht) und `last_seen` (letzte Anmeldung in Millisekunden).
+Die Tabellen legt der Dienst beim ersten Aufruf selbst an; in der Konsole ist nichts auszuführen. (`schema.sql`
+enthält sie trotzdem, falls du die Datenbank lieber von Hand vorbereitest.)
 
 ## 3. Worker (den eigentlichen Dienst) anlegen
 
@@ -41,7 +38,7 @@ Eine eigene Domain wird **nicht** benötigt.
 1. Die Adresse des Workers kopieren. Sie steht oben beim Worker und sieht so aus:
    `https://mclauncher-badge.DEIN-NAME.workers.dev`
 2. Im Browser öffnen. Es muss erscheinen: `{"ok":true,"service":"mclauncher-badge"}`
-3. Die Adresse ist im Launcher fest eingebaut (`LauncherSettings.BadgeApiUrl`); bei einem eigenen Worker
+3. Die Adresse ist im Launcher fest eingebaut (`AppInfo.AxoServiceUrl`); bei einem eigenen Worker
    dort anpassen.
 
 ## Wie es danach funktioniert
@@ -60,12 +57,10 @@ Eine eigene Domain wird **nicht** benötigt.
 
 ## Update: Freunde & „Beitreten“ (wenn der Dienst schon läuft)
 
-Für die Freundesliste auf der Startseite braucht der Dienst neuen Code und drei neue Tabellen:
+Für die Freundesliste auf der Startseite braucht der Dienst neuen Code:
 
 1. **Worker → Edit code**: den Code komplett durch den aktuellen Inhalt von `worker.js` ersetzen, **Deploy**.
-2. **D1 → mclauncher-badge → Console**: die Zeilen 3 bis 7 aus `schema.sql` einzeln ausführen
-   (`tokens`, `status`, `friends`, der Index und `capes`). Alle Zeilen können gefahrlos erneut ausgeführt werden.
-3. Den Launcher neu starten.
+2. Den Launcher neu starten.
 
 Gespeichert werden zusätzlich: ein Anmelde-Token (nur als Hash), der aktuelle Server samt Minecraft-Version,
 solange du spielst, und wer wen als Freund hinzugefügt hat. Den Server sehen nur Freunde, die sich
@@ -78,8 +73,7 @@ Postfach. Dafür ist nur ein Schritt nötig:
 
 1. **Worker → Edit code**: den Code komplett durch den aktuellen Inhalt von `worker.js` ersetzen, **Deploy**.
 
-Die Tabelle `shares` legt der Dienst beim ersten Gebrauch selbst an; in der Konsole ist nichts auszuführen. (Die
-Zeilen stehen trotzdem in `schema.sql`, falls du die Datenbank lieber von Hand vorbereitest.) Beide Seiten brauchen
+Die Tabelle `shares` legt der Dienst selbst an. Beide Seiten brauchen
 danach den aktuellen Launcher – ein Freund mit einer älteren Version sieht das Postfach nicht.
 
 Was gespeichert wird: das Paket selbst (Instanz-Rezept, Overlay-Einstellungen, Modrinth-Kennung oder Serveradresse),
@@ -89,15 +83,38 @@ wer es geschickt hat und wer es bekommt. Es liegt nur im Postfach des Empfänger
 Grenzen (in `worker.js` oben einstellbar): nur zwischen **gegenseitigen** Freunden, ein Paket höchstens 250 000
 Zeichen, höchstens 40 offene Pakete je Postfach (davon 8 von derselben Person) und 30 gesendete Pakete pro Stunde.
 
+## Update: Admins und Umhänge hochladen
+
+Admins können AxoClient-Umhänge direkt im Launcher hochladen (Skins → Capes (AxoClient) → Karte mit dem **+**)
+und hochgeladene Umhänge wieder löschen. Der Besitzer ernennt die Admins im Launcher über **Admins verwalten**.
+
+1. **Worker → Edit code**: den Code komplett durch den aktuellen Inhalt von `worker.js` ersetzen, **Deploy**.
+2. Deine Minecraft-UUID herausfinden: <https://api.mojang.com/users/profiles/minecraft/DEINNAME> im Browser öffnen
+   (DEINNAME durch deinen Spielernamen ersetzen) und den Wert bei `"id"` kopieren.
+3. Im Worker **Settings → Variables and Secrets → Add**: Typ **Text**, Name genau `OWNER_UUID`, als Wert die UUID
+   aus Schritt 2 (mehrere Besitzer mit Komma getrennt). Speichern bzw. **Deploy** bestätigen.
+4. Den Launcher neu starten. Unter Skins → Capes (AxoClient) erscheinen jetzt die **+**-Karte und der Knopf
+   **Admins verwalten**.
+
+Die Tabellen `admins` und `cape_images` legt der Dienst beim ersten Gebrauch selbst an. Hochgeladene Umhänge liegen
+als Bild in der Datenbank (höchstens 1,5 MB, 64×32 Pixel oder ein Vielfaches bis 2048×1024). Es gibt nur noch diese
+Umhänge; den früheren GitHub-Ordner `capes/` gibt es nicht mehr. Wer noch einen der alten Umhänge trägt, legt ihn
+automatisch ab. Wird ein Umhang gelöscht, legen ihn ebenfalls alle ab, die ihn gerade tragen.
+
+**Wichtig:** Launcher ab dieser Version laden die Umhänge über den Dienst. Den neuen `worker.js` deshalb vor dem
+Launcher-Release deployen, sonst bleibt die Umhang-Liste leer.
+
 ## Wenn etwas nicht klappt
 
 | Meldung | Ursache / Lösung |
 |---|---|
 | „Der AxoClient-Dienst kennt das Teilen noch nicht“ | Der neue `worker.js` ist noch nicht deployt (siehe „Update: Teilen mit Freunden“). |
+| „Der AxoClient-Dienst kennt das Hochladen von Umhängen noch nicht“ | Der neue `worker.js` ist noch nicht deployt (siehe „Update: Admins und Umhänge hochladen“). |
+| Kein **+** und kein „Admins verwalten“ zu sehen | `OWNER_UUID` fehlt oder enthält eine falsche UUID; danach den Launcher neu starten. |
 | „Ihr müsst euch gegenseitig als Freunde hinzugefügt haben …“ | Teilen geht nur, wenn beide den anderen hinzugefügt haben; unter Freunde die Anfrage annehmen. |
 | „Unter dieser Adresse antwortet kein Badge-Dienst“ | Adresse falsch oder Code aus Schritt 3 nicht gespeichert (Deploy vergessen). |
 | „Interner Fehler: … DB …“ | Schritt 4 fehlt: Die Bindung muss genau `DB` heißen. |
-| „no such table: users“ | Schritt 2.4 (schema.sql ausführen) fehlt. |
+| „no such table: …“ | Der Worker-Code ist veraltet: aktuellen `worker.js` deployen. |
 | „Mojang hat kein Spieler-Zertifikat ausgestellt“ | Anmeldung im Launcher abgelaufen: einmal ab- und wieder anmelden. |
 | „Zeitstempel ungültig – stimmt die Uhr des PCs?“ | Die Windows-Uhr weicht mehr als 5 Minuten ab: Uhrzeit automatisch stellen lassen. |
 | „Spieler-Zertifikat wurde nicht von Mojang ausgestellt“ | Mojang hat seine Schlüssel geändert: `MOJANG_KEYS` in `worker.js` aktualisieren (Quelle steht im Code). |

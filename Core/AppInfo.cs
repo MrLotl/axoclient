@@ -9,7 +9,7 @@ public static class AppInfo
     public const string DevVersion = "0.0.0-dev";
 
     public const string AxoServiceUrl = "https://mclauncher-badge.bernhardtfinn0.workers.dev";
-    public const string ClientCapesUrl = "https://raw.githubusercontent.com/MrLotl/axoclient/main/capes/";
+    public const string ClientCapesUrl = AxoServiceUrl + "/capes/";
     public const string DiscordAppId = "1550925254124118067";
 
     public static string Version { get; } =

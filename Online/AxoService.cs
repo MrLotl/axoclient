@@ -11,6 +11,9 @@ namespace AxoClient.Online;
 public class AxoService(AppServices app)
 {
     private const string CertificatesUrl = "https://api.minecraftservices.com/player/certificates";
+    private const string PlayerLookupUrl = "https://api.mojang.com/users/profiles/minecraft/";
+    private const string CapeUploadFeature = "das Hochladen von Umhängen";
+    private const string AdminFeature = "die Admin-Verwaltung";
     private const string ServiceOutdated =
         "Der AxoClient-Dienst ist veraltet: bitte den aktuellen Code aus service/worker.js deployen.";
 
@@ -128,15 +131,67 @@ public class AxoService(AppServices app)
         });
     }
 
-    public async Task<string?> GetCapeAsync()
+    public async Task<CapeStatus> GetCapeAsync()
     {
         using var json = await PostAsync("/cape", new());
-        return json.RootElement.GetProperty("cape").GetString();
+        var root = json.RootElement;
+        return new CapeStatus(root.GetProperty("cape").GetString(), JsonFiles.String(root, "role"));
     }
 
     public async Task SetCapeAsync(string? capeId)
     {
         using var _ = await PostAsync("/cape", new() { ["cape"] = capeId });
+    }
+
+    public async Task<string> UploadCapeAsync(string name, byte[] png)
+    {
+        using var json = await NewFeatureCallAsync(CapeUploadFeature, "/capes/upload", new()
+        {
+            ["name"] = name,
+            ["png"] = Convert.ToBase64String(png)
+        });
+        return json.RootElement.GetProperty("id").GetString()!;
+    }
+
+    public async Task DeleteCapeAsync(string capeId)
+    {
+        using var _ = await NewFeatureCallAsync(CapeUploadFeature, "/capes/delete", new() { ["id"] = capeId });
+    }
+
+    public async Task<List<AdminInfo>> GetAdminsAsync()
+    {
+        using var json = await NewFeatureCallAsync(AdminFeature, "/admins", new());
+        return json.RootElement.GetProperty("admins").EnumerateArray()
+            .Select(a => new AdminInfo(a.GetProperty("uuid").GetString()!, a.GetProperty("name").GetString()!))
+            .ToList();
+    }
+
+    public async Task<AdminInfo> AddAdminAsync(string playerName)
+    {
+        var admin = await LookUpPlayerAsync(playerName);
+        using var _ = await NewFeatureCallAsync(AdminFeature, "/admins/add", new()
+        {
+            ["uuid"] = admin.Uuid,
+            ["name"] = admin.Name
+        });
+        return admin;
+    }
+
+    public async Task RemoveAdminAsync(string uuid)
+    {
+        using var _ = await NewFeatureCallAsync(AdminFeature, "/admins/remove", new() { ["uuid"] = uuid });
+    }
+
+    private async Task<AdminInfo> LookUpPlayerAsync(string playerName)
+    {
+        using var response = await app.Http.GetAsync(PlayerLookupUrl + Uri.EscapeDataString(playerName));
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent)
+            throw new InvalidOperationException($"Einen Minecraft-Spieler \"{playerName}\" gibt es nicht.");
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Mojang antwortet mit Status {(int)response.StatusCode}.");
+        using var player = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = player.RootElement;
+        return new AdminInfo(root.GetProperty("id").GetString()!.ToLowerInvariant(), root.GetProperty("name").GetString()!);
     }
 
     public async Task SendShareAsync(string toUuid, string kind, string title, string payload)
@@ -176,7 +231,10 @@ public class AxoService(AppServices app)
         using var _ = await ShareCallAsync("/share/delete", new() { ["id"] = id });
     }
 
-    private async Task<JsonDocument> ShareCallAsync(string path, Dictionary<string, object?> body)
+    private Task<JsonDocument> ShareCallAsync(string path, Dictionary<string, object?> body) =>
+        NewFeatureCallAsync("das Teilen", path, body);
+
+    private async Task<JsonDocument> NewFeatureCallAsync(string feature, string path, Dictionary<string, object?> body)
     {
         try
         {
@@ -185,7 +243,7 @@ public class AxoService(AppServices app)
         catch (InvalidOperationException ex) when (ex.Message == "Nicht gefunden")
         {
             throw new InvalidOperationException(
-                "Der AxoClient-Dienst kennt das Teilen noch nicht. Bitte den aktuellen Code aus service/worker.js deployen " +
+                $"Der AxoClient-Dienst kennt {feature} noch nicht. Bitte den aktuellen Code aus service/worker.js deployen " +
                 "(siehe service/ANLEITUNG.md).");
         }
     }

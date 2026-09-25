@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using Microsoft.Win32;
 
 namespace AxoClient.UI.Pages;
@@ -49,7 +50,7 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
         SaveCurrentButton.IsEnabled = _app.Accounts.Profile?.SkinPng != null;
         foreach (var child in CapePanel.Children.OfType<RadioButton>())
             child.IsEnabled = CanApply;
-        foreach (var child in ClientCapePanel.Children.OfType<RadioButton>())
+        foreach (var child in ClientCapePanel.Children.OfType<ButtonBase>())
             child.IsEnabled = CanApply && _app.Axo.Available;
     }
 
@@ -145,11 +146,16 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
                 () => _app.Capes.SelectAsync(null));
             foreach (var cape in _app.Capes.All)
                 AddCapeOption(ClientCapePanel, cape.Name, cape.Id, cape.Png, cape.Id == _app.Capes.SelectedId,
-                    () => _app.Capes.SelectAsync(cape.Id));
+                    () => _app.Capes.SelectAsync(cape.Id),
+                    _app.Capes.Status.IsAdmin ? () => DeleteClientCapeAsync(cape) : null);
         }
+        if (_app.Capes.Status.IsAdmin)
+            AddUploadCard();
+        Ui.Show(AdminsButton, _app.Capes.Status.IsOwner);
     }
 
-    private void AddCapeOption(Panel panel, string label, string? capeId, byte[]? png, bool active, Func<Task> apply)
+    private void AddCapeOption(Panel panel, string label, string? capeId, byte[]? png, bool active, Func<Task> apply,
+        Func<Task>? delete = null)
     {
         var preview = new Grid { Width = 50, Height = 80, Margin = new Thickness(0, 4, 0, 8) };
         if (png != null && SkinRenderer.RenderCape(png) is { } image)
@@ -183,9 +189,33 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
             FontSize = 12
         });
 
+        var card = new Grid();
+        card.Children.Add(content);
+        if (delete != null)
+        {
+            var remove = new Button
+            {
+                Style = Ui.Resource<Style>("IconButton"),
+                Content = "",
+                Width = 24,
+                Height = 24,
+                FontSize = 11,
+                Margin = new Thickness(0),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                ToolTip = "Umhang für alle löschen"
+            };
+            remove.Click += async (_, e) =>
+            {
+                e.Handled = true;
+                await delete();
+            };
+            card.Children.Add(remove);
+        }
+
         var radio = new RadioButton
         {
-            Content = content,
+            Content = card,
             GroupName = panel.Name,
             IsChecked = active,
             ToolTip = label,
@@ -229,6 +259,85 @@ public partial class SkinsPage : UserControl, INotifyPropertyChanged
         };
         panel.Children.Add(radio);
     }
+
+    private void AddUploadCard()
+    {
+        var content = new StackPanel { Width = 90 };
+        content.Children.Add(new TextBlock
+        {
+            Text = "+",
+            FontSize = 40,
+            FontWeight = FontWeights.Light,
+            Height = 80,
+            Margin = new Thickness(0, 4, 0, 8),
+            Padding = new Thickness(0, 12, 0, 0),
+            TextAlignment = TextAlignment.Center,
+            Foreground = Ui.Resource<System.Windows.Media.Brush>("MutedText")
+        });
+        content.Children.Add(new TextBlock { Text = "Hochladen", TextAlignment = TextAlignment.Center, FontSize = 12 });
+
+        var button = new Button
+        {
+            Content = content,
+            Style = Ui.Resource<Style>("LauncherButton"),
+            Background = Ui.Frozen(System.Windows.Media.Color.FromArgb(0x18, 0xFF, 0xFF, 0xFF)),
+            Foreground = Ui.Resource<System.Windows.Media.Brush>("SubtleText"),
+            Padding = new Thickness(8),
+            Margin = new Thickness(0, 0, 12, 8),
+            ToolTip = "Neuen AxoClient-Umhang hochladen",
+            IsEnabled = CanApply && _app.Axo.Available
+        };
+        button.Click += async (_, _) => await UploadClientCapeAsync();
+        ClientCapePanel.Children.Add(button);
+    }
+
+    private async Task UploadClientCapeAsync()
+    {
+        if (_busy || await CapeUploadDialog.AskAsync(_app) is not { } cape)
+            return;
+        SetBusy(true);
+        StatusText.Text = $"Lade \"{cape.Name}\" hoch...";
+        try
+        {
+            await _app.Capes.UploadAsync(cape.Name, cape.Png);
+            StatusText.Text = $"\"{cape.Name}\" ist hochgeladen. Alle AxoClient-Nutzer können ihn jetzt auswählen.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "";
+            await _app.Dialogs.ShowErrorAsync("Umhang konnte nicht hochgeladen werden", ex);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private async Task DeleteClientCapeAsync(ClientCape cape)
+    {
+        if (_busy || !await _app.Dialogs.ConfirmAsync("Umhang löschen",
+                $"\"{cape.Name}\" für alle löschen? Wer ihn gerade trägt, hat danach keinen AxoClient-Umhang mehr.",
+                "Löschen", danger: true))
+            return;
+        SetBusy(true);
+        StatusText.Text = $"Lösche \"{cape.Name}\"...";
+        try
+        {
+            await _app.Capes.DeleteAsync(cape);
+            StatusText.Text = $"\"{cape.Name}\" wurde gelöscht.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "";
+            await _app.Dialogs.ShowErrorAsync("Umhang konnte nicht gelöscht werden", ex);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private async void Admins_Click(object sender, RoutedEventArgs e) => await AdminsDialog.ShowAsync(_app);
 
     private void RefreshLibrary()
     {

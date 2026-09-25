@@ -142,7 +142,13 @@
                             </StackPanel>
 
                             <StackPanel x:Name="AxoCapesView" Visibility="Collapsed">
-                                <TextBlock Text="AxoClient-Umhänge" Style="{StaticResource SectionTitle}" Margin="0,0,0,4"/>
+                                <DockPanel Margin="0,0,0,4">
+                                    <Button x:Name="AdminsButton" DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
+                                            Padding="10,5" FontSize="12" Content="Admins verwalten"
+                                            Visibility="Collapsed" Click="Admins_Click"/>
+                                    <TextBlock Text="AxoClient-Umhänge" Style="{StaticResource SectionTitle}"
+                                               Margin="0" VerticalAlignment="Center"/>
+                                </DockPanel>
                                 <TextBlock x:Name="ClientCapesHint" Foreground="{StaticResource MutedText}" FontSize="12"
                                            TextWrapping="Wrap" Margin="0,0,0,10"
                                            Text="Sehen alle, die AxoClient nutzen (Fabric-Instanzen mit unterstützter Minecraft-Version). Ein AxoClient-Umhang wird dort statt deines Minecraft-Umhangs angezeigt. Fahre mit der Maus über einen Umhang, um ihn links anzuprobieren."/>
