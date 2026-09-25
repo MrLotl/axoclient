@@ -1,0 +1,16 @@
+global using System.IO;
+global using System.Net.Http;
+global using AxoClient.Accounts;
+global using AxoClient.Content;
+global using AxoClient.Core;
+global using AxoClient.Game;
+global using AxoClient.Import;
+global using AxoClient.Instances;
+global using AxoClient.Online;
+global using AxoClient.Platform;
+global using AxoClient.Sharing;
+global using AxoClient.UI;
+global using AxoClient.UI.Controls;
+global using AxoClient.UI.Dialogs;
+global using AxoClient.UI.InstanceTabs;
+global using AxoClient.UI.Pages;

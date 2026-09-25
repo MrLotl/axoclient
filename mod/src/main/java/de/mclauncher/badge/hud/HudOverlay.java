@@ -38,9 +38,33 @@ public final class HudOverlay {
 		sampleMode = false;
 		HudProfiles.applyPending(config);
 		List<HudElement> shown = elements(config, painter, texts, false);
+
+		// Als privat markierte Anzeigen wandern aus dem Spielbild heraus und werden stattdessen vom
+		// Launcher gezeichnet (siehe HudPrivacy). Einen eigenen Schalter für alle gibt es nicht mehr.
+		List<HudElement> secret = new ArrayList<>();
+		for (HudElement element : new ArrayList<>(shown)) {
+			if (!config.isPrivate(element.module()) || !HudPrivacy.canHide(config, element.module()))
+				continue;
+			shown.remove(element);
+			secret.add(element);
+		}
+
 		drawGroups(config, shown, painter, texts, screenWidth, screenHeight);
 		for (HudElement element : shown)
 			draw(config, element, painter, texts, box(config, element, painter, texts, screenWidth, screenHeight));
+
+		if (HudPrivacy.editorOpen()) {
+			// Das Menü zeichnet gerade alles selbst: Launcher-Fenster leeren, sonst stünde es doppelt da
+			HudPrivacy.send(config, List.of(), painter, texts, screenWidth, screenHeight);
+			return;
+		}
+		HudPrivacy.send(config, secret, painter, texts, screenWidth, screenHeight);
+		// Ohne Launcher zeichnet niemand die privaten Anzeigen. Das darf nicht stillschweigend
+		// passieren, sonst sucht man im Spiel vergeblich nach seinen Koordinaten.
+		if (!secret.isEmpty() && !HudPrivacy.available()) {
+			int[] box = box(config, secret.get(0), painter, texts, screenWidth, screenHeight);
+			painter.text("Privat: kein Launcher verbunden", box[0], box[1], 0xFFE36D6F, true);
+		}
 	}
 
 	/**
@@ -158,11 +182,11 @@ public final class HudOverlay {
 			String[] lines = text.split("\n");
 			int widest = 0;
 			for (String line : lines)
-				widest = Math.max(widest, painter.textWidth(line));
+				widest = Math.max(widest, painter.textWidth(HudText.plain(line)));
 			for (int i = 0; i < lines.length; i++) {
-				int spare = widest - painter.textWidth(lines[i]);
+				int spare = widest - painter.textWidth(HudText.plain(lines[i]));
 				int offset = entry.align == 1 ? spare / 2 : entry.align == 2 ? spare : 0;
-				painter.text(lines[i], x + offset, y + i * LINE_STEP, color, entry.shadow);
+				drawMarked(entry, painter, lines[i], x + offset, y + i * LINE_STEP, color);
 			}
 			return;
 		}
@@ -179,6 +203,36 @@ public final class HudOverlay {
 			index++;
 			drawSlot(entry, painter, slot.ordinal(), slotX, slotY, color, !entry.vertical);
 		}
+	}
+
+	/**
+	 * Eine Zeile, deren Farbmarken (siehe {@link HudText#COLOUR_MARK}) die Farbe wechseln, z.B. X, Y
+	 * und Z in eigenen Farben. Ohne Marken einfach die ganze Zeile in {@code color}.
+	 */
+	private static void drawMarked(HudConfig.Entry entry, HudPainter painter, String line, int x, int y, int color) {
+		if (line.indexOf(HudText.COLOUR_MARK) < 0) {
+			painter.text(line, x, y, color, entry.shadow);
+			return;
+		}
+		int current = color;
+		StringBuilder run = new StringBuilder();
+		for (int i = 0; i < line.length(); i++) {
+			char c = line.charAt(i);
+			if (c != HudText.COLOUR_MARK || i + 1 >= line.length()) {
+				run.append(c);
+				continue;
+			}
+			if (run.length() > 0) {
+				painter.text(run.toString(), x, y, current, entry.shadow);
+				x += painter.textWidth(run.toString());
+				run.setLength(0);
+			}
+			int axis = line.charAt(++i) - '0';
+			current = axis >= 0 && axis < entry.axisRgb.length
+				? (color & 0xFF000000) | entry.axisRgb[axis] : color;
+		}
+		if (run.length() > 0)
+			painter.text(run.toString(), x, y, current, entry.shadow);
 	}
 
 	/**
@@ -301,7 +355,7 @@ public final class HudOverlay {
 				return 0;
 			int widest = 0;
 			for (String line : text.split("\n"))
-				widest = Math.max(widest, painter.textWidth(line));
+				widest = Math.max(widest, painter.textWidth(HudText.plain(line)));
 			return widest;
 		}
 		int value = entry.percent ? SLOT - ICON + painter.textWidth(WIDEST_PERCENT) : 0;

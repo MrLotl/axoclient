@@ -1,0 +1,168 @@
+<UserControl x:Class="AxoClient.UI.Pages.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Style="{StaticResource Card}">
+        <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="Einstellungen" Style="{StaticResource PageTitle}" Margin="0,0,0,12"/>
+
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+                <RadioButton x:Name="GeneralTab" Style="{StaticResource SegmentButton}" GroupName="SettingsTab"
+                             Content="Allgemein" IsChecked="True" Checked="Tab_Checked"/>
+                <RadioButton x:Name="GameTab" Style="{StaticResource SegmentButton}" GroupName="SettingsTab"
+                             Content="Spiel" Checked="Tab_Checked"/>
+                <RadioButton x:Name="JavaTab" Style="{StaticResource SegmentButton}" GroupName="SettingsTab"
+                             Content="Java" Checked="Tab_Checked"/>
+                <RadioButton x:Name="OnlineTab" Style="{StaticResource SegmentButton}" GroupName="SettingsTab"
+                             Content="Discord &amp; Online" Checked="Tab_Checked"/>
+                <RadioButton x:Name="AdvancedTab" Style="{StaticResource SegmentButton}" GroupName="SettingsTab"
+                             Content="Ordner &amp; Hilfe" Checked="Tab_Checked"/>
+            </WrapPanel>
+
+            <TextBlock x:Name="SavedText" DockPanel.Dock="Bottom" Foreground="{StaticResource MutedText}" FontSize="11"
+                       Margin="0,10,0,0" Text="Änderungen werden automatisch gespeichert."/>
+
+            <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBar}"/>
+                </ScrollViewer.Resources>
+                <Grid MaxWidth="620" HorizontalAlignment="Left" Margin="0,0,12,0">
+
+                    <StackPanel x:Name="GeneralView">
+                        <TextBlock Text="Mit Windows starten" Style="{StaticResource SectionTitle}"/>
+                        <CheckBox x:Name="AutostartCheck" Content="AxoClient beim Anmelden an Windows starten"
+                                  Margin="0,0,0,8" Click="Autostart_Click"/>
+                        <CheckBox x:Name="AutostartMinimizedCheck" Content="Dabei nur minimiert in der Taskleiste öffnen"
+                                  Margin="24,0,0,8" Click="Check_Click"/>
+                        <TextBlock x:Name="AutostartHint" Foreground="{StaticResource MutedText}" FontSize="11"
+                                   Margin="0,0,0,22" TextWrapping="Wrap"
+                                   Text="Praktisch für den Discord-Status und die Freundesliste. Abschalten kannst du das auch im Task-Manager unter „Autostart“."/>
+
+                        <TextBlock Text="Nach dem Spielstart" Style="{StaticResource SectionTitle}"/>
+                        <WrapPanel Margin="0,0,0,6">
+                            <RadioButton x:Name="AfterKeepOpen" Style="{StaticResource SegmentButton}" GroupName="AfterLaunch"
+                                         Content="Offen lassen" Tag="KeepOpen" Checked="AfterLaunch_Checked"/>
+                            <RadioButton x:Name="AfterMinimize" Style="{StaticResource SegmentButton}" GroupName="AfterLaunch"
+                                         Content="Minimieren" Tag="Minimize" Checked="AfterLaunch_Checked"/>
+                            <RadioButton x:Name="AfterHide" Style="{StaticResource SegmentButton}" GroupName="AfterLaunch"
+                                         Content="Ausblenden" Tag="Hide" Checked="AfterLaunch_Checked"/>
+                            <RadioButton x:Name="AfterClose" Style="{StaticResource SegmentButton}" GroupName="AfterLaunch"
+                                         Content="Schließen" Tag="Close" Checked="AfterLaunch_Checked"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="AfterLaunchHint" Foreground="{StaticResource MutedText}" FontSize="11"
+                                   Margin="0,0,0,22" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="GameView" Visibility="Collapsed">
+                        <TextBlock Text="Arbeitsspeicher" Style="{StaticResource SectionTitle}"/>
+                        <DockPanel Margin="0,0,0,6">
+                            <TextBlock x:Name="RamValue" DockPanel.Dock="Right" Foreground="White" FontWeight="SemiBold"/>
+                            <TextBlock Text="Maximaler Arbeitsspeicher" Style="{StaticResource FieldLabel}" Margin="0"/>
+                        </DockPanel>
+                        <Slider x:Name="RamSlider" Minimum="1024" TickFrequency="512" IsSnapToTickEnabled="True"
+                                ValueChanged="RamSlider_ValueChanged"/>
+                        <TextBlock x:Name="RamHint" Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,4,0,22"
+                                   TextWrapping="Wrap"/>
+
+                        <TextBlock Text="Spielfenster" Style="{StaticResource SectionTitle}"/>
+                        <CheckBox x:Name="FullScreenCheck" Content="Im Vollbild starten" Margin="0,0,0,12"
+                                  Click="Check_Click"/>
+                        <CheckBox x:Name="MaximizeCheck" Content="Maximiert starten (Fenster füllt den Bildschirm)" Margin="0,0,0,12"
+                                  Click="Check_Click"/>
+                        <TextBlock Text="Fenstergröße (leer = Standard)" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                            <TextBox x:Name="WidthBox" Style="{StaticResource LauncherTextBox}" Width="100"
+                                     LostFocus="Text_LostFocus" PreviewTextInput="Number_PreviewTextInput"/>
+                            <TextBlock Text="×" Foreground="{StaticResource SubtleText}" VerticalAlignment="Center"
+                                       Margin="10,0"/>
+                            <TextBox x:Name="HeightBox" Style="{StaticResource LauncherTextBox}" Width="100"
+                                     LostFocus="Text_LostFocus" PreviewTextInput="Number_PreviewTextInput"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Startprüfung" Style="{StaticResource SectionTitle}"/>
+                        <CheckBox x:Name="PreLaunchCheckBox" Margin="0,0,0,8" Click="Check_Click"
+                                  Content="Vor dem Start prüfen, ob Java, Speicher und Mods zusammenpassen"/>
+                        <TextBlock Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,0,0,22" TextWrapping="Wrap"
+                                   Text="Meldet sich nur, wenn etwas auffällt – starten kannst du dann immer noch."/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="JavaView" Visibility="Collapsed">
+                        <TextBlock Text="Java-Laufzeit" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"
+                                   Text="Normalerweise lädt AxoClient für jede Minecraft-Version die passende Java-Laufzeit selbst herunter. Nur wenn du ein bestimmtes Java brauchst, stellst du es hier um."/>
+                        <ComboBox x:Name="JavaBox" Style="{StaticResource LauncherCombo}" Margin="0,0,0,8"
+                                  SelectionChanged="JavaBox_SelectionChanged"/>
+                        <TextBlock x:Name="JavaHint" Foreground="{StaticResource MutedText}" FontSize="11"
+                                   Margin="0,0,0,10" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                            <Button x:Name="JavaRescanButton" Style="{StaticResource LauncherButton}" Content="Neu suchen"
+                                    Padding="12,6" Click="JavaRescan_Click"/>
+                            <Button Style="{StaticResource LauncherButton}" Content="Java selbst wählen..." Padding="12,6"
+                                    Margin="8,0,0,0" Click="JavaBrowse_Click"/>
+                            <Button Style="{StaticResource LauncherButton}" Content="Laufzeiten-Ordner" Padding="12,6"
+                                    Margin="8,0,0,0" ToolTip="Ordner mit den von Minecraft mitgelieferten Java-Versionen"
+                                    Click="JavaFolder_Click"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Java-Argumente" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="Voreinstellung" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel x:Name="PresetButtons" Orientation="Horizontal" Margin="0,0,0,6"/>
+                        <TextBlock x:Name="PresetHint" Foreground="{StaticResource MutedText}" FontSize="11"
+                                   Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+                        <TextBlock Text="Zusätzliche Java-Argumente" Style="{StaticResource FieldLabel}"/>
+                        <TextBox x:Name="JvmArgsBox" Style="{StaticResource LauncherTextBox}" LostFocus="Text_LostFocus"/>
+                        <TextBlock x:Name="JvmArgsHint" Foreground="{StaticResource MutedText}" FontSize="11"
+                                   Margin="0,4,0,22" TextWrapping="Wrap"
+                                   Text="Für Fortgeschrittene, z.B. -XX:+UseG1GC. Leer lassen, wenn du unsicher bist."/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="OnlineView" Visibility="Collapsed">
+                        <TextBlock Text="Discord-Status" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,12"
+                                   Text="Zeigt in Discord „Spielt AxoClient“ mit Axolotl-Bild, Instanz und Spielzeit, solange ein Spiel läuft (der Launcher muss dafür geöffnet bleiben, minimiert oder ausgeblendet reicht)."/>
+                        <CheckBox x:Name="DiscordCheck" Content="Discord-Status anzeigen" Margin="0,0,0,22" Click="Check_Click"/>
+
+                        <TextBlock Text="Axolotl-Symbol in der Tabliste" Style="{StaticResource SectionTitle}"/>
+                        <DockPanel Margin="0,0,0,12">
+                            <Image DockPanel.Dock="Left" Source="/Assets/axolotl.png" Width="32" Height="32" Margin="0,0,12,0"
+                                   RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Top"/>
+                            <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12"
+                                       Text="Spieler, die AxoClient nutzen, bekommen in der Tabliste das Axolotl neben ihrem Kopf. Funktioniert in Fabric-Instanzen mit unterstützter Minecraft-Version (siehe Häkchen bei der Versionsauswahl) auf Servern, die Spielerköpfe anzeigen. Wird auch für die Freundesliste auf der Startseite und die AxoClient-Umhänge gebraucht."/>
+                        </DockPanel>
+                        <CheckBox x:Name="BadgeCheck" Content="Symbol anzeigen und mich als AxoClient-Nutzer anmelden"
+                                  Margin="0,0,0,22" Click="Check_Click"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="AdvancedView" Visibility="Collapsed">
+                        <TextBlock Text="Ordner" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock x:Name="LauncherDirText" Foreground="{StaticResource MutedText}" FontSize="11"
+                                   Margin="0,0,0,10" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                            <Button Style="{StaticResource LauncherButton}" Click="OpenLauncherFolder_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE838;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Launcher-Ordner öffnen"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <TextBlock Text="Probleme" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,12"
+                                   Text="Das Fehlerprotokoll sammelt alles, was im Launcher schiefging – auch das, was nebenbei aufgefangen wurde. Was das Spiel selbst schreibt, siehst du links unter „Game Log“."/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,22">
+                            <Button Style="{StaticResource LauncherButton}" Click="OpenErrorLog_Click"
+                                    ToolTip="Zeigt die Datei mit den zuletzt aufgetretenen Fehlern">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" Margin="0,0,8,0"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="Fehlerprotokoll öffnen"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</UserControl>

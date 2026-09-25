@@ -1,50 +1,29 @@
-using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Media.Imaging;
 
-namespace McLauncher;
+namespace AxoClient.Content;
 
-/// <summary>Liest das Profilbild direkt aus einer Mod-, Ressourcenpaket- oder Shader-Datei (ohne Netzwerk).</summary>
 public static class ContentIcons
 {
+    private const int DecodeWidth = 128;
+
     public static BitmapSource? Load(string path, ContentType type)
     {
         try
         {
             return FromBytes(Directory.Exists(path) ? ReadFromFolder(path) : ReadFromZip(path, type));
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorReport.Log("Symbol aus \"" + path + "\" lesen", ex);
             return null;
         }
     }
 
-    /// <summary>Bild aus Rohdaten (z.B. vom Anbieter heruntergeladen); null, wenn das Format nicht lesbar ist.</summary>
-    public static BitmapSource? FromBytes(byte[]? bytes)
-    {
-        if (bytes == null || bytes.Length == 0)
-            return null;
-        try
-        {
-            var image = new BitmapImage();
-            using var ms = new MemoryStream(bytes);
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 128; // reicht auch für die Kacheln, spart aber Speicher bei großen Bildern
-            image.StreamSource = ms;
-            image.EndInit();
-            image.Freeze();
-            return image;
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    public static BitmapSource? FromBytes(byte[]? bytes) => Images.FromBytes(bytes, DecodeWidth);
 
-    /// <summary>Namen, unter denen Pakete und Shader ihr Bild ablegen.</summary>
     private static readonly string[] PackIconNames = ["pack.png", "icon.png", "preview.png", "screenshot.png", "thumbnail.png"];
 
     private static byte[]? ReadFromFolder(string folder)
@@ -61,24 +40,13 @@ public static class ContentIcons
     private static byte[]? ReadFromZip(string path, ContentType type)
     {
         using var zip = ZipFile.OpenRead(path);
-        if (type == ContentType.Mod)
-        {
-            foreach (var candidate in IconPathsOfMod(zip))
-                if (Read(zip, candidate) is { } bytes)
-                    return bytes;
-            return null;
-        }
-
-        foreach (var candidate in IconPathsOfPack(zip))
+        var candidates = type == ContentType.Mod ? IconPathsOfMod(zip) : IconPathsOfPack(zip);
+        foreach (var candidate in candidates)
             if (Read(zip, candidate) is { } bytes)
                 return bytes;
         return null;
     }
 
-    /// <summary>
-    /// Bildpfade in einem Paket oder Shader. Viele Shader-Archive haben einen Unterordner
-    /// (z.B. "ComplementaryShaders/shaders/..."), daher wird auch eine Ebene tiefer gesucht.
-    /// </summary>
     private static IEnumerable<string> IconPathsOfPack(ZipArchive zip)
     {
         foreach (var name in PackIconNames)
@@ -93,7 +61,6 @@ public static class ContentIcons
             yield return full;
     }
 
-    /// <summary>Mögliche Icon-Pfade laut fabric.mod.json / quilt.mod.json / mods.toml.</summary>
     private static IEnumerable<string> IconPathsOfMod(ZipArchive zip)
     {
         foreach (var manifest in new[] { "fabric.mod.json", "quilt.mod.json" })
@@ -111,7 +78,6 @@ public static class ContentIcons
             if (icon.ValueKind == JsonValueKind.String)
                 yield return icon.GetString()!;
             else if (icon.ValueKind == JsonValueKind.Object)
-                // Größte angebotene Größe zuerst
                 foreach (var size in icon.EnumerateObject().OrderByDescending(p => int.TryParse(p.Name, out var n) ? n : 0))
                     if (size.Value.GetString() is { } p)
                         yield return p;

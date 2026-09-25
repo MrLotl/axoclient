@@ -1,0 +1,68 @@
+<UserControl x:Class="AxoClient.UI.InstanceTabs.PackProfilePanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,12,10">
+            <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
+                    Background="{StaticResource Accent}" Content="Profil aus jetzigem Stand" Click="Capture_Click"
+                    ToolTip="Nimmt die gerade aktiven Ressourcenpakete und den eingestellten Shader als neues Profil auf"/>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="Header" Text="Paket-Profile" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                <TextBlock x:Name="SubHeader" Foreground="{StaticResource MutedText}" FontSize="12"/>
+            </StackPanel>
+        </DockPanel>
+
+        <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" Foreground="{StaticResource SubtleText}"
+                   FontSize="12" TextWrapping="Wrap" Margin="0,10,12,0"/>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ScrollViewer.Resources>
+                <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBar}"/>
+            </ScrollViewer.Resources>
+            <StackPanel Margin="0,0,12,0">
+                <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" Margin="0,0,0,10"
+                           Text="Ein Profil merkt sich, welche Ressourcenpakete aktiv sind und welcher Shader läuft. Du kannst es von Hand einschalten oder Servern zuordnen: Startest du dann über „Server“ oder die Freundesliste auf einen dieser Server, wird das Profil vorher gesetzt."/>
+                <TextBlock x:Name="RunningNote" Foreground="#E3A66D" TextWrapping="Wrap" Margin="0,0,0,10"
+                           Visibility="Collapsed"
+                           Text="Minecraft läuft gerade. Änderungen hier würde das Spiel beim Beenden überschreiben – schließe es zuerst."/>
+                <TextBlock x:Name="EmptyText" Foreground="{StaticResource MutedText}" TextWrapping="Wrap"
+                           Margin="0,0,0,10" Visibility="Collapsed"
+                           Text="Noch kein Profil. Stelle im Spiel die Pakete so ein, wie du sie haben willst, und nimm den Stand hier oben als Profil auf."/>
+
+                <ItemsControl x:Name="ProfileItems">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#14FFFFFF" CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                                VerticalAlignment="Center">
+                                        <Button Style="{StaticResource LauncherButton}" Content="Anwenden"
+                                                Padding="12,6" Click="Apply_Click"
+                                                ToolTip="Ressourcenpakete und Shader jetzt auf dieses Profil setzen"/>
+                                        <Button Style="{StaticResource LauncherButton}" Content="Server" Padding="12,6"
+                                                Margin="6,0,0,0" Click="Servers_Click"
+                                                ToolTip="Server, auf denen das Profil automatisch gesetzt wird"/>
+                                        <Button Style="{StaticResource IconButton}" Width="30" Height="30" FontSize="12"
+                                                Content="&#xE8AC;" Margin="6,0,0,0" ToolTip="Umbenennen"
+                                                Click="Rename_Click"/>
+                                        <Button Style="{StaticResource IconButton}" Width="30" Height="30" FontSize="12"
+                                                Content="&#xE72C;" Margin="6,0,0,0"
+                                                ToolTip="Mit dem jetzigen Stand überschreiben" Click="Update_Click"/>
+                                        <Button Style="{StaticResource IconButton}" Width="30" Height="30" FontSize="12"
+                                                Content="&#xE74D;" Margin="6,0,0,0" ToolTip="Löschen" Click="Delete_Click"/>
+                                    </StackPanel>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15"
+                                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Summary}" Foreground="{StaticResource MutedText}"
+                                                   FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

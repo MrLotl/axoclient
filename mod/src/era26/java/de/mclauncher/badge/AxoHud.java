@@ -34,6 +34,10 @@ import java.util.Map;
 public final class AxoHud {
 	/** Taste, die das Auswahlmenü öffnet: rechte Umschalttaste (GLFW-Nummer). */
 	public static final int MENU_KEY = 344;
+	/** Taste, die Fullbright ein- und ausschaltet: G (GLFW-Nummer). */
+	public static final int FULLBRIGHT_KEY = 71;
+	/** So weit wird die Helligkeit aufgedreht (der Regler in den Optionen endet bei 1). */
+	public static final float FULLBRIGHT_GAMMA = 16.0F;
 
 	/** Ausrüstungsplätze in der Reihenfolge von HudSlot. */
 	private static final EquipmentSlot[] SLOTS = {
@@ -43,6 +47,7 @@ public final class AxoHud {
 
 	private static HudConfig config;
 	private static boolean keyWasDown;
+	private static boolean fullbrightWasDown;
 
 	private AxoHud() {}
 
@@ -59,6 +64,18 @@ public final class AxoHud {
 		if (down && !keyWasDown && HudPlatform.noScreenOpen(client) && client.player != null)
 			HudPlatform.openScreen(client, new HudScreen());
 		keyWasDown = down;
+		boolean fullbrightDown = HudPlatform.isKeyDown(client, FULLBRIGHT_KEY);
+		if (fullbrightDown && !fullbrightWasDown && HudPlatform.noScreenOpen(client) && client.player != null) {
+			config().fullbright = !config().fullbright;
+			config().save();
+			client.player.sendOverlayMessage(Component.literal("Fullbright " + (config().fullbright ? "an" : "aus")));
+		}
+		fullbrightWasDown = fullbrightDown;
+	}
+
+	/** Ob Fullbright gerade an ist (fragt die Lichtberechnung jedes Mal). */
+	public static boolean fullbright() {
+		return config().fullbright;
 	}
 
 	/** Ob die Effekte als Text statt als Symbole erscheinen sollen. */
@@ -123,7 +140,10 @@ public final class AxoHud {
 	/** Zeichnet die eingeschalteten Anzeigen (am Ende der normalen Anzeige). */
 	public static void render(GuiGraphicsExtractor graphics) {
 		Minecraft client = Minecraft.getInstance();
-		if (client.player == null || client.getDebugOverlay().showDebugScreen())
+		// Nur ausblenden, solange der F3-Text im Bild steht. showDebugScreen() taugt dafür nicht mehr:
+		// seit 26.1 meldet es auch "true", wenn bloß eine Debug-Anzeige wie die Chunk-Grenzen (F3+G)
+		// eingeschaltet ist - dann wäre das Overlay dauerhaft weg, ohne dass man den Grund sieht.
+		if (client.player == null || client.debugEntries.isOverlayVisible())
 			return;
 		HudOverlay.draw(config(), new Painter(graphics), texts(), graphics.guiWidth(), graphics.guiHeight());
 	}

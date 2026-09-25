@@ -36,6 +36,10 @@ import java.util.Map;
 public final class AxoHud {
 	/** Taste, die das Auswahlmenü öffnet. */
 	public static final int MENU_KEY = GLFW.GLFW_KEY_RIGHT_SHIFT;
+	/** Taste, die Fullbright ein- und ausschaltet. */
+	public static final int FULLBRIGHT_KEY = GLFW.GLFW_KEY_G;
+	/** So weit wird die Helligkeit aufgedreht (der Regler in den Optionen endet bei 1). */
+	public static final float FULLBRIGHT_GAMMA = 16.0F;
 
 	/** Ausrüstungsplätze in der Reihenfolge von HudSlot. */
 	private static final EquipmentSlot[] SLOTS = {
@@ -45,6 +49,7 @@ public final class AxoHud {
 
 	private static HudConfig config;
 	private static boolean keyWasDown;
+	private static boolean fullbrightWasDown;
 
 	private AxoHud() {}
 
@@ -63,6 +68,21 @@ public final class AxoHud {
 		if (down && !keyWasDown && client.currentScreen == null && client.player != null)
 			client.setScreen(new HudScreen());
 		keyWasDown = down;
+		boolean fullbrightDown = InputUtil.isKeyPressed(client.getWindow().getHandle(), FULLBRIGHT_KEY);
+		if (fullbrightDown && !fullbrightWasDown && client.currentScreen == null && client.player != null)
+			toggleFullbright(client);
+		fullbrightWasDown = fullbrightDown;
+	}
+
+	/** Ob Fullbright gerade an ist (fragt die Lichtberechnung jedes Mal). */
+	public static boolean fullbright() {
+		return config().fullbright;
+	}
+
+	private static void toggleFullbright(MinecraftClient client) {
+		config().fullbright = !config().fullbright;
+		config().save();
+		client.inGameHud.setOverlayMessage(Text.literal("Fullbright " + (config().fullbright ? "an" : "aus")), false);
 	}
 
 	/** Ob die Effekte als Text statt als Symbole erscheinen sollen. */

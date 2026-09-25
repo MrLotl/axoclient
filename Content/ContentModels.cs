@@ -1,7 +1,6 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
-namespace McLauncher;
+namespace AxoClient.Content;
 
 public enum ContentType
 {
@@ -18,6 +17,8 @@ public enum ContentSource
 
 public static class ContentTypes
 {
+    public static readonly ContentType[] All = [ContentType.Mod, ContentType.ResourcePack, ContentType.Shader];
+
     public static string Folder(ContentType type, string mcVersion) => type switch
     {
         ContentType.Mod => "mods",
@@ -25,45 +26,44 @@ public static class ContentTypes
         _ => "shaderpacks"
     };
 
-    /// <summary>
-    /// Vor 1.6 hießen Ressourcenpakete "Texture Packs" und lagen im Ordner "texturepacks".
-    /// Betrifft Alpha/Beta, Releases 1.0 bis 1.5.2 und Snapshots vor 13w24a.
-    /// </summary>
-    public static bool UsesTexturePacks(string v)
+    public static string Label(ContentType type) => type switch
     {
-        if (v.StartsWith("a") || v.StartsWith("b") || v.StartsWith("c") || v.StartsWith("rd-") || v.StartsWith("inf-"))
+        ContentType.Mod => "Mod",
+        ContentType.ResourcePack => "Ressourcenpaket",
+        _ => "Shader"
+    };
+
+    public static bool UsesTexturePacks(string version)
+    {
+        if (version.StartsWith('a') || version.StartsWith('b') || version.StartsWith('c')
+            || version.StartsWith("rd-") || version.StartsWith("inf-"))
             return true;
 
-        var release = System.Text.RegularExpressions.Regex.Match(v, @"^1\.(\d+)");
+        var release = Regex.Match(version, @"^1\.(\d+)");
         if (release.Success)
             return int.Parse(release.Groups[1].Value) < 6;
 
-        var snapshot = System.Text.RegularExpressions.Regex.Match(v, @"^(\d\d)w(\d\d)");
+        var snapshot = Regex.Match(version, @"^(\d\d)w(\d\d)");
         if (snapshot.Success)
         {
             int year = int.Parse(snapshot.Groups[1].Value), week = int.Parse(snapshot.Groups[2].Value);
             return year < 13 || (year == 13 && week < 24);
         }
-        return false; // neue Versionsnamen wie 26.2
+        return false;
     }
 }
 
-/// <summary>Ein Suchergebnis (Mod, Ressourcenpaket oder Shader) von Modrinth oder CurseForge.</summary>
-public class ContentProject : INotifyPropertyChanged
+public class ContentProject : Observable
 {
     public required string Id { get; init; }
     public required string Title { get; init; }
-    public required ContentSource Source { get; init; }
     public string Author { get; init; } = "";
     public string Description { get; init; } = "";
     public string? IconUrl { get; init; }
     public long Downloads { get; init; }
     public string? WebsiteUrl { get; init; }
-
-    /// <summary>Kurzinfo unter dem Namen, z.B. "Fabric, Forge · bis 1.21.1" (bei Modpacks).</summary>
     public string Tags { get; init; } = "";
 
-    /// <summary>Die Kurzinfo mit Trennpunkt davor, zum Anhängen an die Download-Zahl.</summary>
     public string TagsSuffix => Tags.Length > 0 ? "  ·  " + Tags : "";
 
     public string DownloadsText => Downloads switch
@@ -79,60 +79,47 @@ public class ContentProject : INotifyPropertyChanged
     public bool IsInstalled
     {
         get => _installed;
-        set { _installed = value; Changed(); Changed(nameof(ActionText)); Changed(nameof(CanInstall)); }
+        set { _installed = value; Changed(nameof(IsInstalled), nameof(ActionText), nameof(CanInstall)); }
     }
 
     public bool IsBusy
     {
         get => _busy;
-        set { _busy = value; Changed(); Changed(nameof(ActionText)); Changed(nameof(CanInstall)); }
+        set { _busy = value; Changed(nameof(IsBusy), nameof(ActionText), nameof(CanInstall)); }
     }
 
     public string ActionText => IsBusy ? "Lädt..." : IsInstalled ? "Installiert" : "Installieren";
     public bool CanInstall => !IsBusy && !IsInstalled;
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    private void Changed([CallerMemberName] string? name = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
-/// <summary>Eine konkrete Version (Datei) eines Projekts.</summary>
 public class ContentVersion
 {
     public required string Id { get; init; }
     public required string ProjectId { get; init; }
-    public required ContentSource Source { get; init; }
     public required string Name { get; init; }
     public required string FileName { get; init; }
     public string? DownloadUrl { get; init; }
     public DateTime Date { get; init; }
-
-    /// <summary>Größe der Datei in Bytes (0 = unbekannt), für die Fortschrittsanzeige.</summary>
     public long Size { get; init; }
-
-    /// <summary>release, beta oder alpha</summary>
     public string Channel { get; init; } = "release";
-
     public IReadOnlyList<string> GameVersions { get; init; } = [];
-
-    /// <summary>Kleingeschrieben, z.B. "fabric", "forge", "neoforge", "quilt".</summary>
     public IReadOnlyList<string> Loaders { get; init; } = [];
-
     public IReadOnlyList<string> RequiredProjectIds { get; init; } = [];
     public IReadOnlyList<string> IncompatibleProjectIds { get; init; } = [];
 
+    public bool IsRelease => Channel == "release";
     public string ChannelText => Channel switch { "beta" => "Beta", "alpha" => "Alpha", _ => "Release" };
     public string Details => $"{ChannelText} · {Date:dd.MM.yyyy} · {FileName}";
 
-    /// <summary>Läuft diese Version auf der Instanz (Minecraft-Version und bei Mods der Loader)?</summary>
     public bool Supports(Installation inst, ContentType type) =>
         GameVersions.Contains(inst.MinecraftVersion)
-        && (type != ContentType.Mod || Loaders.Count == 0
-            || Loaders.Contains(inst.Loader == LoaderType.Forge ? "forge" : "fabric"));
+        && (type != ContentType.Mod || Loaders.Count == 0 || Loaders.Contains(inst.Loader.ModrinthName()));
+
+    public static ContentVersion? Newest(IReadOnlyList<ContentVersion> versions) =>
+        versions.FirstOrDefault(v => v.IsRelease) ?? versions.FirstOrDefault();
 }
 
-/// <summary>Eine Zeile in der Versionsauswahl.</summary>
-public class VersionRow(ContentVersion version, bool isCurrent, bool isNewest) : INotifyPropertyChanged
+public class VersionRow(ContentVersion version, bool isCurrent, bool isNewest) : Observable
 {
     public ContentVersion Version { get; } = version;
 
@@ -142,50 +129,20 @@ public class VersionRow(ContentVersion version, bool isCurrent, bool isNewest) :
     public bool IsCurrent
     {
         get => _current;
-        set { _current = value; Changed(); Changed(nameof(ActionText)); Changed(nameof(CanInstall)); Changed(nameof(Badge)); }
+        set { _current = value; Changed(nameof(IsCurrent), nameof(ActionText), nameof(CanInstall), nameof(Badge)); }
     }
 
     public bool IsBusy
     {
         get => _busy;
-        set { _busy = value; Changed(); Changed(nameof(ActionText)); Changed(nameof(CanInstall)); }
+        set { _busy = value; Changed(nameof(IsBusy), nameof(ActionText), nameof(CanInstall)); }
     }
 
     public string Badge => IsCurrent ? "· installiert" : isNewest ? "· neueste" : "";
     public string ActionText => IsBusy ? "Lädt..." : IsCurrent ? "Installiert" : "Installieren";
     public bool CanInstall => !IsBusy && !IsCurrent;
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    private void Changed([CallerMemberName] string? name = null) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
-/// <summary>Eine Seite Suchergebnisse plus Gesamtzahl der Treffer (für die Seitennavigation).</summary>
 public record SearchPage(List<ContentProject> Items, int TotalHits);
 
-public interface IContentProvider
-{
-    ContentSource Source { get; }
-
-    /// <summary>Sucht eine Seite (0-basiert) mit <paramref name="pageSize"/> Einträgen.</summary>
-    Task<SearchPage> SearchAsync(string query, ContentType type, Installation inst, int page, int pageSize);
-
-    /// <summary>Alle zur Instanz passenden Versionen eines Projekts, neueste zuerst.</summary>
-    Task<List<ContentVersion>> GetVersionsAsync(string projectId, ContentType type, Installation inst);
-
-    /// <summary>Eine bestimmte Version (unabhängig davon, ob sie zur Instanz passt).</summary>
-    Task<ContentVersion?> GetVersionAsync(string projectId, string versionId);
-
-    Task<(string Id, string Title)> GetProjectInfoAsync(string idOrSlug);
-}
-
-public static class ContentProviderExtensions
-{
-    /// <summary>Neueste passende Version; Vollversionen werden gegenüber Beta/Alpha bevorzugt.</summary>
-    public static async Task<ContentVersion?> GetLatestVersionAsync(this IContentProvider provider,
-        string projectId, ContentType type, Installation inst)
-    {
-        var versions = await provider.GetVersionsAsync(projectId, type, inst);
-        return versions.FirstOrDefault(v => v.Channel == "release") ?? versions.FirstOrDefault();
-    }
-}
+public record ProjectSummary(string Id, string Title, string? IconUrl);

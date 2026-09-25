@@ -1,127 +1,34 @@
-using System.ComponentModel;
-using System.IO;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+namespace AxoClient.Content;
 
-namespace McLauncher;
-
-/// <summary>Merkt sich, welche Datei von welchem Projekt und welcher Version stammt.</summary>
-public class InstalledContent
-{
-    public string FileName { get; set; } = "";
-    public ContentType Type { get; set; }
-    public ContentSource Source { get; set; }
-    public string ProjectId { get; set; } = "";
-    public string Title { get; set; } = "";
-    public string? VersionId { get; set; }
-    public string? VersionName { get; set; }
-    public DateTime? VersionDate { get; set; }
-}
-
-/// <summary>Eine Datei im mods-, resourcepacks- oder shaderpacks-Ordner.</summary>
-public class InstalledItem : INotifyPropertyChanged
-{
-    public required string FullPath { get; init; }
-    public required string DisplayName { get; init; }
-    public required string FileName { get; init; }
-    public required bool Enabled { get; init; }
-    public required bool CanToggle { get; init; }
-    public required ContentType Type { get; init; }
-
-    /// <summary>Herkunft (null = manuell hinzugefügt, Quelle unbekannt).</summary>
-    public InstalledContent? Entry { get; init; }
-
-    private System.Windows.Media.Imaging.BitmapSource? _icon;
-
-    /// <summary>
-    /// Profilbild: zuerst aus der Datei selbst, sonst später vom Anbieter nachgeladen
-    /// (Shader und viele Ressourcenpakete haben kein Bild in der Datei).
-    /// </summary>
-    public System.Windows.Media.Imaging.BitmapSource? Icon
-    {
-        get => _icon;
-        set
-        {
-            _icon = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Icon)));
-        }
-    }
-
-    public bool CanChangeVersion => Entry != null;
-
-    /// <summary>Teilen geht nur, wenn Modrinth die Datei kennt: der Empfänger lädt sie von dort.</summary>
-    public bool CanShare => Entry is { Source: ContentSource.Modrinth };
-
-    public string SourceText => Entry == null
-        ? $"Manuell · {FileName}"
-        : $"{Entry.Source} · {Entry.VersionName ?? FileName}";
-
-    private ContentVersion? _update;
-
-    /// <summary>Neuere passende Version, falls vorhanden (nach "Updates suchen").</summary>
-    public ContentVersion? Update
-    {
-        get => _update;
-        set
-        {
-            _update = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Update)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasUpdate)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UpdateText)));
-        }
-    }
-
-    public bool HasUpdate => Update != null;
-    public string UpdateText => Update == null ? "" : $"Update: {Update.Name}";
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-}
-
-/// <summary>Verwaltet Mods, Ressourcenpakete und Shader einer Installation.</summary>
-public class ContentStore(Installation inst, HttpClient http)
+public class ContentStore(Installation inst, ModrinthClient modrinth)
 {
     private const string DisabledSuffix = ".disabled";
+    private const string IndexFileName = "launcher-content.json";
+    private const string IconCacheFolder = "launcher-icons";
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
+    public static readonly string[] ReservedPaths = [IndexFileName, IconCacheFolder + "/"];
+
+    public record PlannedInstall(ContentType Type, string ProjectId, string Title, ContentVersion Version, bool Enabled = true);
+
+    public record PinnedContent(ContentType Type, string ProjectId, string? VersionId, string Title, bool Enabled);
+
+    public record PinnedResult(int Installed, List<string> Replaced, List<string> Failures);
 
     public Installation Installation => inst;
 
-    private string IndexPath => Path.Combine(inst.GameDir, "launcher-content.json");
+    private string IndexPath => inst.GameFile(IndexFileName);
+    private string IconCacheDir => inst.GameFile(IconCacheFolder);
 
-    public string FolderOf(ContentType type) =>
-        Path.Combine(inst.GameDir, ContentTypes.Folder(type, inst.MinecraftVersion));
+    public static string EnabledName(string fileName) =>
+        fileName.EndsWith(DisabledSuffix) ? fileName[..^DisabledSuffix.Length] : fileName;
 
-    private List<InstalledContent> LoadIndex()
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<List<InstalledContent>>(File.ReadAllText(IndexPath), JsonOptions) ?? [];
-        }
-        catch
-        {
-            return [];
-        }
-    }
+    public List<InstalledContent> GetIndex() => JsonFiles.Read<List<InstalledContent>>(IndexPath) ?? [];
 
-    private void SaveIndex(List<InstalledContent> index)
-    {
-        Directory.CreateDirectory(inst.GameDir);
-        File.WriteAllText(IndexPath, JsonSerializer.Serialize(index, JsonOptions));
-    }
+    private void SaveIndex(List<InstalledContent> index) => JsonFiles.Write(IndexPath, index);
 
-    /// <summary>Herkunft aller über den Launcher installierten Dateien (Quelle, Projekt, Titel, Version).</summary>
-    public List<InstalledContent> GetIndex() => LoadIndex();
-
-    /// <summary>Übernimmt Herkunftseinträge (z.B. beim Übertragen aus einer anderen Instanz).</summary>
     public void AddIndexEntries(IEnumerable<InstalledContent> entries)
     {
-        var index = LoadIndex();
+        var index = GetIndex();
         foreach (var entry in entries)
         {
             index.RemoveAll(i => i.Type == entry.Type && i.FileName == entry.FileName);
@@ -132,36 +39,45 @@ public class ContentStore(Installation inst, HttpClient http)
 
     private bool FileExists(ContentType type, string fileName)
     {
-        var path = Path.Combine(FolderOf(type), fileName);
+        var path = Path.Combine(inst.ContentDir(type), fileName);
         return File.Exists(path) || File.Exists(path + DisabledSuffix);
+    }
+
+    public int CountFiles(ContentType type)
+    {
+        var folder = inst.ContentDir(type);
+        if (!Directory.Exists(folder))
+            return 0;
+        return type == ContentType.Mod
+            ? Directory.GetFiles(folder, "*.jar*").Count(f => !BadgeMod.IsModFile(f))
+            : Directory.GetFiles(folder, "*.zip").Length + Directory.GetDirectories(folder).Length;
     }
 
     public List<InstalledItem> GetInstalled(ContentType type)
     {
-        var folder = FolderOf(type);
+        var folder = inst.ContentDir(type);
         if (!Directory.Exists(folder))
             return [];
 
-        var index = LoadIndex();
+        var index = GetIndex();
         var entries = type == ContentType.Mod
             ? Directory.GetFiles(folder, "*.jar").Concat(Directory.GetFiles(folder, "*.jar" + DisabledSuffix))
-            : Directory.GetFiles(folder, "*.zip").Concat(Directory.GetDirectories(folder)); // Pakete können auch Ordner sein
+            : Directory.GetFiles(folder, "*.zip").Concat(Directory.GetDirectories(folder));
 
         return entries
-            .Where(path => !Path.GetFileName(path).StartsWith(Badge.ModFileName)) // vom Launcher verwaltet
+            .Where(path => !BadgeMod.IsModFile(path))
             .Select(path =>
             {
                 var name = Path.GetFileName(path);
-                var enabled = !name.EndsWith(DisabledSuffix);
-                var baseName = enabled ? name : name[..^DisabledSuffix.Length];
+                var baseName = EnabledName(name);
                 var known = index.FirstOrDefault(i => i.Type == type && i.FileName == baseName);
                 return new InstalledItem
                 {
                     FullPath = path,
                     FileName = baseName,
                     DisplayName = known?.Title ?? Path.GetFileNameWithoutExtension(baseName),
-                    Enabled = enabled,
-                    CanToggle = type == ContentType.Mod, // Pakete werden im Spiel selbst aktiviert
+                    Enabled = name == baseName,
+                    CanToggle = type == ContentType.Mod,
                     Type = type,
                     Entry = known,
                     Icon = ContentIcons.Load(path, type)
@@ -171,19 +87,10 @@ public class ContentStore(Installation inst, HttpClient http)
             .ToList();
     }
 
-    /// <summary>Ordner für nachgeladene Profilbilder (Shader und viele Pakete bringen keines mit).</summary>
-    private string IconCacheDir => Path.Combine(inst.GameDir, "launcher-icons");
-
-    private string CachedIconPath(string projectId) => Path.Combine(IconCacheDir, projectId + ".png");
-
-    /// <summary>
-    /// Holt fehlende Profilbilder von Modrinth nach und legt sie neben der Instanz ab, damit sie
-    /// beim nächsten Mal sofort da sind. Fehler werden übergangen (dann bleibt das Ersatzsymbol stehen).
-    /// </summary>
-    public async Task LoadMissingIconsAsync(IEnumerable<InstalledItem> items, ModrinthProvider modrinth)
+    public async Task LoadMissingIconsAsync(IEnumerable<InstalledItem> items)
     {
         var pending = new List<InstalledItem>();
-        foreach (var item in items.Where(i => i.Icon == null && i.Entry is { Source: ContentSource.Modrinth }))
+        foreach (var item in items.Where(i => i.Icon == null && i.Entry is { IsFromModrinth: true }))
         {
             var cached = CachedIconPath(item.Entry!.ProjectId);
             if (File.Exists(cached))
@@ -194,79 +101,77 @@ public class ContentStore(Installation inst, HttpClient http)
         if (pending.Count == 0)
             return;
 
-        Dictionary<string, string> urls;
+        Dictionary<string, ProjectSummary> projects;
         try
         {
-            urls = await modrinth.GetIconUrlsAsync(pending.Select(i => i.Entry!.ProjectId));
+            projects = await modrinth.GetProjectsAsync(pending.Select(i => i.Entry!.ProjectId));
         }
-        catch
+        catch (Exception ex)
         {
-            return; // offline oder Modrinth gerade nicht erreichbar
+            ErrorReport.Log("Symbole der Inhalte abfragen", ex);
+            return;
         }
 
         foreach (var item in pending)
         {
-            if (!urls.TryGetValue(item.Entry!.ProjectId, out var url))
+            if (!projects.TryGetValue(item.Entry!.ProjectId, out var project) || project.IconUrl == null)
                 continue;
             try
             {
-                var bytes = await http.GetByteArrayAsync(url);
+                var bytes = await modrinth.Http.GetByteArrayAsync(project.IconUrl);
                 if (ContentIcons.FromBytes(bytes) is not { } image)
-                    continue; // z.B. webp, das Windows nicht anzeigen kann
+                    continue;
                 item.Icon = image;
                 Directory.CreateDirectory(IconCacheDir);
                 await File.WriteAllBytesAsync(CachedIconPath(item.Entry.ProjectId), bytes);
             }
-            catch
+            catch (Exception ex)
             {
-                // einzelnes Bild fehlt: nicht schlimm
+                ErrorReport.Log("Symbol eines Inhalts laden", ex);
             }
         }
     }
 
-    public bool IsInstalled(ContentSource source, string projectId) =>
-        LoadIndex().Any(i => i.Source == source && i.ProjectId == projectId && FileExists(i.Type, i.FileName));
+    private string CachedIconPath(string projectId) => Path.Combine(IconCacheDir, projectId + ".png");
+
+    public bool IsInstalled(string projectId) =>
+        GetIndex().Any(i => i.IsFromModrinth && i.ProjectId == projectId && FileExists(i.Type, i.FileName));
 
     public bool HasModMatching(params string[] nameParts) =>
         GetInstalled(ContentType.Mod).Any(m => nameParts.Any(p =>
             m.DisplayName.Contains(p, StringComparison.OrdinalIgnoreCase)
             || m.FileName.Contains(p, StringComparison.OrdinalIgnoreCase)));
 
-    /// <summary>
-    /// Lädt eine Version herunter (ohne Angabe: die neueste passende). Mit <paramref name="replace"/> wird eine
-    /// bereits installierte Version desselben Projekts ersetzt (Version ändern / Update).
-    /// Bei Mods werden benötigte Abhängigkeiten mitinstalliert.
-    /// </summary>
-    public async Task InstallAsync(IContentProvider provider, string projectId, string title, ContentType type,
-        IProgress<string> status, HashSet<string>? visited = null, ContentVersion? version = null, bool replace = false,
-        bool withDependencies = true)
+    public InstalledContent? CurrentOf(ContentType type, string projectId) =>
+        GetIndex().FirstOrDefault(i => i.Type == type && i.IsFromModrinth && i.ProjectId == projectId);
+
+    public async Task InstallAsync(string projectId, string title, ContentType type, IProgress<string> status,
+        ContentVersion? version = null, bool replace = false, bool withDependencies = true,
+        HashSet<string>? visited = null)
     {
         visited ??= [];
-        if (!visited.Add(projectId) || (!replace && IsInstalled(provider.Source, projectId)))
+        if (!visited.Add(projectId) || (!replace && IsInstalled(projectId)))
             return;
 
         if (version == null)
         {
             status.Report($"Suche passende Version für {title}...");
-            version = await provider.GetLatestVersionAsync(projectId, type, inst)
+            version = await modrinth.GetLatestVersionAsync(projectId, type, inst)
                       ?? throw new InvalidOperationException(
                           $"{title} hat keine Datei für Minecraft {inst.MinecraftVersion}" +
                           (type == ContentType.Mod ? $" mit {inst.Loader}." : "."));
         }
         if (version.DownloadUrl == null)
-            throw new InvalidOperationException(
-                $"Der Autor von {title} erlaubt keine Downloads über andere Launcher. " +
-                "Bitte über die CurseForge-Webseite herunterladen und in den Ordner legen.");
+            throw new InvalidOperationException($"Der Autor von {title} erlaubt keine Downloads über andere Launcher.");
 
         status.Report($"Lade {title} {version.Name}...");
-        var bytes = await http.GetByteArrayAsync(version.DownloadUrl);
+        var bytes = await modrinth.Http.GetByteArrayAsync(version.DownloadUrl);
 
-        // Bisherige Datei(en) desselben Projekts entfernen; war sie deaktiviert, bleibt die neue es auch
-        var folder = FolderOf(type);
+        var folder = inst.ContentDir(type);
         Directory.CreateDirectory(folder);
-        var index = LoadIndex();
+        var index = GetIndex();
         var wasDisabled = false;
-        foreach (var old in index.Where(i => i.Type == type && i.Source == provider.Source && i.ProjectId == projectId).ToList())
+        foreach (var old in index.Where(i => i.Type == type && i.IsFromModrinth && i.ProjectId == projectId).ToList())
         {
             var oldPath = Path.Combine(folder, old.FileName);
             wasDisabled |= File.Exists(oldPath + DisabledSuffix);
@@ -275,43 +180,28 @@ public class ContentStore(Installation inst, HttpClient http)
             index.Remove(old);
         }
 
-        var target = Path.Combine(folder, version.FileName + (wasDisabled ? DisabledSuffix : ""));
-        await File.WriteAllBytesAsync(target, bytes);
-
+        await File.WriteAllBytesAsync(Path.Combine(folder, version.FileName + (wasDisabled ? DisabledSuffix : "")), bytes);
         index.RemoveAll(i => i.Type == type && i.FileName == version.FileName);
-        index.Add(new InstalledContent
-        {
-            FileName = version.FileName,
-            Type = type,
-            Source = provider.Source,
-            ProjectId = projectId,
-            Title = title,
-            VersionId = version.Id,
-            VersionName = version.Name,
-            VersionDate = version.Date
-        });
+        index.Add(InstalledContent.Create(type, title, version));
         SaveIndex(index);
 
         if (type != ContentType.Mod || !withDependencies)
             return;
         foreach (var dependencyId in version.RequiredProjectIds)
         {
-            if (visited.Contains(dependencyId) || IsInstalled(provider.Source, dependencyId))
+            if (visited.Contains(dependencyId) || IsInstalled(dependencyId))
                 continue;
-            var (id, depTitle) = await provider.GetProjectInfoAsync(dependencyId);
-            await InstallAsync(provider, id, depTitle, ContentType.Mod, status, visited);
+            var (id, dependencyTitle) = await modrinth.GetProjectInfoAsync(dependencyId);
+            await InstallAsync(id, dependencyTitle, ContentType.Mod, status, visited: visited);
         }
     }
 
-    /// <summary>Eine bereits aufgelöste Version, die installiert werden soll (siehe <see cref="InstallManyAsync"/>).</summary>
-    public record PlannedInstall(ContentType Type, string ProjectId, string Title, ContentVersion Version, bool Enabled = true);
+    public async Task InstallBySlugAsync(string slug, ContentType type, IProgress<string> status)
+    {
+        var (id, title) = await modrinth.GetProjectInfoAsync(slug);
+        await InstallAsync(id, title, type, status);
+    }
 
-    /// <summary>
-    /// Lädt viele bereits bekannte Versionen parallel herunter. Anders als <see cref="InstallAsync"/> löst das keine
-    /// Abhängigkeiten auf und ersetzt nichts Vorhandenes; gedacht für eine frische Instanz. Dass die Herkunftsliste
-    /// erst am Ende einmal geschrieben wird, macht paralleles Laden erst sicher.
-    /// Fehler einzelner Dateien brechen nicht ab, sondern kommen als Text zurück.
-    /// </summary>
     public async Task<List<string>> InstallManyAsync(IReadOnlyList<PlannedInstall> plans, WorkProgress progress,
         int parallel = 6)
     {
@@ -329,25 +219,14 @@ public class ContentStore(Installation inst, HttpClient http)
                 var version = plan.Version;
                 if (version.DownloadUrl == null)
                     throw new InvalidOperationException("Der Autor erlaubt keine Downloads über andere Launcher.");
-                // Der Dateiname kommt von Modrinth, wird aber trotzdem nicht blind als Pfad benutzt
                 var name = Path.GetFileName(version.FileName);
                 if (name.Length == 0 || name != version.FileName || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
                     throw new InvalidOperationException("Ungültiger Dateiname.");
 
-                var target = Path.Combine(FolderOf(plan.Type), name + (plan.Enabled ? "" : DisabledSuffix));
-                await Downloads.DownloadToFileAsync(http, version.DownloadUrl, target, null, progress.Cancel);
+                var target = Path.Combine(inst.ContentDir(plan.Type), name + (plan.Enabled ? "" : DisabledSuffix));
+                await HttpDownloads.DownloadToFileAsync(modrinth.Http, version.DownloadUrl, target, null, progress.Cancel);
                 lock (entries)
-                    entries.Add(new InstalledContent
-                    {
-                        FileName = name,
-                        Type = plan.Type,
-                        Source = ContentSource.Modrinth,
-                        ProjectId = plan.ProjectId,
-                        Title = plan.Title,
-                        VersionId = version.Id,
-                        VersionName = version.Name,
-                        VersionDate = version.Date
-                    });
+                    entries.Add(InstalledContent.Create(plan.Type, plan.Title, version, name));
             }
             catch (OperationCanceledException)
             {
@@ -356,7 +235,7 @@ public class ContentStore(Installation inst, HttpClient http)
             catch (Exception ex)
             {
                 lock (failures)
-                    failures.Add($"{plan.Title} ({ex.Message})");
+                    failures.Add($"{plan.Title} ({ErrorReport.Short(ex)})");
             }
             finally
             {
@@ -372,83 +251,105 @@ public class ContentStore(Installation inst, HttpClient http)
         return failures;
     }
 
-    /// <summary>Installiert ein Projekt über seinen Kurznamen (z.B. "iris" bei Modrinth).</summary>
-    public async Task InstallBySlugAsync(IContentProvider provider, string slug, ContentType type, IProgress<string> status)
+    public async Task<PinnedResult> InstallPinnedAsync(IReadOnlyList<PinnedContent> wanted, WorkProgress progress)
     {
-        var (id, title) = await provider.GetProjectInfoAsync(slug);
-        await InstallAsync(provider, id, title, type, status);
+        progress.Text.Report("Suche die Versionen bei Modrinth...");
+        var pinned = await modrinth.GetVersionsByIdsAsync(wanted.Where(e => e.VersionId != null).Select(e => e.VersionId!));
+
+        var exact = new List<PlannedInstall>();
+        var newest = new List<PinnedContent>();
+        foreach (var entry in wanted)
+        {
+            if (entry.VersionId != null && pinned.TryGetValue(entry.VersionId, out var version)
+                && version.ProjectId == entry.ProjectId && version.Supports(inst, entry.Type))
+                exact.Add(new PlannedInstall(entry.Type, entry.ProjectId, entry.Title, version,
+                    entry.Enabled || entry.Type != ContentType.Mod));
+            else
+                newest.Add(entry);
+        }
+
+        var failures = exact.Count > 0 ? await InstallManyAsync(exact, progress) : [];
+        var installed = exact.Count - failures.Count;
+        var replaced = new List<string>();
+        for (var i = 0; i < newest.Count; i++)
+        {
+            var entry = newest[i];
+            progress.Cancel.ThrowIfCancellationRequested();
+            progress.Text.Report($"Lade {entry.Title} ({i + 1} von {newest.Count}, neueste Version)...");
+            try
+            {
+                await InstallAsync(entry.ProjectId, entry.Title, entry.Type, progress.Text);
+                if (!entry.Enabled && entry.Type == ContentType.Mod
+                    && GetInstalled(ContentType.Mod).FirstOrDefault(m => m.Entry?.ProjectId == entry.ProjectId) is { } item)
+                    SetEnabled(item, false);
+                replaced.Add(entry.Title);
+                installed++;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"{entry.Title} ({ErrorReport.Short(ex)})");
+            }
+        }
+        return new PinnedResult(installed, replaced, failures);
     }
 
-    /// <summary>
-    /// Ordnet manuell hinzugefügte Dateien über ihren SHA-1 einem Modrinth-Projekt zu,
-    /// damit auch für sie Versionswechsel, Updates und die Reparatur funktionieren.
-    /// </summary>
-    public async Task<int> IdentifyUnknownAsync(ContentType type, ModrinthProvider modrinth)
+    public async Task<int> IdentifyUnknownAsync(ContentType type)
     {
         var unknown = GetInstalled(type).Where(i => i.Entry == null && File.Exists(i.FullPath)).ToList();
         if (unknown.Count == 0)
             return 0;
 
-        var hashes = unknown.ToDictionary(i => i, i => Sha1(i.FullPath));
+        var hashes = unknown.ToDictionary(i => i, i => FileOps.Sha1(i.FullPath));
         var found = await modrinth.LookupByHashAsync(hashes.Values);
-        // Namen in einem Rutsch holen statt pro Datei eine eigene Anfrage (bei großen Modpacks sonst hunderte)
-        var titles = found.Count == 0
-            ? []
-            : await modrinth.GetProjectTitlesAsync(found.Values.Select(v => v.ProjectId));
+        var projects = found.Count == 0 ? [] : await modrinth.GetProjectsAsync(found.Values.Select(v => v.ProjectId));
         var entries = new List<InstalledContent>();
         foreach (var (item, hash) in hashes)
         {
             if (!found.TryGetValue(hash, out var version))
                 continue;
-            entries.Add(new InstalledContent
-            {
-                FileName = item.FileName,
-                Type = type,
-                Source = ContentSource.Modrinth,
-                ProjectId = version.ProjectId,
-                Title = titles.TryGetValue(version.ProjectId, out var title) && title.Length > 0 ? title : item.DisplayName,
-                VersionId = version.Id,
-                VersionName = version.Name,
-                VersionDate = version.Date
-            });
+            var title = projects.TryGetValue(version.ProjectId, out var project) && project.Title.Length > 0
+                ? project.Title
+                : item.DisplayName;
+            entries.Add(InstalledContent.Create(type, title, version, item.FileName));
         }
         if (entries.Count > 0)
             AddIndexEntries(entries);
         return entries.Count;
     }
 
-    /// <summary>
-    /// Sucht für alle Einträge bekannter Herkunft eine neuere passende Version und setzt <see cref="InstalledItem.Update"/>.
-    /// </summary>
-    public async Task<int> CheckUpdatesAsync(IEnumerable<InstalledItem> items, Func<ContentSource, IContentProvider?> providerFor)
+    public async Task<int> CheckUpdatesAsync(IReadOnlyList<InstalledItem> items)
     {
-        var checks = items.Where(i => i.Entry != null).Select(async item =>
+        await Task.WhenAll(items.Where(i => i.Entry is { IsFromModrinth: true }).Select(async item =>
         {
             var entry = item.Entry!;
-            if (providerFor(entry.Source) is not { } provider)
-                return;
             try
             {
-                var latest = await provider.GetLatestVersionAsync(entry.ProjectId, item.Type, inst);
+                var latest = await modrinth.GetLatestVersionAsync(entry.ProjectId, item.Type, inst);
                 var isNewer = latest != null
                               && latest.Id != entry.VersionId
                               && latest.FileName != entry.FileName
                               && (entry.VersionDate == null || latest.Date > entry.VersionDate);
                 item.Update = isNewer ? latest : null;
             }
-            catch
+            catch (Exception ex)
             {
-                item.Update = null; // Projekt nicht erreichbar, beim nächsten Mal erneut prüfen
+                ErrorReport.Log("Update-Suche für \"" + item.DisplayName + "\"", ex);
+                item.Update = null;
             }
-        });
-        await Task.WhenAll(checks);
+        }));
         return items.Count(i => i.HasUpdate);
     }
 
-    public static string Sha1(string path)
+    public async Task ApplyUpdateAsync(InstalledItem item, IProgress<string> status)
     {
-        using var stream = File.OpenRead(path);
-        return Convert.ToHexString(SHA1.HashData(stream)).ToLowerInvariant();
+        if (item is not { Entry: { IsFromModrinth: true } entry, Update: { } update })
+            return;
+        await InstallAsync(entry.ProjectId, entry.Title, item.Type, status, version: update, replace: true);
+        item.Update = null;
     }
 
     public void SetEnabled(InstalledItem item, bool enabled)
@@ -456,8 +357,7 @@ public class ContentStore(Installation inst, HttpClient http)
         if (!item.CanToggle || item.Enabled == enabled)
             return;
         var dir = Path.GetDirectoryName(item.FullPath)!;
-        var target = Path.Combine(dir, enabled ? item.FileName : item.FileName + DisabledSuffix);
-        File.Move(item.FullPath, target, overwrite: true); // ggf. veraltete Kopie mit dem anderen Zustand ersetzen
+        File.Move(item.FullPath, Path.Combine(dir, enabled ? item.FileName : item.FileName + DisabledSuffix), overwrite: true);
     }
 
     public void Delete(InstalledItem item)
@@ -467,7 +367,7 @@ public class ContentStore(Installation inst, HttpClient http)
         else
             File.Delete(item.FullPath);
 
-        var index = LoadIndex();
+        var index = GetIndex();
         if (index.RemoveAll(i => i.FileName == item.FileName) > 0)
             SaveIndex(index);
     }

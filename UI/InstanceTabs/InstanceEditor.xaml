@@ -1,0 +1,122 @@
+<UserControl x:Class="AxoClient.UI.InstanceTabs.InstanceEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="clr-namespace:AxoClient.UI.InstanceTabs">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ScrollViewer.Resources>
+            <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBar}"/>
+        </ScrollViewer.Resources>
+        <StackPanel MaxWidth="560" HorizontalAlignment="Left" Margin="0,0,12,0">
+            <TextBlock Text="Bild" Style="{StaticResource FieldLabel}"/>
+            <DockPanel Margin="0,0,0,16">
+                <Border x:Name="IconDrop" DockPanel.Dock="Left" Width="96" Height="96" CornerRadius="8"
+                        Background="#3C3F45" ClipToBounds="True" Cursor="Hand" AllowDrop="True"
+                        ToolTip="Klicken oder Bild hierher ziehen" MouseLeftButtonUp="IconDrop_Click"
+                        DragOver="IconDrop_DragOver" Drop="IconDrop_Drop">
+                    <Grid>
+                        <TextBlock x:Name="IconLetter" Foreground="White" FontSize="40" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image x:Name="IconPreview" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Grid>
+                </Border>
+                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="IconInfo" Foreground="{StaticResource SubtleText}" TextWrapping="Wrap"
+                               Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Style="{StaticResource LauncherButton}" Content="Bild auswählen..." Margin="0,0,8,0"
+                                Click="ChooseIcon_Click"/>
+                        <Button x:Name="ResetIconButton" Style="{StaticResource LauncherButton}"
+                                Content="Automatisch (Weltbild)" Click="ResetIcon_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </DockPanel>
+
+            <TextBlock Text="Name" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="NameBox" Style="{StaticResource LauncherTextBox}" Margin="0,0,0,16"/>
+
+            <TextBlock Text="Mod-Loader" Style="{StaticResource FieldLabel}"/>
+            <UniformGrid Columns="3" Margin="0,0,-8,16">
+                <RadioButton x:Name="VanillaRadio" Style="{StaticResource LoaderTile}" GroupName="Loader"
+                             Checked="Loader_Checked">
+                    <StackPanel>
+                        <TextBlock Text="Vanilla" FontWeight="SemiBold"/>
+                        <TextBlock Text="Ohne Mods" Foreground="{StaticResource MutedText}" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="FabricRadio" Style="{StaticResource LoaderTile}" GroupName="Loader"
+                             Checked="Loader_Checked">
+                    <StackPanel>
+                        <TextBlock Text="Fabric" FontWeight="SemiBold"/>
+                        <TextBlock Text="Leicht, meist Modrinth" Foreground="{StaticResource MutedText}" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="ForgeRadio" Style="{StaticResource LoaderTile}" GroupName="Loader"
+                             Checked="Loader_Checked">
+                    <StackPanel>
+                        <TextBlock Text="Forge" FontWeight="SemiBold"/>
+                        <TextBlock Text="Klassisch, meist CurseForge" Foreground="{StaticResource MutedText}" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton>
+            </UniformGrid>
+
+            <TextBlock Text="Minecraft-Version" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="VersionBox" Style="{StaticResource LauncherCombo}"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                <CheckBox x:Name="AxoOnlyCheck" Content="Nur mit AxoClient-Funktionen" Click="Filter_Click"
+                          ToolTip="Nur Versionen, für die AxoClient die Mod mitbringt (Symbol in der Tabliste, Umhänge, Freunde, Anzeigen wie FPS und Ping)"/>
+                <CheckBox x:Name="SnapshotsCheck" Content="Snapshots" Margin="14,0,0,0" Click="Filter_Click"/>
+                <CheckBox x:Name="OldVersionsCheck" Content="Alpha/Beta" Margin="14,0,0,0" Click="Filter_Click"/>
+            </StackPanel>
+            <TextBlock x:Name="InfoText" Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+
+            <StackPanel x:Name="PerformanceSection" Margin="0,22,0,0">
+                <TextBlock Text="Java &amp; Leistung nur für diese Instanz" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Foreground="{StaticResource SubtleText}" TextWrapping="Wrap" FontSize="12"
+                           Margin="0,0,0,12"
+                           Text="Ohne Häkchen gilt, was unter Einstellungen → Java &amp; Leistung steht. Das reicht meistens – eigene Werte lohnen sich für ein großes Modpack neben einer schlanken Vanilla-Instanz."/>
+
+                <CheckBox x:Name="OwnRamCheck" Margin="0,0,0,8" Click="OwnValue_Click"
+                          Content="Eigener Arbeitsspeicher"/>
+                <DockPanel Margin="0,0,0,4">
+                    <TextBlock x:Name="InstanceRamValue" DockPanel.Dock="Right" Foreground="White"
+                               FontWeight="SemiBold"/>
+                    <TextBlock x:Name="InstanceRamAdvice" Foreground="{StaticResource MutedText}" FontSize="11"
+                               TextWrapping="Wrap"/>
+                </DockPanel>
+                <Slider x:Name="InstanceRamSlider" Minimum="1024" TickFrequency="512" IsSnapToTickEnabled="True"
+                        Margin="0,0,0,16" ValueChanged="InstanceRam_ValueChanged"/>
+
+                <CheckBox x:Name="OwnJavaCheck" Margin="0,0,0,8" Click="OwnValue_Click" Content="Eigenes Java"/>
+                <ComboBox x:Name="InstanceJavaBox" Style="{StaticResource LauncherCombo}" Margin="0,0,0,4"
+                          SelectionChanged="InstanceJava_SelectionChanged"/>
+                <TextBlock x:Name="InstanceJavaHint" Foreground="{StaticResource MutedText}" FontSize="11"
+                           TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                <CheckBox x:Name="OwnJvmCheck" Margin="0,0,0,8" Click="OwnValue_Click"
+                          Content="Eigene Java-Einstellung"/>
+                <StackPanel x:Name="InstancePresetButtons" Orientation="Horizontal" Margin="0,0,0,6"/>
+                <TextBlock x:Name="InstancePresetHint" Foreground="{StaticResource MutedText}" FontSize="11"
+                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                <TextBox x:Name="InstanceJvmArgsBox" Style="{StaticResource LauncherTextBox}"
+                         ToolTip="Zusätzliche Java-Argumente nur für diese Instanz"
+                         LostFocus="InstanceJvmArgs_LostFocus"/>
+            </StackPanel>
+
+            <StackPanel x:Name="TransferSection" Margin="0,22,0,0">
+                <TextBlock Text="Daten übernehmen" Style="{StaticResource SectionTitle}"/>
+                <tabs:TransferPanel x:Name="Transfer"/>
+            </StackPanel>
+
+            <DockPanel Margin="0,22,0,0">
+                <Button x:Name="DeleteButton" Style="{StaticResource LauncherButton}"
+                        Background="{StaticResource Danger}" Content="Instanz löschen" Click="Delete_Click"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Style="{StaticResource LauncherButton}" Content="Abbrechen"
+                            Margin="0,0,8,0" Click="Cancel_Click"/>
+                    <Button x:Name="SaveButton" Style="{StaticResource LauncherButton}"
+                            Background="{StaticResource Accent}" Content="Speichern" Click="Save_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

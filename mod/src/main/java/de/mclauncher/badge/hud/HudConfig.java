@@ -42,6 +42,8 @@ public final class HudConfig {
 	public static final String[] SEPARATORS = { " / ", " | ", ", ", "  " };
 	public static final String[] SEPARATOR_NAMES = { "/", "|", ",", "Leerzeichen" };
 	public static final String[] ALIGN_NAMES = { "Links", "Mitte", "Rechts" };
+	/** Was bei den Koordinaten die Farbe der Achse bekommt. */
+	public static final String[] AXIS_COLOUR_NAMES = { "Aus", "Nur Buchstaben", "Buchstabe und Zahl", "Nur Zahlen" };
 
 	/** Zustand und Aussehen einer einzelnen Anzeige. */
 	public static final class Entry {
@@ -89,6 +91,10 @@ public final class HudConfig {
 		public final boolean[] axes = { true, true, true };
 		/** Himmelsrichtung hinter den Koordinaten. */
 		public boolean facing;
+		/** Koordinaten je Achse einfärben, siehe {@link #AXIS_COLOUR_NAMES}; 0 = aus. */
+		public int axisColours;
+		/** Farbe von X, Y und Z als 0xRRGGBB. */
+		public final int[] axisRgb = { 0xE36D6F, 0x6FCF97, 0x6FA8DC };
 		/** Ausrichtung mehrzeiliger Texte: 0 links, 1 Mitte, 2 rechts. */
 		public int align;
 
@@ -103,6 +109,12 @@ public final class HudConfig {
 		public int showLimit;
 		/** Farbe einer gedrückten Taste (Tastenanzeige) als 0xRRGGBB. */
 		public int pressRgb = 0xFFFFFF;
+
+		/**
+		 * Privat: im Privatsphäre-Modus zeichnet nicht das Spiel diese Anzeige, sondern der Launcher in
+		 * einem eigenen Fenster, das Windows aus jeder Bildschirmaufnahme heraushält.
+		 */
+		public boolean privat;
 
 		// ---- nur bei Anzeigen mit HudModule.equipment ----
 		/** Ausrüstung untereinander statt nebeneinander. */
@@ -222,15 +234,25 @@ public final class HudConfig {
 	public boolean snap = true;
 	/** Zuletzt benutzte Art, Farben einzustellen: 0 = RGB, 1 = HSL, 2 = Hex. */
 	public int colorMode;
+	/** Fullbright: alles so hell, als stünde überall eine Fackel (Taste G oder im Menü). */
+	public boolean fullbright;
 
 	/** Name des zuletzt geladenen oder gespeicherten Profils (nur zur Anzeige), sonst leer. */
 	public String activeProfile = "";
+
+	/**
+	 * Früherer Hauptschalter des Privatsphäre-Modus. Wird nicht mehr ausgewertet: privat ist jetzt,
+	 * was je Anzeige (oder Gruppe) so markiert ist. Bleibt nur, damit die Datei gleich aussieht.
+	 */
+	public boolean privacyMode;
 	/** Gruppen: mehrere Anzeigen mit einem gemeinsamen Hintergrund, die zusammen wandern. */
 	public final java.util.List<Group> groups = new java.util.ArrayList<>();
 
 	/** Eine Gruppe von Anzeigen samt gemeinsamer Hintergrundfläche. */
 	public static final class Group {
 		public final java.util.List<HudModule> members = new java.util.ArrayList<>();
+		/** Die ganze Gruppe ist privat (siehe { Entry#privat}). */
+		public boolean privat;
 		public int alpha = 45;
 		public int rgb = 0x000000;
 		public int corner = 4;
@@ -330,8 +352,12 @@ public final class HudConfig {
 			snap = json.get("einrasten").getAsBoolean();
 		if (json.has("farbmodus"))
 			colorMode = Math.max(0, Math.min(2, json.get("farbmodus").getAsInt()));
+		if (json.has("fullbright"))
+			fullbright = json.get("fullbright").getAsBoolean();
 		if (json.has("profil"))
 			activeProfile = json.get("profil").getAsString();
+		if (json.has("privatsphaere"))
+			privacyMode = json.get("privatsphaere").getAsBoolean();
 		if (json.has("gruppen") && json.get("gruppen").isJsonArray()) {
 			groups.clear();
 			for (var element : json.getAsJsonArray("gruppen")) {
@@ -351,6 +377,8 @@ public final class HudConfig {
 					group.corner = clampCorner(saved.get("corner").getAsInt());
 				if (saved.has("border"))
 					group.border = saved.get("border").getAsBoolean();
+				if (saved.has("privat"))
+					group.privat = saved.get("privat").getAsBoolean();
 				if (group.members.size() >= 2)
 					groups.add(group);
 			}
@@ -425,6 +453,13 @@ public final class HudConfig {
 			for (int i = 0; i < entry.axes.length && i < axes.size(); i++)
 				entry.axes[i] = axes.get(i).getAsBoolean();
 		}
+		if (saved.has("achsenfarben"))
+			entry.axisColours = HudSkin.wrap(saved.get("achsenfarben").getAsInt(), AXIS_COLOUR_NAMES.length);
+		if (saved.has("achsenRgb") && saved.get("achsenRgb").isJsonArray()) {
+			JsonArray colours = saved.getAsJsonArray("achsenRgb");
+			for (int i = 0; i < entry.axisRgb.length && i < colours.size(); i++)
+				entry.axisRgb[i] = colours.get(i).getAsInt() & 0xFFFFFF;
+		}
 		if (saved.has("farbregeln"))
 			entry.rulesOn = saved.get("farbregeln").getAsBoolean();
 		if (saved.has("regeln") && saved.get("regeln").isJsonArray()) {
@@ -442,6 +477,8 @@ public final class HudConfig {
 			entry.pressRgb = saved.get("tastenfarbe").getAsInt() & 0xFFFFFF;
 		if (saved.has("grenze"))
 			entry.showLimit = saved.get("grenze").getAsInt();
+		if (saved.has("privat"))
+			entry.privat = saved.get("privat").getAsBoolean();
 		if (!saved.has("slots"))
 			return;
 		JsonObject slots = saved.getAsJsonObject("slots");
@@ -467,7 +504,9 @@ public final class HudConfig {
 			json.add("raster", raster);
 			json.addProperty("einrasten", snap);
 			json.addProperty("farbmodus", colorMode);
+			json.addProperty("fullbright", fullbright);
 			json.addProperty("profil", activeProfile);
+			json.addProperty("privatsphaere", privacyMode);
 			JsonArray serverList = new JsonArray();
 			servers.forEach(serverList::add);
 			json.add("server", serverList);
@@ -481,6 +520,7 @@ public final class HudConfig {
 				saved.addProperty("rgb", group.rgb);
 				saved.addProperty("corner", group.corner);
 				saved.addProperty("border", group.border);
+				saved.addProperty("privat", group.privat);
 				groupList.add(saved);
 			}
 			json.add("gruppen", groupList);
@@ -532,6 +572,11 @@ public final class HudConfig {
 		for (boolean axis : entry.axes)
 			axes.add(axis);
 		saved.add("axes", axes);
+		saved.addProperty("achsenfarben", entry.axisColours);
+		JsonArray axisColours = new JsonArray();
+		for (int rgb : entry.axisRgb)
+			axisColours.add(rgb);
+		saved.add("achsenRgb", axisColours);
 		saved.addProperty("farbregeln", entry.rulesOn);
 		JsonArray rules = new JsonArray();
 		for (int i = 0; i < entry.ruleCount; i++) {
@@ -544,6 +589,7 @@ public final class HudConfig {
 		saved.addProperty("zeigen", entry.showMode);
 		saved.addProperty("grenze", entry.showLimit);
 		saved.addProperty("tastenfarbe", entry.pressRgb);
+		saved.addProperty("privat", entry.privat);
 		JsonObject slots = new JsonObject();
 		for (HudSlot slot : HudSlot.values()) {
 			JsonObject one = new JsonObject();
@@ -561,6 +607,7 @@ public final class HudConfig {
 		for (HudModule module : HudModule.values())
 			entries.put(module, new Entry(module));
 		groups.clear();
+		privacyMode = false;
 		grid = false;
 		gridSize = 8;
 		snap = true;
@@ -573,6 +620,14 @@ public final class HudConfig {
 
 	public boolean isEnabled(HudModule module) {
 		return entries.get(module).enabled;
+	}
+
+	/** Ob diese Anzeige privat ist - selbst so markiert oder als Mitglied einer privaten Gruppe. */
+	public boolean isPrivate(HudModule module) {
+		if (entries.get(module).privat)
+			return true;
+		Group group = groupOf(module);
+		return group != null && group.privat;
 	}
 
 	/** Übernimmt den Hintergrund einer Anzeige für alle anderen. */

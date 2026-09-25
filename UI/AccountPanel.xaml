@@ -1,0 +1,25 @@
+<UserControl x:Class="AxoClient.UI.AccountPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Background="#14FFFFFF" CornerRadius="10" Padding="10">
+        <DockPanel>
+            <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="6" ClipToBounds="True"
+                    Background="#22FFFFFF" Margin="0,0,10,0">
+                <Image x:Name="AvatarImage" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="AccountName" Text="Nicht angemeldet" Foreground="White"
+                           FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Foreground="#6FCF97" FontSize="11" Cursor="Hand">
+                    <Hyperlink x:Name="AccountLink" Foreground="#6FCF97" TextDecorations="{x:Null}"
+                               Click="AccountLink_Click">
+                        <Run x:Name="AccountLinkText" Text="Mit Microsoft anmelden"/>
+                    </Hyperlink>
+                </TextBlock>
+                <TextBlock x:Name="ProblemText" Foreground="#E36D6F" FontSize="11" Cursor="Hand"
+                           TextTrimming="CharacterEllipsis" Visibility="Collapsed"
+                           MouseLeftButtonUp="Problem_Click"/>
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</UserControl>

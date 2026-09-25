@@ -54,6 +54,12 @@ public class HudScreen extends Screen {
 	}
 
 	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+		editor.mouseScrolled(width, height, (int) mouseX, (int) mouseY, verticalAmount);
+		return true;
+	}
+
+	@Override
 	public boolean charTyped(CharInput input) {
 		return editor.charTyped(input.codepoint()) || super.charTyped(input);
 	}

@@ -11,6 +11,27 @@ import java.util.Map;
  * Anzeige; gemessene Zahlen merkt sich die Klasse für die Farbregeln.
  */
 public final class HudText {
+	/**
+	 * Farbmarke im Text: danach folgt '0' bis '2' (ab hier Farbe der Achse X, Y, Z) oder
+	 * {@link #COLOUR_RESET} (zurück zur Textfarbe). Die Marken selbst werden nie gezeichnet.
+	 */
+	public static final char COLOUR_MARK = '\u0001';
+	public static final char COLOUR_RESET = 'r';
+
+	/** Text ohne Farbmarken, z.B. zum Messen der Breite. */
+	public static String plain(String text) {
+		if (text.indexOf(COLOUR_MARK) < 0)
+			return text;
+		StringBuilder plain = new StringBuilder(text.length());
+		for (int i = 0; i < text.length(); i++) {
+			if (text.charAt(i) == COLOUR_MARK)
+				i++; // Marke und das Zeichen danach überspringen
+			else
+				plain.append(text.charAt(i));
+		}
+		return plain.toString();
+	}
+
 	private static final double GIGABYTE = 1024.0 * 1024.0 * 1024.0;
 	/** So oft wird die Geschwindigkeit neu gemessen. */
 	private static final long SPEED_INTERVAL_NANOS = 100_000_000L;
@@ -87,7 +108,16 @@ public final class HudText {
 			if (!entry.axes[i])
 				continue;
 			String value = number(values[i], entry.decimals);
-			parts.add(entry.labels ? names[i] + (entry.stacked ? ": " : " ") + value : value);
+			String label = entry.labels ? names[i] + (entry.stacked ? ": " : " ") : "";
+			String on = "" + COLOUR_MARK + (char) ('0' + i);
+			String off = "" + COLOUR_MARK + COLOUR_RESET;
+			// Farbe je Achse: Marken im Text, die das Zeichnen auswertet (siehe HudOverlay)
+			parts.add(switch (entry.axisColours) {
+				case 1 -> label.isEmpty() ? value : on + names[i] + off + label.substring(1) + value;
+				case 2 -> on + label + value + off;
+				case 3 -> label + on + value + off;
+				default -> label + value;
+			});
 		}
 		if (parts.isEmpty())
 			parts.add(number(x, entry.decimals)); // nie ganz leer, sonst verschwindet die Anzeige

@@ -314,6 +314,93 @@ public final class HudSkin {
 		painter.fill(knob, y - 1, 2, height + 2, TEXT);
 	}
 
+	// ---------- Bausteine des großen Menüs (Seitenleiste, Kacheln, Einstellungskarten) ----------
+
+	/** Seitenleiste: etwas dunkler als die Karte, wie die Navigation im Launcher. */
+	public static final int SIDEBAR = 0x661A1B1E;
+	/** Hintergrund einer Kachel oder Einstellungszeile. */
+	public static final int ROW_BACKGROUND = 0x40000000;
+	public static final int ROW_BORDER = 0x1AFFFFFF;
+	/** Gewählter Eintrag der Seitenleiste (wie im Launcher: Grün, stark zurückgenommen). */
+	public static final int NAV_ACTIVE = 0x333BA55C;
+
+	/** Eintrag der Seitenleiste; {@code info} steht rechtsbündig (z.B. "3/5"), darf null sein. */
+	public static void nav(HudPainter painter, int x, int y, int width, int height, String label, String info,
+						   boolean active, boolean hovered) {
+		if (active) {
+			rounded(painter, x, y, width, height, 3, NAV_ACTIVE);
+			painter.fill(x, y + 3, 2, height - 6, ACCENT);
+		} else if (hovered) {
+			rounded(painter, x, y, width, height, 3, HOVER);
+		}
+		int textY = y + (height - 8) / 2;
+		painter.text(label, x + 7, textY, active ? TEXT : TEXT_DIM);
+		if (info != null)
+			right(painter, info, x + width - 5, textY, MUTED);
+	}
+
+	/** Kachel bzw. Einstellungszeile: dunkle Fläche mit feinem Rahmen, grün umrandet wenn gewählt. */
+	public static void rowCard(HudPainter painter, int x, int y, int width, int height, boolean hovered,
+							   boolean selected) {
+		rounded(painter, x, y, width, height, 3, ROW_BACKGROUND);
+		if (hovered)
+			rounded(painter, x, y, width, height, 3, HOVER);
+		outline(painter, x, y, width, height, 3, selected ? ACCENT : (hovered ? BORDER : ROW_BORDER));
+	}
+
+	/** Schalter wie im Launcher: Pille mit Knopf, grün und rechts wenn an. Immer 18 x 10. */
+	public static void toggleSwitch(HudPainter painter, int x, int y, boolean on, boolean hovered) {
+		rounded(painter, x, y, 18, 10, 5, on ? ACCENT : 0x33FFFFFF);
+		outline(painter, x, y, 18, 10, 5, on ? ACCENT : (hovered ? ACCENT : 0x55FFFFFF));
+		rounded(painter, on ? x + 10 : x + 2, y + 2, 6, 6, 3, on ? TEXT : 0xDDFFFFFF);
+	}
+
+	/** Kleines Symbol einer Anzeige: Anfangsbuchstabe auf der Farbe ihrer Kategorie. */
+	public static void badge(HudPainter painter, int x, int y, int size, String letter, int rgb) {
+		rounded(painter, x, y, size, size, 3, 0x55000000 | (rgb & 0xFFFFFF));
+		outline(painter, x, y, size, size, 3, 0xAA000000 | (rgb & 0xFFFFFF));
+		centered(painter, letter, x + size / 2 + 1, y + (size - 8) / 2 + 1, TEXT);
+	}
+
+	/** Suchfeld mit Platzhalter; {@code focus} zeigt den Rahmen in Grün und die Schreibmarke. */
+	public static void search(HudPainter painter, int x, int y, int width, int height, String text,
+							  boolean focus) {
+		rounded(painter, x, y, width, height, 3, 0x66000000);
+		outline(painter, x, y, width, height, 3, focus ? ACCENT : BORDER);
+		int textY = y + (height - 8) / 2;
+		if (text.isEmpty() && !focus) {
+			painter.text("Suchen...", x + 5, textY, MUTED);
+			return;
+		}
+		painter.text(text, x + 5, textY, TEXT);
+		if (focus)
+			painter.fill(x + 6 + painter.textWidth(text), textY - 1, 1, 9, ACCENT);
+	}
+
+	/** Auswahlfeld zum Durchklicken: Wert links, Pfeil rechts. */
+	public static void dropdown(HudPainter painter, int x, int y, int width, int height, String value,
+								boolean hovered) {
+		rounded(painter, x, y, width, height, 3, 0x55000000);
+		outline(painter, x, y, width, height, 3, hovered ? ACCENT : BORDER);
+		int textY = y + (height - 8) / 2;
+		painter.text(value, x + 5, textY, TEXT_DIM);
+		right(painter, ">", x + width - 5, textY, hovered ? TEXT : MUTED);
+	}
+
+	/** Farbfeld mit Rahmen. */
+	public static void swatch(HudPainter painter, int x, int y, int width, int height, int argb, boolean hovered) {
+		rounded(painter, x, y, width, height, 2, argb);
+		outline(painter, x, y, width, height, 2, hovered ? TEXT : BORDER);
+	}
+
+	/** Abschnittsüberschrift mit Linie bis zum rechten Rand. */
+	public static void section(HudPainter painter, String text, int x, int y, int width) {
+		painter.text(text, x, y, TEXT);
+		int lineX = x + painter.textWidth(text) + 6;
+		if (x + width > lineX)
+			painter.fill(lineX, y + 4, x + width - lineX, 1, BORDER);
+	}
+
 	public static void centered(HudPainter painter, String text, int centerX, int y, int argb) {
 		painter.text(text, centerX - painter.textWidth(text) / 2, y, argb);
 	}
