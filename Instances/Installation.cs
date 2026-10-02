@@ -6,14 +6,27 @@ public enum LoaderType
 {
     Vanilla,
     Fabric,
-    Forge
+    Forge,
+    NeoForge,
+    Quilt
 }
 
 public static class LoaderTypes
 {
-    public static readonly LoaderType[] All = [LoaderType.Vanilla, LoaderType.Fabric, LoaderType.Forge];
+    public static readonly LoaderType[] All =
+        [LoaderType.Vanilla, LoaderType.Fabric, LoaderType.Forge, LoaderType.NeoForge, LoaderType.Quilt];
 
-    public static string ModrinthName(this LoaderType loader) => loader == LoaderType.Forge ? "forge" : "fabric";
+    public static string ModrinthName(this LoaderType loader) => loader switch
+    {
+        LoaderType.Forge => "forge",
+        LoaderType.NeoForge => "neoforge",
+        LoaderType.Quilt => "quilt",
+        _ => "fabric"
+    };
+
+    public static bool IsForgeLike(this LoaderType loader) => loader is LoaderType.Forge or LoaderType.NeoForge;
+
+    public static bool IsFabricLike(this LoaderType loader) => loader is LoaderType.Fabric or LoaderType.Quilt;
 }
 
 public class Installation
@@ -33,11 +46,14 @@ public class Installation
     public long PlayTimeSeconds { get; set; }
     public int LaunchCount { get; set; }
     public DateTime? LastPlayedUtc { get; set; }
+    public long LastSessionSeconds { get; set; }
     public int CrashCount { get; set; }
     public DateTime? LastCrashUtc { get; set; }
     public Dictionary<string, long> PlayDays { get; set; } = [];
 
     public string? IconFile { get; set; }
+    public string? BannerFile { get; set; }
+    public bool BannerFromIcon { get; set; }
 
     [JsonIgnore] public string Description => $"{Loader} · {MinecraftVersion}";
     [JsonIgnore] public string LoaderInitial => Loader.ToString()[..1];

@@ -1,4 +1,7 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
 
 namespace AxoClient;
 
@@ -29,6 +32,11 @@ public partial class App : Application
                 AppInfo.Name, MessageBoxButton.OK, MessageBoxImage.Error);
         };
 
+        var font = (FontFamily)FindResource("UiFont");
+        TextElement.FontFamilyProperty.OverrideMetadata(typeof(TextElement), new FrameworkPropertyMetadata(font));
+        TextBlock.FontFamilyProperty.OverrideMetadata(typeof(TextBlock), new FrameworkPropertyMetadata(font));
+
         base.OnStartup(e);
+        new MainWindow().Show();
     }
 }

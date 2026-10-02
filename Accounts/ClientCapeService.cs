@@ -3,7 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace AxoClient.Accounts;
 
-public record ClientCape(string Id, string Name, byte[]? Png);
+public record ClientCape(string Id, string Name, byte[]? Png, string? Owner = null)
+{
+    public bool IsPersonal => Owner != null;
+}
 
 public sealed partial class ClientCapeService
 {
@@ -31,6 +34,12 @@ public sealed partial class ClientCapeService
     private static partial Regex ValidId();
 
     public List<ClientCape> All { get; private set; } = [];
+
+    public IEnumerable<ClientCape> Global => All.Where(c => !c.IsPersonal);
+
+    public IEnumerable<ClientCape> Mine => All.Where(c => c.IsPersonal && c.Owner == _accounts.CompactUuid);
+
+    public bool CanDelete(ClientCape cape) => Status.IsAdmin || (cape.IsPersonal && cape.Owner == _accounts.CompactUuid);
 
     public string? SelectedId => Status.CapeId;
 
@@ -70,10 +79,11 @@ public sealed partial class ClientCapeService
         _accounts.NotifyChanged();
     }
 
-    public async Task UploadAsync(string name, byte[] png)
+    public async Task<string> UploadAsync(string name, byte[] png, bool global)
     {
-        await _axo.UploadCapeAsync(name, png);
+        var id = await _axo.UploadCapeAsync(name, png, global);
         await RefreshAsync();
+        return id;
     }
 
     public async Task DeleteAsync(ClientCape cape)
@@ -110,7 +120,7 @@ public sealed partial class ClientCapeService
     {
         using var json = JsonDocument.Parse(await _http.GetStringAsync(AppInfo.ClientCapesUrl + "capes.json"));
         var entries = json.RootElement.EnumerateArray()
-            .Select(e => (Id: e.GetProperty("id").GetString() ?? "", Name: JsonFiles.String(e, "name")))
+            .Select(e => (Id: e.GetProperty("id").GetString() ?? "", Name: JsonFiles.String(e, "name"), Owner: JsonFiles.String(e, "owner")))
             .Where(e => ValidId().IsMatch(e.Id))
             .ToList();
 
@@ -125,7 +135,7 @@ public sealed partial class ClientCapeService
             {
                 ErrorReport.Log("Vorschau eines AxoClient-Umhangs laden", ex);
             }
-            return new ClientCape(e.Id, e.Name ?? e.Id, png);
+            return new ClientCape(e.Id, e.Name ?? e.Id, png, e.Owner);
         }))).ToList();
     }
 

@@ -16,6 +16,8 @@ public static class AppInfo
         Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
         ?? DevVersion;
 
+    public static string ShortVersion => Version == DevVersion ? "dev" : Version.Split('+')[0];
+
     public static string? UpdateRepo { get; } = Assembly.GetExecutingAssembly()
         .GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(a => a.Key == "UpdateRepo")?.Value is { Length: > 0 } repo ? repo : null;

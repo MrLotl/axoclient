@@ -8,7 +8,9 @@ public partial class WorldsPanel : UserControl
     private AppServices _app = null!;
     private Installation _inst = null!;
     private WorldStore _store = null!;
+    private List<WorldInfo> _worlds = [];
     private int _loadRequest;
+    private bool _ready;
 
     public event Action<Installation, string>? PlayWorldRequested;
 
@@ -19,23 +21,65 @@ public partial class WorldsPanel : UserControl
 
     public void Show(AppServices app, Installation inst)
     {
+        _ready = false;
         _app = app;
         _inst = inst;
         _store = new WorldStore(inst);
-        StatusText.Text = "";
+        FilterBox.Text = "";
+        ShowStatus("");
+        (app.Settings.ContentAsTiles ? GridToggle : ListToggle).IsChecked = true;
+        ApplyViewMode();
+        _ready = true;
         _ = RefreshAsync();
+    }
+
+    private void ShowStatus(string text)
+    {
+        StatusText.Text = text;
+        Ui.Show(StatusText, text.Length > 0);
     }
 
     private async Task RefreshAsync()
     {
         var request = ++_loadRequest;
-        Header.Text = "Welten (lädt...)";
+        SummaryText.Text = "Lädt …";
         var worlds = await _store.LoadAsync();
         if (request != _loadRequest)
             return;
-        WorldList.ItemsSource = worlds;
-        Header.Text = $"Welten ({worlds.Count})";
-        Ui.Show(EmptyText, worlds.Count == 0);
+        _worlds = worlds;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var query = FilterBox.Text.Trim();
+        var shown = _worlds.Where(w => query.Length == 0 || w.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        WorldList.ItemsSource = shown;
+        SummaryText.Text = $"{Formats.Count(_worlds.Count, "Welt", "Welten")} · {Formats.Size(_worlds.Sum(w => w.SizeBytes))}";
+        EmptyText.Text = _worlds.Count == 0 ? "Noch keine Welten. Starte das Spiel oder importiere eine Welt (.zip)." : "Keine Welten gefunden.";
+        Ui.Show(EmptyText, shown.Count == 0);
+    }
+
+    private void Filter_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_ready)
+            ApplyFilter();
+    }
+
+    private void ViewToggle_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_ready)
+            return;
+        _app.Settings.ContentAsTiles = GridToggle.IsChecked == true;
+        _app.SaveSettings();
+        ApplyViewMode();
+    }
+
+    private void ApplyViewMode()
+    {
+        var grid = GridToggle.IsChecked == true;
+        WorldList.ItemTemplate = (DataTemplate)FindResource(grid ? "CardTemplate" : "ListTemplate");
+        WorldList.ItemsPanel = (ItemsPanelTemplate)FindResource(grid ? "GridPanel" : "ListPanel");
     }
 
     private void Play_Click(object sender, RoutedEventArgs e) =>
@@ -44,15 +88,15 @@ public partial class WorldsPanel : UserControl
     private async void Backup_Click(object sender, RoutedEventArgs e)
     {
         var world = Ui.DataOf<WorldInfo>(sender);
-        StatusText.Text = $"Sichere \"{world.DisplayName}\"...";
+        ShowStatus($"Sichere \"{world.DisplayName}\"...");
         try
         {
             var zip = await _store.BackupAsync(world);
-            StatusText.Text = $"Backup erstellt: {Path.GetFileName(zip)}";
+            ShowStatus($"Backup erstellt: {Path.GetFileName(zip)}");
         }
         catch (Exception ex)
         {
-            StatusText.Text = "";
+            ShowStatus("");
             await _app.Dialogs.ShowErrorAsync("Backup fehlgeschlagen", ex,
                 "Läuft das Spiel noch mit dieser Welt? Dann zuerst das Spiel schließen.");
         }
@@ -71,7 +115,7 @@ public partial class WorldsPanel : UserControl
         try
         {
             await Task.Run(() => FileOps.Recycle(world.FullPath));
-            StatusText.Text = $"\"{world.DisplayName}\" wurde in den Papierkorb verschoben.";
+            ShowStatus($"\"{world.DisplayName}\" wurde in den Papierkorb verschoben.");
         }
         catch (Exception ex)
         {
@@ -104,14 +148,14 @@ public partial class WorldsPanel : UserControl
 
     private async Task ImportAsync(string path)
     {
-        StatusText.Text = $"Importiere {Path.GetFileName(path)}...";
+        ShowStatus($"Importiere {Path.GetFileName(path)}...");
         try
         {
-            StatusText.Text = $"Welt \"{await _store.ImportAsync(path)}\" importiert.";
+            ShowStatus($"Welt \"{await _store.ImportAsync(path)}\" importiert.");
         }
         catch (Exception ex)
         {
-            StatusText.Text = "";
+            ShowStatus("");
             await _app.Dialogs.ShowErrorAsync("Import fehlgeschlagen", ex);
         }
         await RefreshAsync();

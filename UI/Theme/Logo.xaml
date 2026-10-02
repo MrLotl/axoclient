@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <PathGeometry x:Key="GillsGeometry"
+                  Figures="M50 58 C36.3 48.3 29.8 28.2 35.2 12.3 C48.8 22 55.4 42.1 50 58 Z M78 58 C91.7 48.3 98.2 28.2 92.8 12.3 C79.2 22 72.6 42.1 78 58 Z M47 70 C31.4 70.4 15.8 59.1 11.4 44.1 C27 43.7 42.6 55.1 47 70 Z M81 70 C96.6 70.4 112.2 59.1 116.6 44.1 C101 43.7 85.4 55.1 81 70 Z M47 82 C36.4 91 19.6 91 9 82 C19.6 73 36.4 73 47 82 Z M81 82 C91.6 91 108.4 91 119 82 C108.4 73 91.6 73 81 82 Z"/>
+
+    <LinearGradientBrush x:Key="GillsBrush" MappingMode="Absolute" StartPoint="14,-6" EndPoint="114,98">
+        <GradientStop Color="#F9A8D4" Offset="0"/>
+        <GradientStop Color="#EC4899" Offset="0.45"/>
+        <GradientStop Color="#8B5CF6" Offset="1"/>
+    </LinearGradientBrush>
+
+    <DrawingImage x:Key="LogoGills">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0 0 H128 V128 H0 Z"/>
+                <DrawingGroup>
+                    <DrawingGroup.Transform>
+                        <TranslateTransform Y="14"/>
+                    </DrawingGroup.Transform>
+                    <GeometryDrawing Brush="{StaticResource GillsBrush}" Geometry="{StaticResource GillsGeometry}"/>
+                </DrawingGroup>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LogoWhite">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0 0 H128 V128 H0 Z"/>
+                <DrawingGroup>
+                    <DrawingGroup.Transform>
+                        <TranslateTransform Y="14"/>
+                    </DrawingGroup.Transform>
+                    <GeometryDrawing Brush="White" Geometry="{StaticResource GillsGeometry}"/>
+                </DrawingGroup>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="LogoAppIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#1B1B1F" Geometry="M30 2 H98 A28 28 0 0 1 126 30 V98 A28 28 0 0 1 98 126 H30 A28 28 0 0 1 2 98 V30 A28 28 0 0 1 30 2 Z">
+                    <GeometryDrawing.Pen>
+                        <Pen Thickness="3">
+                            <Pen.Brush>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#EC4899" Offset="0"/>
+                                    <GradientStop Color="#7C3AED" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Pen.Brush>
+                        </Pen>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <DrawingGroup>
+                    <DrawingGroup.Transform>
+                        <TransformGroup>
+                            <ScaleTransform ScaleX="0.75" ScaleY="0.75"/>
+                            <TranslateTransform X="16" Y="26"/>
+                        </TransformGroup>
+                    </DrawingGroup.Transform>
+                    <GeometryDrawing Brush="{StaticResource GillsBrush}" Geometry="{StaticResource GillsGeometry}"/>
+                </DrawingGroup>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+</ResourceDictionary>

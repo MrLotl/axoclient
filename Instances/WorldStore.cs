@@ -14,6 +14,10 @@ public class WorldInfo
     public long SizeBytes { get; init; }
     public BitmapSource? Icon { get; init; }
 
+    public string Meta => (LastPlayed is { } t ? Formats.Ago(t.ToUniversalTime()) : "nie gespielt") + " · " + Formats.Size(SizeBytes);
+
+    public string ModeLine => string.IsNullOrEmpty(GameMode) ? Meta : GameMode + " · " + Meta;
+
     public string Details => string.Join(" · ", new[]
     {
         GameMode,

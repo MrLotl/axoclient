@@ -48,16 +48,46 @@ public class ServerEntry : INotifyPropertyChanged
         set { _online = value; Changed(); }
     }
 
+    private string _players = "–";
+    public string PlayersText
+    {
+        get => _players;
+        set { _players = value; Changed(); }
+    }
+
+    private string _ping = "…";
+    public string PingText
+    {
+        get => _ping;
+        set { _ping = value; Changed(); }
+    }
+
+    private int _pingLevel;
+    public int PingLevel
+    {
+        get => _pingLevel;
+        set { _pingLevel = value; Changed(); }
+    }
+
+    public string Motd { get; private set; } = "";
+
     public async Task RefreshStatusAsync(Func<bool> stillWanted, bool withMotd)
     {
         Status = "Status wird abgefragt...";
         Online = false;
+        PingText = "…";
+        PingLevel = 0;
         try
         {
             var result = await ServerPing.PingAsync(Address);
             if (!stillWanted())
                 return;
             Online = true;
+            var german = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+            PlayersText = $"{result.Online.ToString("N0", german)} / {result.Max.ToString("N0", german)}";
+            PingText = $"{result.LatencyMs} ms";
+            PingLevel = result.LatencyMs < 60 ? 4 : result.LatencyMs < 120 ? 3 : result.LatencyMs < 250 ? 2 : 1;
+            Motd = result.Motd;
             Status = $"{result.Online}/{result.Max} Spieler · {result.LatencyMs} ms" +
                      (withMotd && result.Motd.Length > 0 ? $" · {result.Motd}" : "");
             if (result.Favicon != null)
@@ -65,8 +95,11 @@ public class ServerEntry : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            if (stillWanted())
-                Status = "Nicht erreichbar: " + ErrorReport.Short(ex);
+            if (!stillWanted())
+                return;
+            Status = "Nicht erreichbar: " + ErrorReport.Short(ex);
+            PingText = "offline";
+            PlayersText = "–";
         }
     }
 

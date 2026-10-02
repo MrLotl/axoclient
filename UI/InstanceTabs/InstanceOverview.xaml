@@ -1,82 +1,167 @@
 <UserControl x:Class="AxoClient.UI.InstanceTabs.InstanceOverview"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <ScrollViewer.Resources>
-            <Style TargetType="ScrollBar" BasedOn="{StaticResource SlimScrollBar}"/>
-        </ScrollViewer.Resources>
-        <StackPanel Margin="0,0,12,0">
-            <ItemsControl x:Name="StatsList">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="4"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Background="#14FFFFFF" CornerRadius="10" Padding="14,12" Margin="0,0,10,10">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Value}" Foreground="White" FontWeight="SemiBold"
-                                           FontSize="20" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding Label}" Foreground="{StaticResource MutedText}"
-                                           FontSize="12" Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AxoClient.UI.Controls">
+    <UserControl.Resources>
+        <Style x:Key="StatCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+        <Style x:Key="StatHead" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="10,0,0,0"/>
+        </Style>
+        <Style x:Key="StatTile" TargetType="Border">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="{StaticResource AccentSoft}"/>
+            <Setter Property="TextElement.Foreground" Value="{StaticResource AccentText}"/>
+        </Style>
+        <Style x:Key="SideLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedText}"/>
+        </Style>
+        <Style x:Key="SideValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextStrong}"/>
+            <Setter Property="Margin" Value="0,3,0,18"/>
+        </Style>
+    </UserControl.Resources>
 
-            <TextBlock Text="Spielzeit" Style="{StaticResource SectionTitle}" Margin="0,10,0,8"/>
-            <Border Background="#14FFFFFF" CornerRadius="10" Padding="14,12">
+    <DockPanel>
+        <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,-16,16">
+            <Border Style="{StaticResource StatCard}" Margin="0,0,16,0">
                 <StackPanel>
-                    <TextBlock x:Name="PlaySummary" Foreground="{StaticResource SubtleText}" TextWrapping="Wrap"
-                               Margin="0,0,0,12"/>
-                    <ItemsControl x:Name="PlayChart" Height="90">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Rows="1"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="2,0" ToolTip="{Binding Tip}">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <Border Grid.Row="0" Background="#12FFFFFF" CornerRadius="3"/>
-                                    <Border Grid.Row="0" Height="{Binding BarHeight}" VerticalAlignment="Bottom"
-                                            CornerRadius="3" Background="{Binding Fill}"/>
-                                    <TextBlock Grid.Row="1" Text="{Binding Label}" FontSize="10" Margin="0,4,0,0"
-                                               HorizontalAlignment="Center" Foreground="{Binding LabelBrush}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StatTile}">
+                            <c:Icon Kind="Clock" Size="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Spielzeit gesamt" Style="{StaticResource StatHead}"/>
+                    </StackPanel>
+                    <TextBlock x:Name="TotalText" Style="{StaticResource StatValue}" Margin="0,10,0,0"/>
+                    <TextBlock x:Name="TotalSub" Style="{StaticResource Caption}" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>
-
-            <TextBlock Text="Arbeitsspeicher" Style="{StaticResource SectionTitle}" Margin="0,20,0,8"/>
-            <Border Background="#14FFFFFF" CornerRadius="10" Padding="14,12">
-                <DockPanel>
-                    <Button x:Name="RamButton" DockPanel.Dock="Right" Style="{StaticResource LauncherButton}"
-                            Background="{StaticResource Accent}" Content="Empfehlung übernehmen" Padding="12,6"
-                            Margin="12,0,0,0" Click="Ram_Click"/>
-                    <TextBlock x:Name="RamText" Foreground="{StaticResource SubtleText}" TextWrapping="Wrap"
-                               VerticalAlignment="Center"/>
-                </DockPanel>
+            <Border Style="{StaticResource StatCard}" Margin="0,0,16,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StatTile}">
+                            <c:Icon Kind="Calendar" Size="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Diese Woche" Style="{StaticResource StatHead}"/>
+                    </StackPanel>
+                    <DockPanel Margin="0,10,0,0">
+                        <StackPanel x:Name="WeekBars" DockPanel.Dock="Right" Orientation="Horizontal" Height="30"
+                                    VerticalAlignment="Bottom"/>
+                        <TextBlock x:Name="WeekText" Style="{StaticResource StatValue}" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                    <TextBlock x:Name="WeekSub" Style="{StaticResource Caption}" Margin="0,10,0,0"/>
+                </StackPanel>
             </Border>
-
-            <TextBlock Text="Abstürze" Style="{StaticResource SectionTitle}" Margin="0,20,0,8"/>
-            <Border Background="#14FFFFFF" CornerRadius="10" Padding="14,12">
-                <DockPanel>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource LauncherButton}" Content="Analysieren"
-                            Padding="12,6" Margin="12,0,0,0" Click="Crash_Click"/>
-                    <TextBlock x:Name="CrashText" Foreground="{StaticResource SubtleText}" TextWrapping="Wrap"
-                               VerticalAlignment="Center"/>
-                </DockPanel>
+            <Border Style="{StaticResource StatCard}" Margin="0,0,16,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StatTile}">
+                            <c:Icon Kind="History" Size="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Zuletzt gespielt" Style="{StaticResource StatHead}"/>
+                    </StackPanel>
+                    <TextBlock x:Name="LastText" Style="{StaticResource StatValue}" Margin="0,10,0,0" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="LastSub" Style="{StaticResource Caption}" Margin="0,10,0,0"/>
+                </StackPanel>
             </Border>
+            <Border Style="{StaticResource StatCard}" Margin="0,0,16,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Style="{StaticResource StatTile}">
+                            <c:Icon Kind="Folder" Size="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Ordnergröße" Style="{StaticResource StatHead}"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SizeText" Text="…" Style="{StaticResource StatValue}" Margin="0,10,0,0"/>
+                    <Grid x:Name="SizeBar" Height="6" Margin="0,10,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="WorldsCol" Width="0*"/>
+                            <ColumnDefinition x:Name="ModsCol" Width="0*"/>
+                            <ColumnDefinition x:Name="RestCol" Width="1*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Background="#E05AA8" CornerRadius="3,0,0,3" Margin="0,0,2,0"/>
+                        <Border Grid.Column="1" Background="#9B5CF0" Margin="0,0,2,0"/>
+                        <Border Grid.Column="2" Background="#4A4A4A" CornerRadius="0,3,3,0"/>
+                    </Grid>
+                    <TextBlock x:Name="SizeSub" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
 
-        </StackPanel>
-    </ScrollViewer>
+        <Border Style="{StaticResource Card}" Padding="20,18">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                    <Border DockPanel.Dock="Right" Style="{StaticResource SegmentGroup}" Background="{StaticResource ContentBg}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="MonthToggle" Style="{StaticResource SegmentButton}" GroupName="Range" Height="28"
+                                         FontSize="13" Content="Monat" Checked="Range_Checked"/>
+                            <RadioButton x:Name="YearToggle" Style="{StaticResource SegmentButton}" GroupName="Range" Height="28"
+                                         FontSize="13" Content="Jahr" Margin="2,0,0,0" IsChecked="True" Checked="Range_Checked"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel x:Name="MonthNav" DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,12,0"
+                                Visibility="Collapsed">
+                        <Button Style="{StaticResource IconButton}" Width="30" Height="30" Background="#303030"
+                                ToolTip="Vorheriger Monat" Click="PrevMonth_Click">
+                            <c:Icon Kind="ChevronLeft" Size="14"/>
+                        </Button>
+                        <TextBlock x:Name="MonthTitle" Width="120" TextAlignment="Center" FontSize="13" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <Button x:Name="NextMonthButton" Style="{StaticResource IconButton}" Width="30" Height="30"
+                                Background="#303030" ToolTip="Nächster Monat" Click="NextMonth_Click">
+                            <c:Icon Kind="ChevronRight" Size="14"/>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Aktivität" Style="{StaticResource CardTitle}"/>
+                        <TextBlock x:Name="ActivitySub" FontSize="13" Foreground="{StaticResource MutedText}" Margin="12,0,0,0"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <DockPanel>
+                    <Border DockPanel.Dock="Right" Width="200" BorderBrush="{StaticResource Divider}" BorderThickness="1,0,0,0"
+                            Padding="24,0,0,0" Margin="28,0,0,0">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Spieltage" Style="{StaticResource SideLabel}"/>
+                            <TextBlock x:Name="DaysValue" Style="{StaticResource SideValue}"/>
+                            <TextBlock Text="Ø pro Spieltag" Style="{StaticResource SideLabel}"/>
+                            <TextBlock x:Name="AvgValue" Style="{StaticResource SideValue}"/>
+                            <TextBlock Text="Längste Serie" Style="{StaticResource SideLabel}"/>
+                            <TextBlock x:Name="StreakValue" Style="{StaticResource SideValue}"/>
+                            <TextBlock Text="Aktivster Wochentag" Style="{StaticResource SideLabel}"/>
+                            <TextBlock x:Name="WeekdayValue" Style="{StaticResource SideValue}" Margin="0,3,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <DockPanel VerticalAlignment="Center">
+                        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <TextBlock Text="Weniger" FontSize="12" Foreground="{StaticResource MutedText}" Margin="0,0,8,0"/>
+                                <StackPanel x:Name="Legend" Orientation="Horizontal"/>
+                                <TextBlock Text="Mehr" FontSize="12" Foreground="{StaticResource MutedText}" Margin="5,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock x:Name="HoverText" FontSize="12" Foreground="#BDBDBD"
+                                       Text="Fahre über einen Tag, um die Spielzeit zu sehen"/>
+                        </DockPanel>
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                            <Grid>
+                                <StackPanel x:Name="YearView" Orientation="Horizontal"/>
+                                <StackPanel x:Name="MonthView" MaxWidth="660" HorizontalAlignment="Left" Visibility="Collapsed"/>
+                            </Grid>
+                        </ScrollViewer>
+                    </DockPanel>
+                </DockPanel>
+            </DockPanel>
+        </Border>
+    </DockPanel>
 </UserControl>

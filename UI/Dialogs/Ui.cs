@@ -75,8 +75,7 @@ public static class Ui
         Content = text,
         GroupName = group,
         IsChecked = isChecked,
-        Style = Resource<Style>("SegmentButton"),
-        Padding = new Thickness(12, 6, 12, 6)
+        Style = Resource<Style>("SegmentButton")
     };
 
     public static Button Button(string text, Action click)
@@ -85,7 +84,8 @@ public static class Ui
         {
             Content = text,
             Style = Resource<Style>("LauncherButton"),
-            Padding = new Thickness(12, 6, 12, 6),
+            Height = 34,
+            Padding = new Thickness(14, 0, 14, 0),
             Margin = new Thickness(0, 0, 8, 0)
         };
         button.Click += (_, _) => click();
@@ -131,6 +131,65 @@ public static class Ui
             button.Checked += onChecked;
             panel.Children.Add(button);
         }
+    }
+
+    public static UIElement IconText(string? icon, string text, double size = 15)
+    {
+        if (icon == null)
+            return new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center };
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(new Icon { Kind = icon, Size = size, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center });
+        row.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+        return row;
+    }
+
+    public static Image UrlImage(string? url)
+    {
+        var image = new Image { Stretch = Stretch.UniformToFill };
+        RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
+        if (url != null)
+        {
+            try
+            {
+                image.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(url));
+            }
+            catch (Exception ex)
+            {
+                ErrorReport.Log("Bild laden", ex);
+            }
+        }
+        return image;
+    }
+
+    public static System.Windows.Shapes.Ellipse Dot(string presence) => new()
+    {
+        Width = 8,
+        Height = 8,
+        Margin = new Thickness(0, 0, 7, 0),
+        VerticalAlignment = VerticalAlignment.Center,
+        Fill = Resource<Brush>(presence switch { "online" => "Good", "ingame" => "Ingame", _ => "Offline" })
+    };
+
+    public static FrameworkElement Spinner(double size = 34)
+    {
+        var ring = new System.Windows.Shapes.Ellipse
+        {
+            Width = size,
+            Height = size,
+            StrokeThickness = 3,
+            Stroke = new LinearGradientBrush
+            {
+                GradientStops = { new GradientStop(Color.FromRgb(0xD3, 0x6A, 0xD8), 0), new GradientStop(Color.FromRgb(0xD3, 0x6A, 0xD8), 0.35), new GradientStop(Color.FromRgb(0x3A, 0x3A, 0x3A), 0.36) }
+            },
+            RenderTransformOrigin = new Point(0.5, 0.5),
+            RenderTransform = new RotateTransform()
+        };
+        ring.Loaded += (_, _) => ring.RenderTransform.BeginAnimation(RotateTransform.AngleProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(0, 360, TimeSpan.FromSeconds(0.8))
+            {
+                RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
+            });
+        return ring;
     }
 
     public static T DataOf<T>(object sender) => (T)((FrameworkElement)sender).DataContext;

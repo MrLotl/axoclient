@@ -56,16 +56,27 @@ public static class Updater
         return best;
     }
 
-    public static async Task InstallAsync(HttpClient http, UpdateInfo update, IProgress<double> percent)
+    public static async Task DownloadAsync(HttpClient http, UpdateInfo update, IProgress<long> received,
+        CancellationToken cancel)
     {
         long done = 0;
-        await HttpDownloads.DownloadToFileAsync(http, update.DownloadUrl, NewExePath, bytes =>
+        try
         {
-            done += bytes;
-            if (update.Size > 0)
-                percent.Report(done * 100.0 / update.Size);
-        }, CancellationToken.None);
+            await HttpDownloads.DownloadToFileAsync(http, update.DownloadUrl, NewExePath, bytes =>
+            {
+                done += bytes;
+                received.Report(done);
+            }, cancel);
+        }
+        catch
+        {
+            FileOps.TryDelete(NewExePath);
+            throw;
+        }
+    }
 
+    public static void Apply()
+    {
         File.Delete(OldExePath);
         File.Move(ExePath, OldExePath);
         try
@@ -77,8 +88,9 @@ public static class Updater
             File.Move(OldExePath, ExePath);
             throw;
         }
-        Process.Start(new ProcessStartInfo(ExePath) { UseShellExecute = true });
     }
+
+    public static void Launch() => Process.Start(new ProcessStartInfo(ExePath) { UseShellExecute = true });
 
     public static int Compare(string a, string b)
     {

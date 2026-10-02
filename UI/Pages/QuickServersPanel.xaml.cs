@@ -15,6 +15,8 @@ public partial class QuickServersPanel : UserControl
         InitializeComponent();
     }
 
+    public int Count => _servers.Count;
+
     public void Initialize(AppServices app, HomePage home)
     {
         _app = app;
@@ -34,13 +36,12 @@ public partial class QuickServersPanel : UserControl
         var inst = _app.Instances.Selected;
         _servers = inst == null ? [] : new ServerStore(inst.GameDir).Load();
         ServerList.ItemsSource = _servers;
-        Header.Text = _servers.Count == 0 ? "Server" : $"Server ({_servers.Count})";
-        RefreshButton.IsEnabled = inst != null;
+        AddButton.IsEnabled = inst != null;
 
         var info = inst == null
             ? "Lege zuerst eine Instanz an."
             : _servers.Count == 0
-                ? $"\"{inst.Name}\" hat noch keine Server. Du kannst sie im Spiel oder unter Instanzen hinzufügen."
+                ? $"„{inst.Name}“ hat noch keine Server."
                 : null;
         InfoText.Text = info;
         Ui.Show(InfoText, info != null);
@@ -49,7 +50,24 @@ public partial class QuickServersPanel : UserControl
         _ = Task.WhenAll(_servers.Select(s => s.RefreshStatusAsync(() => request == _request, withMotd: false)));
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => Refresh();
+    private async void Add_Click(object sender, RoutedEventArgs e)
+    {
+        if (_app.Instances.Selected is not { } inst)
+            return;
+        if (await ServerForm.AskAsync(_app, "Server hinzufügen",
+                "Der Server erscheint danach in deiner Liste und kann direkt beigetreten werden.", "Hinzufügen") is not
+            { } server)
+            return;
+        await UiRun.GuardAsync(_app, "Server konnte nicht gespeichert werden", () =>
+        {
+            var store = new ServerStore(inst.GameDir);
+            var all = store.Load();
+            all.Add(ServerStore.Create(server.Name, server.Address));
+            store.Save(all);
+            return Task.CompletedTask;
+        });
+        Refresh();
+    }
 
     private async void Join_Click(object sender, RoutedEventArgs e) =>
         await _home.JoinServerAsync(Ui.DataOf<ServerEntry>(sender).Address, version: null, friendName: null, ask: false);

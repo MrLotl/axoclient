@@ -13,16 +13,21 @@ public partial class DialogHost : UserControl, IDialogService
     private TaskCompletionSource<bool>? _result;
     private Func<bool>? _validate;
     private CancellationTokenSource? _progressCancel;
+    private bool _panelMode;
+    private readonly Stack<(FrameworkElement Panel, double Width, TaskCompletionSource<bool> Result)> _suspended = new();
 
     public DialogHost()
     {
         InitializeComponent();
+        IsVisibleChanged += (_, _) => OpenChanged?.Invoke(IsOpen);
     }
+
+    public event Action<bool>? OpenChanged;
 
     public bool IsOpen => Visibility == Visibility.Visible;
 
     public Task<bool> ConfirmAsync(string title, string text, string confirmText = "OK", bool danger = false) =>
-        Open(title, text, confirmText, showCancel: true, danger);
+        Open(title, text, confirmText, showCancel: true, danger, icon: danger ? "Warning" : null);
 
     public Task ShowMessageAsync(string title, string text) =>
         Open(title, text, "OK", showCancel: false, danger: false);
@@ -35,16 +40,36 @@ public partial class DialogHost : UserControl, IDialogService
         ErrorReport.Log(title, ex);
         var text = ErrorReport.Describe(ex) + (string.IsNullOrWhiteSpace(hint) ? "" : "\n\n" + hint);
         return Open(title, null, "OK", showCancel: false, danger: false,
-            ErrorDialog.Build(text, ErrorReport.Details(ex, title)));
+            ErrorDialog.Build(text, ErrorReport.Details(ex, title)), icon: "Warning", iconDanger: true);
     }
 
     public Task<bool> ShowFormAsync(string title, FrameworkElement content, string confirmText, Func<bool>? validate = null,
-        double width = DefaultWidth)
+        double width = DefaultWidth, string? subtitle = null, string? icon = null)
     {
-        var task = Open(title, null, confirmText, showCancel: true, danger: false, content, validate);
-        DialogBox.Width = Math.Max(DefaultWidth, Math.Min(width, (Window.GetWindow(this)?.ActualWidth ?? 0) - 48));
+        var task = Open(title, null, confirmText, showCancel: true, danger: false, content, validate, subtitle, icon);
+        DialogBox.Width = FitWidth(width);
         Dispatcher.BeginInvoke(() => FindFirst<TextBox>(content)?.Focus(), DispatcherPriority.Input);
         return task;
+    }
+
+    public Task ShowPanelAsync(FrameworkElement panel, double width = DefaultWidth)
+    {
+        ReplaceOpenDialog();
+        _result = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _panelMode = true;
+        StandardLayout.Visibility = Visibility.Collapsed;
+        CustomContent.Content = panel;
+        CustomContent.Visibility = Visibility.Visible;
+        DialogBox.Width = FitWidth(width);
+        Visibility = Visibility.Visible;
+        Dispatcher.BeginInvoke(() => FindFirst<TextBox>(panel)?.Focus(), DispatcherPriority.Input);
+        return _result.Task;
+    }
+
+    public void ClosePanel()
+    {
+        if (_panelMode)
+            Close(false);
     }
 
     public async Task<T> RunWithProgressAsync<T>(string title, Func<WorkProgress, Task<T>> work)
@@ -53,12 +78,14 @@ public partial class DialogHost : UserControl, IDialogService
         using var cts = new CancellationTokenSource();
         _progressCancel = cts;
 
-        Reset(title, showCancel: true);
+        Reset(title, showCancel: true, icon: null);
         DialogTextScroller.Visibility = Visibility.Collapsed;
         DialogOk.Visibility = Visibility.Collapsed;
+        CloseButton.Visibility = Visibility.Collapsed;
         DialogProgress.IsIndeterminate = true;
         DialogProgress.Value = 0;
-        DialogProgressText.Text = "";
+        DialogProgressText.Text = "Bitte warten …";
+        DialogProgressPercent.Text = "";
         ProgressPanel.Visibility = Visibility.Visible;
         Visibility = Visibility.Visible;
 
@@ -72,6 +99,7 @@ public partial class DialogHost : UserControl, IDialogService
             {
                 DialogProgress.IsIndeterminate = false;
                 DialogProgress.Value = Math.Clamp(fraction, 0, 1) * 100;
+                DialogProgressPercent.Text = $"{Math.Round(DialogProgress.Value)} %";
             }),
             cts.Token);
         try
@@ -80,9 +108,11 @@ public partial class DialogHost : UserControl, IDialogService
         }
         finally
         {
-            Visibility = Visibility.Collapsed;
             ProgressPanel.Visibility = Visibility.Collapsed;
+            CloseButton.Visibility = Visibility.Visible;
             _progressCancel = null;
+            if (!RestoreSuspended())
+                Visibility = Visibility.Collapsed;
         }
     }
 
@@ -95,21 +125,32 @@ public partial class DialogHost : UserControl, IDialogService
             if (e.Key == Key.Escape)
                 CancelProgress();
         }
+        else if (_panelMode)
+        {
+            if (e.Key != Key.Escape)
+                return;
+            Close(false);
+        }
         else
         {
+            if (e.Key == Key.Enter && Keyboard.FocusedElement is TextBox { AcceptsReturn: true })
+                return;
             Close(e.Key == Key.Enter);
         }
         e.Handled = true;
     }
 
     private Task<bool> Open(string title, string? text, string confirmText, bool showCancel, bool danger,
-        FrameworkElement? content = null, Func<bool>? validate = null)
+        FrameworkElement? content = null, Func<bool>? validate = null, string? subtitle = null, string? icon = null,
+        bool iconDanger = false)
     {
         ReplaceOpenDialog();
         _result = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         _validate = validate;
 
-        Reset(title, showCancel);
+        Reset(title, showCancel, icon, iconDanger || danger);
+        DialogSubtitle.Text = subtitle ?? "";
+        Ui.Show(DialogSubtitle, !string.IsNullOrEmpty(subtitle));
         ProgressPanel.Visibility = Visibility.Collapsed;
         DialogText.Text = text ?? "";
         DialogTextScroller.Visibility = content == null ? Visibility.Visible : Visibility.Collapsed;
@@ -117,25 +158,45 @@ public partial class DialogHost : UserControl, IDialogService
         DialogContent.Visibility = content == null ? Visibility.Collapsed : Visibility.Visible;
         DialogOk.Visibility = Visibility.Visible;
         DialogOk.Content = confirmText;
-        DialogOk.Background = Ui.Resource<Brush>(danger ? "Danger" : "Accent");
+        DialogOk.Style = Ui.Resource<Style>(danger ? "DangerFillButton" : "PrimaryButton");
         Visibility = Visibility.Visible;
         DialogOk.Focus();
         return _result.Task;
     }
 
-    private void Reset(string title, bool showCancel)
+    private void Reset(string title, bool showCancel, string? icon, bool iconDanger = false)
     {
+        _panelMode = false;
+        StandardLayout.Visibility = Visibility.Visible;
+        CustomContent.Content = null;
+        CustomContent.Visibility = Visibility.Collapsed;
         DialogBox.Width = DefaultWidth;
         DialogTitle.Text = title;
+        DialogSubtitle.Visibility = Visibility.Collapsed;
         DialogContent.Content = null;
         DialogContent.Visibility = Visibility.Collapsed;
         DialogCancel.Content = "Abbrechen";
         DialogCancel.IsEnabled = true;
         DialogCancel.Visibility = showCancel ? Visibility.Visible : Visibility.Collapsed;
+        IconTile.Visibility = icon == null ? Visibility.Collapsed : Visibility.Visible;
+        TitleIcon.Kind = icon ?? "";
+        IconTile.Background = Ui.Resource<Brush>(iconDanger ? "DangerSoft" : "AccentSoft");
+        TitleIcon.Foreground = iconDanger ? Ui.Frozen(Color.FromRgb(0xFF, 0x8A, 0x80)) : Ui.Resource<Brush>("AccentText");
     }
+
+    private double FitWidth(double width) =>
+        Math.Max(360, Math.Min(width, (Window.GetWindow(this)?.ActualWidth ?? 1200) - 48));
 
     private void ReplaceOpenDialog()
     {
+        if (_panelMode && _result != null && CustomContent.Content is FrameworkElement panel && IsOpen)
+        {
+            _suspended.Push((panel, DialogBox.Width, _result));
+            CustomContent.Content = null;
+            _result = null;
+            _panelMode = false;
+            return;
+        }
         var previous = _result;
         _result = null;
         _validate = null;
@@ -146,12 +207,30 @@ public partial class DialogHost : UserControl, IDialogService
     {
         if (result && _validate != null && !_validate())
             return;
-        Visibility = Visibility.Collapsed;
         DialogContent.Content = null;
+        CustomContent.Content = null;
         _validate = null;
+        _panelMode = false;
         var finished = _result;
         _result = null;
+        if (!RestoreSuspended())
+            Visibility = Visibility.Collapsed;
         finished?.TrySetResult(result);
+    }
+
+    private bool RestoreSuspended()
+    {
+        if (_suspended.Count == 0)
+            return false;
+        var (panel, width, result) = _suspended.Pop();
+        _panelMode = true;
+        _result = result;
+        StandardLayout.Visibility = Visibility.Collapsed;
+        CustomContent.Content = panel;
+        CustomContent.Visibility = Visibility.Visible;
+        DialogBox.Width = width;
+        Visibility = Visibility.Visible;
+        return true;
     }
 
     private void CancelProgress()
@@ -159,7 +238,7 @@ public partial class DialogHost : UserControl, IDialogService
         if (_progressCancel is not { IsCancellationRequested: false } cts)
             return;
         DialogCancel.IsEnabled = false;
-        DialogProgressText.Text = "Wird abgebrochen...";
+        DialogProgressText.Text = "Wird abgebrochen …";
         cts.Cancel();
     }
 
@@ -172,6 +251,14 @@ public partial class DialogHost : UserControl, IDialogService
         else
             Close(false);
     }
+
+    private void Backdrop_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_progressCancel == null && e.OriginalSource == Backdrop)
+            Close(false);
+    }
+
+    private void DialogBox_MouseDown(object sender, MouseButtonEventArgs e) => e.Handled = true;
 
     private static T? FindFirst<T>(DependencyObject parent) where T : DependencyObject
     {

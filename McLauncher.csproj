@@ -33,6 +33,7 @@
     <Resource Include="Assets\background.jpg" />
     <Resource Include="Assets\axolotl.png" />
     <Resource Include="Assets\axoclient.ico" />
+    <Resource Include="Assets\Fonts\*.ttf" />
     <EmbeddedResource Include="Assets\mods\mclauncher-badge-*.jar" LogicalName="badge-mods/%(Filename)%(Extension)" />
   </ItemGroup>
 

@@ -9,10 +9,12 @@ public class SkinEntry
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public bool Slim { get; set; }
+    public string? From { get; set; }
 
     [JsonIgnore] public string FilePath { get; set; } = "";
     [JsonIgnore] public BitmapSource? Preview { get; set; }
     [JsonIgnore] public string VariantText => Slim ? "Schmale Arme" : "Breite Arme";
+    [JsonIgnore] public string Source => (Slim ? "Slim" : "Classic") + (From != null ? " · von Spieler" : "");
 }
 
 public class SkinLibrary
@@ -38,15 +40,34 @@ public class SkinLibrary
         return entries.Where(e => File.Exists(e.FilePath)).ToList();
     }
 
-    public void Add(byte[] png, string name, bool slim)
+    public static string IdOf(byte[] png) => Convert.ToHexString(SHA1.HashData(png))[..12].ToLowerInvariant();
+
+    public void Update(SkinEntry entry, string name, bool slim, byte[]? newPng)
+    {
+        if (newPng != null && IdOf(newPng) != entry.Id)
+        {
+            Remove(entry);
+            Add(newPng, name, slim, entry.From);
+            return;
+        }
+        var entries = Load();
+        if (entries.FirstOrDefault(e => e.Id == entry.Id) is { } stored)
+        {
+            stored.Name = name;
+            stored.Slim = slim;
+        }
+        JsonFiles.Write(IndexPath, entries);
+    }
+
+    public void Add(byte[] png, string name, bool slim, string? from = null)
     {
         Directory.CreateDirectory(Folder);
-        var id = Convert.ToHexString(SHA1.HashData(png))[..12].ToLowerInvariant();
+        var id = IdOf(png);
         File.WriteAllBytes(Path.Combine(Folder, id + ".png"), png);
 
         var entries = Load();
         entries.RemoveAll(e => e.Id == id);
-        entries.Insert(0, new SkinEntry { Id = id, Name = name, Slim = slim });
+        entries.Insert(0, new SkinEntry { Id = id, Name = name, Slim = slim, From = from });
         JsonFiles.Write(IndexPath, entries);
     }
 

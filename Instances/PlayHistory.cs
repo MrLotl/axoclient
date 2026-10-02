@@ -41,6 +41,23 @@ public static class PlayHistory
 
     public static long LastWeekSeconds(Installation inst) => Recent(inst, 7).Sum(d => d.Seconds);
 
+    public static long Seconds(Installation inst, DateTime date) => (inst.PlayDays ?? []).GetValueOrDefault(Key(date));
+
+    public static DateTime? FirstDay(Installation inst) =>
+        (inst.PlayDays ?? []).Where(e => e.Value > 0).Select(e => Parse(e.Key)).Where(d => d != null).Min();
+
+    public static int LongestStreak(Installation inst, DateTime from, DateTime to)
+    {
+        var best = 0;
+        var current = 0;
+        for (var day = from.Date; day <= to.Date; day = day.AddDays(1))
+        {
+            current = Seconds(inst, day) > 0 ? current + 1 : 0;
+            best = Math.Max(best, current);
+        }
+        return best;
+    }
+
     public static PlayDay? BestDay(Installation inst)
     {
         var best = (inst.PlayDays ?? []).Where(e => e.Value > 0)

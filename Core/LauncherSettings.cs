@@ -40,6 +40,8 @@ public class LauncherSettings
     public bool MaximizeOnLaunch { get; set; }
     public AfterLaunchAction AfterLaunch { get; set; } = AfterLaunchAction.Minimize;
     public bool AutostartMinimized { get; set; } = true;
+    public bool AutoUpdate { get; set; }
+    public HashSet<string> SeenNotices { get; set; } = [];
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? MinimizeOnLaunch { get; set; }

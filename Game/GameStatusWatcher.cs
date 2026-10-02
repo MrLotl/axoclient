@@ -48,6 +48,7 @@ public sealed class GameStatusWatcher
                 {
                     _server = server;
                     _app.Discord.ServerChanged(server);
+                    _app.Games.CurrentServer = server == null ? null : (server, _inst.MinecraftVersion);
                     _lastReport = DateTime.MinValue;
                 }
             }
@@ -55,7 +56,7 @@ public sealed class GameStatusWatcher
             {
                 _lastReport = DateTime.UtcNow;
                 if (_app.Axo.Available)
-                    _app.Axo.SetStatusAsync(true, _server, _inst.MinecraftVersion).Wait();
+                    _app.Axo.SetStatusAsync(true, _server, _inst.MinecraftVersion, _inst.Name).Wait();
             }
         }
         catch (Exception ex)
@@ -71,6 +72,7 @@ public sealed class GameStatusWatcher
     private void Stop()
     {
         _timer.Dispose();
+        _app.Games.CurrentServer = null;
         if (_app.Axo.Available)
             _app.Axo.SetStatusAsync(false, null, null).ContinueWith(_ => { }, TaskScheduler.Default);
     }

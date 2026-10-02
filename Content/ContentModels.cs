@@ -29,7 +29,14 @@ public static class ContentTypes
     public static string Label(ContentType type) => type switch
     {
         ContentType.Mod => "Mod",
-        ContentType.ResourcePack => "Ressourcenpaket",
+        ContentType.ResourcePack => "Ressourcepack",
+        _ => "Shader"
+    };
+
+    public static string PluralLabel(ContentType type) => type switch
+    {
+        ContentType.Mod => "Mods",
+        ContentType.ResourcePack => "Ressourcepacks",
         _ => "Shader"
     };
 
@@ -63,6 +70,8 @@ public class ContentProject : Observable
     public long Downloads { get; init; }
     public string? WebsiteUrl { get; init; }
     public string Tags { get; init; } = "";
+    public string? ImageUrl { get; init; }
+    public DateTime? Updated { get; init; }
 
     public string TagsSuffix => Tags.Length > 0 ? "  ·  " + Tags : "";
 

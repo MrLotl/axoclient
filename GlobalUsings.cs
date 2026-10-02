@@ -4,6 +4,7 @@ global using AxoClient.Accounts;
 global using AxoClient.Content;
 global using AxoClient.Core;
 global using AxoClient.Game;
+global using AxoClient.Hosting;
 global using AxoClient.Import;
 global using AxoClient.Instances;
 global using AxoClient.Online;

@@ -22,6 +22,7 @@ public static class AppPaths
     public static string Resources => Path.Combine(LauncherDir, "resources");
     public static string Assets => Path.Combine(LauncherDir, "assets");
     public static string Runtime => Path.Combine(LauncherDir, "runtime");
+    public static string LocalServers => Path.Combine(LauncherDir, "servers");
 
     public static string ErrorLog => Path.Combine(
         string.IsNullOrEmpty(LauncherDir) ? DefaultLauncherDir : LauncherDir, "logs", "fehler.log");

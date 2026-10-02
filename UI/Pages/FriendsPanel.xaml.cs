@@ -9,13 +9,16 @@ public partial class FriendsPanel : UserControl
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(20) };
     private AppServices _app = null!;
     private HomePage _home = null!;
-    private bool _loadingFriends;
-    private bool _loadingShares;
+    private bool _loading;
 
     public FriendsPanel()
     {
         InitializeComponent();
     }
+
+    public List<FriendInfo> Friends { get; private set; } = [];
+
+    public event Action<List<FriendInfo>>? FriendsLoaded;
 
     public void Initialize(AppServices app, HomePage home)
     {
@@ -30,35 +33,32 @@ public partial class FriendsPanel : UserControl
 
     private async Task RefreshAsync()
     {
-        if (_app == null || !IsVisible || _loadingFriends)
+        if (_app == null || _loading)
             return;
 
         var available = _app.Axo.Available;
-        AddButton.IsEnabled = RefreshButton.IsEnabled = available;
+        AddButton.IsEnabled = available;
         if (!available)
         {
+            Friends = [];
             FriendsList.ItemsSource = null;
-            Header.Text = "Freunde";
-            SharesPanel.Visibility = Visibility.Collapsed;
             ShowInfo(_app.Accounts.Session == null
                 ? "Melde dich an, um deine Freunde zu sehen."
-                : "Schalte unter Einstellungen \"Axolotl-Symbol in der Tabliste\" ein, um Freunde hinzuzufügen " +
-                  "und ihnen auf Server zu folgen.");
+                : "Schalte unter Einstellungen „AxoClient-Symbol in der Tabliste“ ein, um Freunde hinzuzufügen.");
             return;
         }
 
-        _loadingFriends = true;
-        _ = RefreshSharesAsync();
+        _loading = true;
         try
         {
             var friends = await _app.Axo.GetFriendsAsync();
-            FriendsList.ItemsSource = friends;
-            var playing = friends.Count(f => f.Playing);
-            Header.Text = playing > 0 ? $"Freunde ({playing} im Spiel)" : "Freunde";
-            ShowInfo(friends.Count == 0
-                ? "Noch keine Freunde. Füge sie über + mit ihrem Minecraft-Namen hinzu. Sie müssen AxoClient nutzen " +
-                  "und dich ebenfalls hinzufügen."
-                : null);
+            Friends = friends;
+            FriendsList.ItemsSource = friends
+                .OrderBy(f => f.IsIncoming ? 0 : f.IsOutgoing ? 1 : f.Playing ? 2 : f.Online ? 3 : 4)
+                .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            ShowInfo(friends.Count == 0 ? "Noch keine Freunde." : null);
+            FriendsLoaded?.Invoke(friends);
         }
         catch (Exception ex)
         {
@@ -66,30 +66,7 @@ public partial class FriendsPanel : UserControl
         }
         finally
         {
-            _loadingFriends = false;
-        }
-    }
-
-    private async Task RefreshSharesAsync()
-    {
-        if (_loadingShares)
-            return;
-        _loadingShares = true;
-        try
-        {
-            var shares = await _app.Axo.GetInboxAsync();
-            SharesList.ItemsSource = shares;
-            SharesHeader.Text = shares.Count == 1 ? "Geteilt mit dir (1 neu)" : $"Geteilt mit dir ({shares.Count} neu)";
-            Ui.Show(SharesPanel, shares.Count > 0);
-        }
-        catch (Exception ex)
-        {
-            ErrorReport.Log("Geteilte Sachen abrufen", ex);
-            SharesPanel.Visibility = Visibility.Collapsed;
-        }
-        finally
-        {
-            _loadingShares = false;
+            _loading = false;
         }
     }
 
@@ -99,65 +76,45 @@ public partial class FriendsPanel : UserControl
         Ui.Show(InfoText, text != null);
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => Refresh();
-
     private async void Add_Click(object sender, RoutedEventArgs e)
     {
         var nameBox = Ui.Input();
-        var form = Ui.Stack(
-            Ui.Note("Minecraft-Name deines Freundes. Er muss AxoClient nutzen und dich ebenfalls hinzufügen; " +
-                    "erst dann seht ihr gegenseitig, auf welchem Server ihr spielt."),
-            nameBox);
-        if (!await _app.Dialogs.ShowFormAsync("Freund hinzufügen", form, "Hinzufügen", () => nameBox.Text.Trim().Length > 0))
+        nameBox.MaxLength = 16;
+        Field.SetIcon(nameBox, "Person");
+        Field.SetHint(nameBox, "z. B. Granulator444");
+        nameBox.Margin = new Thickness(0);
+        var form = Ui.Stack(Ui.Label("Minecraft-Name"), nameBox);
+        if (!await _app.Dialogs.ShowFormAsync("Freund hinzufügen", form, "Anfrage senden",
+                () => nameBox.Text.Trim().Length > 0, 420,
+                "Gib den Minecraft-Namen ein. Dein Freund bekommt eine Anfrage.", "UserAdd"))
             return;
-        await RunAsync(async () => _home.ShowStatus($"{await _app.Axo.AddFriendAsync(nameBox.Text.Trim())} hinzugefügt."));
+        await RunAsync(() => _app.Axo.AddFriendAsync(nameBox.Text.Trim()));
     }
 
     private async void Accept_Click(object sender, RoutedEventArgs e) =>
         await RunAsync(() => _app.Axo.AddFriendAsync(Ui.DataOf<FriendInfo>(sender).Name));
 
-    private async void Remove_Click(object sender, RoutedEventArgs e)
+    private async void Remove_Click(object sender, RoutedEventArgs e) => await RemoveAsync(Ui.DataOf<FriendInfo>(sender));
+
+    public async Task RemoveAsync(FriendInfo friend)
     {
-        var friend = Ui.DataOf<FriendInfo>(sender);
         if (friend.IsFriend
-            && !await _app.Dialogs.ConfirmAsync("Freund entfernen", $"{friend.Name} wirklich entfernen?", "Entfernen", danger: true))
+            && !await _app.Dialogs.ConfirmAsync("Freund entfernen", $"{friend.Name} wirklich als Freund entfernen?",
+                "Entfernen", danger: true))
             return;
         await RunAsync(() => _app.Axo.RemoveFriendAsync(friend.Uuid));
     }
 
-    private async void Join_Click(object sender, RoutedEventArgs e)
+    private async void Join_Click(object sender, RoutedEventArgs e) => await JoinAsync(Ui.DataOf<FriendInfo>(sender));
+
+    public async Task JoinAsync(FriendInfo friend)
     {
-        var friend = Ui.DataOf<FriendInfo>(sender);
         if (friend.Server != null)
             await _home.JoinServerAsync(friend.Server, friend.Version, friend.Name, ask: false);
     }
 
-    private async void ShareWithFriend_Click(object sender, RoutedEventArgs e) =>
-        await ShareDialogs.ShareInstanceAsync(_app, null, Ui.DataOf<FriendInfo>(sender).Uuid);
-
-    private async void OpenShare_Click(object sender, RoutedEventArgs e)
-    {
-        if (await ShareDialogs.OpenShareAsync(_app, Ui.DataOf<ShareInfo>(sender)))
-            await RefreshSharesAsync();
-    }
-
-    private async void DismissShare_Click(object sender, RoutedEventArgs e)
-    {
-        var share = Ui.DataOf<ShareInfo>(sender);
-        if (!await _app.Dialogs.ConfirmAsync("Paket verwerfen",
-                $"\"{share.Title}\" von {share.FromName} verwerfen?\n\nDein Freund kann es dir danach erneut schicken.",
-                "Verwerfen", danger: true))
-            return;
-        try
-        {
-            await _app.Axo.DeleteShareAsync(share.Id);
-        }
-        catch (Exception ex)
-        {
-            await _app.Dialogs.ShowErrorAsync("Verwerfen fehlgeschlagen", ex);
-        }
-        await RefreshSharesAsync();
-    }
+    private async void Profile_Click(object sender, RoutedEventArgs e) =>
+        await FriendProfileDialog.ShowAsync(_app, Ui.DataOf<FriendInfo>(sender), this);
 
     private async Task RunAsync(Func<Task> action)
     {

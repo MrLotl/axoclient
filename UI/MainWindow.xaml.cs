@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Threading;
 
 namespace AxoClient.UI;
@@ -15,6 +17,7 @@ public partial class MainWindow : Window
     private TrayIcon? _tray;
     private bool _hiddenForGame;
     private int _dragDepth;
+    private bool _restoring = true;
 
     public MainWindow()
     {
@@ -24,17 +27,42 @@ public partial class MainWindow : Window
         {
             [NavHome] = HomePage,
             [NavInstances] = InstancesPage,
+            [NavServers] = LocalServersPage,
             [NavSkins] = SkinsPage,
-            [NavGameLog] = GameLogPage,
+            [NavConsole] = GameLogPage,
             [NavSettings] = SettingsPage
         };
 
-        Account.Initialize(_app);
+        AccountMenu.Initialize(_app);
+        AccountMenu.CloseRequested += () => AccountPopup.IsOpen = false;
         HomePage.Initialize(_app);
         InstancesPage.Initialize(_app);
+        LocalServersPage.Initialize(_app);
         SkinsPage.Initialize(_app);
         GameLogPage.Initialize(_app);
         SettingsPage.Initialize(_app);
+
+        LocalServersPage.JoinRequested += (address, version) =>
+        {
+            NavHome.IsChecked = true;
+            _ = HomePage.JoinServerAsync(address, version, null, ask: false);
+        };
+        LocalServersPage.ConsoleRequested += server =>
+        {
+            NavConsole.IsChecked = true;
+            GameLogPage.ShowServer(server);
+        };
+
+        _app.Accounts.Changed += UpdateAccount;
+        HomePage.OpenInstanceRequested += (inst, section) =>
+        {
+            NavInstances.IsChecked = true;
+            InstancesPage.Open(inst, section);
+        };
+        HomePage.Notifications.Changed += () => SetUnreadCount(HomePage.Notifications.UnreadCount);
+        HomePage.Notifications.Arrived += OnNoticeArrived;
+        DialogHost.OpenChanged += open =>
+            ShellContent.Effect = open ? new BlurEffect { Radius = 3, KernelType = KernelType.Gaussian } : null;
 
         InstancesPage.PlayRequested += (inst, quickPlay) =>
         {
@@ -60,32 +88,169 @@ public partial class MainWindow : Window
         Autostart.Refresh();
         if (Autostart.StartedByWindows && _app.Settings.AutostartMinimized)
             WindowState = WindowState.Minimized;
+        UpdateAccount();
     }
 
     public IDialogService Dialogs => DialogHost;
 
+    public AppServices App => _app;
+
+    public void ShowToast(Toast toast) => Toasts.Show(toast);
+
+    public void Navigate(string page)
+    {
+        var target = page switch
+        {
+            "instances" => NavInstances,
+            "servers" => NavServers,
+            "skins" => NavSkins,
+            "console" => NavConsole,
+            "settings" => NavSettings,
+            _ => NavHome
+        };
+        target.IsChecked = true;
+    }
+
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        VersionText.Text = "Version " + AppInfo.Version + (Updater.IsEnabled ? "" : " (lokal)");
+        VersionText.Text = "v" + AppInfo.ShortVersion;
         Updater.CleanUp();
 
         if (LauncherSettings.LoadProblem is { } problem)
             await Dialogs.ShowErrorAsync("Einstellungen konnten nicht gelesen werden", problem.Error, problem.Text);
 
-        var updateCheck = CheckForUpdateAsync(manual: false);
-        await Account.RestoreSessionAsync();
+        var updateCheck = CheckForUpdateAsync();
+        await _app.Accounts.TryRestoreAsync();
+        _restoring = false;
+        UpdateAccount();
         _sessionRestored.TrySetResult();
+        _ = HomePage.Notifications.RefreshAsync();
+        _ = ScanModUpdatesAsync();
         await updateCheck;
     }
 
-    private async void VersionText_Click(object sender, MouseButtonEventArgs e) => await CheckForUpdateAsync(manual: true);
-
-    private Task CheckForUpdateAsync(bool manual) =>
-        UpdateDialog.CheckAsync(_app, manual, status =>
+    private async Task CheckForUpdateAsync()
+    {
+        var update = await UpdateDialog.CheckQuietlyAsync(_app);
+        if (update == null)
+            return;
+        UpdatePill.Tag = update;
+        UpdatePill.Visibility = Visibility.Visible;
+        HomePage.Notifications.AddLocal(new Notice
         {
-            NavHome.IsChecked = true;
-            HomePage.ShowStatus(status);
-        }, Close);
+            Key = "update:" + update.Version,
+            Kind = NoticeKind.AppUpdate,
+            Title = $"AxoClient {update.Version} ist da",
+            Text = "Klicke auf „Update verfügbar“ oben, um es zu installieren.",
+            Update = update
+        });
+        if (_app.Settings.AutoUpdate)
+            await UpdateDialog.InstallAsync(_app, update, Close);
+    }
+
+    private async void UpdatePill_Click(object sender, RoutedEventArgs e)
+    {
+        if (UpdatePill.Tag is UpdateInfo update)
+            await UpdateDialog.ShowAsync(_app, update, Close);
+    }
+
+    private void UpdateAccount()
+    {
+        var session = _app.Accounts.Session;
+        AccountName.Text = session?.Username ?? "";
+        AccountHead.Source = _app.Accounts.Profile?.Head
+                             ?? _app.Accounts.Saved.FirstOrDefault(a => a.Active)?.Head;
+        Ui.Show(AccountButton, session != null);
+        Ui.Show(LoginButton, session == null);
+        LoginButton.IsEnabled = !_restoring;
+        LoginText.Text = _restoring ? "Prüfe Anmeldung …" : "Anmelden";
+    }
+
+    private void OnNoticeArrived(Notice notice)
+    {
+        if (DialogHost.IsOpen || notice.Kind is NoticeKind.AppUpdate)
+            return;
+        var image = notice.HeadUrl != null ? new System.Windows.Media.Imaging.BitmapImage(new Uri(notice.HeadUrl)) : null;
+        var (action, badge) = notice.Kind switch
+        {
+            NoticeKind.Invite => ("Beitreten", "Join"),
+            NoticeKind.Share => ("Ansehen", "Send"),
+            NoticeKind.ModUpdates => ("Ansehen", "Refresh"),
+            NoticeKind.FriendRequest => ("Ansehen", "UserAdd"),
+            _ => ((string?)null, "Bell")
+        };
+        Toasts.Show(new Toast(notice.Title, notice.Share?.Title ?? notice.Text, image, badge, action, () =>
+        {
+            if (notice.Kind == NoticeKind.Invite && notice.Remote?.Server is { } server)
+            {
+                NavHome.IsChecked = true;
+                _ = HomePage.JoinServerAsync(server, notice.Remote.Version, notice.Remote.FromName, ask: true);
+            }
+            else
+            {
+                _ = HomePage.ShowNotificationsAsync();
+            }
+        }, notice.Kind == NoticeKind.Share ? 12 : 7));
+    }
+
+    private async Task ScanModUpdatesAsync()
+    {
+        if (_app.Instances.Selected is not { CanUseMods: true } inst)
+            return;
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+            var result = await UpdateScanner.ScanAsync(_app, [inst],
+                new WorkProgress(new Progress<string>(), new Progress<double>(), cts.Token));
+            var updates = result.Updates;
+            if (updates.Count == 0)
+                return;
+            HomePage.Notifications.AddLocal(new Notice
+            {
+                Key = $"mods:{inst.Id}:{string.Join(",", updates.Select(u => u.Title + " " + u.Change))}",
+                Kind = NoticeKind.ModUpdates,
+                Title = Formats.Count(updates.Count, "Mod-Update verfügbar", "Mod-Updates verfügbar"),
+                Text = $"{Formats.Some(updates.Select(u => u.Title).ToList(), 2, " und ")} in „{inst.Name}“.",
+                Image = InstanceIcons.Load(inst),
+                Instance = inst,
+                Count = updates.Count
+            });
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Mod-Updates suchen", ex);
+        }
+    }
+
+    public void SetUnreadCount(int count)
+    {
+        BellCount.Text = count > 9 ? "9+" : count.ToString();
+        Ui.Show(BellBadge, count > 0);
+        BellButton.ToolTip = count > 0 ? $"Benachrichtigungen ({count} neu)" : "Benachrichtigungen";
+    }
+
+    private async void Login_Click(object sender, RoutedEventArgs e)
+    {
+        LoginButton.IsEnabled = false;
+        LoginText.Text = "Anmeldung läuft …";
+        await UiRun.GuardAsync(_app, "Anmeldung fehlgeschlagen", _app.Accounts.LoginAsync);
+        UpdateAccount();
+    }
+
+    private void AccountButton_Checked(object sender, RoutedEventArgs e)
+    {
+        AccountMenu.Refresh();
+        AccountPopup.IsOpen = true;
+        ((RotateTransform)AccountChevron.RenderTransform).Angle = 180;
+    }
+
+    private void AccountPopup_Closed(object? sender, EventArgs e)
+    {
+        ((RotateTransform)AccountChevron.RenderTransform).Angle = 0;
+        Dispatcher.BeginInvoke(() => AccountButton.IsChecked = false, DispatcherPriority.Input);
+    }
+
+    private async void Bell_Click(object sender, RoutedEventArgs e) => await HomePage.ShowNotificationsAsync();
 
     private void OnGameStarted(Installation inst, Process process)
     {
@@ -106,10 +271,13 @@ public partial class MainWindow : Window
 
     private async Task OnGameCrashedAsync(Installation inst)
     {
-        if (await Dialogs.ConfirmAsync("Minecraft ist abgestürzt",
-                $"\"{inst.Name}\" wurde mit einem Fehler beendet. Soll der Launcher die Ursache suchen und Maßnahmen vorschlagen?",
-                "Analysieren"))
-            await CrashDialog.ShowAsync(_app, inst, justCrashed: true);
+        await Dispatcher.InvokeAsync(BringToFront);
+        await CrashDialog.ShowAsync(_app, inst, justCrashed: true, () =>
+        {
+            _app.Instances.Select(inst);
+            NavHome.IsChecked = true;
+            _ = HomePage.PlayAsync();
+        });
     }
 
     private async Task JoinFromDiscordAsync(string server, string? version)
@@ -134,7 +302,7 @@ public partial class MainWindow : Window
             _tray.ShowHint("AxoClient läuft im Hintergrund weiter und kommt zurück, sobald du das Spiel beendest.");
     }
 
-    private void BringToFront()
+    public void BringToFront()
     {
         _hiddenForGame = false;
         if (_tray != null)
@@ -187,8 +355,7 @@ public partial class MainWindow : Window
         RootGrid.Margin = maximized
             ? new Thickness(frame.Left + 4, frame.Top + 4, frame.Right + 4, frame.Bottom + 4)
             : new Thickness(0);
-        MaximizeButton.Content = maximized ? "" : "";
-        MaximizeButton.ToolTip = maximized ? "Verkleinern" : "Maximieren";
+        MaximizeIcon.Kind = maximized ? "WinRestore" : "WinMax";
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;

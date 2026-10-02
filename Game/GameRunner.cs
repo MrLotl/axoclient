@@ -28,6 +28,8 @@ public sealed class GameRunner(AppServices app)
 
     public List<Installation> RunningInstances => app.Instances.All.Where(IsRunning).ToList();
 
+    public (string Server, string? Version)? CurrentServer { get; set; }
+
     public async Task LaunchAsync(Installation inst, QuickPlay? quickPlay, LaunchProgress progress)
     {
         var session = await app.Accounts.GetFreshSessionAsync();
@@ -82,6 +84,7 @@ public sealed class GameRunner(AppServices app)
     {
         var played = (long)Math.Max(0, (DateTime.UtcNow - startedUtc).TotalSeconds);
         inst.PlayTimeSeconds += played;
+        inst.LastSessionSeconds = played;
         PlayHistory.Add(inst, startedLocal, played);
 
         var crashed = false;

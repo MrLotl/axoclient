@@ -101,11 +101,20 @@ public class AxoService(AppServices app)
                 State = f.GetProperty("state").GetString()!,
                 Playing = f.GetProperty("playing").GetBoolean(),
                 Server = f.GetProperty("server").GetString(),
-                Version = f.GetProperty("version").GetString()
+                Version = f.GetProperty("version").GetString(),
+                Online = f.TryGetProperty("online", out var online) && online.ValueKind == JsonValueKind.True,
+                Instance = JsonFiles.String(f, "instance"),
+                SinceUtc = TimeOf(f, "since"),
+                LastSeenUtc = TimeOf(f, "seen")
             })
             .OrderBy(f => f.SortKey).ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    private static DateTime? TimeOf(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number
+            ? DateTimeOffset.FromUnixTimeMilliseconds(v.GetInt64()).UtcDateTime
+            : null;
 
     public async Task<List<FriendInfo>> GetMutualFriendsAsync() =>
         (await GetFriendsAsync()).Where(f => f.IsFriend).ToList();
@@ -121,14 +130,64 @@ public class AxoService(AppServices app)
         using var _ = await PostAsync("/friends/remove", new() { ["uuid"] = uuid });
     }
 
-    public async Task SetStatusAsync(bool playing, string? server, string? version)
+    public async Task SetStatusAsync(bool playing, string? server, string? version, string? instance = null)
     {
         using var _ = await PostAsync("/status", new()
         {
             ["playing"] = playing,
             ["server"] = server,
+            ["version"] = version,
+            ["instance"] = instance
+        });
+    }
+
+    public async Task<FriendProfile> GetFriendProfileAsync(string uuid)
+    {
+        using var json = await NewFeatureCallAsync("Freundesprofile", "/friends/profile", new() { ["uuid"] = uuid });
+        var root = json.RootElement;
+        return new FriendProfile(
+            TimeOf(root, "since"),
+            root.TryGetProperty("together", out var together) && together.ValueKind == JsonValueKind.Number ? together.GetInt64() : 0,
+            root.TryGetProperty("servers", out var servers)
+                ? servers.EnumerateArray().Select(s => s.GetString() ?? "").Where(s => s.Length > 0).ToList()
+                : [],
+            root.TryGetProperty("recent", out var recent)
+                ? recent.EnumerateArray()
+                    .Select(r => (TimeOf(r, "time") ?? DateTime.UtcNow, Sanitize.Text(JsonFiles.String(r, "text"), 120)))
+                    .ToList()
+                : []);
+    }
+
+    public async Task InviteAsync(string uuid, string server, string? version)
+    {
+        using var _ = await NewFeatureCallAsync("Einladungen", "/invite", new()
+        {
+            ["to"] = uuid,
+            ["server"] = server,
             ["version"] = version
         });
+    }
+
+    public async Task<List<NotificationInfo>> GetNotificationsAsync()
+    {
+        using var json = await NewFeatureCallAsync("Benachrichtigungen", "/notifications", new());
+        return json.RootElement.GetProperty("notifications").EnumerateArray().Select(n => new NotificationInfo
+        {
+            Id = n.GetProperty("id").GetInt64(),
+            Kind = n.GetProperty("kind").GetString()!,
+            FromUuid = JsonFiles.String(n, "fromUuid"),
+            FromName = JsonFiles.String(n, "fromName"),
+            Text = Sanitize.Text(JsonFiles.String(n, "text"), 200),
+            Server = JsonFiles.String(n, "server"),
+            Version = JsonFiles.String(n, "version"),
+            CreatedUtc = TimeOf(n, "created") ?? DateTime.UtcNow,
+            Read = n.TryGetProperty("read", out var read) && read.ValueKind == JsonValueKind.True
+        }).ToList();
+    }
+
+    public async Task MarkNotificationsReadAsync()
+    {
+        using var _ = await NewFeatureCallAsync("Benachrichtigungen", "/notifications/read", new());
     }
 
     public async Task<CapeStatus> GetCapeAsync()
@@ -143,12 +202,13 @@ public class AxoService(AppServices app)
         using var _ = await PostAsync("/cape", new() { ["cape"] = capeId });
     }
 
-    public async Task<string> UploadCapeAsync(string name, byte[] png)
+    public async Task<string> UploadCapeAsync(string name, byte[] png, bool global)
     {
         using var json = await NewFeatureCallAsync(CapeUploadFeature, "/capes/upload", new()
         {
             ["name"] = name,
-            ["png"] = Convert.ToBase64String(png)
+            ["png"] = Convert.ToBase64String(png),
+            ["global"] = global
         });
         return json.RootElement.GetProperty("id").GetString()!;
     }

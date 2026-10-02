@@ -18,6 +18,7 @@ public sealed class AppServices : IDisposable
         Games = new GameRunner(this);
         Axo = new AxoService(this);
         Capes = new ClientCapeService(Http, Accounts, Axo, () => Games.RunningInstances);
+        LocalServers = new ServerHost(Http);
     }
 
     public HttpClient Http { get; }
@@ -31,6 +32,7 @@ public sealed class AppServices : IDisposable
     public GameRunner Games { get; }
     public AxoService Axo { get; }
     public DiscordPresence Discord { get; }
+    public ServerHost LocalServers { get; }
 
     public ContentStore ContentOf(Installation inst) => new(inst, Modrinth);
 
@@ -55,5 +57,9 @@ public sealed class AppServices : IDisposable
         }
     }
 
-    public void Dispose() => Discord.Dispose();
+    public void Dispose()
+    {
+        Discord.Dispose();
+        LocalServers.Dispose();
+    }
 }

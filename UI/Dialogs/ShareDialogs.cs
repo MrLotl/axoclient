@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace AxoClient.UI.Dialogs;
 
@@ -13,54 +14,110 @@ public static class ShareDialogs
         public override string ToString() => $"{Installation.Name}  ·  {Installation.Description}";
     }
 
-    private sealed record OverlaySource(string? Profile)
+    private sealed class FriendPicker
     {
-        public override string ToString() => Profile ?? "Aktuelle Einstellungen";
-    }
+        private readonly List<(FriendInfo Friend, CheckBox Box, Border Row)> _rows = [];
+        private readonly TextBox _search;
+        private readonly TextBlock _empty;
 
-    private sealed class FriendChooser
-    {
-        private readonly List<(FriendInfo Friend, CheckBox Box)> _boxes = [];
-        private readonly TextBlock _problem = Ui.Problem();
-
-        public FriendChooser(IReadOnlyList<FriendInfo> friends, string? preselectUuid)
+        public FriendPicker(IReadOnlyList<FriendInfo> friends, string? preselectUuid, Action changed)
         {
+            _search = new TextBox { Style = Ui.Resource<Style>("LauncherTextBox"), Margin = new Thickness(0, 0, 0, 10) };
+            Field.SetIcon(_search, "Search");
+            Field.SetHint(_search, "Freunde suchen …");
             var list = new StackPanel();
             foreach (var friend in friends)
             {
-                var box = Ui.Check(friend.Name, friend.Uuid == preselectUuid);
-                _boxes.Add((friend, box));
-                list.Children.Add(box);
+                var head = new Border
+                {
+                    Width = 34,
+                    Height = 34,
+                    CornerRadius = new CornerRadius(6),
+                    ClipToBounds = true,
+                    Background = Ui.Resource<Brush>("RowBg"),
+                    Margin = new Thickness(0, 0, 12, 0),
+                    Child = Ui.UrlImage(friend.HeadUrl)
+                };
+                var status = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 0) };
+                status.Children.Add(Ui.Dot(friend.Presence));
+                status.Children.Add(new TextBlock { Text = friend.PresenceText, FontSize = 12, Foreground = Ui.Resource<Brush>("TextSecondary") });
+                var texts = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                texts.Children.Add(new TextBlock { Text = friend.Name, FontSize = 13.5, FontWeight = FontWeights.SemiBold, Foreground = Ui.Resource<Brush>("TextStrong") });
+                texts.Children.Add(status);
+                var content = new StackPanel { Orientation = Orientation.Horizontal, Children = { head, texts } };
+                var box = new CheckBox { Content = content, IsChecked = friend.Uuid == preselectUuid, Margin = new Thickness(10, 0, 10, 0) };
+                var row = new Border { Height = 52, CornerRadius = new CornerRadius(10), Margin = new Thickness(0, 0, 0, 4), Child = box };
+                box.Click += (_, _) =>
+                {
+                    Paint(row, box);
+                    changed();
+                };
+                Paint(row, box);
+                _rows.Add((friend, box, row));
+                list.Children.Add(row);
             }
-            View = friends.Count > 6 ? Ui.Scroll(list, 140) : list;
+            _empty = new TextBlock
+            {
+                Text = "Kein Freund gefunden.",
+                FontSize = 13,
+                Foreground = Ui.Resource<Brush>("DimText"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 16, 0, 16),
+                Visibility = Visibility.Collapsed
+            };
+            _search.TextChanged += (_, _) =>
+            {
+                var query = _search.Text.Trim();
+                foreach (var (friend, _, row) in _rows)
+                    Ui.Show(row, query.Length == 0 || friend.Name.Contains(query, StringComparison.OrdinalIgnoreCase));
+                Ui.Show(_empty, _rows.All(r => r.Row.Visibility != Visibility.Visible));
+            };
+            View = new StackPanel
+            {
+                Children =
+                {
+                    _search,
+                    new ScrollViewer
+                    {
+                        Content = new StackPanel { Children = { list, _empty } },
+                        MaxHeight = 236,
+                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                        Margin = new Thickness(0, 0, -8, 0),
+                        Padding = new Thickness(0, 0, 8, 0)
+                    }
+                }
+            };
         }
+
+        private static void Paint(Border row, CheckBox box) =>
+            row.Background = box.IsChecked == true ? Ui.Resource<Brush>("AccentFaint") : Brushes.Transparent;
 
         public FrameworkElement View { get; }
 
-        public TextBlock Problem => _problem;
+        public List<FriendInfo> Selected => _rows.Where(r => r.Box.IsChecked == true).Select(r => r.Friend).ToList();
 
-        public List<FriendInfo> Selected => _boxes.Where(b => b.Box.IsChecked == true).Select(b => b.Friend).ToList();
+        public string CountLabel => Selected.Count switch
+        {
+            0 => "Niemand ausgewählt",
+            1 => "1 Freund ausgewählt",
+            var n => $"{n} Freunde ausgewählt"
+        };
 
-        public bool Validate() => Ui.ShowProblem(_problem, Selected.Count == 0 ? "Wähle mindestens einen Freund aus." : null);
+        public string RecipientLabel => Selected.Count == 1 ? Selected[0].Name : $"{Selected.Count} Freunde";
     }
 
-    public static Task ShareInstanceAsync(AppServices app, Installation? inst = null, string? preselectFriend = null,
-        string? overlayProfile = null) =>
-        UiRun.GuardAsync(app, FailureTitle, () => ShareInstanceCoreAsync(app, inst, preselectFriend, overlayProfile));
+    public static Task ShareInstanceAsync(AppServices app, Installation? inst = null, string? preselectFriend = null) =>
+        UiRun.GuardAsync(app, FailureTitle, () => ShareInstanceCoreAsync(app, inst ?? app.Instances.Selected, preselectFriend));
 
     public static Task ShareContentAsync(AppServices app, ContentPayload payload) =>
-        UiRun.GuardAsync(app, FailureTitle, () => SharePayloadAsync(app, payload, $"{payload.KindText} teilen",
-            $"\"{payload.Title}\" ({payload.KindText}) wird als Empfehlung geschickt. Dein Freund kann es mit einem " +
-            "Klick installieren, und zwar in einer Instanz seiner Wahl.",
-            ShareKinds.Content, payload.Title));
+        UiRun.GuardAsync(app, FailureTitle, () => SharePayloadAsync(app, payload, $"„{payload.Title}“ senden",
+            $"{payload.KindText} · Dein Freund kann es mit einem Klick installieren.", "Cube", ShareKinds.Content, payload.Title));
 
     public static Task ShareServerAsync(AppServices app, string name, string address)
     {
         var payload = new ServerPayload { Name = name, Address = address };
-        return UiRun.GuardAsync(app, FailureTitle, () => SharePayloadAsync(app, payload, "Server teilen",
-            $"\"{payload.Name}\" ({payload.Address}) wird an deine Freunde geschickt. Sie können den Server in die " +
-            "Serverliste einer Instanz ihrer Wahl übernehmen.",
-            ShareKinds.Server, payload.Name));
+        return UiRun.GuardAsync(app, FailureTitle, () => SharePayloadAsync(app, payload, $"„{name}“ senden",
+            $"{address} · landet in der Serverliste einer Instanz seiner Wahl.", "Server", ShareKinds.Server, payload.Name));
     }
 
     public static Task<bool> OpenShareAsync(AppServices app, ShareInfo share) =>
@@ -74,7 +131,7 @@ public static class ShareDialogs
         if (app.Accounts.Session == null)
             return ([], "Melde dich an, um Freunden etwas zu schicken.");
         if (!app.Axo.Available)
-            return ([], "Schalte unter Einstellungen \"Axolotl-Symbol in der Tabliste\" ein, um Freunden etwas zu schicken.");
+            return ([], "Schalte unter Einstellungen „AxoClient-Symbol in der Tabliste“ ein, um Freunden etwas zu schicken.");
         try
         {
             var friends = await app.Axo.GetMutualFriendsAsync();
@@ -88,179 +145,320 @@ public static class ShareDialogs
         }
     }
 
-    private static async Task ShareInstanceCoreAsync(AppServices app, Installation? inst, string? preselectFriend,
-        string? overlayProfile)
+    private static FrameworkElement SentView(string title)
     {
-        var choices = app.Instances.All.Select(i => new InstanceChoice(i)).ToList();
-        if (choices.Count == 0)
-            return;
-        var (friends, friendsProblem) = await LoadFriendsAsync(app);
-
-        var instanceBox = Ui.Combo(choices);
-        instanceBox.SelectedItem = choices.FirstOrDefault(c => c.Installation == (inst ?? app.Instances.Selected)) ?? choices[0];
-
-        var whatGroup = Guid.NewGuid().ToString("N");
-        var whole = Ui.Choice("Ganze Instanz", whatGroup, overlayProfile == null);
-        var overlayOnly = Ui.Choice("Nur das Overlay", whatGroup, overlayProfile != null);
-
-        var overlaySource = Ui.Combo([]);
-        var overlayPanel = Ui.Stack(Ui.Label("Welches Overlay?"), overlaySource);
-
-        var mods = Ui.Check("Mods");
-        var packs = Ui.Check("Ressourcenpakete");
-        var shaders = Ui.Check("Shader");
-        var servers = Ui.Check("Server");
-        var options = Ui.Check("Einstellungen & Tastenbelegung");
-        var overlay = Ui.Check("Overlay-Einstellungen");
-        var itemBoxes = new[] { mods, packs, shaders, servers, options, overlay };
-        var items = Ui.Stack(itemBoxes.Cast<UIElement>()
-            .Append(Ui.Note("Mods, Ressourcenpakete und Shader lädt dein Freund selbst von Modrinth. Nur was von " +
-                            "Modrinth stammt, lässt sich teilen. Welten und das Instanzbild werden nicht übertragen.", 6, 11))
-            .ToArray());
-
-        var targetGroup = Guid.NewGuid().ToString("N");
-        var toFriends = Ui.Choice("An Freunde senden", targetGroup, friends.Count > 0);
-        var toFile = Ui.Choice("Als Datei speichern", targetGroup, friends.Count == 0);
-        toFriends.IsEnabled = friends.Count > 0;
-
-        var chooser = new FriendChooser(friends, preselectFriend);
-        var friendPanel = Ui.Stack(chooser.View, friendsProblem != null ? Ui.Note(friendsProblem, 6, 11) : null);
-        var fileNote = Ui.Note("Die Datei kann ein Freund im Launcher unter Instanzen → Importieren öffnen, " +
-                               "auch wenn ihr nicht befreundet seid.", 6, 11);
-        var problem = Ui.Problem();
-
-        var form = Ui.Stack(
-            inst == null ? Ui.Label("Instanz") : null, inst == null ? instanceBox : null,
-            Ui.Label("Was möchtest du teilen?"), Ui.Row(whole, overlayOnly),
-            overlayPanel, items,
-            Ui.Label("An wen?"), Ui.Row(toFriends, toFile),
-            friendPanel, fileNote, problem);
-
-        Installation Current() => ((InstanceChoice)instanceBox.SelectedItem!).Installation;
-
-        void RefreshItems()
+        var circle = new Border
         {
-            var target = Current();
-            var overlays = new OverlayStore(target);
-            var sources = new List<object> { new OverlaySource(null) };
-            sources.AddRange(overlays.ProfileNames().Select(n => new OverlaySource(n)));
-            overlaySource.ItemsSource = sources;
-            overlaySource.SelectedItem = sources.OfType<OverlaySource>().FirstOrDefault(s => s.Profile == overlayProfile) ?? sources[0];
-
-            var store = app.ContentOf(target);
-            var modCount = store.CountFiles(ContentType.Mod);
-            var packCount = store.CountFiles(ContentType.ResourcePack);
-            var shaderCount = store.CountFiles(ContentType.Shader);
-            var serverCount = new ServerStore(target.GameDir).Load().Count;
-            var hasOptions = File.Exists(target.OptionsFile);
-            var hasOverlay = overlays.ReadActive() != null;
-            Ui.SetOption(mods, $"Mods ({modCount})", target.CanUseMods && modCount > 0);
-            Ui.SetOption(packs, $"Ressourcenpakete ({packCount})", packCount > 0);
-            Ui.SetOption(shaders, $"Shader ({shaderCount})", shaderCount > 0);
-            Ui.SetOption(servers, $"Server ({serverCount})", serverCount > 0);
-            Ui.SetOption(options, hasOptions ? "Einstellungen & Tastenbelegung" : "Einstellungen (noch keine gespeichert)", hasOptions);
-            Ui.SetOption(overlay, hasOverlay ? "Overlay-Einstellungen" : "Overlay-Einstellungen (noch keine gespeichert)", hasOverlay);
-        }
-
-        void RefreshVisibility()
+            Width = 52,
+            Height = 52,
+            CornerRadius = new CornerRadius(26),
+            Background = Ui.Resource<Brush>("Accent"),
+            Effect = Ui.Resource<System.Windows.Media.Effects.Effect>("AccentShadow"),
+            Child = new Icon { Kind = "Check", Size = 22, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+        };
+        return new StackPanel
         {
-            Ui.Show(items, whole.IsChecked == true);
-            Ui.Show(overlayPanel, overlayOnly.IsChecked == true);
-            Ui.Show(friendPanel, toFriends.IsChecked == true);
-            Ui.Show(fileNote, toFile.IsChecked == true);
-        }
-
-        foreach (var radio in new[] { whole, overlayOnly, toFriends, toFile })
-            radio.Checked += (_, _) => RefreshVisibility();
-        instanceBox.SelectionChanged += (_, _) => RefreshItems();
-        RefreshItems();
-        RefreshVisibility();
-
-        string? ChosenProfile() => (overlaySource.SelectedItem as OverlaySource)?.Profile;
-
-        JsonElement? ChosenOverlay() => ChosenProfile() is { } profile
-            ? new OverlayStore(Current()).ReadProfile(profile)
-            : new OverlayStore(Current()).ReadActive();
-
-        bool Validate() => Ui.ShowProblem(problem,
-            toFriends.IsChecked == true && chooser.Selected.Count == 0 ? "Wähle mindestens einen Freund aus."
-            : whole.IsChecked == true && !itemBoxes.Any(Ui.IsChosen) ? "Wähle aus, was geteilt werden soll."
-            : overlayOnly.IsChecked == true && ChosenOverlay() == null
-                ? "Für diese Instanz gibt es noch keine Overlay-Einstellungen. Öffne im Spiel mit der rechten " +
-                  "Umschalttaste das Overlay-Menü und speichere sie dort."
-                : null);
-
-        if (!await app.Dialogs.ShowFormAsync("Teilen", form, "Teilen", Validate))
-            return;
-
-        var source = Current();
-        var chosenProfile = ChosenProfile();
-        var onlyOverlay = overlayOnly.IsChecked == true;
-        var exportOptions = new ExportOptions(Ui.IsChosen(mods), Ui.IsChosen(packs), Ui.IsChosen(shaders),
-            Ui.IsChosen(servers), Ui.IsChosen(options), Ui.IsChosen(overlay));
-        var recipients = toFriends.IsChecked == true ? chooser.Selected : [];
-
-        string? filePath = null;
-        if (toFile.IsChecked == true)
-        {
-            var save = new Microsoft.Win32.SaveFileDialog
+            Margin = new Thickness(0, 26, 0, 14),
+            Children =
             {
-                Title = "Paket speichern",
-                Filter = "AxoClient-Paket (*.json)|*.json",
-                FileName = Sanitize.FileName(chosenProfile ?? source.Name, "Instanz") + (onlyOverlay ? "-overlay" : "") +
-                           ".axoclient.json"
-            };
-            if (save.ShowDialog(Application.Current.MainWindow) != true)
-                return;
-            filePath = save.FileName;
-        }
-
-        var report = await UiRun.RunAsync(app, "Paket wird vorbereitet",
-            progress => BuildAndDeliverAsync(app, source, onlyOverlay ? chosenProfile ?? "" : null, exportOptions,
-                recipients, filePath, progress),
-            "Teilen fehlgeschlagen");
-        if (report != null)
-            await UiRun.ShowReportAsync(app, "Geteilt", report);
+                circle,
+                new TextBlock { Text = title, FontSize = 15, FontWeight = FontWeights.SemiBold, Foreground = Ui.Resource<Brush>("TextStrong"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 12, 0, 0) },
+                new TextBlock { Text = "Deine Freunde bekommen eine Benachrichtigung im Launcher.", FontSize = 13, Foreground = Ui.Resource<Brush>("MutedText"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) }
+            }
+        };
     }
 
-    private static async Task<List<string>> BuildAndDeliverAsync(AppServices app, Installation inst, string? overlayOnly,
-        ExportOptions options, List<FriendInfo> recipients, string? filePath, WorkProgress progress)
+    private static (DockPanel Root, ContentControl Body, ContentControl Footer, TextBlock Subtitle) Frame(AppServices app,
+        string title, string subtitle, FrameworkElement leading)
     {
-        var report = new List<string>();
-        string kind, title, json;
-        if (overlayOnly != null)
+        var header = DialogParts.Header(title, subtitle, leading, app.Dialogs.ClosePanel);
+        header.Margin = new Thickness(22, 22, 22, 0);
+        var sub = header.Children.OfType<StackPanel>().Last().Children.OfType<TextBlock>().Last();
+        var body = new ContentControl { Margin = new Thickness(22, 16, 22, 16), Focusable = false };
+        var footer = new ContentControl { Focusable = false };
+        var root = new DockPanel();
+        DockPanel.SetDock(header, Dock.Top);
+        DockPanel.SetDock(footer, Dock.Bottom);
+        root.Children.Add(header);
+        root.Children.Add(footer);
+        root.Children.Add(body);
+        return (root, body, footer, sub);
+    }
+
+    private static FrameworkElement InstanceThumb(Installation inst)
+    {
+        var image = InstanceIcons.Load(inst);
+        return new Border
         {
-            var overlays = new OverlayStore(inst);
-            var config = (overlayOnly.Length == 0 ? overlays.ReadActive() : overlays.ReadProfile(overlayOnly))
-                         ?? throw new InvalidOperationException("Diese Overlay-Einstellungen gibt es nicht (mehr).");
-            var payload = new OverlayPayload { Name = inst.Name, ProfileName = overlayOnly, Config = config };
-            payload.Validate();
-            var label = overlayOnly.Length == 0 ? "Overlay" : $"Overlay-Profil {payload.ProfileName}";
-            (kind, title, json) = (ShareKinds.Overlay, $"{label} aus {inst.Name}", ShareJson.Write(payload));
-            report.Add($"{label} aus \"{inst.Name}\" ({OverlayProfile.CountEnabled(config)} Anzeigen eingeschaltet).");
+            Width = 40,
+            Height = 40,
+            CornerRadius = new CornerRadius(10),
+            VerticalAlignment = VerticalAlignment.Top,
+            Background = image != null ? new ImageBrush(image) { Stretch = Stretch.UniformToFill } : InstanceText.Placeholder(inst)
+        };
+    }
+
+    private sealed record ShareOption(string Key, CheckBox Box, Border Row);
+
+    private static async Task ShareInstanceCoreAsync(AppServices app, Installation? inst, string? preselectFriend)
+    {
+        if (inst == null)
+            return;
+        var (friends, problem) = await LoadFriendsAsync(app);
+        var store = app.ContentOf(inst);
+        var mods = inst.CanUseMods ? store.CountFiles(ContentType.Mod) : 0;
+        var packs = store.CountFiles(ContentType.ResourcePack);
+        var shaders = store.CountFiles(ContentType.Shader);
+        var servers = new ServerStore(inst.GameDir).Load().Count;
+        var hasOptions = File.Exists(inst.OptionsFile);
+        var (root, body, footer, subtitle) = Frame(app, $"„{inst.Name}“ senden", "Wähle aus, wer die Instanz bekommen soll.",
+            InstanceThumb(inst));
+
+        FriendPicker? picker = null;
+        Button? next = null;
+        TextBlock? count = null;
+
+        var options = new List<ShareOption>();
+        void AddOption(string key, string label, string detail, bool available, bool on)
+        {
+            var texts = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            texts.Children.Add(new TextBlock { Text = label, FontSize = 13.5, FontWeight = FontWeights.SemiBold, Foreground = Ui.Resource<Brush>("TextStrong") });
+            texts.Children.Add(new TextBlock { Text = detail, FontSize = 11.5, Foreground = Ui.Resource<Brush>("MutedText"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 0) });
+            var box = new CheckBox { Content = texts, IsChecked = available && on, IsEnabled = available, Margin = new Thickness(12, 0, 12, 0) };
+            var row = new Border { Height = 62, CornerRadius = new CornerRadius(10), Margin = new Thickness(0, 0, 8, 8), Child = box };
+            options.Add(new ShareOption(key, box, row));
         }
-        else
+        AddOption("mods", "Mods", Formats.Count(mods, "Mod", "Mods") + " mit Versionen", mods > 0, true);
+        AddOption("packs", "Ressourcepacks", Formats.Count(packs, "Ressourcepack", "Ressourcepacks"), packs > 0, true);
+        AddOption("shaders", "Shader", Formats.Count(shaders, "Shader", "Shader"), shaders > 0, true);
+        AddOption("servers", "Server", Formats.Count(servers, "Server", "Server") + " aus der Liste", servers > 0, true);
+        AddOption("settings", "Einstellungen", "Version, Loader, RAM, Java-Argumente", false, true);
+        options[^1].Box.IsChecked = true;
+        AddOption("ingame", "Ingame-Einstellungen", hasOptions ? "Steuerung, Grafik, Sound (options.txt)" : "Noch keine gespeichert",
+            hasOptions, false);
+
+        void Paint()
         {
-            var result = await new InstanceExporter(app).BuildAsync(inst, options, progress);
-            (kind, title, json) = (ShareKinds.Instance, inst.Name, ShareJson.Write(result.Manifest));
-            report.Add($"Instanz \"{inst.Name}\" ({inst.Description}). {result.Manifest.Describe()}");
-            report.AddRange(result.Notes);
+            foreach (var option in options)
+                option.Row.Background = option.Box.IsChecked == true ? Ui.Resource<Brush>("AccentFaint") : Ui.Resource<Brush>("RowBgSoft");
         }
 
+        ExportOptions Chosen()
+        {
+            bool On(string key) => options.Any(o => o.Key == key && o.Box.IsChecked == true);
+            return new ExportOptions(On("mods"), On("packs"), On("shaders"), On("servers"), On("ingame"), false);
+        }
+
+        FrameworkElement Steps(int step)
+        {
+            StackPanel Step(int number, string label)
+            {
+                var on = number <= step;
+                var dot = new Border
+                {
+                    Width = 18,
+                    Height = 18,
+                    CornerRadius = new CornerRadius(9),
+                    Background = on ? Ui.Resource<Brush>("Accent") : Ui.Resource<Brush>("ChipBg"),
+                    Margin = new Thickness(0, 0, 7, 0),
+                    Child = new TextBlock
+                    {
+                        Text = number.ToString(),
+                        FontSize = 10.5,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = on ? Brushes.White : Ui.Resource<Brush>("MutedText"),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    }
+                };
+                var text = new TextBlock
+                {
+                    Text = label,
+                    FontSize = 12,
+                    FontWeight = FontWeights.SemiBold,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = number == step ? Ui.Resource<Brush>("TextStrong")
+                        : number < step ? Ui.Resource<Brush>("TextSecondary") : Ui.Resource<Brush>("DimText")
+                };
+                return new StackPanel { Orientation = Orientation.Horizontal, Children = { dot, text } };
+            }
+            return new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 14),
+                Children =
+                {
+                    Step(1, "Freunde"),
+                    new Border { Width = 24, Height = 1, Background = Ui.Resource<Brush>("FieldBorder"), Margin = new Thickness(8, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center },
+                    Step(2, "Inhalte")
+                }
+            };
+        }
+
+        void ShowStep1()
+        {
+            subtitle.Text = "Wähle aus, wer die Instanz bekommen soll.";
+            var content = new StackPanel { Children = { Steps(1) } };
+            if (picker == null)
+                content.Children.Add(new TextBlock { Text = problem ?? "", Style = Ui.Resource<Style>("Body"), Margin = new Thickness(0, 0, 0, 8) });
+            else
+            {
+                if (picker.View.Parent is Panel parent)
+                    parent.Children.Remove(picker.View);
+                content.Children.Add(picker.View);
+            }
+            var file = new Button { Style = Ui.Resource<Style>("LinkButton"), Content = "Stattdessen als Datei speichern …", Margin = new Thickness(0, 12, 0, 0) };
+            file.Click += (_, _) => ShowStep2(toFile: true);
+            content.Children.Add(file);
+            body.Content = content;
+            count = new TextBlock { Text = picker?.CountLabel ?? "", FontSize = 12.5, Foreground = Ui.Resource<Brush>("MutedText"), VerticalAlignment = VerticalAlignment.Center };
+            next = DialogParts.Primary("Weiter", () => ShowStep2(toFile: false), "ArrowRight");
+            next.IsEnabled = picker?.Selected.Count > 0;
+            footer.Content = DialogParts.Footer(count, DialogParts.Secondary("Abbrechen", app.Dialogs.ClosePanel), next);
+        }
+
+        void ShowStep2(bool toFile)
+        {
+            var recipients = toFile || picker == null ? [] : picker.Selected;
+            subtitle.Text = toFile ? $"Als Datei · {InstanceText.Version(inst)}" : $"Für {picker!.RecipientLabel} · {InstanceText.Version(inst)}";
+            var grid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2, Margin = new Thickness(0, 0, -8, 0) };
+            foreach (var option in options)
+            {
+                if (option.Row.Parent is Panel parent)
+                    parent.Children.Remove(option.Row);
+                grid.Children.Add(option.Row);
+            }
+            var allNone = new Button { Style = Ui.Resource<Style>("LinkButton"), HorizontalAlignment = HorizontalAlignment.Right };
+            void UpdateAll()
+            {
+                allNone.Content = options.Where(o => o.Box.IsEnabled).All(o => o.Box.IsChecked == true) ? "Keine auswählen" : "Alle auswählen";
+                Paint();
+            }
+            allNone.Click += (_, _) =>
+            {
+                var target = !options.Where(o => o.Box.IsEnabled).All(o => o.Box.IsChecked == true);
+                foreach (var option in options.Where(o => o.Box.IsEnabled))
+                    option.Box.IsChecked = target;
+                UpdateAll();
+            };
+            foreach (var option in options)
+            {
+                option.Box.Click -= OptionClicked;
+                option.Box.Click += OptionClicked;
+            }
+            void OptionClicked(object? s, RoutedEventArgs e) => UpdateAll();
+            UpdateAll();
+            var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
+            DockPanel.SetDock(allNone, Dock.Right);
+            head.Children.Add(allNone);
+            head.Children.Add(new TextBlock { Text = "Was soll übertragen werden?", FontSize = 13, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+            var info = new Border
+            {
+                CornerRadius = new CornerRadius(10),
+                Background = Ui.Frozen(Color.FromRgb(0x24, 0x24, 0x24)),
+                Padding = new Thickness(12, 10, 12, 10),
+                Child = new DockPanel
+                {
+                    Children =
+                    {
+                        new Icon { Kind = "Info", Size = 15, Foreground = Ui.Resource<Brush>("TextSecondary"), Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Top },
+                        new TextBlock
+                        {
+                            Text = "Es werden nur Namen und Versionen übertragen – der Launcher deines Freundes lädt die offiziellen Dateien selbst herunter. Welten und Screenshots bleiben bei dir.",
+                            FontSize = 12.5,
+                            Foreground = Ui.Resource<Brush>("TextSecondary"),
+                            TextWrapping = TextWrapping.Wrap
+                        }
+                    }
+                }
+            };
+            body.Content = new StackPanel { Children = { Steps(2), head, grid, info } };
+            var back = DialogParts.Secondary("Zurück", ShowStep1);
+            var send = DialogParts.Primary(toFile ? "Datei speichern" : $"An {picker!.RecipientLabel} senden", () => { },
+                toFile ? "Download" : "Send");
+            send.Click += async (_, _) =>
+            {
+                if (toFile)
+                {
+                    await SaveFileAsync(app, inst, Chosen());
+                    return;
+                }
+                send.IsEnabled = back.IsEnabled = false;
+                try
+                {
+                    await BuildAndDeliverAsync(app, inst, Chosen(), recipients, null,
+                        new WorkProgress(new Progress<string>(), new Progress<double>(), CancellationToken.None));
+                    body.Content = SentView($"An {picker!.RecipientLabel} gesendet");
+                    footer.Content = null;
+                    await Task.Delay(1600);
+                    app.Dialogs.ClosePanel();
+                }
+                catch (Exception ex)
+                {
+                    send.IsEnabled = back.IsEnabled = true;
+                    await app.Dialogs.ShowErrorAsync("Senden fehlgeschlagen", ex);
+                }
+            };
+            footer.Content = DialogParts.Footer(back, send);
+        }
+
+        if (friends.Count > 0)
+            picker = new FriendPicker(friends, preselectFriend, () =>
+            {
+                if (count != null)
+                    count.Text = picker!.CountLabel;
+                if (next != null)
+                    next.IsEnabled = picker!.Selected.Count > 0;
+            });
+        ShowStep1();
+        await app.Dialogs.ShowPanelAsync(root, 500);
+    }
+
+    private static async Task SaveFileAsync(AppServices app, Installation inst, ExportOptions options)
+    {
+        var save = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Instanz als Datei speichern",
+            Filter = "AxoClient-Paket (*.json)|*.json",
+            FileName = Sanitize.FileName(inst.Name, "Instanz") + ".axoclient.json"
+        };
+        if (save.ShowDialog(Application.Current.MainWindow) != true)
+            return;
+        app.Dialogs.ClosePanel();
+        var report = await UiRun.RunAsync(app, "Paket wird vorbereitet",
+            progress => BuildAndDeliverAsync(app, inst, options, [], save.FileName, progress), "Speichern fehlgeschlagen");
+        if (report != null)
+            await UiRun.ShowReportAsync(app, "Gespeichert", report);
+    }
+
+    private static async Task<List<string>> BuildAndDeliverAsync(AppServices app, Installation inst, ExportOptions options,
+        List<FriendInfo> recipients, string? filePath, WorkProgress progress)
+    {
+        var report = new List<string>();
+        var result = await new InstanceExporter(app).BuildAsync(inst, options, progress);
+        var json = ShareJson.Write(result.Manifest);
+        report.Add($"Instanz „{inst.Name}“ ({InstanceText.Version(inst)}). {result.Manifest.Describe()}");
+        report.AddRange(result.Notes);
+
         if (json.Length > ShareValidation.MaxJsonChars)
-            throw new InvalidOperationException("Das Paket ist zu groß zum Teilen. Wähle weniger aus, z.B. ohne Einstellungen.");
+            throw new InvalidOperationException("Das Paket ist zu groß zum Teilen. Wähle weniger aus, z.B. ohne Ingame-Einstellungen.");
 
         if (filePath != null)
         {
             await File.WriteAllTextAsync(filePath, json);
             report.Add($"Als Datei gespeichert:\n{filePath}");
         }
-        report.AddRange(await SendAsync(app, recipients, kind, title, json, progress));
+        if (recipients.Count > 0)
+        {
+            var failed = await SendAsync(app, recipients, ShareKinds.Instance, inst.Name, json);
+            if (failed.Count > 0)
+                throw new InvalidOperationException("Nicht zugestellt:\n" + string.Join("\n", failed));
+        }
         return report;
     }
 
-    private static async Task SharePayloadAsync(AppServices app, SharePayload payload, string dialogTitle, string intro,
-        string kind, string title)
+    private static async Task SharePayloadAsync(AppServices app, SharePayload payload, string title, string subtitle,
+        string icon, string kind, string shareTitle)
     {
         string json;
         try
@@ -277,48 +475,57 @@ public static class ShareDialogs
         var (friends, problem) = await LoadFriendsAsync(app);
         if (friends.Count == 0)
         {
-            await app.Dialogs.ShowMessageAsync(dialogTitle, problem ?? "Es gibt niemanden, dem du etwas schicken kannst.");
+            await app.Dialogs.ShowMessageAsync("Senden nicht möglich", problem ?? "Es gibt niemanden, dem du etwas schicken kannst.");
             return;
         }
 
-        var chooser = new FriendChooser(friends, null);
-        var form = Ui.Stack(Ui.Note(intro), Ui.Label("An wen?"), chooser.View, chooser.Problem);
-        if (!await app.Dialogs.ShowFormAsync(dialogTitle, form, "Senden", chooser.Validate))
-            return;
-
-        var recipients = chooser.Selected;
-        var report = await UiRun.RunAsync(app, "Wird gesendet",
-            progress => SendAsync(app, recipients, kind, title, json, progress), "Senden fehlgeschlagen");
-        if (report != null)
-            await UiRun.ShowReportAsync(app, "Gesendet", report);
+        var (root, body, footer, _) = Frame(app, title, subtitle, DialogParts.IconTile(icon));
+        var count = new TextBlock { FontSize = 12.5, Foreground = Ui.Resource<Brush>("MutedText"), VerticalAlignment = VerticalAlignment.Center };
+        var send = DialogParts.Primary("Senden", () => { }, "Send");
+        send.IsEnabled = false;
+        FriendPicker? picker = null;
+        picker = new FriendPicker(friends, null, () =>
+        {
+            count.Text = picker!.CountLabel;
+            send.IsEnabled = picker.Selected.Count > 0;
+        });
+        count.Text = picker.CountLabel;
+        send.Click += async (_, _) =>
+        {
+            send.IsEnabled = false;
+            var failed = await SendAsync(app, picker.Selected, kind, shareTitle, json);
+            if (failed.Count > 0)
+            {
+                send.IsEnabled = true;
+                await app.Dialogs.ShowMessageAsync("Nicht zugestellt", string.Join("\n", failed));
+                return;
+            }
+            body.Content = SentView($"An {picker.RecipientLabel} gesendet");
+            footer.Content = null;
+            await Task.Delay(1600);
+            app.Dialogs.ClosePanel();
+        };
+        body.Content = picker.View;
+        footer.Content = DialogParts.Footer(count, DialogParts.Secondary("Abbrechen", app.Dialogs.ClosePanel), send);
+        await app.Dialogs.ShowPanelAsync(root, 440);
     }
 
     private static async Task<List<string>> SendAsync(AppServices app, List<FriendInfo> recipients, string kind,
-        string title, string json, WorkProgress progress)
+        string title, string json)
     {
-        var report = new List<string>();
-        var sent = new List<string>();
         var failed = new List<string>();
         foreach (var friend in recipients)
         {
-            progress.Cancel.ThrowIfCancellationRequested();
-            progress.Text.Report($"Sende an {friend.Name}...");
             try
             {
                 await app.Axo.SendShareAsync(friend.Uuid, kind, title, json);
-                sent.Add(friend.Name);
             }
             catch (Exception ex)
             {
                 failed.Add($"{friend.Name}: {ErrorReport.Short(ex)}");
             }
         }
-        if (sent.Count > 0)
-            report.Add($"Gesendet an {string.Join(", ", sent)}. Es erscheint auf der Startseite unter \"Geteilt mit dir\" " +
-                       "(nach spätestens 14 Tagen verfällt es, wenn es nicht abgeholt wird).");
-        if (failed.Count > 0)
-            report.Add("Nicht zugestellt:\n" + string.Join("\n", failed));
-        return report;
+        return failed;
     }
 
     private static async Task<bool> OpenShareCoreAsync(AppServices app, ShareInfo share)

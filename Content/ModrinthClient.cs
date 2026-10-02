@@ -10,7 +10,8 @@ public class ModrinthClient(HttpClient http)
 
     public HttpClient Http => http;
 
-    public async Task<SearchPage> SearchAsync(string query, ContentType type, Installation inst, int page, int pageSize)
+    public async Task<SearchPage> SearchAsync(string query, ContentType type, Installation inst, int page, int pageSize,
+        string? category = null, string? index = null)
     {
         var projectType = type switch
         {
@@ -25,24 +26,31 @@ public class ModrinthClient(HttpClient http)
         };
         if (type == ContentType.Mod)
             facets.Add([$"categories:{inst.Loader.ModrinthName()}"]);
-        return await SearchAsync(query, facets, page, pageSize, projectType, _ => "");
+        if (category != null)
+            facets.Add([$"categories:{category}"]);
+        return await SearchAsync(query, facets, page, pageSize, projectType, CategoryTags, index);
     }
 
-    public Task<SearchPage> SearchModpacksAsync(string query, int page, int pageSize)
+    public Task<SearchPage> SearchModpacksAsync(string query, int page, int pageSize, string? loader = null,
+        string? minecraft = null, string? index = null)
     {
         var facets = new List<string[]>
         {
             new[] { "project_type:modpack" },
-            new[] { "categories:fabric", "categories:forge" }
+            loader != null
+                ? new[] { $"categories:{loader}" }
+                : new[] { "categories:fabric", "categories:forge", "categories:neoforge", "categories:quilt" }
         };
-        return SearchAsync(query, facets, page, pageSize, "modpack", ModpackTags);
+        if (minecraft != null)
+            facets.Add([$"versions:{minecraft}"]);
+        return SearchAsync(query, facets, page, pageSize, "modpack", ModpackTags, index);
     }
 
     private async Task<SearchPage> SearchAsync(string query, List<string[]> facets, int page, int pageSize,
-        string projectType, Func<JsonElement, string> tags)
+        string projectType, Func<JsonElement, string> tags, string? index = null)
     {
         var url = $"{Api}/search?limit={pageSize}&offset={page * pageSize}" +
-                  $"&index={(string.IsNullOrWhiteSpace(query) ? "downloads" : "relevance")}" +
+                  $"&index={index ?? (string.IsNullOrWhiteSpace(query) ? "downloads" : "relevance")}" +
                   $"&query={Uri.EscapeDataString(query)}" +
                   $"&facets={Uri.EscapeDataString(JsonSerializer.Serialize(facets))}";
 
@@ -56,22 +64,45 @@ public class ModrinthClient(HttpClient http)
             IconUrl = NullIfEmpty(hit.GetProperty("icon_url").GetString()),
             Downloads = hit.GetProperty("downloads").GetInt64(),
             WebsiteUrl = $"https://modrinth.com/{projectType}/{hit.GetProperty("slug").GetString()}",
-            Tags = tags(hit)
+            Tags = tags(hit),
+            ImageUrl = NullIfEmpty(hit.TryGetProperty("featured_gallery", out var gallery) && gallery.ValueKind == JsonValueKind.String
+                ? gallery.GetString()
+                : hit.TryGetProperty("gallery", out var images) && images.ValueKind == JsonValueKind.Array && images.GetArrayLength() > 0
+                    ? images[0].GetString()
+                    : null),
+            Updated = hit.TryGetProperty("date_modified", out var modified) && modified.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(modified.GetString(), out var updated) ? updated : null
         }).ToList();
         return new SearchPage(items, json.RootElement.GetProperty("total_hits").GetInt32());
     }
 
+    private static readonly Dictionary<string, string> CategoryNames = new()
+    {
+        ["optimization"] = "Leistung", ["utility"] = "Komfort", ["library"] = "Bibliothek", ["technology"] = "Technik",
+        ["adventure"] = "Abenteuer", ["decoration"] = "Deko", ["storage"] = "Lager", ["worldgen"] = "Welt",
+        ["magic"] = "Magie", ["management"] = "Verwaltung", ["social"] = "Sozial", ["vanilla-like"] = "Vanilla-Stil",
+        ["realistic"] = "Realistisch", ["gui"] = "Oberfläche", ["fantasy"] = "Fantasy", ["semi-realistic"] = "Halb-realistisch",
+        ["cartoon"] = "Cartoon", ["simplistic"] = "Schlicht", ["low"] = "Leistung", ["potato"] = "Sehr schnell",
+        ["equipment"] = "Ausrüstung", ["blocks"] = "Blöcke", ["items"] = "Items", ["models"] = "Modelle",
+        ["tweaks"] = "Anpassungen", ["combat"] = "Kampf", ["food"] = "Essen", ["mobs"] = "Mobs", ["transportation"] = "Transport"
+    };
+
+    private static string CategoryTags(JsonElement hit) =>
+        hit.TryGetProperty("display_categories", out var categories) || hit.TryGetProperty("categories", out categories)
+            ? string.Join(", ", categories.EnumerateArray().Select(c => c.GetString() ?? "")
+                .Where(CategoryNames.ContainsKey).Select(c => CategoryNames[c]).Distinct().Take(2))
+            : "";
+
     private static string ModpackTags(JsonElement hit)
     {
         var loaders = hit.TryGetProperty("categories", out var categories)
-            ? categories.EnumerateArray().Select(c => c.GetString()).Where(c => c is "fabric" or "forge")
-                .Select(c => c == "fabric" ? "Fabric" : "Forge").Distinct().ToList()
+            ? categories.EnumerateArray().Select(c => c.GetString()).Where(c => c is "fabric" or "forge" or "neoforge" or "quilt")
+                .Select(c => c switch { "fabric" => "Fabric", "forge" => "Forge", "neoforge" => "NeoForge", _ => "Quilt" }).Distinct().ToList()
             : [];
         var newest = hit.TryGetProperty("versions", out var versions) && versions.GetArrayLength() > 0
             ? versions[versions.GetArrayLength() - 1].GetString()
             : null;
-        return string.Join(" · ", new[] { string.Join(", ", loaders), newest == null ? "" : $"bis {newest}" }
-            .Where(s => s.Length > 0));
+        return string.Join(" · ", new[] { newest ?? "", string.Join("/", loaders) }.Where(s => s.Length > 0));
     }
 
     public async Task<List<ContentVersion>> GetProjectVersionsAsync(string projectId)

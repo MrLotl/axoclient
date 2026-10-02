@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Windows.Media.Imaging;
 using CmlLib.Core.Auth;
 using CmlLib.Core.Auth.Microsoft;
+using CmlLib.Core.Auth.Microsoft.Sessions;
+using XboxAuthNet.Game.Accounts;
 
 namespace AxoClient.Accounts;
 
@@ -22,15 +24,19 @@ public class ProfileInfo
 
 public record AccountTrouble(string What, Exception Error);
 
+public record SavedAccount(string Id, string Name, string? Uuid, BitmapSource? Head, bool Active);
+
 public sealed class AccountService(HttpClient http)
 {
     private const string ProfileApi = "https://api.minecraftservices.com/minecraft/profile";
 
     private readonly JELoginHandler _login = JELoginHandlerBuilder.BuildDefault();
+    private IXboxGameAccount? _current;
 
     public MSession? Session { get; private set; }
     public ProfileInfo? Profile { get; private set; }
     public AccountTrouble? Problem { get; private set; }
+    public IReadOnlyList<SavedAccount> Saved { get; private set; } = [];
 
     public event Action? Changed;
     public event Action? SignedIn;
@@ -51,43 +57,147 @@ public sealed class AccountService(HttpClient http)
         Problem = new AccountTrouble(what, ex);
     }
 
+    public bool HasSavedAccounts => _login.AccountManager.GetAccounts().Any(a => a is JEGameAccount { Profile: not null });
+
     public async Task TryRestoreAsync()
     {
         try
         {
-            Session = await _login.AuthenticateSilently();
+            _current = _login.AccountManager.GetDefaultAccount();
+            Session = await _login.AuthenticateSilently(_current);
         }
         catch (Exception ex)
         {
             ErrorReport.Log("Gespeicherte Anmeldung wiederherstellen", ex);
             Session = null;
+            LoadSaved();
             Changed?.Invoke();
             return;
         }
+        LoadSaved();
         await RefreshProfileAsync();
         SignedIn?.Invoke();
     }
 
     public async Task LoginAsync()
     {
-        Session = await _login.AuthenticateInteractively();
+        var account = _login.AccountManager.NewAccount();
+        var session = await _login.AuthenticateInteractively(account);
+        if (Session != null)
+            SignedOut?.Invoke();
+        _current = account;
+        Session = session;
+        LoadSaved();
+        await RefreshProfileAsync();
+        SignedIn?.Invoke();
+    }
+
+    public async Task SwitchAsync(string id)
+    {
+        var account = _login.AccountManager.GetAccounts().FirstOrDefault(a => a.Identifier == id);
+        if (account == null || account == _current && Session != null)
+            return;
+        MSession session;
+        try
+        {
+            session = await _login.AuthenticateSilently(account);
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Konto wechseln", ex);
+            session = await _login.AuthenticateInteractively(account);
+        }
+        if (Session != null)
+            SignedOut?.Invoke();
+        _current = account;
+        Session = session;
+        LoadSaved();
         await RefreshProfileAsync();
         SignedIn?.Invoke();
     }
 
     public async Task LogoutAsync()
     {
-        await _login.Signout();
+        if (_current != null)
+            await _login.Signout(_current);
+        else
+            await _login.Signout();
         Session = null;
         Profile = null;
+        _current = null;
         SignedOut?.Invoke();
+
+        var next = _login.AccountManager.GetAccounts().OfType<JEGameAccount>()
+            .Where(a => a.Profile != null)
+            .OrderByDescending(a => a.LastAccess)
+            .FirstOrDefault();
+        if (next != null)
+        {
+            try
+            {
+                _current = next;
+                Session = await _login.AuthenticateSilently(next);
+                LoadSaved();
+                await RefreshProfileAsync();
+                SignedIn?.Invoke();
+                return;
+            }
+            catch (Exception ex)
+            {
+                ErrorReport.Log("Nächstes Konto anmelden", ex);
+                _current = null;
+                Session = null;
+            }
+        }
+        LoadSaved();
         Changed?.Invoke();
     }
 
     public async Task<MSession> GetFreshSessionAsync()
     {
-        Session = await _login.AuthenticateSilently();
+        Session = _current != null ? await _login.AuthenticateSilently(_current) : await _login.AuthenticateSilently();
         return Session;
+    }
+
+    private void LoadSaved()
+    {
+        Saved = _login.AccountManager.GetAccounts().OfType<JEGameAccount>()
+            .Where(a => a.Profile?.Username != null)
+            .OrderByDescending(a => a.LastAccess)
+            .Select(a => new SavedAccount(a.Identifier ?? a.Profile!.Username!, a.Profile!.Username!, a.Profile.UUID,
+                LoadCachedHead(a.Profile.UUID), Session != null && a.Profile.UUID == Session.UUID))
+            .ToList();
+    }
+
+    private static string? HeadCachePath(string? uuid) =>
+        string.IsNullOrEmpty(uuid) ? null : Path.Combine(AppPaths.LauncherDir, "accounts", uuid.Replace("-", "") + ".png");
+
+    private static BitmapSource? LoadCachedHead(string? uuid)
+    {
+        try
+        {
+            return HeadCachePath(uuid) is { } path && File.Exists(path) ? SkinRenderer.RenderHead(File.ReadAllBytes(path)) : null;
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Gespeicherten Kopf laden", ex);
+            return null;
+        }
+    }
+
+    private void CacheSkin(byte[] png)
+    {
+        try
+        {
+            if (HeadCachePath(Session?.UUID) is not { } path)
+                return;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, png);
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Kopf zwischenspeichern", ex);
+        }
     }
 
     public async Task RefreshProfileAsync()
@@ -96,6 +206,11 @@ public sealed class AccountService(HttpClient http)
         {
             using var json = await SendProfileRequestAsync(HttpMethod.Get, "");
             Profile = await LoadProfileAsync(json.RootElement);
+            if (Profile.SkinPng != null)
+            {
+                CacheSkin(Profile.SkinPng);
+                Saved = Saved.Select(a => a.Active ? a with { Head = Profile.Head } : a).ToList();
+            }
             ReportProblem("", null);
         }
         catch (Exception ex)

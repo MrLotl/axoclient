@@ -8,11 +8,24 @@ public class FriendInfo
     public bool Playing { get; init; }
     public string? Server { get; init; }
     public string? Version { get; init; }
+    public bool Online { get; init; }
+    public string? Instance { get; init; }
+    public DateTime? SinceUtc { get; init; }
+    public DateTime? LastSeenUtc { get; init; }
 
     public string HeadUrl => $"https://mc-heads.net/avatar/{Uuid}/64";
     public bool IsIncoming => State == "incoming";
     public bool IsFriend => State == "friend";
     public bool CanJoin => Playing && Server != null;
+    public bool IsOutgoing => State == "outgoing";
+    public string Presence => Playing ? "ingame" : Online ? "online" : "offline";
+
+    public string PresenceText => Playing ? "Im Spiel" : Online ? "Online" : "Offline";
+
+    public string ActivityText => Playing
+        ? string.Join(" · ", new[] { "Im Spiel", Server, Instance }.Where(s => !string.IsNullOrEmpty(s)))
+        : Online ? "Online · im Launcher"
+        : LastSeenUtc is { } seen ? "Offline · zuletzt " + Formats.Ago(seen) : "Offline";
 
     public string StatusText => State switch
     {
@@ -57,4 +70,21 @@ public record CapeStatus(string? CapeId, string? Role)
 public record AdminInfo(string Uuid, string Name)
 {
     public string HeadUrl => $"https://mc-heads.net/avatar/{Uuid}/64";
+}
+
+public record FriendProfile(DateTime? SinceUtc, long TogetherSeconds, List<string> Servers, List<(DateTime When, string Text)> Recent);
+
+public class NotificationInfo
+{
+    public required long Id { get; init; }
+    public required string Kind { get; init; }
+    public string? FromUuid { get; init; }
+    public string? FromName { get; init; }
+    public string Text { get; init; } = "";
+    public string? Server { get; init; }
+    public string? Version { get; init; }
+    public DateTime CreatedUtc { get; init; }
+    public bool Read { get; init; }
+
+    public string? HeadUrl => FromUuid == null ? null : $"https://mc-heads.net/avatar/{FromUuid}/64";
 }

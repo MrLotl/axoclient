@@ -19,6 +19,26 @@ public static class Formats
         return span.TotalHours >= 1 ? $"{(int)span.TotalHours} Std {span.Minutes} Min" : $"{span.Minutes} Min";
     }
 
+    public static string Hours(long seconds) =>
+        seconds >= 3600 ? $"{seconds / 3600} Std" : seconds >= 60 ? $"{seconds / 60} Min" : "–";
+
+    public static string Day(DateTime utc)
+    {
+        var day = utc.ToLocalTime().Date;
+        var today = DateTime.Today;
+        if (day == today)
+            return "Heute";
+        if (day == today.AddDays(-1))
+            return "Gestern";
+        var text = $"{day.Day}. {Months[day.Month - 1]}";
+        return day.Year == today.Year ? text : $"{text} {day.Year}";
+    }
+
+    public static readonly string[] Months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+
+    public static readonly string[] MonthsLong =
+        ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
     public static string Ago(DateTime utc)
     {
         var age = DateTime.UtcNow - utc;
