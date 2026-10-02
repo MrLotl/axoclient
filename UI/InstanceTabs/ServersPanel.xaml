@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:AxoClient.UI.Controls">
     <UserControl.Resources>
-        <c:PingBrushConverter x:Key="PingBrush"/>
 
         <DataTemplate x:Key="Actions">
             <StackPanel Orientation="Horizontal">
@@ -121,7 +120,7 @@
         </DataTemplate>
 
         <ItemsPanelTemplate x:Key="GridPanel">
-            <UniformGrid Columns="4" VerticalAlignment="Top" Margin="0,0,-16,0"/>
+            <c:TileGrid TileWidth="280" VerticalAlignment="Top" Margin="0,0,-16,0"/>
         </ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ListPanel">
             <StackPanel/>

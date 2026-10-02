@@ -52,8 +52,10 @@ public class ServerEntry : INotifyPropertyChanged
     public string PlayersText
     {
         get => _players;
-        set { _players = value; Changed(); }
+        set { _players = value; Changed(); Changed(nameof(PlayersSuffix)); }
     }
+
+    public string PlayersSuffix => _players is "–" or "" ? "" : $" · {_players} Spieler";
 
     private string _ping = "…";
     public string PingText

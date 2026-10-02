@@ -3,6 +3,53 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:AxoClient.UI.Controls">
     <UserControl.Resources>
+        <DataTemplate x:Key="PackActions">
+            <StackPanel>
+                <StackPanel HorizontalAlignment="Right" Visibility="{Binding Idle, Converter={StaticResource BoolToVisibility}}">
+                    <Grid Height="38" HorizontalAlignment="Right">
+                        <Border CornerRadius="9" Background="{StaticResource Accent}" Effect="{StaticResource AccentShadow}"/>
+                        <Border CornerRadius="9" Background="{StaticResource Accent}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource SplitPart}" Padding="14,0,14,0" c:Field.Corner="9,0,0,9"
+                                    Click="Install_Click" ToolTip="{Binding InstallTip}">
+                                <StackPanel Orientation="Horizontal">
+                                    <c:Icon Kind="Download" Size="15" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Installieren" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Border Width="1" Margin="0,9" Background="#40FFFFFF"/>
+                            <Button Style="{StaticResource SplitPart}" Width="34" c:Field.Corner="0,9,9,0" ToolTip="Version wählen"
+                                    Click="Versions_Click">
+                                <c:Icon Kind="ChevronDown" Size="14" StrokeWidth="1.8"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="{Binding LatestLabel}" FontSize="11.5" Foreground="{StaticResource LabelText}"
+                               HorizontalAlignment="Right" Margin="0,6,0,0"/>
+                </StackPanel>
+                <StackPanel Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel Margin="0,0,0,7">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding PercentText}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource AccentText}"/>
+                        <TextBlock Text="{Binding Stage}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource AccentText}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                    <ProgressBar Maximum="100" Value="{Binding Percent, Mode=OneWay}" IsIndeterminate="{Binding Indeterminate}"/>
+                    <TextBlock Text="{Binding BusyVersion}" FontSize="11.5" Foreground="{StaticResource LabelText}" Margin="0,7,0,0"/>
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Right" Visibility="{Binding Done, Converter={StaticResource BoolToVisibility}}">
+                    <Button Style="{StaticResource GoodButton}" Height="38" Padding="16,0" c:Field.Corner="9" Click="OpenInstalled_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <c:Icon Kind="Check" Size="14" Margin="0,0,8,0"/>
+                            <TextBlock Text="Installiert · Öffnen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding DoneVersion}" FontSize="11.5" Foreground="{StaticResource LabelText}"
+                               HorizontalAlignment="Right" Margin="0,6,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
         <DataTemplate x:Key="PackCard">
             <Border x:Name="Card" Background="{StaticResource CardBg}" CornerRadius="12" Padding="12,12,16,12" Margin="0,0,0,10">
                 <DockPanel>
@@ -15,46 +62,8 @@
                         </Border>
                     </Grid>
 
-                    <StackPanel DockPanel.Dock="Right" Width="200" VerticalAlignment="Center" Margin="16,0,0,0">
-                        <StackPanel HorizontalAlignment="Right" Visibility="{Binding Idle, Converter={StaticResource BoolToVisibility}}">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Style="{StaticResource PrimaryButton}" Height="38" Padding="14,0,16,0" c:Field.Corner="9,0,0,9"
-                                        Click="Install_Click" ToolTip="{Binding InstallTip}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <c:Icon Kind="Download" Size="15" Margin="0,0,8,0"/>
-                                        <TextBlock Text="Installieren" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource PrimaryButton}" Width="36" Height="38" Padding="0" c:Field.Corner="0,9,9,0"
-                                        BorderBrush="#38FFFFFF" BorderThickness="1,0,0,0" ToolTip="Version wählen"
-                                        Click="Versions_Click">
-                                    <c:Icon Kind="ChevronDown" Size="15"/>
-                                </Button>
-                            </StackPanel>
-                            <TextBlock Text="{Binding LatestLabel}" FontSize="11.5" Foreground="{StaticResource LabelText}"
-                                       HorizontalAlignment="Right" Margin="0,6,0,0"/>
-                        </StackPanel>
-                        <StackPanel Visibility="{Binding Busy, Converter={StaticResource BoolToVisibility}}">
-                            <DockPanel Margin="0,0,0,7">
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding PercentText}" FontSize="12" FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentText}"/>
-                                <TextBlock Text="{Binding Stage}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource AccentText}"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </DockPanel>
-                            <ProgressBar Maximum="100" Value="{Binding Percent, Mode=OneWay}" IsIndeterminate="{Binding Indeterminate}"/>
-                            <TextBlock Text="{Binding BusyVersion}" FontSize="11.5" Foreground="{StaticResource LabelText}" Margin="0,7,0,0"/>
-                        </StackPanel>
-                        <StackPanel HorizontalAlignment="Right" Visibility="{Binding Done, Converter={StaticResource BoolToVisibility}}">
-                            <Button Style="{StaticResource GoodButton}" Height="38" Padding="16,0" c:Field.Corner="9" Click="OpenInstalled_Click">
-                                <StackPanel Orientation="Horizontal">
-                                    <c:Icon Kind="Check" Size="14" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Installiert · Öffnen" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-                            <TextBlock Text="{Binding DoneVersion}" FontSize="11.5" Foreground="{StaticResource LabelText}"
-                                       HorizontalAlignment="Right" Margin="0,6,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
+                    <ContentPresenter DockPanel.Dock="Right" Width="200" VerticalAlignment="Center" Margin="16,0,0,0"
+                                      Content="{Binding}" ContentTemplate="{StaticResource PackActions}"/>
 
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
@@ -88,6 +97,61 @@
                 </Trigger>
             </DataTemplate.Triggers>
         </DataTemplate>
+
+        <DataTemplate x:Key="PackTile">
+            <Border x:Name="Card" Background="{StaticResource CardBg}" CornerRadius="12" Padding="10" Margin="0,0,14,14">
+                <DockPanel>
+                    <c:AspectBox DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <Grid>
+                            <Border CornerRadius="9" Background="{Binding Placeholder}"/>
+                            <Border CornerRadius="9">
+                                <Border.Background>
+                                    <ImageBrush ImageSource="{Binding Image}" Stretch="UniformToFill"/>
+                                </Border.Background>
+                            </Border>
+                        </Grid>
+                    </c:AspectBox>
+                    <ContentPresenter DockPanel.Dock="Bottom" Margin="4,12,4,4" Content="{Binding}"
+                                      ContentTemplate="{StaticResource PackActions}"/>
+                    <StackPanel Margin="4,0">
+                        <TextBlock Text="{Binding Project.Title}" FontSize="15" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextStrong}" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Project.Author, StringFormat='von {0}'}" FontSize="12"
+                                   Foreground="{StaticResource LabelText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Project.Description}" FontSize="12.5" Foreground="#BDBDBD" TextWrapping="Wrap"
+                                   Height="36" TextTrimming="CharacterEllipsis" LineHeight="18" Margin="0,8,0,0"/>
+                        <WrapPanel Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,10,4">
+                                <c:Icon Kind="Download" Size="12" Foreground="{StaticResource LabelText}" Margin="0,0,5,0"/>
+                                <TextBlock Text="{Binding Project.DownloadsText}" FontSize="11.5" Foreground="{StaticResource LabelText}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Border Style="{StaticResource Tag}" Background="#303030" Margin="0,0,10,4"
+                                    Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding Project.Tags}" FontSize="11.5" FontWeight="SemiBold" Foreground="#BDBDBD"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <Button Style="{StaticResource LinkButton}" FontSize="11.5" Margin="0,0,10,4" Content="Auf Modrinth"
+                                    Foreground="{StaticResource LabelText}" Click="Website_Click"/>
+                            <Button Style="{StaticResource LinkButton}" FontSize="11.5" Margin="0,0,0,4" Content="Senden"
+                                    Foreground="{StaticResource LabelText}" Click="Share_Click"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Card" Property="Background" Value="#2D2D2D"/>
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <ItemsPanelTemplate x:Key="GridPanel">
+            <c:TileGrid TileWidth="370" VerticalAlignment="Top" Margin="0,0,-14,0"/>
+        </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="ListPanel">
+            <StackPanel/>
+        </ItemsPanelTemplate>
     </UserControl.Resources>
 
     <DockPanel>
@@ -110,13 +174,25 @@
         </DockPanel>
 
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,18">
-            <TextBox x:Name="SearchBox" DockPanel.Dock="Left" Style="{StaticResource SearchBox}" Width="420"
+            <TextBox x:Name="SearchBox" DockPanel.Dock="Left" Style="{StaticResource SearchBox}" Width="300"
                      c:Field.Hint="Modpacks durchsuchen …" TextChanged="Search_TextChanged"/>
             <ComboBox x:Name="LoaderBox" DockPanel.Dock="Left" Style="{StaticResource LauncherCombo}" Height="36" Width="150"
                       Margin="10,0,0,0" SelectionChanged="Filter_Changed"/>
             <ComboBox x:Name="VersionBox" DockPanel.Dock="Left" Style="{StaticResource LauncherCombo}" Height="36" Width="150"
                       Margin="10,0,0,0" SelectionChanged="Filter_Changed"/>
-            <ComboBox x:Name="SortBox" DockPanel.Dock="Right" Style="{StaticResource LauncherCombo}" Height="36" Width="190"
+            <Border DockPanel.Dock="Right" Style="{StaticResource SegmentGroup}" Background="{StaticResource CardBg}" Margin="10,0,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="GridToggle" Style="{StaticResource SegmentIconButton}" GroupName="PackView"
+                                 ToolTip="Kartenansicht" Checked="ViewToggle_Checked">
+                        <c:Icon Kind="Grid" Size="16"/>
+                    </RadioButton>
+                    <RadioButton x:Name="ListToggle" Style="{StaticResource SegmentIconButton}" GroupName="PackView"
+                                 ToolTip="Listenansicht" Margin="2,0,0,0" Checked="ViewToggle_Checked">
+                        <c:Icon Kind="List" Size="16"/>
+                    </RadioButton>
+                </StackPanel>
+            </Border>
+            <ComboBox x:Name="SortBox" DockPanel.Dock="Right" Style="{StaticResource LauncherCombo}" Height="36" Width="170"
                       SelectionChanged="Filter_Changed"/>
             <TextBlock DockPanel.Dock="Right" Text="Sortieren:" FontSize="12.5" Foreground="{StaticResource MutedText}"
                        VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -126,7 +202,7 @@
         <Grid>
             <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
                 <StackPanel>
-                    <ItemsControl x:Name="PackList" ItemTemplate="{StaticResource PackCard}"/>
+                    <ItemsControl x:Name="PackList" ItemTemplate="{StaticResource PackCard}" ItemsPanel="{StaticResource ListPanel}"/>
                     <Button x:Name="MoreButton" Style="{StaticResource SmallButton}" Content="Mehr laden" HorizontalAlignment="Center"
                             Margin="0,4,0,12" Visibility="Collapsed" Click="More_Click"/>
                 </StackPanel>

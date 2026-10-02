@@ -81,6 +81,7 @@ public partial class LocalServersPage : UserControl
     private readonly Dictionary<string, string> _busy = new();
     private AppServices _app = null!;
     private string? _copied;
+    private bool _ready;
 
     public LocalServersPage()
     {
@@ -96,7 +97,27 @@ public partial class LocalServersPage : UserControl
     {
         _app = app;
         Host.Changed += () => Dispatcher.InvokeAsync(Refresh);
+        (app.Settings.LocalServersAsTiles ? GridToggle : ListToggle).IsChecked = true;
+        _ready = true;
+        ApplyViewMode();
         Refresh();
+    }
+
+    private void ViewToggle_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_ready)
+            return;
+        _app.Settings.LocalServersAsTiles = GridToggle.IsChecked == true;
+        _app.SaveSettings();
+        ApplyViewMode();
+        Refresh();
+    }
+
+    private void ApplyViewMode()
+    {
+        var grid = GridToggle.IsChecked == true;
+        ServerList.ItemTemplateSelector = (DataTemplateSelector)FindResource(grid ? "CardSelector" : "RowSelector");
+        ServerList.ItemsPanel = (ItemsPanelTemplate)FindResource(grid ? "GridPanel" : "ListPanel");
     }
 
     private void Refresh()

@@ -311,7 +311,7 @@ public partial class ContentPanel : UserControl
                 break;
 
             case ContentType.Shader when !_store.HasModMatching("iris", "oculus"):
-                var (mod, slug) = _inst.Loader is LoaderType.Forge or LoaderType.NeoForge ? ("Oculus", "oculus") : ("Iris", "iris");
+                var (mod, slug) = _inst.Loader == LoaderType.Forge ? ("Oculus", "oculus") : ("Iris", "iris");
                 text = $"Damit Shader funktionieren, wird die Mod {mod} benötigt.";
                 button = $"{mod} installieren";
                 _hintAction = () => _ = InstallShaderModAsync(slug);

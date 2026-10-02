@@ -83,6 +83,13 @@ public partial class HomePage : UserControl
         _app.Instances.Select(Ui.DataOf<InstanceItem>(sender).Installation);
     }
 
+    private void SkinArea_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var height = Math.Max(0, Math.Min(e.NewSize.Height, e.NewSize.Width * 1.5));
+        SkinView.Height = height;
+        SkinView.Width = height / 1.5;
+    }
+
     private void UpdateAccount()
     {
         SkinView.SetSkin(_app.Accounts.Profile?.SkinPng, _app.Accounts.Profile?.SkinSlim ?? false, _app.Capes.DisplayPng);

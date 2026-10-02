@@ -7,10 +7,14 @@
     <UserControl.Resources>
         <DataTemplate x:Key="Thumb">
             <Grid>
-                <Border Background="{Binding Placeholder}">
+                <Border Background="{Binding Placeholder}" CornerRadius="8">
                     <c:Icon Kind="Cube" Size="22" Foreground="#66FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
-                <Image Source="{Binding Image}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Border CornerRadius="8">
+                    <Border.Background>
+                        <ImageBrush ImageSource="{Binding Image}" Stretch="UniformToFill"/>
+                    </Border.Background>
+                </Border>
             </Grid>
         </DataTemplate>
 
@@ -33,9 +37,30 @@
                                 <Grid.Clip>
                                     <RectangleGeometry RadiusX="8" RadiusY="8" Rect="0,0,2000,2000"/>
                                 </Grid.Clip>
-                                <Border CornerRadius="8" ClipToBounds="True">
-                                    <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource Thumb}"/>
+                                <Border CornerRadius="8" Background="{Binding Placeholder}"/>
+                                <Border CornerRadius="8" Opacity="0.55" ClipToBounds="True">
+                                    <Border Margin="-30">
+                                        <Border.Background>
+                                            <ImageBrush ImageSource="{Binding Image}" Stretch="UniformToFill"/>
+                                        </Border.Background>
+                                        <Border.Effect>
+                                            <BlurEffect Radius="24"/>
+                                        </Border.Effect>
+                                    </Border>
                                 </Border>
+                                <Grid Margin="0,16,0,34" HorizontalAlignment="Center"
+                                      Width="{Binding ActualHeight, RelativeSource={RelativeSource Self}}">
+                                    <Border CornerRadius="16" Background="#26FFFFFF" Effect="{StaticResource SoftShadow}">
+                                        <c:Icon Kind="Cube" Size="28" Foreground="#80FFFFFF" HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                                    </Border>
+                                    <Border CornerRadius="16">
+                                        <Border.Background>
+                                            <ImageBrush ImageSource="{Binding Image}" Stretch="UniformToFill"
+                                                        RenderOptions.BitmapScalingMode="HighQuality"/>
+                                        </Border.Background>
+                                    </Border>
+                                </Grid>
                                 <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8" Padding="8,4"
                                         CornerRadius="6" Background="#80000000">
                                     <TextBlock Text="{Binding VersionLabel}" FontSize="11" FontWeight="SemiBold"
@@ -64,7 +89,7 @@
                     <Button Style="{StaticResource RowButton}" Click="Open_Click" Margin="0,0,14,0"
                             ToolTip="{Binding Name, StringFormat='{}{0} öffnen'}">
                         <DockPanel>
-                            <Border DockPanel.Dock="Left" Width="96" Height="54" CornerRadius="6" ClipToBounds="True"
+                            <Border DockPanel.Dock="Left" Width="54" Height="54"
                                     Margin="0,0,14,0">
                                 <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource Thumb}"/>
                             </Border>
@@ -86,7 +111,7 @@
         </DataTemplate>
 
         <ItemsPanelTemplate x:Key="GridPanel">
-            <UniformGrid Columns="4" VerticalAlignment="Top" Margin="0,0,-16,0"/>
+            <c:TileGrid TileWidth="280" VerticalAlignment="Top" Margin="0,0,-16,0"/>
         </ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ListPanel">
             <StackPanel/>
@@ -156,7 +181,7 @@
         </DockPanel>
 
         <DockPanel x:Name="DetailView" Margin="28,24,28,24" Visibility="Collapsed">
-            <Border DockPanel.Dock="Top" Height="128" CornerRadius="14" Background="{StaticResource DeepBg}" ClipToBounds="True"
+            <Border DockPanel.Dock="Top" Height="200" CornerRadius="14" Background="{StaticResource DeepBg}" ClipToBounds="True"
                     Margin="0,0,0,16">
                 <Grid x:Name="Hero">
                     <Border x:Name="HeroArt" CornerRadius="14"/>

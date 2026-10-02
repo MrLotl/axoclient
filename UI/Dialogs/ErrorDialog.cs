@@ -22,9 +22,16 @@ public static class ErrorDialog
     {
         var detailArea = new StackPanel { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 10, 0, 0) };
         var detailBox = ReadOnlyText(details);
-        detailBox.FontFamily = new FontFamily("Consolas");
-        detailBox.FontSize = 11;
-        detailArea.Children.Add(Ui.Scroll(detailBox, 200));
+        detailBox.FontFamily = Ui.Resource<FontFamily>("MonoFont");
+        detailBox.FontSize = 11.5;
+        detailBox.Foreground = Ui.Resource<Brush>("TextSecondary");
+        detailArea.Children.Add(new Border
+        {
+            Background = Ui.Resource<Brush>("DeepBg"),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(12, 10, 4, 10),
+            Child = Ui.Scroll(detailBox, 220)
+        });
 
         Button? copy = null;
         copy = Ui.Button("Kopieren", () =>
@@ -53,12 +60,13 @@ public static class ErrorDialog
         detailArea.Children.Add(buttons);
 
         Button? toggle = null;
-        toggle = Ui.Button("Einzelheiten anzeigen", () =>
+        toggle = new Button { Content = "Einzelheiten anzeigen", Style = Ui.Resource<Style>("LinkButton") };
+        toggle.Click += (_, _) =>
         {
             var show = detailArea.Visibility != Visibility.Visible;
             Ui.Show(detailArea, show);
             toggle!.Content = show ? "Einzelheiten ausblenden" : "Einzelheiten anzeigen";
-        });
+        };
         toggle.HorizontalAlignment = HorizontalAlignment.Left;
         toggle.Margin = new Thickness(0, 12, 0, 0);
 

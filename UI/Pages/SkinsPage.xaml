@@ -137,8 +137,20 @@
 
         <Border CornerRadius="14" Background="{StaticResource StageBrush}" Padding="20">
             <DockPanel>
-                <TextBlock x:Name="PreviewTitle" DockPanel.Dock="Top" Text="AKTUELLER SKIN" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{StaticResource MutedText}"/>
+                <DockPanel DockPanel.Dock="Top">
+                    <Border x:Name="WearToggle" DockPanel.Dock="Right" Style="{StaticResource SegmentGroup}" Padding="2"
+                            Background="#26000000" Visibility="Collapsed" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="WearCape" Style="{StaticResource SegmentButton}" GroupName="CapeWear" Content="Cape"
+                                         Height="26" Padding="12,0" FontSize="12" IsChecked="True" Click="Wear_Click"/>
+                            <RadioButton x:Name="WearElytra" Style="{StaticResource SegmentButton}" GroupName="CapeWear"
+                                         Content="Elytra" Height="26" Padding="12,0" FontSize="12" Margin="2,0,0,0"
+                                         Click="Wear_Click"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="PreviewTitle" Text="AKTUELLER SKIN" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{StaticResource MutedText}" VerticalAlignment="Center"/>
+                </DockPanel>
                 <StackPanel DockPanel.Dock="Bottom">
                     <Border Style="{StaticResource Row}" Padding="12,10" CornerRadius="10" Margin="0,0,0,8">
                         <DockPanel>
@@ -221,7 +233,7 @@
                         <ItemsControl x:Name="LibraryList" ItemTemplate="{StaticResource SkinCard}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <UniformGrid Columns="3" VerticalAlignment="Top" Margin="0,0,-16,0"/>
+                                    <c:TileGrid TileWidth="250" VerticalAlignment="Top" Margin="0,0,-16,0"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>
@@ -242,7 +254,7 @@
                         <ItemsControl x:Name="McCapes" ItemTemplate="{StaticResource CapeCard}" Margin="0,0,0,8">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <UniformGrid Columns="4" VerticalAlignment="Top" Margin="0,0,-14,0"/>
+                                    <c:TileGrid TileWidth="190" VerticalAlignment="Top" Margin="0,0,-14,0"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>
@@ -254,7 +266,7 @@
                         <ItemsControl x:Name="AxoCapes" ItemTemplateSelector="{StaticResource CapeSelector}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <UniformGrid Columns="4" VerticalAlignment="Top" Margin="0,0,-14,0"/>
+                                    <c:TileGrid TileWidth="190" VerticalAlignment="Top" Margin="0,0,-14,0"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>

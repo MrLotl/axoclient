@@ -72,16 +72,41 @@ public static class ContentDialogs
         sort.SelectedIndex = 0;
         sort.Width = 190;
         sort.Margin = new Thickness(10, 0, 0, 0);
+        var tiles = app.Settings.BrowseAsTiles;
+        var gridToggle = ViewToggle("Grid", "Kartenansicht", tiles);
+        var listToggle = ViewToggle("List", "Listenansicht", !tiles);
+        listToggle.Margin = new Thickness(2, 0, 0, 0);
+        var viewToggle = new Border
+        {
+            Style = Ui.Resource<Style>("SegmentGroup"),
+            Margin = new Thickness(10, 0, 0, 0),
+            Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { gridToggle, listToggle } }
+        };
         var searchRow = new DockPanel();
+        DockPanel.SetDock(viewToggle, Dock.Right);
         DockPanel.SetDock(sort, Dock.Right);
+        searchRow.Children.Add(viewToggle);
         searchRow.Children.Add(sort);
         searchRow.Children.Add(search);
 
         var chips = new WrapPanel { Margin = new Thickness(0, 12, 0, 12) };
-        var results = new StackPanel();
+        Panel results = tiles ? ResultGrid() : new StackPanel();
         var more = new Button { Style = Ui.Resource<Style>("SmallButton"), Content = "Mehr laden", HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 8), Visibility = Visibility.Collapsed };
         var resultStatus = new TextBlock { FontSize = 13, Foreground = Ui.Resource<Brush>("DimText"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 40, 0, 40), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap };
         var resultStack = new StackPanel { Children = { results, resultStatus, more } };
+        void SetTiles(bool value)
+        {
+            if (tiles == value)
+                return;
+            tiles = value;
+            app.Settings.BrowseAsTiles = value;
+            app.SaveSettings();
+            var index = resultStack.Children.IndexOf(results);
+            resultStack.Children.RemoveAt(index);
+            results = value ? ResultGrid() : new StackPanel();
+            resultStack.Children.Insert(index, results);
+            _ = LoadAsync(reset: true);
+        }
         var resultScroll = new ScrollViewer { Content = resultStack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 0, -8, 0), Padding = new Thickness(0, 0, 8, 0) };
         var right = new DockPanel();
         DockPanel.SetDock(searchRow, Dock.Top);
@@ -208,7 +233,7 @@ public static class ContentDialogs
                     ? found.Items.OrderBy(i => i.Title, StringComparer.CurrentCultureIgnoreCase).ToList()
                     : found.Items;
                 foreach (var project in items)
-                    results.Children.Add(ResultRow(project));
+                    results.Children.Add(tiles ? ResultTile(project) : ResultRow(project));
                 RenderResultStates();
                 resultStatus.Text = results.Children.Count == 0 ? "Nichts gefunden. Versuch einen anderen Suchbegriff." : "";
                 Ui.Show(resultStatus, results.Children.Count == 0);
@@ -221,11 +246,9 @@ public static class ContentDialogs
             }
         }
 
-        FrameworkElement ResultRow(ContentProject project)
+        Button InstallButton(ContentProject project)
         {
-            var icon = IconTile(project.Title, null, project.IconUrl, 52, 12);
-            icon.Margin = new Thickness(0, 0, 14, 0);
-            var install = new Button { Width = 128, Height = 34, Margin = new Thickness(12, 0, 0, 0) };
+            var install = new Button { Height = 34 };
             buttons[project] = install;
             install.Click += (_, _) =>
             {
@@ -236,6 +259,53 @@ public static class ContentDialogs
                 RenderInstalled();
                 RenderResultStates();
             };
+            return install;
+        }
+
+        FrameworkElement ResultTile(ContentProject project)
+        {
+            var icon = IconTile(project.Title, null, project.IconUrl, 56, 13);
+            icon.HorizontalAlignment = HorizontalAlignment.Left;
+            var install = InstallButton(project);
+            install.Margin = new Thickness(0, 12, 0, 0);
+            var texts = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
+            texts.Children.Add(new TextBlock { Text = project.Title, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Ui.Resource<Brush>("TextStrong"), TextTrimming = TextTrimming.CharacterEllipsis });
+            if (project.Author.Length > 0)
+                texts.Children.Add(new TextBlock { Text = "von " + project.Author, FontSize = 11.5, Foreground = Ui.Resource<Brush>("LabelText"), TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 0) });
+            texts.Children.Add(new TextBlock { Text = project.Description, FontSize = 12, Foreground = Ui.Frozen(Color.FromRgb(0xBD, 0xBD, 0xBD)), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, Height = 34, LineHeight = 17, Margin = new Thickness(0, 6, 0, 0) });
+            var meta = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            meta.Children.Add(new Icon { Kind = "Download", Size = 12, Foreground = Ui.Resource<Brush>("LabelText"), Margin = new Thickness(0, 0, 6, 0) });
+            meta.Children.Add(new TextBlock { Text = project.DownloadsText, FontSize = 11.5, Foreground = Ui.Resource<Brush>("LabelText") });
+            texts.Children.Add(meta);
+            var dock = new DockPanel();
+            DockPanel.SetDock(icon, Dock.Top);
+            DockPanel.SetDock(install, Dock.Bottom);
+            dock.Children.Add(icon);
+            dock.Children.Add(install);
+            dock.Children.Add(texts);
+            return ResultCard(project, dock, new Thickness(14), new Thickness(0, 0, 8, 8));
+        }
+
+        FrameworkElement ResultCard(ContentProject project, UIElement content, Thickness padding, Thickness margin)
+        {
+            var card = new Border { Padding = padding, CornerRadius = new CornerRadius(12), Background = Ui.Resource<Brush>("InsetBg"), Margin = margin, Child = content, Cursor = Cursors.Hand, ToolTip = "Auf Modrinth ansehen (Doppelklick)" };
+            card.MouseEnter += (_, _) => card.Background = Ui.Resource<Brush>("CardHover");
+            card.MouseLeave += (_, _) => card.Background = Ui.Resource<Brush>("InsetBg");
+            card.MouseLeftButtonDown += (_, e) =>
+            {
+                if (e.ClickCount == 2)
+                    Shell.OpenUrl(project.WebsiteUrl);
+            };
+            return card;
+        }
+
+        FrameworkElement ResultRow(ContentProject project)
+        {
+            var icon = IconTile(project.Title, null, project.IconUrl, 52, 12);
+            icon.Margin = new Thickness(0, 0, 14, 0);
+            var install = InstallButton(project);
+            install.Width = 128;
+            install.Margin = new Thickness(12, 0, 0, 0);
             var titleLine = new StackPanel { Orientation = Orientation.Horizontal };
             titleLine.Children.Add(new TextBlock { Text = project.Title, FontSize = 14.5, FontWeight = FontWeights.SemiBold, Foreground = Ui.Resource<Brush>("TextStrong") });
             if (project.Author.Length > 0)
@@ -253,15 +323,7 @@ public static class ContentDialogs
             dock.Children.Add(icon);
             dock.Children.Add(install);
             dock.Children.Add(texts);
-            var card = new Border { Padding = new Thickness(12, 12, 14, 12), CornerRadius = new CornerRadius(12), Background = Ui.Resource<Brush>("InsetBg"), Margin = new Thickness(0, 0, 0, 8), Child = dock, Cursor = Cursors.Hand, ToolTip = "Auf Modrinth ansehen (Doppelklick)" };
-            card.MouseEnter += (_, _) => card.Background = Ui.Resource<Brush>("CardHover");
-            card.MouseLeave += (_, _) => card.Background = Ui.Resource<Brush>("InsetBg");
-            card.MouseLeftButtonDown += (_, e) =>
-            {
-                if (e.ClickCount == 2)
-                    Shell.OpenUrl(project.WebsiteUrl);
-            };
-            return card;
+            return ResultCard(project, dock, new Thickness(12, 12, 14, 12), new Thickness(0, 0, 0, 8));
         }
 
         var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
@@ -316,6 +378,8 @@ public static class ContentDialogs
                 await app.Dialogs.ShowMessageAsync("Nicht alles konnte installiert werden", string.Join("\n", failed));
         };
 
+        gridToggle.Checked += (_, _) => SetTiles(true);
+        listToggle.Checked += (_, _) => SetTiles(false);
         RenderChips();
         RenderInstalled();
         _ = LoadAsync(reset: true);
@@ -335,6 +399,18 @@ public static class ContentDialogs
         await app.Dialogs.ShowPanelAsync(root, 1120);
         timer.Stop();
     }
+
+    private static RadioButton ViewToggle(string icon, string tip, bool isChecked) => new()
+    {
+        Style = Ui.Resource<Style>("SegmentIconButton"),
+        GroupName = "BrowseView",
+        IsChecked = isChecked,
+        ToolTip = tip,
+        Content = new Icon { Kind = icon, Size = 16 }
+    };
+
+    private static UniformGrid ResultGrid() =>
+        new() { Columns = 3, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 0, -8, 0) };
 
     private static void ApplyInstallButton(Button button, ContentProject project, bool pending, bool installed)
     {

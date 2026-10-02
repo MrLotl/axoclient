@@ -35,7 +35,7 @@ public static class UpgradeDialog
             Ui.Note($"\"{inst.Name}\" läuft auf {inst.Loader} {inst.MinecraftVersion}. Der Launcher sucht für jeden Mod, " +
                     "jedes Ressourcenpaket und jeden Shader eine passende Version und legt daraus eine neue Instanz an. " +
                     "Diese Instanz bleibt unverändert.", 12),
-            Ui.Label("Mod-Loader"), Ui.Row(loaders.Values.Cast<UIElement>().ToArray()),
+            Ui.Label("Mod-Loader"), Segments(loaders.Values),
             Ui.Label("Auf welche Minecraft-Version?"), versions, problem);
 
         LoaderType Chosen() => loaders.First(l => l.Value.IsChecked == true).Key;
@@ -72,7 +72,8 @@ public static class UpgradeDialog
             radio.Checked += (_, _) => _ = LoadVersionsAsync();
         _ = LoadVersionsAsync();
 
-        if (!await app.Dialogs.ShowFormAsync("Instanz hochziehen", form, "Prüfen", () => versions.SelectedItem is string))
+        if (!await app.Dialogs.ShowFormAsync("Instanz hochziehen", form, "Prüfen", () => versions.SelectedItem is string,
+                520, $"{inst.Name} · {inst.Loader} {inst.MinecraftVersion}", "ArrowUp"))
             return null;
         return ((string)versions.SelectedItem!, Chosen());
     }
@@ -88,14 +89,14 @@ public static class UpgradeDialog
         var servers = Ui.Check("Serverliste mitnehmen");
 
         var form = Ui.Stack(
-            Ui.Note($"Ergebnis für Minecraft {plan.TargetVersion}: {plan.Summary}."),
-            Ui.Scroll(EntryList(plan), 210),
+            Ui.Scroll(EntryList(plan), 240),
             Ui.Label("Name der neuen Instanz"), nameBox,
             withPrereleases, worlds, options, servers,
             Ui.Note($"\"{plan.Source.Name}\" bleibt so, wie sie ist. Die Welten werden kopiert, " +
                     "nicht verschoben – in der alten Instanz sind sie also weiter da.", 0, 11));
 
-        if (!await app.Dialogs.ShowFormAsync("Neue Instanz anlegen", form, "Anlegen", () => nameBox.Text.Trim().Length > 0))
+        if (!await app.Dialogs.ShowFormAsync("Neue Instanz anlegen", form, "Anlegen", () => nameBox.Text.Trim().Length > 0,
+                560, $"Minecraft {plan.TargetVersion} · {plan.Summary}", "ArrowUp"))
             return null;
 
         var carry = plan.Ready.ToList();
@@ -115,6 +116,23 @@ public static class UpgradeDialog
         return result.Instance;
     }
 
+    private static Border Segments(IEnumerable<RadioButton> buttons)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        foreach (var button in buttons)
+        {
+            button.Margin = new Thickness(row.Children.Count == 0 ? 0 : 2, 0, 0, 0);
+            row.Children.Add(button);
+        }
+        return new Border
+        {
+            Style = Ui.Resource<Style>("SegmentGroup"),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(0, 0, 0, 14),
+            Child = row
+        };
+    }
+
     private static UIElement EntryList(UpgradePlan plan)
     {
         if (plan.Entries.Count == 0)
@@ -123,7 +141,7 @@ public static class UpgradeDialog
         var list = new StackPanel();
         foreach (var entry in plan.Entries)
         {
-            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+            var row = new DockPanel();
             var state = new TextBlock
             {
                 Text = entry.StateText,
@@ -140,11 +158,25 @@ public static class UpgradeDialog
             DockPanel.SetDock(state, Dock.Right);
             row.Children.Add(state);
 
-            var name = new TextBlock { Foreground = Brushes.White, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            var name = new TextBlock
+            {
+                Foreground = Ui.Resource<Brush>("TextStrong"),
+                FontSize = 12.5,
+                FontWeight = FontWeights.Medium,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center
+            };
             name.Inlines.Add(new Run(entry.Title));
             name.Inlines.Add(new Run($"  ·  {entry.TypeText}") { Foreground = Ui.Resource<Brush>("MutedText") });
             row.Children.Add(name);
-            list.Children.Add(row);
+            list.Children.Add(new Border
+            {
+                Background = Ui.Resource<Brush>("RowBg"),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(0, 0, 0, 4),
+                Child = row
+            });
         }
         return list;
     }

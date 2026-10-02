@@ -24,43 +24,72 @@ public sealed class IssueList
 
     private UIElement Entry(Issue issue, bool withMarker)
     {
-        var panel = new StackPanel { Margin = new Thickness(0, 0, 0, withMarker ? 12 : 0) };
-        var head = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 2) };
+        var (icon, color) = issue.Severity switch
+        {
+            IssueSeverity.Error => ("Warning", Color.FromRgb(0xF4, 0x70, 0x67)),
+            IssueSeverity.Warning => ("Warning", Color.FromRgb(0xE3, 0xB3, 0x41)),
+            _ => ("Info", Color.FromRgb(0x8A, 0x8F, 0x98))
+        };
+
+        var row = new DockPanel();
         if (withMarker)
-            head.Children.Add(new TextBlock
+        {
+            var tile = new Border
             {
-                Text = issue.Marker,
-                Foreground = issue.Severity switch
+                Width = 30,
+                Height = 30,
+                CornerRadius = new CornerRadius(8),
+                Background = Ui.Frozen(Color.FromArgb(0x24, color.R, color.G, color.B)),
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 0, 12, 0),
+                Child = new Icon
                 {
-                    IssueSeverity.Error => Ui.ProblemBrush,
-                    IssueSeverity.Warning => Ui.WarningBrush,
-                    _ => Ui.InfoBrush
-                },
-                FontSize = 12,
-                Margin = new Thickness(0, 1, 8, 0)
-            });
-        head.Children.Add(new TextBlock
+                    Kind = icon,
+                    Size = 15,
+                    Foreground = Ui.Frozen(color),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            DockPanel.SetDock(tile, Dock.Left);
+            row.Children.Add(tile);
+        }
+
+        var texts = new StackPanel();
+        texts.Children.Add(new TextBlock
         {
             Text = issue.Title,
-            Foreground = Brushes.White,
+            Foreground = Ui.Resource<Brush>("TextStrong"),
+            FontSize = 13.5,
             FontWeight = FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap,
-            MaxWidth = 340
+            TextWrapping = TextWrapping.Wrap
         });
-        panel.Children.Add(head);
-
-        var indent = withMarker ? 20 : 0;
-        var detail = Ui.Note(issue.Description, withMarker ? 0 : 6, 12);
-        detail.Margin = new Thickness(indent, 0, 0, withMarker ? 0 : 6);
-        panel.Children.Add(detail);
-
+        if (!string.IsNullOrEmpty(issue.Description))
+            texts.Children.Add(new TextBlock
+            {
+                Text = issue.Description,
+                Foreground = Ui.Resource<Brush>("MutedText"),
+                FontSize = 12.5,
+                LineHeight = 18,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 3, 0, 0)
+            });
         if (issue.CanFix)
         {
             var box = Ui.Check(issue.FixText ?? "Beheben", issue.Selected);
-            box.Margin = new Thickness(indent, withMarker ? 6 : 0, 0, withMarker ? 0 : 14);
+            box.Margin = new Thickness(0, 10, 0, 0);
             _boxes.Add((box, issue));
-            panel.Children.Add(box);
+            texts.Children.Add(box);
         }
-        return panel;
+        row.Children.Add(texts);
+
+        return new Border
+        {
+            Background = Ui.Resource<Brush>("RowBg"),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(12),
+            Margin = new Thickness(0, 0, 0, 8),
+            Child = row
+        };
     }
 }

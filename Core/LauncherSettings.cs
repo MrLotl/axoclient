@@ -23,6 +23,9 @@ public class LauncherSettings
     public bool ShowOldVersions { get; set; }
     public bool InstancesAsTiles { get; set; }
     public bool ContentAsTiles { get; set; }
+    public bool ModpacksAsTiles { get; set; }
+    public bool LocalServersAsTiles { get; set; } = true;
+    public bool BrowseAsTiles { get; set; }
 
     public bool BadgeEnabled { get; set; } = true;
     public string? BadgeToken { get; set; }
@@ -41,6 +44,14 @@ public class LauncherSettings
     public AfterLaunchAction AfterLaunch { get; set; } = AfterLaunchAction.Minimize;
     public bool AutostartMinimized { get; set; } = true;
     public bool AutoUpdate { get; set; }
+    public bool? FirstStartDone { get; set; }
+
+    [JsonIgnore]
+    public bool SetupDone
+    {
+        get => FirstStartDone == true;
+        set => FirstStartDone = value;
+    }
     public HashSet<string> SeenNotices { get; set; } = [];
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -59,10 +70,11 @@ public class LauncherSettings
         {
             settings = JsonSerializer.Deserialize<LauncherSettings>(File.ReadAllText(path), JsonFiles.Indented)
                        ?? new LauncherSettings();
+            settings.FirstStartDone ??= true;
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
-            settings = new LauncherSettings();
+            settings = new LauncherSettings { FirstStartDone = false };
         }
         catch (Exception ex)
         {

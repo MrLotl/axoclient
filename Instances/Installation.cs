@@ -24,6 +24,9 @@ public static class LoaderTypes
         _ => "fabric"
     };
 
+    public static string[] ModrinthNames(this LoaderType loader) =>
+        loader == LoaderType.Quilt ? ["quilt", "fabric"] : [loader.ModrinthName()];
+
     public static bool IsForgeLike(this LoaderType loader) => loader is LoaderType.Forge or LoaderType.NeoForge;
 
     public static bool IsFabricLike(this LoaderType loader) => loader is LoaderType.Fabric or LoaderType.Quilt;

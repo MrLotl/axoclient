@@ -30,7 +30,9 @@ public sealed class CapeEditorDialog
     ];
 
     private static readonly (string Label, int Factor)[] Resolutions =
-        [("10 × 16 · Standard", 1), ("20 × 32 · HD", 2), ("40 × 64 · Ultra HD", 4)];
+        [("10 × 16 · Standard", 1), ("20 × 32 · HD", 2), ("40 × 64 · Ultra HD", 4), ("80 × 128 · 8-fach", 8), ("160 × 256 · 16-fach", 16)];
+
+    private const double MinLayerZoom = 0.2, MaxLayerZoom = 8;
 
     private readonly AppServices _app;
     private readonly byte[] _skin;
@@ -67,6 +69,12 @@ public sealed class CapeEditorDialog
     private readonly TextBlock _fileTitle = new() { FontSize = 15, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _fileSub = new() { FontSize = 12.5, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 0) };
     private Point? _dragFrom;
+    private BitmapSource? _layer;
+    private double _layerZoom = 1, _layerX, _layerY;
+    private readonly Dictionary<int, Color?> _strokes = [];
+    private Point? _moveFrom;
+    private (double X, double Y) _moveBase;
+    private readonly TextBlock _hint = new() { FontSize = 11.5, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 10, 0, 0) };
 
     private CapeEditorDialog(AppServices app)
     {
@@ -84,6 +92,11 @@ public sealed class CapeEditorDialog
         _previewTimer.Tick += (_, _) => UpdatePreview();
         _canvas.CellPainted += Paint;
         _canvas.StrokeEnded += SchedulePreview;
+        _canvas.PreviewMouseLeftButtonDown += MoveStart;
+        _canvas.PreviewMouseMove += MoveDrag;
+        _canvas.PreviewMouseLeftButtonUp += MoveEnd;
+        _canvas.MouseWheel += MoveZoom;
+        _hint.Foreground = Ui.Resource<Brush>("DimText");
         _canvas.Load(10, 16, Enumerable.Repeat<Color?>(Color.FromRgb(0x3B, 0x2A, 0x4E), 160).ToArray());
     }
 
@@ -214,9 +227,9 @@ public sealed class CapeEditorDialog
     private FrameworkElement BuildPixelView()
     {
         var canvasArea = new Grid { Background = DotGrid() };
-        var tools = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 16) };
+        var tools = new UniformGrid { Columns = 5, Margin = new Thickness(0, 0, 0, 16) };
         var group = Guid.NewGuid().ToString("N");
-        foreach (var (tool, icon, label) in new[] { ("pen", "Pencil", "Stift"), ("eraser", "Eraser", "Radierer"), ("fill", "Bucket", "Füllen"), ("pick", "Pipette", "Farbe aufnehmen") })
+        foreach (var (tool, icon, label) in new[] { ("pen", "Pencil", "Stift"), ("eraser", "Eraser", "Radierer"), ("fill", "Bucket", "Füllen"), ("pick", "Pipette", "Farbe aufnehmen"), ("move", "Move", "Bild verschieben und zoomen") })
         {
             var button = new RadioButton
             {
@@ -229,7 +242,11 @@ public sealed class CapeEditorDialog
                 ToolTip = label,
                 Content = new Icon { Kind = icon, Size = 16 }
             };
-            button.Checked += (_, _) => _tool = tool;
+            button.Checked += (_, _) =>
+            {
+                _tool = tool;
+                UpdateHint();
+            };
             _tools.Add((button, tool));
             tools.Children.Add(button);
         }
@@ -292,7 +309,16 @@ public sealed class CapeEditorDialog
         resolution.SelectionChanged += (_, _) =>
         {
             _factor = Resolutions[Math.Max(0, resolution.SelectedIndex)].Factor;
-            _canvas.Resize(10 * _factor, 16 * _factor);
+            if (_layer != null && _strokes.Count == 0)
+            {
+                _canvas.Load(10 * _factor, 16 * _factor, new Color?[160 * _factor * _factor]);
+                RenderLayer();
+            }
+            else
+            {
+                DropLayer();
+                _canvas.Resize(10 * _factor, 16 * _factor);
+            }
             FitCanvas();
             SchedulePreview();
         };
@@ -303,6 +329,7 @@ public sealed class CapeEditorDialog
         import.Background = Ui.Resource<Brush>("ChipBg");
         var clear = DialogParts.Make("TextButton", "Alles leeren", () =>
         {
+            DropLayer();
             _canvas.Clear();
             SchedulePreview();
         });
@@ -321,7 +348,7 @@ public sealed class CapeEditorDialog
                 Ui.Label("Werkzeug"), tools,
                 Ui.Label("Farbe"), palette, current,
                 Spaced(Ui.Label("Pixel"), 16), resolution,
-                new TextBlock { Text = "Beim Wechsel wird dein Bild auf die neue Größe umgerechnet.", FontSize = 11.5, Foreground = Ui.Resource<Brush>("LabelText"), TextWrapping = TextWrapping.Wrap }
+                new TextBlock { Text = "Beim Wechsel wird dein Bild umgerechnet. Ein importiertes Bild, auf das noch nicht gemalt wurde, wird in der neuen Auflösung neu eingesetzt.", FontSize = 11.5, Foreground = Ui.Resource<Brush>("LabelText"), TextWrapping = TextWrapping.Wrap }
             }
         });
         var toolsBorder = new Border
@@ -333,12 +360,11 @@ public sealed class CapeEditorDialog
             Child = toolsColumn
         };
 
-        var hint = new TextBlock { Text = "Klicken und ziehen zum Malen", FontSize = 11.5, Foreground = Ui.Resource<Brush>("DimText"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 10, 0, 0) };
         canvasArea.Children.Add(new StackPanel
         {
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Children = { new Border { Effect = Ui.Resource<System.Windows.Media.Effects.Effect>("SoftShadow"), Child = _canvas }, hint }
+            Children = { new Border { Effect = Ui.Resource<System.Windows.Media.Effects.Effect>("SoftShadow"), Child = _canvas }, _hint }
         });
         canvasArea.SizeChanged += (_, _) => FitCanvas();
 
@@ -347,13 +373,15 @@ public sealed class CapeEditorDialog
         view.Children.Add(toolsBorder);
         view.Children.Add(canvasArea);
         SetColor(_color);
+        UpdateHint();
         return view;
 
         void FitCanvas()
         {
             var width = Math.Max(120, canvasArea.ActualWidth - 60);
             var height = Math.Max(160, canvasArea.ActualHeight - 70);
-            _canvas.CellSize = Math.Floor(Math.Min(width / _canvas.Columns, height / _canvas.Rows));
+            var size = Math.Min(width / _canvas.Columns, height / _canvas.Rows);
+            _canvas.CellSize = size >= 4 ? Math.Floor(size) : Math.Max(1, Math.Floor(size * 4) / 4);
             _canvas.InvalidateMeasure();
             _canvas.InvalidateVisual();
         }
@@ -582,7 +610,7 @@ public sealed class CapeEditorDialog
         _color = color;
         _currentSwatch.Background = new SolidColorBrush(color);
         _hex.Text = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-        if (_tool is "eraser" or "pick")
+        if (_tool is "eraser" or "pick" or "move")
             SelectTool("pen");
     }
 
@@ -619,12 +647,18 @@ public sealed class CapeEditorDialog
         {
             case "pen":
                 _canvas[index] = _color;
+                RememberStroke(index);
                 break;
             case "eraser":
                 _canvas[index] = null;
+                RememberStroke(index);
                 break;
             case "fill" when start:
+                var before = (Color?[])_canvas.Pixels.Clone();
                 _canvas.Fill(index, _color);
+                for (var i = 0; i < before.Length; i++)
+                    if (before[i] != _canvas.Pixels[i])
+                        RememberStroke(i);
                 break;
             case "pick" when start:
                 if (_canvas[index] is { } picked)
@@ -646,22 +680,10 @@ public sealed class CapeEditorDialog
         try
         {
             var image = Images.Decode(File.ReadAllBytes(dialog.FileName));
-            int columns = _canvas.Columns, rows = _canvas.Rows;
-            var visual = new DrawingVisual();
-            RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
-            using (var dc = visual.RenderOpen())
-            {
-                var scale = Math.Max((double)columns / image.PixelWidth, (double)rows / image.PixelHeight);
-                double width = image.PixelWidth * scale, height = image.PixelHeight * scale;
-                dc.DrawImage(image, new Rect((columns - width) / 2, (rows - height) / 2, width, height));
-            }
-            var bitmap = new RenderTargetBitmap(columns, rows, 96, 96, PixelFormats.Pbgra32);
-            bitmap.Render(visual);
-            var (pixels, _, _) = Images.ReadBgra(bitmap);
-            var colors = new Color?[columns * rows];
-            for (var i = 0; i < colors.Length; i++)
-                colors[i] = pixels[i * 4 + 3] < 40 ? null : Color.FromRgb(pixels[i * 4 + 2], pixels[i * 4 + 1], pixels[i * 4]);
-            _canvas.Load(columns, rows, colors);
+            if (image.PixelWidth > 1024)
+                image = Images.Decode(File.ReadAllBytes(dialog.FileName), 1024);
+            StartLayer(image);
+            SelectTool("move");
             if (_name.Text.Trim().Length == 0)
                 _name.Text = Path.GetFileNameWithoutExtension(dialog.FileName);
             SchedulePreview();
@@ -674,6 +696,120 @@ public sealed class CapeEditorDialog
         }
     }
 
+    private void StartLayer(BitmapSource image)
+    {
+        _layer = image;
+        _layerZoom = 1;
+        _layerX = _layerY = 0;
+        _strokes.Clear();
+        RenderLayer();
+        SchedulePreview();
+        Validate();
+    }
+
+    private void DropLayer()
+    {
+        _layer = null;
+        _strokes.Clear();
+        UpdateHint();
+    }
+
+    private void RememberStroke(int index)
+    {
+        if (_layer != null)
+            _strokes[index] = _canvas[index];
+    }
+
+    private void RenderLayer()
+    {
+        if (_layer is not { } image)
+            return;
+        int columns = _canvas.Columns, rows = _canvas.Rows;
+        var visual = new DrawingVisual();
+        RenderOptions.SetBitmapScalingMode(visual, image.PixelWidth <= columns
+            ? BitmapScalingMode.NearestNeighbor
+            : BitmapScalingMode.HighQuality);
+        using (var dc = visual.RenderOpen())
+        {
+            var scale = Math.Max((double)columns / image.PixelWidth, (double)rows / image.PixelHeight) * _layerZoom;
+            double width = image.PixelWidth * scale, height = image.PixelHeight * scale;
+            var x = Math.Round(columns * (0.5 + _layerX) - width / 2);
+            var y = Math.Round(rows * (0.5 + _layerY) - height / 2);
+            dc.DrawImage(image, new Rect(x, y, width, height));
+        }
+        var bitmap = new RenderTargetBitmap(columns, rows, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var (pixels, _, _) = Images.ReadBgra(bitmap);
+        var colors = new Color?[columns * rows];
+        for (var i = 0; i < colors.Length; i++)
+            colors[i] = pixels[i * 4 + 3] < 40 ? null : Color.FromRgb(pixels[i * 4 + 2], pixels[i * 4 + 1], pixels[i * 4]);
+        foreach (var (index, color) in _strokes)
+            if (index < colors.Length)
+                colors[index] = color;
+        _canvas.Load(columns, rows, colors);
+        UpdateHint();
+    }
+
+    private void UpdateHint()
+    {
+        _hint.Text = _tool != "move" ? "Klicken und ziehen zum Malen"
+            : _layer == null && _canvas.IsEmpty ? "Importiere ein Bild oder male etwas, um es zu verschieben"
+            : $"Ziehen verschiebt das Bild · Mausrad zoomt ({_layerZoom * 100:0} %)";
+    }
+
+    private void MoveStart(object sender, MouseButtonEventArgs e)
+    {
+        if (_tool != "move")
+            return;
+        e.Handled = true;
+        if (_layer == null)
+        {
+            if (_canvas.IsEmpty)
+                return;
+            _layer = _canvas.ToBitmap();
+            _layerZoom = 1;
+            _layerX = _layerY = 0;
+            _strokes.Clear();
+        }
+        _moveFrom = _canvas.CellPoint(e.GetPosition(_canvas));
+        _moveBase = (_layerX, _layerY);
+        _canvas.CaptureMouse();
+    }
+
+    private void MoveDrag(object sender, MouseEventArgs e)
+    {
+        if (_tool != "move" || _moveFrom is not { } from || !_canvas.IsMouseCaptured)
+            return;
+        e.Handled = true;
+        var to = _canvas.CellPoint(e.GetPosition(_canvas));
+        var x = _moveBase.X + Math.Round(to.X - from.X) / _canvas.Columns;
+        var y = _moveBase.Y + Math.Round(to.Y - from.Y) / _canvas.Rows;
+        if (x == _layerX && y == _layerY)
+            return;
+        (_layerX, _layerY) = (Math.Clamp(x, -1.5, 1.5), Math.Clamp(y, -1.5, 1.5));
+        RenderLayer();
+    }
+
+    private void MoveEnd(object sender, MouseButtonEventArgs e)
+    {
+        if (_tool != "move" || _moveFrom == null)
+            return;
+        e.Handled = true;
+        _moveFrom = null;
+        _canvas.ReleaseMouseCapture();
+        SchedulePreview();
+    }
+
+    private void MoveZoom(object sender, MouseWheelEventArgs e)
+    {
+        if (_tool != "move" || _layer == null)
+            return;
+        e.Handled = true;
+        _layerZoom = Math.Clamp(_layerZoom * Math.Pow(1.1, e.Delta / 120.0), MinLayerZoom, MaxLayerZoom);
+        RenderLayer();
+        SchedulePreview();
+    }
+
     private CapeDesign? PixelDesign()
     {
         if (_canvas.IsEmpty)
@@ -684,6 +820,7 @@ public sealed class CapeEditorDialog
         encoder.Save(stream);
         var design = CapeDesign.FromPng(stream.ToArray());
         design.ImageInside = true;
+        design.PixelArt = true;
         design.ImageOnElytra = true;
         return design;
     }
@@ -701,7 +838,7 @@ public sealed class CapeEditorDialog
         try
         {
             cape = _pixelMode
-                ? PixelDesign()?.ToPng(CapeDesign.PreviewScale)
+                ? PixelDesign()?.ToPng(Math.Max(CapeDesign.PreviewScale, _factor))
                 : _fileAsIs ? _file : _fileDesign?.ToPng(CapeDesign.PreviewScale);
         }
         catch (Exception ex)

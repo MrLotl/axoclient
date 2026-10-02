@@ -119,10 +119,15 @@ public partial class MainWindow : Window
         if (LauncherSettings.LoadProblem is { } problem)
             await Dialogs.ShowErrorAsync("Einstellungen konnten nicht gelesen werden", problem.Error, problem.Text);
 
+        var firstStart = !_app.Settings.SetupDone;
+        if (firstStart)
+            Welcome.ShowFirstStart(_app);
         var updateCheck = CheckForUpdateAsync();
         await _app.Accounts.TryRestoreAsync();
         _restoring = false;
         UpdateAccount();
+        if (!firstStart && _app.Accounts.Session == null)
+            Welcome.ShowWelcomeBack(_app);
         _sessionRestored.TrySetResult();
         _ = HomePage.Notifications.RefreshAsync();
         _ = ScanModUpdatesAsync();
@@ -364,6 +369,39 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    private bool _closeConfirmed;
+
+    protected override async void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        if (_closeConfirmed || e.Cancel)
+            return;
+        var running = _app.LocalServers.Servers.Where(_app.LocalServers.IsRunning).ToList();
+        if (running.Count == 0)
+            return;
+        e.Cancel = true;
+        var names = string.Join(", ", running.Select(s => $"„{s.Name}“"));
+        var text = running.Count == 1
+            ? $"Der Server {names} läuft noch. Er wird sauber gestoppt und die Welt gespeichert, bevor der Launcher schließt."
+            : $"Die Server {names} laufen noch. Sie werden sauber gestoppt und die Welten gespeichert, bevor der Launcher schließt.";
+        if (!await _app.Dialogs.ConfirmAsync("Lokale Server stoppen?", text, "Stoppen und beenden", danger: true))
+            return;
+        try
+        {
+            await _app.Dialogs.RunWithProgressAsync("Server werden gestoppt …", async _ =>
+            {
+                await _app.LocalServers.StopAllAsync();
+                return true;
+            });
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Server beim Beenden stoppen", ex);
+        }
+        _closeConfirmed = true;
+        Close();
+    }
 
     protected override void OnClosed(EventArgs e)
     {

@@ -50,6 +50,8 @@ public sealed class ForeignInstance
         ForeignLoader.Vanilla => LoaderType.Vanilla,
         ForeignLoader.Fabric => LoaderType.Fabric,
         ForeignLoader.Forge => LoaderType.Forge,
+        ForeignLoader.NeoForge => LoaderType.NeoForge,
+        ForeignLoader.Quilt => LoaderType.Quilt,
         _ => null
     };
 

@@ -788,7 +788,7 @@ public static class ShareDialogs
         {
             await app.Dialogs.ShowMessageAsync(title,
                 "Es gibt keine passende Instanz dafür (z.B. sind Mods in Vanilla-Instanzen nicht möglich). " +
-                "Lege zuerst eine Instanz mit Fabric oder Forge an.");
+                "Lege zuerst eine Instanz mit Mod-Loader an (Fabric, Forge, NeoForge oder Quilt).");
             return null;
         }
 

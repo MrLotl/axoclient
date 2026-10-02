@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (uuid TEXT PRIMARY KEY, name TEXT NOT NULL, last_seen INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS users_last_seen ON users (last_seen);
 CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, uuid TEXT NOT NULL, created INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS status (uuid TEXT PRIMARY KEY, server TEXT, version TEXT, updated INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS status (uuid TEXT PRIMARY KEY, server TEXT, version TEXT, updated INTEGER NOT NULL, instance TEXT);
 CREATE TABLE IF NOT EXISTS friends (owner TEXT NOT NULL, friend TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (owner, friend));
 CREATE INDEX IF NOT EXISTS friends_friend ON friends (friend);
 CREATE TABLE IF NOT EXISTS capes (uuid TEXT PRIMARY KEY, cape TEXT NOT NULL);
@@ -9,4 +9,9 @@ CREATE TABLE IF NOT EXISTS shares (id INTEGER PRIMARY KEY AUTOINCREMENT, sender 
 CREATE INDEX IF NOT EXISTS shares_recipient ON shares (recipient, created);
 CREATE INDEX IF NOT EXISTS shares_sender ON shares (sender, created);
 CREATE TABLE IF NOT EXISTS admins (uuid TEXT PRIMARY KEY, name TEXT NOT NULL, added_by TEXT NOT NULL, created INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS cape_images (id TEXT PRIMARY KEY, name TEXT NOT NULL, png BLOB NOT NULL, uploader TEXT NOT NULL, created INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS cape_images (id TEXT PRIMARY KEY, name TEXT NOT NULL, png BLOB NOT NULL, uploader TEXT NOT NULL, created INTEGER NOT NULL, owner TEXT);
+CREATE TABLE IF NOT EXISTS sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL, server TEXT, instance TEXT, started INTEGER NOT NULL, ended INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS sessions_uuid ON sessions (uuid, ended);
+CREATE INDEX IF NOT EXISTS sessions_server ON sessions (server, ended);
+CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient TEXT NOT NULL, kind TEXT NOT NULL, sender TEXT, text TEXT, server TEXT, version TEXT, created INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS notifications_recipient ON notifications (recipient, created);

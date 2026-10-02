@@ -17,8 +17,6 @@ public static partial class AdminsDialog
         var status = Ui.Note("Lädt...", 0);
         var input = Ui.Input();
         input.MaxLength = 16;
-        input.Width = 250;
-        input.Margin = new Thickness(0, 0, 8, 0);
         var busy = false;
 
         async Task RunAsync(Func<Task<string>> action)
@@ -56,11 +54,11 @@ public static partial class AdminsDialog
         {
             var remove = new Button
             {
-                Style = Ui.Resource<Style>("IconButton"),
-                Content = "",
-                Width = 30,
-                Height = 30,
-                FontSize = 12,
+                Style = Ui.Resource<Style>("ActTrash"),
+                Content = new Icon { Kind = "Trash", Size = 15 },
+                Width = 32,
+                Height = 32,
+                Margin = new Thickness(0),
                 ToolTip = "Admin-Rechte entziehen"
             };
             remove.Click += async (_, _) => await RunAsync(async () =>
@@ -71,20 +69,37 @@ public static partial class AdminsDialog
             });
             DockPanel.SetDock(remove, Dock.Right);
 
-            var head = new Image
+            var head = new Border
             {
-                Source = new BitmapImage(new Uri(admin.HeadUrl)),
-                Width = 26,
-                Height = 26,
-                Margin = new Thickness(0, 0, 10, 0)
+                Width = 32,
+                Height = 32,
+                CornerRadius = new CornerRadius(7),
+                ClipToBounds = true,
+                Margin = new Thickness(0, 0, 12, 0),
+                Background = Ui.Resource<Brush>("ChipBg"),
+                Child = Ui.UrlImage(admin.HeadUrl)
             };
             DockPanel.SetDock(head, Dock.Left);
 
-            var row = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+            var row = new DockPanel();
             row.Children.Add(remove);
             row.Children.Add(head);
-            row.Children.Add(new TextBlock { Text = admin.Name, VerticalAlignment = VerticalAlignment.Center });
-            return row;
+            row.Children.Add(new TextBlock
+            {
+                Text = admin.Name,
+                FontSize = 13.5,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Ui.Resource<Brush>("TextStrong"),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            return new Border
+            {
+                Background = Ui.Resource<Brush>("RowBg"),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(10, 8, 8, 8),
+                Margin = new Thickness(0, 0, 0, 6),
+                Child = row
+            };
         }
 
         void Add()
@@ -117,7 +132,7 @@ public static partial class AdminsDialog
             Ui.Note("Admins dürfen AxoClient-Umhänge hochladen und hochgeladene Umhänge löschen. " +
                     "Du bist als Besitzer immer Admin."),
             Ui.Label("Spielername"),
-            Ui.Row(input, Ui.Button("Hinzufügen", Add)),
+            AddRow(input, Ui.Button("Hinzufügen", Add)),
             Ui.Label("Admins"),
             Ui.Scroll(list, 260),
             status);
@@ -127,6 +142,17 @@ public static partial class AdminsDialog
             await ReloadAsync();
             return "";
         });
-        await app.Dialogs.ShowFormAsync("Admins verwalten", form, "Fertig", AddOrClose);
+        await app.Dialogs.ShowFormAsync("Admins verwalten", form, "Fertig", AddOrClose, 460,
+            "Wer AxoClient-Umhänge hochladen und löschen darf", "Shield");
+    }
+
+    private static DockPanel AddRow(TextBox input, Button add)
+    {
+        add.Margin = new Thickness(8, 0, 0, 0);
+        DockPanel.SetDock(add, Dock.Right);
+        var row = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
+        row.Children.Add(add);
+        row.Children.Add(input);
+        return row;
     }
 }

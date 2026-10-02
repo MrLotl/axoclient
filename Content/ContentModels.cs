@@ -122,7 +122,7 @@ public class ContentVersion
 
     public bool Supports(Installation inst, ContentType type) =>
         GameVersions.Contains(inst.MinecraftVersion)
-        && (type != ContentType.Mod || Loaders.Count == 0 || Loaders.Contains(inst.Loader.ModrinthName()));
+        && (type != ContentType.Mod || Loaders.Count == 0 || inst.Loader.ModrinthNames().Any(Loaders.Contains));
 
     public static ContentVersion? Newest(IReadOnlyList<ContentVersion> versions) =>
         versions.FirstOrDefault(v => v.IsRelease) ?? versions.FirstOrDefault();

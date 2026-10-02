@@ -4,6 +4,8 @@ using System.Text.RegularExpressions;
 using CmlLib.Core;
 using CmlLib.Core.Auth;
 using CmlLib.Core.Installer.Forge;
+using CmlLib.Core.Installer.NeoForge;
+using CmlLib.Core.Installer.NeoForge.Installers;
 using CmlLib.Core.Installers;
 using CmlLib.Core.ProcessBuilder;
 
@@ -19,6 +21,7 @@ public record LaunchProgress(
 public class GameInstaller(HttpClient http)
 {
     private const string FabricMeta = "https://meta.fabricmc.net/v2/versions/loader";
+    private const string QuiltMeta = "https://meta.quiltmc.org/v3/versions/loader";
 
     public static bool IsSafeLoaderVersion(string? version) =>
         version is { Length: > 0 and <= 40 } && Regex.IsMatch(version, @"^[A-Za-z0-9._+\-]+$");
@@ -98,9 +101,21 @@ public class GameInstaller(HttpClient http)
             case LoaderType.Fabric:
                 progress.Status.Report("Installiere Fabric...");
                 return await InstallFabricAsync(path, inst.MinecraftVersion, inst.LoaderVersion);
+            case LoaderType.Quilt:
+                progress.Status.Report("Installiere Quilt...");
+                return await InstallQuiltAsync(path, inst.MinecraftVersion, inst.LoaderVersion);
             case LoaderType.Forge:
                 progress.Status.Report("Installiere Forge (kann beim ersten Mal etwas dauern)...");
                 return await InstallForgeAsync(launcher, inst, new ForgeInstallOptions
+                {
+                    FileProgress = progress.Files,
+                    ByteProgress = progress.Bytes,
+                    InstallerOutput = progress.Status,
+                    SkipIfAlreadyInstalled = true
+                }, progress.Status);
+            case LoaderType.NeoForge:
+                progress.Status.Report("Installiere NeoForge (kann beim ersten Mal etwas dauern)...");
+                return await InstallNeoForgeAsync(launcher, inst, new NeoForgeInstallOptions
                 {
                     FileProgress = progress.Files,
                     ByteProgress = progress.Bytes,
@@ -132,7 +147,51 @@ public class GameInstaller(HttpClient http)
         return await forge.Install(inst.MinecraftVersion, options);
     }
 
-    private async Task<string> InstallFabricAsync(MinecraftPath path, string mcVersion, string? pinnedLoader)
+    private static async Task<string> InstallNeoForgeAsync(MinecraftLauncher launcher, Installation inst,
+        NeoForgeInstallOptions options, IProgress<string> status)
+    {
+        var neoForge = new NeoForgeInstaller(launcher);
+        if (IsSafeLoaderVersion(inst.LoaderVersion))
+        {
+            try
+            {
+                return await neoForge.Install(inst.MinecraftVersion, inst.LoaderVersion!, options);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                ErrorReport.Log($"NeoForge {inst.LoaderVersion} installieren", ex);
+                status.Report($"NeoForge {inst.LoaderVersion} nicht verfügbar ({ErrorReport.Short(ex)}), " +
+                              "nehme die neueste Version...");
+            }
+        }
+        return await neoForge.Install(inst.MinecraftVersion, options);
+    }
+
+    private Task<string> InstallFabricAsync(MinecraftPath path, string mcVersion, string? pinnedLoader) =>
+        InstallProfileAsync(path, FabricMeta, "Fabric", "fabric-loader", mcVersion, pinnedLoader,
+            loaders => loaders.FirstOrDefault(l => l.TryGetProperty("stable", out var stable) && stable.GetBoolean(), loaders[0]));
+
+    private Task<string> InstallQuiltAsync(MinecraftPath path, string mcVersion, string? pinnedLoader) =>
+        InstallProfileAsync(path, QuiltMeta, "Quilt", "quilt-loader", mcVersion, pinnedLoader, loaders =>
+        {
+            var sorted = loaders.OrderByDescending(l => LoaderVersionKey(l.GetProperty("version").GetString()!)).ToList();
+            var needsNewest = int.TryParse(mcVersion.Split('.')[0], out var major) && major >= 26;
+            return needsNewest
+                ? sorted[0]
+                : sorted.FirstOrDefault(l => !l.GetProperty("version").GetString()!.Contains('-'), sorted[0]);
+        });
+
+    private static (int, int, int, int, int) LoaderVersionKey(string version)
+    {
+        var dash = version.IndexOf('-');
+        var release = (dash < 0 ? version : version[..dash]).Split('.')
+            .Select(p => int.TryParse(p, out var n) ? n : 0).Concat([0, 0, 0]).ToArray();
+        var pre = dash < 0 ? int.MaxValue : int.TryParse(version[(version.LastIndexOf('.') + 1)..], out var b) ? b : 0;
+        return (release[0], release[1], release[2], dash < 0 ? 1 : 0, pre);
+    }
+
+    private async Task<string> InstallProfileAsync(MinecraftPath path, string meta, string name, string prefix,
+        string mcVersion, string? pinnedLoader, Func<List<JsonElement>, JsonElement> pick)
     {
         try
         {
@@ -140,35 +199,34 @@ public class GameInstaller(HttpClient http)
             {
                 try
                 {
-                    return await WriteFabricProfileAsync(path, mcVersion, pinnedLoader!);
+                    return await WriteProfileAsync(path, meta, mcVersion, pinnedLoader!);
                 }
                 catch (HttpRequestException)
                 {
                 }
             }
 
-            using var loaders = JsonDocument.Parse(await http.GetStringAsync($"{FabricMeta}/{mcVersion}"));
+            using var loaders = JsonDocument.Parse(await http.GetStringAsync($"{meta}/{mcVersion}"));
             var entries = loaders.RootElement.EnumerateArray().Select(e => e.GetProperty("loader")).ToList();
             if (entries.Count == 0)
-                throw new InvalidOperationException($"Fabric unterstützt Minecraft {mcVersion} nicht.");
-            var loader = entries.FirstOrDefault(l => l.GetProperty("stable").GetBoolean(), entries[0]);
-            return await WriteFabricProfileAsync(path, mcVersion, loader.GetProperty("version").GetString()!);
+                throw new InvalidOperationException($"{name} unterstützt Minecraft {mcVersion} nicht.");
+            return await WriteProfileAsync(path, meta, mcVersion, pick(entries).GetProperty("version").GetString()!);
         }
         catch (HttpRequestException)
         {
             var installed = Directory.Exists(path.Versions)
-                ? new DirectoryInfo(path.Versions).GetDirectories($"fabric-loader-*-{mcVersion}")
-                    .OrderByDescending(d => d.Name == $"fabric-loader-{pinnedLoader}-{mcVersion}")
+                ? new DirectoryInfo(path.Versions).GetDirectories($"{prefix}-*-{mcVersion}")
+                    .OrderByDescending(d => d.Name == $"{prefix}-{pinnedLoader}-{mcVersion}")
                     .ThenByDescending(d => d.LastWriteTime).FirstOrDefault()
                 : null;
             return installed?.Name ?? throw new InvalidOperationException(
-                "Fabric konnte nicht geladen werden und ist für diese Version noch nicht installiert.");
+                $"{name} konnte nicht geladen werden und ist für diese Version noch nicht installiert.");
         }
     }
 
-    private async Task<string> WriteFabricProfileAsync(MinecraftPath path, string mcVersion, string loaderVersion)
+    private async Task<string> WriteProfileAsync(MinecraftPath path, string meta, string mcVersion, string loaderVersion)
     {
-        var profile = await http.GetStringAsync($"{FabricMeta}/{mcVersion}/{loaderVersion}/profile/json");
+        var profile = await http.GetStringAsync($"{meta}/{mcVersion}/{loaderVersion}/profile/json");
         using var profileJson = JsonDocument.Parse(profile);
         var id = profileJson.RootElement.GetProperty("id").GetString()!;
 

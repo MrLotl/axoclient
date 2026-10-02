@@ -65,6 +65,7 @@ public sealed class CapeDesign
     public double OffsetY { get; set; }
     public bool ImageInside { get; set; }
     public bool ImageOnElytra { get; set; } = true;
+    public bool PixelArt { get; set; }
 
     public void Reset()
     {
@@ -129,7 +130,7 @@ public sealed class CapeDesign
     private BitmapSource Render(int width, int height, double scale, Action<DrawingContext> draw)
     {
         var visual = new DrawingVisual();
-        RenderOptions.SetBitmapScalingMode(visual, Image.PixelWidth < 64
+        RenderOptions.SetBitmapScalingMode(visual, PixelArt || Image.PixelWidth < 64
             ? BitmapScalingMode.NearestNeighbor
             : BitmapScalingMode.HighQuality);
         RenderOptions.SetEdgeMode(visual, EdgeMode.Aliased);

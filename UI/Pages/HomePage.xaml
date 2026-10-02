@@ -6,11 +6,15 @@
     <UserControl.Resources>
         <DataTemplate x:Key="InstanceThumb">
             <Grid>
-                <Border Background="{Binding Placeholder}">
+                <Border Background="{Binding Placeholder}" CornerRadius="7">
                     <c:Icon Kind="Cube" Size="14" Foreground="#80FFFFFF" HorizontalAlignment="Center"
                             VerticalAlignment="Center"/>
                 </Border>
-                <Image Source="{Binding Image}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Border CornerRadius="7">
+                    <Border.Background>
+                        <ImageBrush ImageSource="{Binding Image}" Stretch="UniformToFill"/>
+                    </Border.Background>
+                </Border>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -27,11 +31,13 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <c:SkinViewer x:Name="SkinView" Width="320" MaxHeight="480" VerticalAlignment="Bottom" Margin="0,0,0,24">
-                <c:SkinViewer.Effect>
-                    <DropShadowEffect Color="Black" BlurRadius="30" ShadowDepth="18" Direction="270" Opacity="0.35"/>
-                </c:SkinViewer.Effect>
-            </c:SkinViewer>
+            <Grid x:Name="SkinArea" Margin="0,0,0,24" SizeChanged="SkinArea_SizeChanged">
+                <c:SkinViewer x:Name="SkinView" Width="320" Height="480" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                    <c:SkinViewer.Effect>
+                        <DropShadowEffect Color="Black" BlurRadius="30" ShadowDepth="18" Direction="270" Opacity="0.35"/>
+                    </c:SkinViewer.Effect>
+                </c:SkinViewer>
+            </Grid>
 
             <Border x:Name="LaunchPanel" Grid.Row="1" Width="460" Padding="16" CornerRadius="14"
                     Background="{StaticResource CardBg}" HorizontalAlignment="Center">
@@ -55,7 +61,7 @@
                             </ControlTemplate>
                         </ToggleButton.Template>
                         <DockPanel>
-                            <Border DockPanel.Dock="Left" Width="56" Height="32" CornerRadius="6" ClipToBounds="True"
+                            <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="8" ClipToBounds="True"
                                     Margin="0,0,12,0">
                                 <ContentPresenter x:Name="CurrentThumb" ContentTemplate="{StaticResource InstanceThumb}"/>
                             </Border>
@@ -153,7 +159,7 @@
                                     <Button x:Name="Item" Style="{StaticResource MenuItemButton}" Height="42" Padding="8,0"
                                             Margin="0,0,0,2" Click="InstanceItem_Click">
                                         <DockPanel>
-                                            <Border DockPanel.Dock="Left" Width="48" Height="27" CornerRadius="5"
+                                            <Border DockPanel.Dock="Left" Width="32" Height="32" CornerRadius="7"
                                                     ClipToBounds="True" Margin="0,0,10,0">
                                                 <ContentPresenter Content="{Binding}"
                                                                   ContentTemplate="{StaticResource InstanceThumb}"/>

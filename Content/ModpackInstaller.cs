@@ -149,10 +149,10 @@ public class ModpackInstaller(AppServices app)
             (loader, loaderVersion) = (LoaderType.Fabric, fabric);
         else if (Dependency("forge") is { } forge)
             (loader, loaderVersion) = (LoaderType.Forge, forge);
-        else if (Dependency("neoforge") != null)
-            throw new UserFacingException("Dieses Modpack braucht NeoForge. AxoClient kann derzeit nur Fabric und Forge starten.");
-        else if (Dependency("quilt-loader") != null)
-            throw new UserFacingException("Dieses Modpack braucht Quilt. AxoClient kann derzeit nur Fabric und Forge starten.");
+        else if (Dependency("neoforge") is { } neoForge)
+            (loader, loaderVersion) = (LoaderType.NeoForge, neoForge);
+        else if (Dependency("quilt-loader") is { } quilt)
+            (loader, loaderVersion) = (LoaderType.Quilt, quilt);
         else
             (loader, loaderVersion) = (LoaderType.Vanilla, null);
         if (!GameInstaller.IsSafeLoaderVersion(loaderVersion))

@@ -202,7 +202,7 @@ public class PackRepair(ContentStore store)
                 Severity = IssueSeverity.Error,
                 Title = "Shader brauchen eine Mod",
                 Description = "Diese Instanz läuft ohne Mod-Loader. Shaderpakete funktionieren nur mit Iris " +
-                              "(Fabric) oder Oculus (Forge); dafür muss die Instanz Fabric oder Forge nutzen."
+                              "(Fabric, Quilt, NeoForge) oder Oculus (Forge); dafür braucht die Instanz einen Mod-Loader."
             });
         }
         else if (!hasIris)
@@ -290,7 +290,7 @@ public class PackRepair(ContentStore store)
                 {
                     Severity = IssueSeverity.Warning,
                     Title = $"{names}: {need.Feature} braucht eine Mod",
-                    Description = $"Dafür ist {need.Title} nötig, das gibt es aber nur für Fabric oder Forge. " +
+                    Description = $"Dafür ist {need.Title} nötig, das gibt es aber nur mit Mod-Loader. " +
                                   "Diese Instanz läuft ohne Mod-Loader; der Rest des Pakets funktioniert trotzdem."
                 });
                 continue;

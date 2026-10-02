@@ -25,18 +25,19 @@ public static class PreLaunchDialog
         var problems = results.Count(r => r.Severity == IssueSeverity.Error);
         var list = new IssueList(results, withMarkers: true);
         var form = Ui.Stack(
-            Ui.Note(problems > 0
-                ? $"Vor dem Start von \"{inst.Name}\" sind Dinge aufgefallen, an denen der Start scheitern kann:"
-                : $"Vor dem Start von \"{inst.Name}\" sind Kleinigkeiten aufgefallen:"),
-            Ui.Scroll(list.View, 300),
+            Ui.Scroll(list.View, 360),
             Ui.Note(list.AnyFixable
                 ? "Die angehakten Punkte bringt der Launcher vor dem Start in Ordnung. Danach wird gestartet."
                 : problems > 0
                     ? "Du kannst trotzdem starten – wenn das Spiel gleich wieder zugeht, liegt es vermutlich hieran."
-                    : "Starten geht ohne Weiteres; die Punkte sind nur Hinweise.", 0, 11));
+                    : "Starten geht ohne Weiteres; die Punkte sind nur Hinweise.", 0, 12));
 
+        var subtitle = problems > 0
+            ? $"Bei „{inst.Name}“ ist etwas aufgefallen, an dem der Start scheitern kann"
+            : $"Bei „{inst.Name}“ sind Kleinigkeiten aufgefallen";
         if (!await app.Dialogs.ShowFormAsync(problems > 0 ? "Der Start könnte scheitern" : "Vor dem Start", form,
-                list.AnyFixable ? "Beheben und starten" : "Trotzdem starten"))
+                list.AnyFixable ? "Beheben und starten" : "Trotzdem starten", width: 560, subtitle: subtitle,
+                icon: problems > 0 ? "Warning" : "Shield"))
             return false;
 
         var chosen = list.Chosen;

@@ -56,16 +56,19 @@
                                     </Border.Effect>
                                 </Border>
                             </Border>
-                            <Border Width="72" Height="72" CornerRadius="16" Background="{Binding LetterBrush}"
-                                    Effect="{StaticResource SoftShadow}">
-                                <TextBlock Text="{Binding Letter}" FontSize="30" FontWeight="Bold" Foreground="White"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <Border Width="72" Height="72" CornerRadius="16">
-                                <Border.Background>
-                                    <ImageBrush ImageSource="{Binding Icon}" Stretch="UniformToFill"/>
-                                </Border.Background>
-                            </Border>
+                            <Grid Margin="0,18" HorizontalAlignment="Center"
+                                  Width="{Binding ActualHeight, RelativeSource={RelativeSource Self}}">
+                                <Border CornerRadius="18" Background="{Binding LetterBrush}" Effect="{StaticResource SoftShadow}">
+                                    <Viewbox Margin="22">
+                                        <TextBlock Text="{Binding Letter}" FontWeight="Bold" Foreground="White"/>
+                                    </Viewbox>
+                                </Border>
+                                <Border CornerRadius="18">
+                                    <Border.Background>
+                                        <ImageBrush ImageSource="{Binding Icon}" Stretch="UniformToFill"/>
+                                    </Border.Background>
+                                </Border>
+                            </Grid>
                             <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Height="22" Padding="8,0"
                                     CornerRadius="11" Background="#333FB950"
                                     Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibility}}">
@@ -126,7 +129,7 @@
         </DataTemplate>
 
         <ItemsPanelTemplate x:Key="GridPanel">
-            <UniformGrid Columns="4" VerticalAlignment="Top" Margin="0,0,-16,0"/>
+            <c:TileGrid TileWidth="280" VerticalAlignment="Top" Margin="0,0,-16,0"/>
         </ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ListPanel">
             <StackPanel/>

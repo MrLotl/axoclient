@@ -161,7 +161,7 @@ public static class PreLaunchCheck
         if (!inst.CanUseMods && mods.Count > 0)
             results.Add(Found(IssueSeverity.Warning, $"{mods.Count} Mod(s) ohne Mod-Loader",
                 "Diese Instanz läuft als Vanilla, deshalb wird der Ordner \"mods\" gar nicht gelesen. " +
-                "Stelle die Instanz auf Fabric oder Forge um, damit die Mods geladen werden."));
+                "Stelle die Instanz auf einen Mod-Loader wie Fabric oder NeoForge um, damit die Mods geladen werden."));
 
         var duplicates = mods
             .Where(m => !BadgeMod.IsModFile(m))
@@ -221,7 +221,7 @@ public static class PreLaunchCheck
             return results;
         }
 
-        var loaderName = inst.Loader.ModrinthName();
+        var loaderNames = inst.Loader.ModrinthNames();
         var installedProjects = found.Values.Select(v => v.ProjectId).ToHashSet();
         var wrongVersion = new List<string>();
         var wrongLoader = new List<string>();
@@ -234,7 +234,7 @@ public static class PreLaunchCheck
             var name = Path.GetFileName(file);
             if (version.GameVersions.Count > 0 && !version.GameVersions.Contains(inst.MinecraftVersion))
                 wrongVersion.Add($"{name} (für {string.Join(", ", version.GameVersions.TakeLast(3))})");
-            else if (version.Loaders.Count > 0 && !version.Loaders.Contains(loaderName))
+            else if (version.Loaders.Count > 0 && !loaderNames.Any(version.Loaders.Contains))
                 wrongLoader.Add($"{name} (für {string.Join(", ", version.Loaders)})");
 
             foreach (var needed in version.RequiredProjectIds.Where(id => !installedProjects.Contains(id)))

@@ -41,6 +41,7 @@ public partial class SkinsPage : UserControl
     private bool _busy;
     private CapeItem? _hover;
     private byte[]? _shownSkin, _shownCape;
+    private bool _shownElytra;
 
     public SkinsPage()
     {
@@ -86,11 +87,18 @@ public partial class SkinsPage : UserControl
         Ui.Show(CapesView, !skins);
         Ui.Show(SkinActions, skins);
         Ui.Show(CapeActions, !skins);
+        Ui.Show(WearToggle, !skins);
         PreviewTitle.Text = skins ? "AKTUELLER SKIN" : "VORSCHAU";
         UpdateCount();
         CurrentSkin.TurnTo(skins ? SkinViewer.FrontYaw : SkinViewer.BackYaw);
         _hover = null;
         UpdatePreview();
+    }
+
+    private void Wear_Click(object sender, RoutedEventArgs e)
+    {
+        UpdatePreview();
+        CurrentSkin.TurnTo(SkinViewer.BackYaw);
     }
 
     private void UpdateCount()
@@ -106,11 +114,13 @@ public partial class SkinsPage : UserControl
     {
         var profile = _app.Accounts.Profile;
         var cape = _hover is { } hover ? hover.Png : _app.Capes.DisplayPng;
-        if (force || !ReferenceEquals(_shownSkin, profile?.SkinPng) || !ReferenceEquals(_shownCape, cape))
+        var elytra = CapesTab.IsChecked == true && WearElytra.IsChecked == true;
+        if (force || !ReferenceEquals(_shownSkin, profile?.SkinPng) || !ReferenceEquals(_shownCape, cape) || _shownElytra != elytra)
         {
-            CurrentSkin.SetSkin(profile?.SkinPng, profile?.SkinSlim ?? false, cape);
+            CurrentSkin.SetSkin(profile?.SkinPng, profile?.SkinSlim ?? false, cape, elytra);
             _shownSkin = profile?.SkinPng;
             _shownCape = cape;
+            _shownElytra = elytra;
         }
         var activeSkin = profile?.SkinPng is { } png
             ? _library.Load().FirstOrDefault(e => e.Id == SkinLibrary.IdOf(png))?.Name ?? _app.Accounts.Session?.Username

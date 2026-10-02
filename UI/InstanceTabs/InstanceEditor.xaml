@@ -114,11 +114,11 @@
                             </Button>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="Instanzbild" FontSize="13" FontWeight="SemiBold"/>
-                                <TextBlock x:Name="IconInfo" Text="Für Karten und Liste · ideal 16:9" Style="{StaticResource Caption}"
+                                <TextBlock x:Name="IconInfo" Text="Für Karten und Liste · quadratisch" Style="{StaticResource Caption}"
                                            Margin="0,3,0,0"/>
                             </StackPanel>
                         </DockPanel>
-                        <Grid Height="92" Margin="0,0,0,10">
+                        <Grid Height="120" Margin="0,0,0,10">
                             <Border x:Name="BannerPreview" CornerRadius="10" Background="#1C1C1C" AllowDrop="True"
                                     DragOver="Image_DragOver" Drop="Banner_Drop"/>
                             <Border CornerRadius="10" IsHitTestVisible="False">

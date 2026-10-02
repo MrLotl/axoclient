@@ -133,8 +133,26 @@ public partial class ModpackPanel : UserControl
         _app = app;
         _ready = false;
         SearchBox.Text = "";
+        (app.Settings.ModpacksAsTiles ? GridToggle : ListToggle).IsChecked = true;
+        ApplyViewMode();
         _ready = true;
         _ = LoadAsync(reset: true);
+    }
+
+    private void ViewToggle_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_ready)
+            return;
+        _app.Settings.ModpacksAsTiles = GridToggle.IsChecked == true;
+        _app.SaveSettings();
+        ApplyViewMode();
+    }
+
+    private void ApplyViewMode()
+    {
+        var grid = GridToggle.IsChecked == true;
+        PackList.ItemTemplate = (DataTemplate)FindResource(grid ? "PackTile" : "PackCard");
+        PackList.ItemsPanel = (ItemsPanelTemplate)FindResource(grid ? "GridPanel" : "ListPanel");
     }
 
     private void ShowStatus(string text)

@@ -7,11 +7,12 @@ namespace AxoClient.UI.Controls;
 
 public sealed class PixelCanvas : FrameworkElement
 {
-    private static readonly Brush CheckerA = Ui.Frozen(Color.FromRgb(0x2E, 0x2E, 0x2E));
-    private static readonly Brush CheckerB = Ui.Frozen(Color.FromRgb(0x26, 0x26, 0x26));
+    private static readonly Color CheckerA = Color.FromRgb(0x2E, 0x2E, 0x2E);
+    private static readonly Color CheckerB = Color.FromRgb(0x26, 0x26, 0x26);
     private static readonly Pen GridPen = MakePen();
 
     private Color?[] _pixels = new Color?[10 * 16];
+    private WriteableBitmap? _bitmap;
     private int _hover = -1;
     private bool _painting;
 
@@ -19,6 +20,7 @@ public sealed class PixelCanvas : FrameworkElement
     {
         Cursor = Cursors.Cross;
         Focusable = false;
+        RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
     }
 
     public int Columns { get; private set; } = 10;
@@ -41,6 +43,7 @@ public sealed class PixelCanvas : FrameworkElement
         set
         {
             _pixels[index] = value;
+            WriteCell(index);
             InvalidateVisual();
         }
     }
@@ -49,10 +52,13 @@ public sealed class PixelCanvas : FrameworkElement
 
     public void Load(int columns, int rows, Color?[] pixels)
     {
+        var resized = columns != Columns || rows != Rows;
         Columns = columns;
         Rows = rows;
         _pixels = pixels;
-        InvalidateMeasure();
+        RebuildBitmap();
+        if (resized)
+            InvalidateMeasure();
         InvalidateVisual();
     }
 
@@ -90,6 +96,7 @@ public sealed class PixelCanvas : FrameworkElement
             if (y < Rows - 1)
                 stack.Push(i + Columns);
         }
+        RebuildBitmap();
         InvalidateVisual();
     }
 
@@ -112,26 +119,50 @@ public sealed class PixelCanvas : FrameworkElement
 
     public bool IsEmpty => _pixels.All(p => p == null);
 
+    private void RebuildBitmap()
+    {
+        _bitmap = new WriteableBitmap(Columns * 2, Rows * 2, 96, 96, PixelFormats.Bgra32, null);
+        var pixels = new byte[Columns * 2 * Rows * 2 * 4];
+        for (var i = 0; i < _pixels.Length; i++)
+            CellBytes(i, pixels, Columns * 2 * 4);
+        _bitmap.WritePixels(new Int32Rect(0, 0, Columns * 2, Rows * 2), pixels, Columns * 2 * 4, 0);
+    }
+
+    private void WriteCell(int index)
+    {
+        if (_bitmap == null)
+            return;
+        var block = new byte[2 * 2 * 4];
+        var color = _pixels[index];
+        for (var sub = 0; sub < 4; sub++)
+            Put(block, sub * 4, color ?? (sub is 0 or 3 ? CheckerB : CheckerA));
+        _bitmap.WritePixels(new Int32Rect(index % Columns * 2, index / Columns * 2, 2, 2), block, 2 * 4, 0);
+    }
+
+    private void CellBytes(int index, byte[] pixels, int stride)
+    {
+        var (x, y) = (index % Columns * 2, index / Columns * 2);
+        var color = _pixels[index];
+        for (var dy = 0; dy < 2; dy++)
+        for (var dx = 0; dx < 2; dx++)
+            Put(pixels, (y + dy) * stride + (x + dx) * 4, color ?? (dx == dy ? CheckerB : CheckerA));
+    }
+
+    private static void Put(byte[] pixels, int offset, Color color)
+    {
+        pixels[offset] = color.B;
+        pixels[offset + 1] = color.G;
+        pixels[offset + 2] = color.R;
+        pixels[offset + 3] = 255;
+    }
+
     protected override Size MeasureOverride(Size availableSize) => new(Columns * CellSize, Rows * CellSize);
 
     protected override void OnRender(DrawingContext dc)
     {
-        for (var y = 0; y < Rows; y++)
-        for (var x = 0; x < Columns; x++)
-        {
-            var rect = new Rect(x * CellSize, y * CellSize, CellSize, CellSize);
-            if (_pixels[y * Columns + x] is { } color)
-            {
-                dc.DrawRectangle(new SolidColorBrush(color), null, rect);
-            }
-            else
-            {
-                var half = CellSize / 2;
-                dc.DrawRectangle(CheckerA, null, rect);
-                dc.DrawRectangle(CheckerB, null, new Rect(rect.X, rect.Y, half, half));
-                dc.DrawRectangle(CheckerB, null, new Rect(rect.X + half, rect.Y + half, half, half));
-            }
-        }
+        if (_bitmap == null)
+            RebuildBitmap();
+        dc.DrawImage(_bitmap, new Rect(0, 0, Columns * CellSize, Rows * CellSize));
         if (CellSize >= 10)
         {
             for (var x = 1; x < Columns; x++)
@@ -139,7 +170,7 @@ public sealed class PixelCanvas : FrameworkElement
             for (var y = 1; y < Rows; y++)
                 dc.DrawLine(GridPen, new Point(0, y * CellSize), new Point(Columns * CellSize, y * CellSize));
         }
-        if (_hover >= 0)
+        if (_hover >= 0 && CellSize >= 4)
             dc.DrawRectangle(null, new Pen(Ui.Frozen(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF)), 1.2),
                 new Rect(_hover % Columns * CellSize + 0.6, _hover / Columns * CellSize + 0.6, CellSize - 1.2, CellSize - 1.2));
     }
@@ -150,6 +181,8 @@ public sealed class PixelCanvas : FrameworkElement
         var y = (int)(point.Y / CellSize);
         return x < 0 || y < 0 || x >= Columns || y >= Rows ? -1 : y * Columns + x;
     }
+
+    public Point CellPoint(Point point) => new(point.X / CellSize, point.Y / CellSize);
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {

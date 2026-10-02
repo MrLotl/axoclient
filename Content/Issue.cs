@@ -20,9 +20,9 @@ public sealed class Issue
 
     public string Icon => Severity switch
     {
-        IssueSeverity.Error => "",
-        IssueSeverity.Warning => "",
-        _ => ""
+        IssueSeverity.Error => "Warning",
+        IssueSeverity.Warning => "Warning",
+        _ => "Info"
     };
 
     public string Marker => Severity switch

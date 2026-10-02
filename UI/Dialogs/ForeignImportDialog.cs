@@ -88,9 +88,8 @@ public static class ForeignImportDialog
                 nav.Children.Add(NavHeading("Nicht gefunden"));
             var button = new RadioButton
             {
-                Style = Ui.Resource<Style>("NavButton"),
+                Style = Ui.Resource<Style>("SideTab"),
                 GroupName = "ForeignLaunchers",
-                Tag = launcher.Installed ? "" : "",
                 IsEnabled = launcher.Installed,
                 Opacity = launcher.Installed ? 1 : 0.4,
                 ToolTip = launcher.Installed ? null : "Nicht auf diesem Rechner gefunden (am Standard-Speicherort)"
@@ -140,7 +139,7 @@ public static class ForeignImportDialog
         }
 
         if (!await app.Dialogs.ShowFormAsync("Aus anderem Launcher importieren", form, "Importieren", Validate,
-                DialogWidth))
+                DialogWidth, "Instanzen aus anderen Launchern übernehmen", "Import"))
             return;
 
         var choices = tabs.SelectMany(t => t.Rows).Where(r => r.Chosen)
@@ -170,7 +169,7 @@ public static class ForeignImportDialog
         text.Inlines.Add(new Run(chosen > 0 ? $"  {chosen}/{importable}" : $"  {importable}")
         {
             Foreground = chosen > 0
-                ? Ui.Resource<Brush>("Accent")
+                ? Ui.Resource<Brush>("AccentText")
                 : Ui.Resource<Brush>("MutedText"),
             FontSize = 12
         });
@@ -196,7 +195,7 @@ public static class ForeignImportDialog
         header.Children.Add(new TextBlock
         {
             Text = tab.Launcher.Name,
-            Foreground = Brushes.White,
+            Foreground = Ui.Resource<Brush>("TextStrong"),
             FontSize = 15,
             FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
@@ -250,7 +249,7 @@ public static class ForeignImportDialog
         text.Children.Add(new TextBlock
         {
             Text = source.Name,
-            Foreground = Brushes.White,
+            Foreground = Ui.Resource<Brush>("TextStrong"),
             FontWeight = FontWeights.SemiBold,
             FontSize = 13.5,
             TextWrapping = TextWrapping.Wrap
@@ -283,7 +282,7 @@ public static class ForeignImportDialog
         {
             if (!source.Complete)
             {
-                loaderBox = Ui.Combo([LoaderType.Vanilla, LoaderType.Fabric, LoaderType.Forge]);
+                loaderBox = Ui.Combo([LoaderType.Vanilla, LoaderType.Fabric, LoaderType.Forge, LoaderType.NeoForge, LoaderType.Quilt]);
                 loaderBox.SelectedItem = ForeignInstance.AsLoaderType(source.Loader)
                                          ?? (source.Loader == ForeignLoader.Unknown && source.Mods > 0
                                              ? LoaderType.Fabric
@@ -318,9 +317,9 @@ public static class ForeignImportDialog
         rows.Add(new Row { Source = source, Box = box, LoaderBox = loaderBox, VersionBox = versionBox });
         return new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF)),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(10),
+            Background = Ui.Resource<Brush>("RowBg"),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(12, 10, 12, 10),
             Margin = new Thickness(0, 0, 8, 6),
             Child = panel
         };

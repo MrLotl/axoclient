@@ -104,12 +104,35 @@ automatisch ab. Wird ein Umhang gelöscht, legen ihn ebenfalls alle ab, die ihn 
 **Wichtig:** Launcher ab dieser Version laden die Umhänge über den Dienst. Den neuen `worker.js` deshalb vor dem
 Launcher-Release deployen, sonst bleibt die Umhang-Liste leer.
 
+## Update: Neuer Launcher (Online-Status, Profile, Einladungen, Benachrichtigungen, eigene Umhänge)
+
+Der neu gestaltete Launcher braucht dafür neuen Dienst-Code:
+
+1. **Worker → Edit code**: den Code komplett durch den aktuellen Inhalt von `worker.js` ersetzen, **Deploy**.
+2. Den Launcher neu starten.
+
+Neue Tabellen (`sessions`, `notifications`) und Spalten (`status.instance`, `cape_images.owner`) legt der Dienst
+beim ersten Aufruf selbst an. Was neu dazukommt:
+
+- **Online-Status:** Jede Anfrage des Launchers zählt als „gesehen“. Freunde sehen „Online“, solange der Launcher
+  offen ist, sonst „zuletzt gesehen“. Wer länger als 30 Minuten weg war, löst beim Wiederkommen für seine Freunde
+  eine Benachrichtigung „… ist online“ aus (höchstens alle 6 Stunden).
+- **Instanz im Status:** Freunde sehen neben dem Server auch den Namen der Instanz.
+- **Freundesprofil:** Der Dienst merkt sich die Spielzeiten (Server, Instanz, Beginn, Ende) der letzten 90 Tage.
+  Daraus berechnet er gemeinsame Spielzeit, gemeinsame Server und die letzten Aktivitäten – nur für gegenseitige
+  Freunde abrufbar.
+- **Einladungen & Benachrichtigungen:** Freundschaftsanfragen, angenommene Anfragen, Einladungen auf einen Server und
+  „ist online“. Sie verfallen nach 30 Tagen; Einladungen höchstens 20 pro Stunde.
+- **Eigene Umhänge:** Jeder kann bis zu 5 eigene Umhänge hochladen, die nur er selbst tragen kann. Umhänge für alle
+  laden weiterhin nur Admins hoch. Löschen kann ein Umhang sein Besitzer oder ein Admin.
+
 ## Wenn etwas nicht klappt
 
 | Meldung | Ursache / Lösung |
 |---|---|
 | „Der AxoClient-Dienst kennt das Teilen noch nicht“ | Der neue `worker.js` ist noch nicht deployt (siehe „Update: Teilen mit Freunden“). |
 | „Der AxoClient-Dienst kennt das Hochladen von Umhängen noch nicht“ | Der neue `worker.js` ist noch nicht deployt (siehe „Update: Admins und Umhänge hochladen“). |
+| „Der AxoClient-Dienst kennt Benachrichtigungen / Einladungen / Freundesprofile noch nicht“ | Der neue `worker.js` ist noch nicht deployt (siehe „Update: Neuer Launcher“). |
 | Kein **+** und kein „Admins verwalten“ zu sehen | `OWNER_UUID` fehlt oder enthält eine falsche UUID; danach den Launcher neu starten. |
 | „Ihr müsst euch gegenseitig als Freunde hinzugefügt haben …“ | Teilen geht nur, wenn beide den anderen hinzugefügt haben; unter Freunde die Anfrage annehmen. |
 | „Unter dieser Adresse antwortet kein Badge-Dienst“ | Adresse falsch oder Code aus Schritt 3 nicht gespeichert (Deploy vergessen). |

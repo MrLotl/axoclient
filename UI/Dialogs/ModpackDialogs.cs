@@ -8,8 +8,9 @@ public static class ModpackDialogs
     {
         public override string ToString()
         {
-            var loaders = string.Join("/", Version.Loaders.Where(l => l is "fabric" or "forge")
-                .Select(l => l == "fabric" ? "Fabric" : "Forge"));
+            var loaders = string.Join("/", Version.Loaders
+                .Select(l => l switch { "fabric" => "Fabric", "forge" => "Forge", "neoforge" => "NeoForge", "quilt" => "Quilt", _ => "" })
+                .Where(l => l.Length > 0));
             var minecraft = Version.GameVersions.Count > 0 ? "Minecraft " + Version.GameVersions[^1] : "";
             return string.Join(" · ", new[] { Version.Name, minecraft, loaders, Version.ChannelText }.Where(p => p.Length > 0));
         }
@@ -30,15 +31,13 @@ public static class ModpackDialogs
             return false;
 
         var usable = info.Versions
-            .Where(v => v.DownloadUrl != null && v.FileName.EndsWith(".mrpack", StringComparison.OrdinalIgnoreCase)
-                        && (v.Loaders.Any(l => l is "fabric" or "forge") || !v.Loaders.Any(l => l is "neoforge" or "quilt")))
+            .Where(v => v.DownloadUrl != null && v.FileName.EndsWith(".mrpack", StringComparison.OrdinalIgnoreCase))
             .Select(v => new VersionChoice(v))
             .ToList();
         if (usable.Count == 0)
         {
             await app.Dialogs.ShowMessageAsync("Nicht installierbar",
-                $"\"{info.Title}\" hat keine Version für Fabric oder Forge. AxoClient kann derzeit nur diese beiden " +
-                "Mod-Loader starten (NeoForge und Quilt fehlen noch).");
+                $"„{info.Title}“ hat keine installierbare Version (.mrpack) auf Modrinth.");
             return false;
         }
 
@@ -55,7 +54,8 @@ public static class ModpackDialogs
             Ui.Label("Name der Instanz"), nameBox);
 
         if (!await app.Dialogs.ShowFormAsync($"{info.Title} installieren", form, "Installieren",
-                () => nameBox.Text.Trim().Length > 0 && versionBox.SelectedItem != null))
+                () => nameBox.Text.Trim().Length > 0 && versionBox.SelectedItem != null, 480,
+                "Wird als neue Instanz angelegt", "Download"))
             return false;
 
         var version = ((VersionChoice)versionBox.SelectedItem!).Version;
@@ -73,7 +73,7 @@ public static class ModpackDialogs
             Ui.Label("Name der Instanz"), nameBox);
 
         if (!await app.Dialogs.ShowFormAsync("Modpack-Datei installieren", form, "Installieren",
-                () => nameBox.Text.Trim().Length > 0))
+                () => nameBox.Text.Trim().Length > 0, 480, Path.GetFileName(path), "Archive"))
             return false;
 
         var name = nameBox.Text.Trim();

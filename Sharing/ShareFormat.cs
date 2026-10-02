@@ -29,11 +29,11 @@ public static class ShareKinds
 
     public static string Icon(string kind) => kind switch
     {
-        Instance => "",
-        Overlay => "",
-        Content => "",
-        Server => "",
-        _ => ""
+        Instance => "Cube",
+        Overlay => "Layers",
+        Content => "Download",
+        Server => "Server",
+        _ => "Archive"
     };
 }
 

@@ -7,12 +7,16 @@ public static class VersionCatalog
     private const string MojangManifest = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
     private const string FabricGameVersions = "https://meta.fabricmc.net/v2/versions/game";
     private const string ForgePromotions = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
+    private const string QuiltGameVersions = "https://meta.quiltmc.org/v3/versions/game";
+    private const string NeoForgeVersions = "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge";
 
     private record MojangVersion(string Id, string Type);
 
     private static List<MojangVersion>? _mojang;
     private static List<(string Version, bool Stable)>? _fabric;
     private static HashSet<string>? _forge;
+    private static List<(string Version, bool Stable)>? _quilt;
+    private static HashSet<string>? _neoForge;
 
     public static async Task<List<string>> GetVersionsAsync(HttpClient http, LoaderType loader, bool snapshots,
         bool oldVersions)
@@ -21,12 +25,20 @@ public static class VersionCatalog
         switch (loader)
         {
             case LoaderType.Fabric:
-                _fabric ??= await GetFabricAsync(http);
+                _fabric ??= await GetFabricAsync(http, FabricGameVersions);
                 return _fabric.Where(v => v.Stable || snapshots).Select(v => v.Version).ToList();
 
             case LoaderType.Forge:
                 _forge ??= await GetForgeAsync(http);
                 return mojang.Where(v => _forge.Contains(v.Id)).Select(v => v.Id).ToList();
+
+            case LoaderType.Quilt:
+                _quilt ??= await GetFabricAsync(http, QuiltGameVersions);
+                return _quilt.Where(v => v.Stable || snapshots).Select(v => v.Version).ToList();
+
+            case LoaderType.NeoForge:
+                _neoForge ??= await GetNeoForgeAsync(http);
+                return mojang.Where(v => _neoForge.Contains(v.Id)).Select(v => v.Id).ToList();
 
             default:
                 return mojang
@@ -53,9 +65,9 @@ public static class VersionCatalog
             .ToList();
     }
 
-    private static async Task<List<(string, bool)>> GetFabricAsync(HttpClient http)
+    private static async Task<List<(string, bool)>> GetFabricAsync(HttpClient http, string url)
     {
-        using var json = JsonDocument.Parse(await http.GetStringAsync(FabricGameVersions));
+        using var json = JsonDocument.Parse(await http.GetStringAsync(url));
         return json.RootElement.EnumerateArray()
             .Select(v => (v.GetProperty("version").GetString()!, v.GetProperty("stable").GetBoolean()))
             .ToList();
@@ -67,5 +79,25 @@ public static class VersionCatalog
         return json.RootElement.GetProperty("promos").EnumerateObject()
             .Select(p => p.Name[..p.Name.LastIndexOf('-')])
             .ToHashSet();
+    }
+
+    private static async Task<HashSet<string>> GetNeoForgeAsync(HttpClient http)
+    {
+        using var json = JsonDocument.Parse(await http.GetStringAsync(NeoForgeVersions));
+        return json.RootElement.GetProperty("versions").EnumerateArray()
+            .Select(v => MinecraftOfNeoForge(v.GetString() ?? ""))
+            .OfType<string>()
+            .ToHashSet();
+    }
+
+    public static string? MinecraftOfNeoForge(string version)
+    {
+        var parts = version.Split('-')[0].Split('.');
+        if (parts.Length < 3 || !int.TryParse(parts[0], out var major) || !int.TryParse(parts[1], out var minor)
+            || !int.TryParse(parts[2], out var patch))
+            return null;
+        if (major >= 26)
+            return parts.Length >= 4 && patch > 0 ? $"{major}.{minor}.{patch}" : $"{major}.{minor}";
+        return minor == 0 ? $"1.{major}" : $"1.{major}.{minor}";
     }
 }

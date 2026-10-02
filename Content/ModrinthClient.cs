@@ -25,7 +25,7 @@ public class ModrinthClient(HttpClient http)
             new[] { $"versions:{inst.MinecraftVersion}" }
         };
         if (type == ContentType.Mod)
-            facets.Add([$"categories:{inst.Loader.ModrinthName()}"]);
+            facets.Add(inst.Loader.ModrinthNames().Select(name => $"categories:{name}").ToArray());
         if (category != null)
             facets.Add([$"categories:{category}"]);
         return await SearchAsync(query, facets, page, pageSize, projectType, CategoryTags, index);
@@ -116,7 +116,7 @@ public class ModrinthClient(HttpClient http)
         var url = $"{Api}/project/{projectId}/version" +
                   $"?game_versions={Uri.EscapeDataString($"[\"{inst.MinecraftVersion}\"]")}";
         if (type == ContentType.Mod)
-            url += $"&loaders={Uri.EscapeDataString($"[\"{inst.Loader.ModrinthName()}\"]")}";
+            url += $"&loaders={Uri.EscapeDataString("[" + string.Join(",", inst.Loader.ModrinthNames().Select(name => $"\"{name}\"")) + "]")}";
         using var json = await GetJsonAsync(url);
         return ParseVersions(json.RootElement);
     }

@@ -24,7 +24,7 @@ public class ProfileInfo
 
 public record AccountTrouble(string What, Exception Error);
 
-public record SavedAccount(string Id, string Name, string? Uuid, BitmapSource? Head, bool Active);
+public record SavedAccount(string Id, string Name, string? Uuid, BitmapSource? Head, bool Active, DateTime LastUsed = default);
 
 public sealed class AccountService(HttpClient http)
 {
@@ -165,7 +165,7 @@ public sealed class AccountService(HttpClient http)
             .Where(a => a.Profile?.Username != null)
             .OrderByDescending(a => a.LastAccess)
             .Select(a => new SavedAccount(a.Identifier ?? a.Profile!.Username!, a.Profile!.Username!, a.Profile.UUID,
-                LoadCachedHead(a.Profile.UUID), Session != null && a.Profile.UUID == Session.UUID))
+                LoadCachedHead(a.Profile.UUID), Session != null && a.Profile.UUID == Session.UUID, a.LastAccess))
             .ToList();
     }
 

@@ -162,7 +162,7 @@ public partial class InstanceEditor : UserControl
 
     private void Ram_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (RamValue == null)
+        if (RamValue == null || RamHint == null)
             return;
         UpdateRam();
         MarkDirty();
@@ -209,7 +209,7 @@ public partial class InstanceEditor : UserControl
         BannerName.Text = DisplayName;
         Ui.Show(BannerAutoBadge, BannerIsAuto);
         IconInfo.Text = _pendingIcon != null ? "Eigenes Bild (wird beim Speichern übernommen)"
-            : icon == null ? "Für Karten und Liste · ideal 16:9" : "Für Karten und Liste · ideal 16:9";
+            : icon == null ? "Für Karten und Liste · quadratisch" : "Für Karten und Liste · quadratisch";
         PreviewThumb.Background = IconPreview.Background;
         PreviewName.Text = DisplayName;
     }
@@ -241,21 +241,25 @@ public partial class InstanceEditor : UserControl
         return false;
     }
 
-    private void SetIcon(string path)
+    private async void SetIcon(string path)
     {
         if (!IsImage(path))
             return;
-        _pendingIcon = path;
+        if (await ImageCropDialog.ShowAsync(_app, path, 1, 512, "Instanzbild zuschneiden") is not { } cropped)
+            return;
+        _pendingIcon = cropped;
         _iconReset = false;
         MarkDirty();
         UpdateImages();
     }
 
-    private void SetBanner(string path)
+    private async void SetBanner(string path)
     {
         if (!IsImage(path))
             return;
-        _pendingBanner = path;
+        if (await ImageCropDialog.ShowAsync(_app, path, 5, 1800, "Banner zuschneiden") is not { } cropped)
+            return;
+        _pendingBanner = cropped;
         _bannerReset = false;
         _bannerFromIcon = false;
         MarkDirty();
@@ -508,20 +512,54 @@ public partial class InstanceEditor : UserControl
         Edit(_app, _existing);
     }
 
-    private void Delete_Click(object sender, RoutedEventArgs e)
+    private bool CanDeleteFolder(Installation inst)
+    {
+        var root = Path.GetFullPath(AppPaths.Instances).TrimEnd('\\') + "\\";
+        var dir = Path.GetFullPath(inst.GameDir).TrimEnd('\\') + "\\";
+        return dir.StartsWith(root, StringComparison.OrdinalIgnoreCase) && dir.Length > root.Length
+               && Directory.Exists(dir)
+               && !_app.Instances.All.Any(other => other != inst
+                                                    && (Path.GetFullPath(other.GameDir).TrimEnd('\\') + "\\")
+                                                    .StartsWith(dir, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (_existing is not { } inst)
             return;
+        if (_app.Games.IsRunning(inst))
+        {
+            await _app.Dialogs.ShowMessageAsync("Minecraft läuft", $"„{inst.Name}“ läuft gerade. Beende das Spiel, bevor du die Instanz löschst.");
+            return;
+        }
+        var deleteFolder = CanDeleteFolder(inst);
         if (!_confirmDelete)
         {
             _confirmDelete = true;
             DeleteText.Text = "Wirklich löschen?";
             DeleteButton.Style = Ui.Resource<Style>("DangerFillButton");
-            DeleteButton.ToolTip = $"Entfernt „{inst.Name}“ aus dem Launcher. Der Ordner mit Welten und Mods bleibt erhalten.";
+            DeleteButton.ToolTip = deleteFolder
+                ? $"Entfernt „{inst.Name}“ und verschiebt den Ordner mit Welten, Mods und Screenshots in den Papierkorb."
+                : $"Entfernt „{inst.Name}“ aus dem Launcher. Der Ordner liegt außerhalb des Instanzordners oder wird geteilt und bleibt deshalb erhalten.";
             return;
         }
+
+        var dir = inst.GameDir;
         _app.Instances.Remove(inst);
         Deleted?.Invoke();
+        if (!deleteFolder)
+            return;
+        try
+        {
+            await Task.Run(() => Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(dir,
+                Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin));
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Instanzordner löschen", ex);
+            await _app.Dialogs.ShowErrorAsync("Der Instanzordner konnte nicht gelöscht werden", ex,
+                $"Die Instanz ist aus dem Launcher entfernt. Den Ordner kannst du selbst löschen: {dir}");
+        }
     }
 
     private async void Backups_Click(object sender, RoutedEventArgs e)

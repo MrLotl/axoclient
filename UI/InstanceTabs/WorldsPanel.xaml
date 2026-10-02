@@ -87,7 +87,7 @@
         </DataTemplate>
 
         <ItemsPanelTemplate x:Key="GridPanel">
-            <UniformGrid Columns="4" VerticalAlignment="Top" Margin="0,0,-16,0"/>
+            <c:TileGrid TileWidth="280" VerticalAlignment="Top" Margin="0,0,-16,0"/>
         </ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ListPanel">
             <StackPanel/>

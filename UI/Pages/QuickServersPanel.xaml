@@ -30,9 +30,17 @@
                                 </Border>
                                 <Button DockPanel.Dock="Right" Style="{StaticResource SmallGoodButton}" Content="Beitreten"
                                         FontSize="13" ToolTip="{Binding Status}" Click="Join_Click"/>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,12,0"
+                                            VerticalAlignment="Center" ToolTip="{Binding Status}">
+                                    <c:PingBars Level="{Binding PingLevel}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding PingText}" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Foreground="{Binding PingLevel, Converter={StaticResource PingBrush}}"/>
+                                </StackPanel>
                                 <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
                                     <TextBlock Text="{Binding Name}" Style="{StaticResource RowTitle}"/>
-                                    <TextBlock Text="{Binding Address}" Style="{StaticResource RowSub}"/>
+                                    <TextBlock Style="{StaticResource RowSub}">
+                                        <Run Text="{Binding Address, Mode=OneWay}"/><Run Text="{Binding PlayersSuffix, Mode=OneWay}"/>
+                                    </TextBlock>
                                 </StackPanel>
                             </DockPanel>
                         </Border>

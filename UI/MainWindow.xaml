@@ -141,11 +141,11 @@
             <ui:AccountMenu x:Name="AccountMenu" Margin="12,4,16,28"/>
         </Popup>
 
+        <ui:WelcomeView x:Name="Welcome" Visibility="Collapsed"/>
+
         <ui:ToastHost x:Name="Toasts" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20"/>
 
         <ui:DialogHost x:Name="DialogHost"/>
-
-        <ui:WelcomeView x:Name="Welcome" Visibility="Collapsed"/>
 
         <Grid x:Name="DropOverlay" Background="#B31F1F1F" Visibility="Collapsed" IsHitTestVisible="False">
             <Border BorderBrush="#80D68CE6" BorderThickness="2" CornerRadius="16" Margin="26" Background="#08FFFFFF">
