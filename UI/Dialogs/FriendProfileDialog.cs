@@ -209,13 +209,17 @@ public static class FriendProfileDialog
         string? version = current?.Version ?? inst?.MinecraftVersion;
         if (server == null)
         {
-            if (inst == null)
-                return;
-            var options = new ServerStore(inst.GameDir).Addresses();
+            var hosted = app.LocalServers.Servers
+                .Where(s => app.LocalServers.StateOf(s)?.FriendAddress != null)
+                .Select(s => (Name: s.Name + " (dein Server)", Address: app.LocalServers.StateOf(s)!.FriendAddress!,
+                    Version: s.IsProxy || s.Version.Length == 0 ? null : s.Version))
+                .ToList();
+            var options = hosted.Select(h => (h.Name, h.Address))
+                .Concat(inst != null ? new ServerStore(inst.GameDir).Addresses() : []).ToList();
             if (options.Count == 0)
             {
                 await app.Dialogs.ShowMessageAsync("Kein Server",
-                    $"„{inst.Name}“ hat noch keine Server. Füge zuerst einen Server hinzu, auf den du einladen möchtest.");
+                    "Es gibt noch keinen Server, auf den du einladen kannst. Füge einer Instanz einen Server hinzu oder starte einen lokalen Server.");
                 return;
             }
             var combo = Ui.Combo(options.Select(o => (object)(o.Name == o.Address ? o.Address : $"{o.Name} · {o.Address}")));
@@ -223,8 +227,18 @@ public static class FriendProfileDialog
             if (!await app.Dialogs.ShowFormAsync($"{friend.Name} einladen", Ui.Stack(Ui.Label("Server"), combo), "Einladung senden",
                     null, 420, "Dein Freund bekommt eine Benachrichtigung und kann direkt beitreten.", "Send"))
                 return;
-            server = options[Math.Max(0, combo.SelectedIndex)].Address;
+            var picked = Math.Max(0, combo.SelectedIndex);
+            server = options[picked].Address;
+            if (picked < hosted.Count)
+                version = hosted[picked].Version ?? version;
         }
+        if (app.LocalServers.FriendAddressFor(server) is not { } shared)
+        {
+            await app.Dialogs.ShowMessageAsync("Server nicht erreichbar",
+                $"„{server}“ ist nur auf deinem PC erreichbar. Starte den passenden lokalen Server, damit Freunde beitreten können.");
+            return;
+        }
+        server = shared;
         await UiRun.GuardAsync(app, "Einladung fehlgeschlagen", async () =>
         {
             await app.Axo.InviteAsync(friend.Uuid, server, version);

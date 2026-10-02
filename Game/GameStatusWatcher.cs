@@ -56,7 +56,7 @@ public sealed class GameStatusWatcher
             {
                 _lastReport = DateTime.UtcNow;
                 if (_app.Axo.Available)
-                    _app.Axo.SetStatusAsync(true, _server, _inst.MinecraftVersion, _inst.Name).Wait();
+                    _app.Axo.SetStatusAsync(true, _app.LocalServers.FriendAddressFor(_server), _inst.MinecraftVersion, _inst.Name).Wait();
             }
         }
         catch (Exception ex)

@@ -86,6 +86,7 @@ public partial class MainWindow : Window
         });
 
         Autostart.Refresh();
+        StartMenu.EnsureShortcut();
         if (Autostart.StartedByWindows && _app.Settings.AutostartMinimized)
             WindowState = WindowState.Minimized;
         UpdateAccount();

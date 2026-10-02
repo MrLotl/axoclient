@@ -69,6 +69,29 @@ public sealed class ServerCardItem : ISpecialItem
     public Brush RunBackground => Running ? Ui.Frozen(Color.FromRgb(0x3D, 0x26, 0x26)) : Ui.Resource<Brush>("GoodBg");
     public Brush RunForeground => Running ? Ui.Resource<Brush>("DangerText") : Ui.Resource<Brush>("Good");
 
+    public bool HasReach => State != null && (State.Reach != Reachability.Pending || Server?.OpenToInternet == true);
+    public string? ShareAddress => State?.FriendAddress;
+
+    public string ReachText => State?.Reach switch
+    {
+        { PublicAddress: { } address } => $"Freunde im Internet: {address}",
+        { Problem: not null, LanAddress: { } lan } => $"Nur im selben Netzwerk: {lan} · Portfreigabe fehlgeschlagen",
+        { Problem: not null } => "Portfreigabe fehlgeschlagen",
+        { LanAddress: { } lan } when Server?.OpenToInternet != true => $"Im selben Netzwerk: {lan}",
+        _ => "Portfreigabe wird eingerichtet …"
+    };
+
+    public string? ReachTip => State?.Reach.Problem ?? (ShareAddress != null ? "Klicken, um die Adresse für Freunde zu kopieren" : null);
+
+    public string ReachIcon => State?.Reach is { Problem: not null } ? "Warning" : State?.Reach.PublicAddress != null ? "Globe" : "Link";
+
+    public Brush ReachBrush => State?.Reach switch
+    {
+        { PublicAddress: not null } => Ui.Frozen(Color.FromRgb(0x6F, 0xDC, 0x80)),
+        { Problem: not null } => Ui.Resource<Brush>("Warn"),
+        _ => Ui.Resource<Brush>("MutedText")
+    };
+
     public static ServerCardItem CreateCard() => new();
 
     private ServerCardItem()
@@ -196,6 +219,21 @@ public partial class LocalServersPage : UserControl
         await Task.Delay(1400);
         _copied = null;
         Refresh();
+    }
+
+    private void CopyShare_Click(object sender, RoutedEventArgs e)
+    {
+        if (Ui.DataOf<ServerCardItem>(sender).ShareAddress is not { } address)
+            return;
+        try
+        {
+            Clipboard.SetText(address);
+            Toasts.Show(new Toast("Adresse kopiert", address, BadgeIcon: "Link"));
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Adresse für Freunde kopieren", ex);
+        }
     }
 
     private void Join_Click(object sender, RoutedEventArgs e)

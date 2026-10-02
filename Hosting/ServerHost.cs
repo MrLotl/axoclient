@@ -14,6 +14,9 @@ public sealed class RunningServer(Process process)
     public bool Reachable { get; set; }
     public long RamBytes { get; set; }
     public bool Stopping { get; set; }
+    public Reachability Reach { get; set; } = Reachability.Pending;
+    public PortMapping? Mapping { get; set; }
+    public string? FriendAddress => Reach.PublicAddress ?? Reach.LanAddress;
 }
 
 public sealed class ServerHost : IDisposable
@@ -285,9 +288,76 @@ public sealed class ServerHost : IDisposable
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
+        RunningServer state;
         lock (_running)
-            _running[server.Id] = new RunningServer(process) { Max = server.MaxPlayers };
+            _running[server.Id] = state = new RunningServer(process) { Max = server.MaxPlayers };
         Changed?.Invoke();
+        _ = OpenAccessAsync(server, state);
+    }
+
+    private async Task OpenAccessAsync(LocalServer server, RunningServer state)
+    {
+        var lan = PortForwarding.LanIp() is { } ip ? $"{ip}:{server.Port}" : null;
+        if (!server.OpenToInternet)
+        {
+            state.Reach = new Reachability(null, lan, null);
+            Changed?.Invoke();
+            return;
+        }
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            var mapping = await PortForwarding.OpenAsync(server.Port, $"AxoClient {server.Name}", timeout.Token);
+            if (state.Process.HasExited || state.Stopping)
+            {
+                await PortForwarding.CloseAsync(mapping);
+                return;
+            }
+            state.Mapping = mapping;
+            var publicAddress = server.Port == 25565 ? mapping.PublicIp : $"{mapping.PublicIp}:{server.Port}";
+            state.Reach = new Reachability(publicAddress, lan, null);
+        }
+        catch (Exception ex)
+        {
+            ErrorReport.Log("Portfreigabe für lokalen Server", ex);
+            state.Reach = new Reachability(null, lan, ex is InvalidOperationException ? ex.Message : ErrorReport.Short(ex));
+        }
+        Changed?.Invoke();
+    }
+
+    public void SetOpenToInternet(LocalServer server, bool open)
+    {
+        if (server.OpenToInternet == open)
+            return;
+        server.OpenToInternet = open;
+        Save();
+        if (StateOf(server) is not { } state)
+            return;
+        CloseAccess(state);
+        state.Reach = Reachability.Pending;
+        Changed?.Invoke();
+        _ = OpenAccessAsync(server, state);
+    }
+
+    private static void CloseAccess(RunningServer state)
+    {
+        if (state.Mapping is not { } mapping)
+            return;
+        state.Mapping = null;
+        _ = PortForwarding.CloseAsync(mapping);
+    }
+
+    public string? FriendAddressFor(string? address)
+    {
+        if (string.IsNullOrEmpty(address))
+            return address;
+        var (host, port) = ServerPing.ParseAddress(address);
+        var lan = PortForwarding.LanIp();
+        if (host is not ("localhost" or "127.0.0.1" or "::1" or "0.0.0.0") && host != lan)
+            return address;
+        return Servers.FirstOrDefault(s => s.Port == port && IsRunning(s)) is { } server && StateOf(server)?.FriendAddress is { } shared
+            ? shared
+            : null;
     }
 
     public void SendCommand(LocalServer server, string command)
@@ -328,6 +398,7 @@ public sealed class ServerHost : IDisposable
                 ErrorReport.Log("Server beenden", ex);
             }
         }
+        CloseAccess(state);
         lock (_running)
             _running.Remove(server.Id);
         Changed?.Invoke();
@@ -353,6 +424,7 @@ public sealed class ServerHost : IDisposable
             {
                 if (state.Process.HasExited)
                 {
+                    CloseAccess(state);
                     lock (_running)
                         _running.Remove(server.Id);
                     changed = true;
@@ -388,5 +460,13 @@ public sealed class ServerHost : IDisposable
         }
     }
 
-    public void Dispose() => _timer.Dispose();
+    public void Dispose()
+    {
+        _timer.Dispose();
+        List<PortMapping> mappings;
+        lock (_running)
+            mappings = _running.Values.Select(r => r.Mapping).OfType<PortMapping>().ToList();
+        if (mappings.Count > 0)
+            Task.WhenAll(mappings.Select(PortForwarding.CloseAsync)).Wait(TimeSpan.FromSeconds(3));
+    }
 }

@@ -24,6 +24,7 @@ public class LocalServer
     public string? InstalledVersion { get; set; }
     public ServerSoftware? InstalledSoftware { get; set; }
     public bool Imported { get; set; }
+    public bool OpenToInternet { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 
     [JsonIgnore] public bool IsProxy => Software == ServerSoftware.Velocity;

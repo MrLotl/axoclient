@@ -129,6 +129,21 @@ public static class LocalServerDialog
         ramHead.Children.Add(ramValue);
         ramHead.Children.Add(new TextBlock { Text = "Arbeitsspeicher", Style = Ui.Resource<Style>("FieldLabel"), Margin = new Thickness(0), VerticalAlignment = VerticalAlignment.Bottom });
 
+        var openSwitch = new CheckBox { Style = Ui.Resource<Style>("ToggleSwitch"), IsChecked = existing?.OpenToInternet ?? false, Margin = new Thickness(16, 0, 0, 0) };
+        DockPanel.SetDock(openSwitch, Dock.Right);
+        var openTexts = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        openTexts.Children.Add(new TextBlock { Text = "Für Freunde im Internet öffnen", FontSize = 13.5, FontWeight = FontWeights.Medium, Foreground = Ui.Resource<Brush>("TextPrimary") });
+        openTexts.Children.Add(new TextBlock
+        {
+            Text = "Gibt den Port beim Start per UPnP im Router frei, damit Freunde über „Beitreten“ mitspielen können. " +
+                   "Der Server ist dann aus dem Internet erreichbar – nutze eine Whitelist, wenn nicht jeder rein soll.",
+            FontSize = 12,
+            Foreground = Ui.Resource<Brush>("MutedText"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 3, 0, 0)
+        });
+        var openRow = new DockPanel { Margin = new Thickness(0, 16, 0, 0), Children = { openSwitch, openTexts } };
+
         var eulaBox = new Border { Padding = new Thickness(12, 10, 12, 10), CornerRadius = new CornerRadius(9), Background = Ui.Frozen(Color.FromRgb(0x23, 0x23, 0x23)), Margin = new Thickness(0, 16, 0, 0), Child = eula, Visibility = create ? Visibility.Visible : Visibility.Collapsed, ToolTip = "https://aka.ms/MinecraftEULA" };
 
         var grid = new Grid();
@@ -173,11 +188,13 @@ public static class LocalServerDialog
                 {
                     result = host.Create(name.Text.Trim(), software, chosen, int.Parse(port.Text), int.Parse(maxPlayers.Text),
                         (int)ram.Value * 1024, icon);
+                    host.SetOpenToInternet(result!, openSwitch.IsChecked == true);
                 }
                 else
                 {
                     host.Update(existing!, name.Text.Trim(), software, chosen, int.Parse(port.Text), int.Parse(maxPlayers.Text),
                         (int)ram.Value * 1024, icon, resetIcon);
+                    host.SetOpenToInternet(existing!, openSwitch.IsChecked == true);
                     result = existing;
                 }
                 app.Dialogs.ClosePanel();
@@ -198,6 +215,7 @@ public static class LocalServerDialog
         body.Children.Add(grid);
         body.Children.Add(ramHead);
         body.Children.Add(ram);
+        body.Children.Add(openRow);
         body.Children.Add(eulaBox);
 
         UIElement? left = null;
