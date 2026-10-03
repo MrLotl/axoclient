@@ -28,7 +28,13 @@ public static class FriendProfileDialog
                 }
             }
         };
-        var leftLayers = new Grid { MinHeight = 420 };
+        var leftLayers = new Grid();
+        leftLayers.SizeChanged += (_, e) =>
+        {
+            var height = Math.Max(200, Math.Min(e.NewSize.Height - 70, (e.NewSize.Width - 30) * 1.65));
+            viewer.Height = height;
+            viewer.Width = height / 1.65;
+        };
         leftLayers.Children.Add(new Border
         {
             Height = 120,
@@ -122,7 +128,7 @@ public static class FriendProfileDialog
         recentSection.Margin = new Thickness(0, 16, 0, 0);
         body.Children.Add(serversSection);
         body.Children.Add(recentSection);
-        right.Children.Add(body);
+        right.Children.Add(new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
 
         var root = new DockPanel();
         DockPanel.SetDock(left, Dock.Left);
@@ -131,7 +137,13 @@ public static class FriendProfileDialog
 
         _ = LoadSkinAsync(app, friend, viewer);
         _ = LoadProfileAsync(app, friend, togetherValue, commonValue, sinceValue, serverChips, recentList, serversSection);
-        await app.Dialogs.ShowPanelAsync(root, 680);
+        await app.Dialogs.ShowPanelAsync(root, host =>
+        {
+            var width = Math.Clamp(host.Width * 0.62, 680, 1100);
+            root.Height = Math.Max(320, Math.Min(Math.Clamp(host.Height * 0.62, 420, 820), host.Height - 80));
+            left.Width = Math.Clamp(width * 0.36, 230, 400);
+            return width;
+        });
     }
 
     private static async Task LoadSkinAsync(AppServices app, FriendInfo friend, SkinViewer viewer)
@@ -190,7 +202,7 @@ public static class FriendProfileDialog
 
         if (profile.Recent.Count == 0)
             recent.Children.Add(new TextBlock { Text = "Noch keine Aktivität.", FontSize = 12.5, Foreground = Ui.Resource<Brush>("DimText") });
-        foreach (var (when, text) in profile.Recent.Take(4))
+        foreach (var (when, text) in profile.Recent.Take(10))
         {
             var line = new DockPanel { Margin = new Thickness(0, 0, 0, 7) };
             var whenText = new TextBlock { Text = Formats.Day(when), Width = 64, FontSize = 12.5, Foreground = Ui.Resource<Brush>("DimText") };

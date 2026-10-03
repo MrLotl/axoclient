@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
 
@@ -34,7 +35,9 @@ public partial class MainWindow : Window
         };
 
         AccountMenu.Initialize(_app);
-        AccountMenu.CloseRequested += () => AccountPopup.IsOpen = false;
+        AccountMenu.CloseRequested += CloseAccountMenu;
+        SizeChanged += (_, _) => CloseAccountMenu();
+        Deactivated += (_, _) => CloseAccountMenu();
         HomePage.Initialize(_app);
         InstancesPage.Initialize(_app);
         LocalServersPage.Initialize(_app);
@@ -246,14 +249,32 @@ public partial class MainWindow : Window
     private void AccountButton_Checked(object sender, RoutedEventArgs e)
     {
         AccountMenu.Refresh();
-        AccountPopup.IsOpen = true;
+        AccountMenu.Visibility = Visibility.Visible;
+        AccountMenu.Margin = new Thickness(0);
+        AccountMenu.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var button = AccountButton.TranslatePoint(new Point(0, 0), RootGrid);
+        var left = button.X + AccountButton.ActualWidth - AccountMenu.DesiredSize.Width;
+        left = Math.Max(8, Math.Min(left, RootGrid.ActualWidth - AccountMenu.DesiredSize.Width - 8));
+        AccountMenu.Margin = new Thickness(left, button.Y + AccountButton.ActualHeight + 6, 0, 0);
+        AccountDismiss.Visibility = Visibility.Visible;
+        AccountMenu.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
         ((RotateTransform)AccountChevron.RenderTransform).Angle = 180;
     }
 
-    private void AccountPopup_Closed(object? sender, EventArgs e)
+    private void CloseAccountMenu()
     {
+        if (AccountMenu.Visibility != Visibility.Visible)
+            return;
+        AccountMenu.Visibility = Visibility.Collapsed;
+        AccountDismiss.Visibility = Visibility.Collapsed;
         ((RotateTransform)AccountChevron.RenderTransform).Angle = 0;
-        Dispatcher.BeginInvoke(() => AccountButton.IsChecked = false, DispatcherPriority.Input);
+        AccountButton.IsChecked = false;
+    }
+
+    private void AccountDismiss_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        CloseAccountMenu();
+        e.Handled = true;
     }
 
     private async void Bell_Click(object sender, RoutedEventArgs e) => await HomePage.ShowNotificationsAsync();
@@ -426,6 +447,12 @@ public partial class MainWindow : Window
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && AccountMenu.IsVisible)
+        {
+            CloseAccountMenu();
+            e.Handled = true;
+            return;
+        }
         DialogHost.HandleKey(e);
         if (!e.Handled)
             base.OnPreviewKeyDown(e);

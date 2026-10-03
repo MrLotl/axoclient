@@ -21,6 +21,16 @@ public partial class HomePage : UserControl
         InitializeComponent();
         PlayLayers.SizeChanged += (_, _) =>
             PlayLayers.Clip = new RectangleGeometry(new Rect(PlayLayers.RenderSize), 12, 12);
+        IsVisibleChanged += (_, _) => CloseInstanceMenu();
+        SizeChanged += (_, _) => CloseInstanceMenu();
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape && InstanceMenu.IsVisible)
+            {
+                CloseInstanceMenu();
+                e.Handled = true;
+            }
+        };
     }
 
     public event Action<Installation, InstanceSection?>? OpenInstanceRequested;
@@ -66,20 +76,35 @@ public partial class HomePage : UserControl
 
     private void InstancePicker_Checked(object sender, RoutedEventArgs e)
     {
-        InstancePopup.Width = LaunchPanel.ActualWidth;
-        InstancePopup.IsOpen = true;
+        var top = LaunchPanel.TranslatePoint(new Point(0, 0), this).Y;
+        InstanceMenu.Width = LaunchPanel.ActualWidth;
+        InstanceMenu.Margin = new Thickness(0, 0, 0, ActualHeight - top + 8);
+        InstanceList.MaxHeight = Math.Clamp(top - 70, 120, 360);
+        InstanceDismiss.Visibility = Visibility.Visible;
+        InstanceMenu.Visibility = Visibility.Visible;
+        InstanceMenu.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
         ((RotateTransform)PickerChevron.RenderTransform).Angle = 180;
     }
 
-    private void InstancePopup_Closed(object? sender, EventArgs e)
+    private void CloseInstanceMenu()
     {
+        if (InstanceMenu.Visibility != Visibility.Visible)
+            return;
+        InstanceMenu.Visibility = Visibility.Collapsed;
+        InstanceDismiss.Visibility = Visibility.Collapsed;
         ((RotateTransform)PickerChevron.RenderTransform).Angle = 0;
-        Dispatcher.BeginInvoke(() => InstancePicker.IsChecked = false, DispatcherPriority.Input);
+        InstancePicker.IsChecked = false;
+    }
+
+    private void InstanceDismiss_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        CloseInstanceMenu();
+        e.Handled = true;
     }
 
     private void InstanceItem_Click(object sender, RoutedEventArgs e)
     {
-        InstancePopup.IsOpen = false;
+        CloseInstanceMenu();
         _app.Instances.Select(Ui.DataOf<InstanceItem>(sender).Installation);
     }
 

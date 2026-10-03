@@ -39,7 +39,7 @@ public sealed class CapeEditorDialog
     private readonly bool _slim;
     private readonly DispatcherTimer _previewTimer = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private readonly PixelCanvas _canvas = new();
-    private readonly SkinViewer _viewer = new() { Width = 220, Height = 330 };
+    private readonly SkinViewer _viewer = new() { Width = 220, Height = 330, FaceLeft = true };
     private readonly TextBox _name = Ui.Input();
     private readonly TextBlock _footerText = new() { FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly Border _currentSwatch = new() { Width = 16, Height = 16, CornerRadius = new CornerRadius(4), Margin = new Thickness(0, 0, 8, 0) };

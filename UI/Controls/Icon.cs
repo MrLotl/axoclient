@@ -145,6 +145,8 @@ public sealed class Icon : FrameworkElement
         if (string.IsNullOrEmpty(Kind) || !Glyphs.TryGetValue(Kind, out var glyph))
             return;
         var scale = Size / glyph.View;
+        dc.PushTransform(new TranslateTransform(Math.Max(0, (RenderSize.Width - Size) / 2),
+            Math.Max(0, (RenderSize.Height - Size) / 2)));
         dc.PushTransform(new ScaleTransform(scale, scale));
         var stroke = double.IsNaN(StrokeWidth) ? glyph.Stroke : StrokeWidth;
         Pen? pen = null;
@@ -158,6 +160,7 @@ public sealed class Icon : FrameworkElement
             };
         }
         dc.DrawGeometry(glyph.Fill ? Foreground : null, pen, glyph.Data);
+        dc.Pop();
         dc.Pop();
     }
 }

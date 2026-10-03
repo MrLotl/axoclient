@@ -15,6 +15,8 @@ public interface IDialogService
 
     Task ShowPanelAsync(FrameworkElement panel, double width = 440);
 
+    Task ShowPanelAsync(FrameworkElement panel, Func<Size, double> fit);
+
     void ClosePanel();
 
     Task<T> RunWithProgressAsync<T>(string title, Func<WorkProgress, Task<T>> work);

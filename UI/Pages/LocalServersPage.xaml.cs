@@ -151,8 +151,8 @@ public partial class LocalServersPage : UserControl
             .ToList();
         ServerList.ItemsSource = items;
         var running = Host.Servers.Count(Host.IsRunning);
-        SummaryText.Text = $"{Formats.Count(Host.Servers.Count, "Server", "Server")} auf diesem PC · " +
-                           (running == 0 ? "keiner läuft" : running == 1 ? "1 läuft" : $"{running} laufen");
+        CountText.Text = Host.Servers.Count.ToString();
+        SummaryText.Text = running == 0 ? "keiner läuft" : running == 1 ? "1 läuft" : $"{running} laufen";
     }
 
     private static LocalServer Of(object sender) => Ui.DataOf<ServerCardItem>(sender).Server!;

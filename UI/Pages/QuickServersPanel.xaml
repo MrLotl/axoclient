@@ -28,8 +28,10 @@
                                         <Image Source="{Binding Icon}" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
                                     </Grid>
                                 </Border>
-                                <Button DockPanel.Dock="Right" Style="{StaticResource SmallGoodButton}" Content="Beitreten"
-                                        FontSize="13" ToolTip="{Binding Status}" Click="Join_Click"/>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource GoodIconButton}"
+                                        ToolTip="Beitreten" Click="Join_Click">
+                                    <c:Icon Kind="Play" Size="14"/>
+                                </Button>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,12,0"
                                             VerticalAlignment="Center" ToolTip="{Binding Status}">
                                     <c:PingBars Level="{Binding PingLevel}" VerticalAlignment="Center" Margin="0,0,6,0"/>

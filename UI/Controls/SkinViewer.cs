@@ -9,7 +9,7 @@ namespace AxoClient.UI.Controls;
 
 public class SkinViewer : Grid
 {
-    private const double DefaultYaw = -28, DefaultPitch = 8;
+    private const double DefaultYaw = 18, DefaultPitch = 8;
 
     private readonly Viewport3D _viewport = new() { ClipToBounds = false, IsHitTestVisible = false };
     private readonly Model3DGroup _figure = new();
@@ -71,9 +71,39 @@ public class SkinViewer : Grid
         };
     }
 
-    public void ResetView() => TurnTo(DefaultYaw, ResetSeconds);
+    public void ResetView() => TurnTo(_faceFront ? 0 : DefaultYaw, ResetSeconds);
 
-    public const double FrontYaw = DefaultYaw, BackYaw = 180 + DefaultYaw;
+    public bool FaceFront
+    {
+        get => _faceFront;
+        set
+        {
+            if (_faceFront == value)
+                return;
+            _faceFront = value;
+            StopTurn();
+            _yaw.Angle = value ? 0 : _faceLeft ? -DefaultYaw : DefaultYaw;
+        }
+    }
+
+    private bool _faceFront;
+
+    public const double FrontYaw = DefaultYaw, BackYaw = 180 + 12;
+
+    public bool FaceLeft
+    {
+        get => _faceLeft;
+        set
+        {
+            if (_faceLeft == value)
+                return;
+            _faceLeft = value;
+            StopTurn();
+            _yaw.Angle = -_yaw.Angle;
+        }
+    }
+
+    private bool _faceLeft;
 
     private double _turnFrom, _turnTo, _pitchFrom, _turnSeconds;
     private TimeSpan _turnStart;
@@ -83,6 +113,8 @@ public class SkinViewer : Grid
 
     public void TurnTo(double yaw, double seconds = TurnSeconds)
     {
+        if (_faceLeft)
+            yaw = -yaw;
         _turnFrom = _yaw.Angle;
         _turnSeconds = seconds;
         _turnTo = _turnFrom + ((yaw - _turnFrom) % 360 + 540) % 360 - 180;

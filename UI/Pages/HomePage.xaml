@@ -32,7 +32,7 @@
             </Grid.RowDefinitions>
 
             <Grid x:Name="SkinArea" Margin="0,0,0,24" SizeChanged="SkinArea_SizeChanged">
-                <c:SkinViewer x:Name="SkinView" Width="320" Height="480" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <c:SkinViewer x:Name="SkinView" FaceFront="True" Width="320" Height="480" VerticalAlignment="Bottom" HorizontalAlignment="Center">
                     <c:SkinViewer.Effect>
                         <DropShadowEffect Color="Black" BlurRadius="30" ShadowDepth="18" Direction="270" Opacity="0.35"/>
                     </c:SkinViewer.Effect>
@@ -66,7 +66,8 @@
                                 <ContentPresenter x:Name="CurrentThumb" ContentTemplate="{StaticResource InstanceThumb}"/>
                             </Border>
                             <c:Icon x:Name="PickerChevron" DockPanel.Dock="Right" Kind="ChevronUp" Size="16"
-                                    Foreground="{StaticResource SubtleText}" RenderTransformOrigin="0.5,0.5">
+                                    Foreground="{StaticResource SubtleText}" VerticalAlignment="Center"
+                                    RenderTransformOrigin="0.5,0.5">
                                 <c:Icon.RenderTransform>
                                     <RotateTransform/>
                                 </c:Icon.RenderTransform>
@@ -146,37 +147,6 @@
                 </StackPanel>
             </Border>
 
-            <Popup x:Name="InstancePopup" Grid.Row="1" PlacementTarget="{Binding ElementName=InstancePicker}"
-                   Placement="Top" VerticalOffset="-8" HorizontalOffset="-12" AllowsTransparency="True"
-                   StaysOpen="False" PopupAnimation="Fade" Closed="InstancePopup_Closed">
-                <Border Margin="12,24,12,4" Padding="6" CornerRadius="12" Background="#2F2F2F" BorderBrush="#3A3A3A"
-                        BorderThickness="1" Width="428" Effect="{StaticResource PopupShadow}">
-                    <StackPanel>
-                        <TextBlock Text="INSTANZ WÄHLEN" Style="{StaticResource OverLabel}" Margin="8,6,8,4"/>
-                        <ItemsControl x:Name="InstanceList" Style="{StaticResource PlainList}" MaxHeight="360">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button x:Name="Item" Style="{StaticResource MenuItemButton}" Height="42" Padding="8,0"
-                                            Margin="0,0,0,2" Click="InstanceItem_Click">
-                                        <DockPanel>
-                                            <Border DockPanel.Dock="Left" Width="32" Height="32" CornerRadius="7"
-                                                    ClipToBounds="True" Margin="0,0,10,0">
-                                                <ContentPresenter Content="{Binding}"
-                                                                  ContentTemplate="{StaticResource InstanceThumb}"/>
-                                            </Border>
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding VersionLabel}" FontSize="12"
-                                                       Foreground="{StaticResource MutedText}" VerticalAlignment="Center"
-                                                       Margin="10,0,0,0"/>
-                                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
-                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                        </DockPanel>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-            </Popup>
         </Grid>
 
         <Grid Grid.Column="1" Margin="0,20,20,20">
@@ -187,5 +157,37 @@
             <pages:FriendsPanel x:Name="Friends"/>
             <pages:QuickServersPanel x:Name="Servers" Grid.Row="1" Margin="0,16,0,0" MaxHeight="300"/>
         </Grid>
+
+        <Border x:Name="InstanceDismiss" Grid.ColumnSpan="2" Background="Transparent" Visibility="Collapsed"
+                MouseDown="InstanceDismiss_MouseDown"/>
+
+        <Border x:Name="InstanceMenu" VerticalAlignment="Bottom" HorizontalAlignment="Center" Padding="6"
+                CornerRadius="12" Background="#2F2F2F" BorderBrush="#3A3A3A" BorderThickness="1"
+                Effect="{StaticResource PopupShadow}" Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="INSTANZ WÄHLEN" Style="{StaticResource OverLabel}" Margin="8,6,8,4"/>
+                <ItemsControl x:Name="InstanceList" Style="{StaticResource PlainList}" MaxHeight="360">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button x:Name="Item" Style="{StaticResource MenuItemButton}" Height="42" Padding="8,0"
+                                        Margin="0,0,0,2" Click="InstanceItem_Click">
+                                    <DockPanel>
+                                        <Border DockPanel.Dock="Left" Width="32" Height="32" CornerRadius="7"
+                                                ClipToBounds="True" Margin="0,0,10,0">
+                                            <ContentPresenter Content="{Binding}"
+                                                              ContentTemplate="{StaticResource InstanceThumb}"/>
+                                        </Border>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding VersionLabel}" FontSize="12"
+                                                   Foreground="{StaticResource MutedText}" VerticalAlignment="Center"
+                                                   Margin="10,0,0,0"/>
+                                        <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

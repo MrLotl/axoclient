@@ -242,7 +242,7 @@ public static class LocalServerDialog
         root.Children.Add(body);
         _ = LoadVersionsAsync();
         Validate();
-        await app.Dialogs.ShowPanelAsync(root, 520);
+        await app.Dialogs.ShowPanelAsync(root, 720);
         return result;
     }
 

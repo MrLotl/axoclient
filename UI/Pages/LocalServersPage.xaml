@@ -285,8 +285,13 @@
 
     <DockPanel Margin="28,24,28,24">
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,18">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Style="{StaticResource SegmentGroup}" Background="{StaticResource CardBg}" Margin="0,0,12,0">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Lokale Server" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+                <Border Style="{StaticResource Pill}" Margin="12,0,0,0">
+                    <TextBlock x:Name="CountText" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextSecondary}"
+                               VerticalAlignment="Center"/>
+                </Border>
+                <Border Style="{StaticResource SegmentGroup}" Background="{StaticResource CardBg}" Margin="20,0,0,0">
                     <StackPanel Orientation="Horizontal">
                         <RadioButton x:Name="GridToggle" Style="{StaticResource SegmentIconButton}" GroupName="ServerView"
                                      ToolTip="Kartenansicht" Checked="ViewToggle_Checked">
@@ -298,6 +303,10 @@
                         </RadioButton>
                     </StackPanel>
                 </Border>
+                <TextBlock x:Name="SummaryText" FontSize="13" Foreground="{StaticResource MutedText}" Margin="16,0,0,0"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button Style="{StaticResource ToolButton}" Width="36" Padding="0" ToolTip="Server-Ordner öffnen" Click="OpenRoot_Click">
                     <c:Icon Kind="Folder" Size="16"/>
                 </Button>
@@ -315,10 +324,6 @@
                         <TextBlock Text="Server erstellen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-            </StackPanel>
-            <StackPanel>
-                <TextBlock Text="Lokale Server" Style="{StaticResource PageTitle}"/>
-                <TextBlock x:Name="SummaryText" FontSize="13" Foreground="{StaticResource MutedText}" Margin="0,4,0,0"/>
             </StackPanel>
         </DockPanel>
 

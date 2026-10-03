@@ -22,6 +22,9 @@ public partial class InstanceOverview : UserControl
     private Installation? _inst;
     private int _request;
     private int _monthOffset;
+    private double _builtStep;
+    private int _builtRows = 5;
+    private DateTime _builtFirstMonday;
 
     public event Action<InstanceSection>? OpenRequested;
 
@@ -218,18 +221,56 @@ public partial class InstanceOverview : UserControl
         return cell;
     }
 
+    private void ActivityArea_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var year = YearToggle.IsChecked == true;
+        if (_inst == null || Math.Abs(year ? YearStep() - _builtStep : MonthCellHeight(_builtRows) - _builtStep) < 0.5)
+            return;
+        if (year)
+            BuildYear(_inst, _builtFirstMonday);
+        else
+            BuildMonth(_inst);
+    }
+
+    private double YearStep()
+    {
+        var step = Math.Min((ActivityArea.ActualWidth - 28) / 53, (ActivityArea.ActualHeight - 20) / 7);
+        return Math.Floor(Math.Clamp(double.IsFinite(step) ? step : 16, 10, 44));
+    }
+
+    private double MonthCellHeight(int rows)
+    {
+        var byHeight = (ActivityArea.ActualHeight - 22) / Math.Max(rows, 4) - 6;
+        var byWidth = (ActivityArea.ActualWidth / 7 - 6) / 2.75;
+        var height = Math.Min(byHeight, byWidth);
+        return Math.Floor(Math.Clamp(double.IsFinite(height) && height > 0 ? height : 32, 28, 72));
+    }
+
     private void BuildYear(Installation inst, DateTime firstMonday)
     {
         YearView.Children.Clear();
-        var labels = new StackPanel { Width = 22, Margin = new Thickness(0, 19, 6, 0) };
+        var step = YearStep();
+        var gap = Math.Clamp(Math.Round(step * 0.2), 2, 6);
+        var size = step - gap;
+        _builtStep = step;
+        _builtFirstMonday = firstMonday;
+        var labels = new StackPanel { Width = 22, Margin = new Thickness(0, 20, 6, 0) };
         for (var i = 0; i < 7; i++)
-            labels.Children.Add(new TextBlock { Text = i is 0 or 2 or 4 ? WeekdaysShort[i] : "", FontSize = 10, Height = 16, Foreground = Ui.Resource<Brush>("DimText") });
+            labels.Children.Add(new TextBlock
+            {
+                Text = i is 0 or 2 or 4 ? WeekdaysShort[i] : "",
+                FontSize = 10,
+                Height = size,
+                Margin = new Thickness(0, 0, 0, gap),
+                Padding = new Thickness(0, Math.Max(0, (size - 13) / 2), 0, 0),
+                Foreground = Ui.Resource<Brush>("DimText")
+            });
         YearView.Children.Add(labels);
 
         var lastMonth = -1;
         for (var week = 0; week < 53; week++)
         {
-            var column = new StackPanel { Margin = new Thickness(0, 0, 3, 0) };
+            var column = new StackPanel { Margin = new Thickness(0, 0, gap, 0) };
             var weekStart = firstMonday.AddDays(week * 7);
             var label = "";
             if (weekStart.Month != lastMonth)
@@ -239,16 +280,17 @@ public partial class InstanceOverview : UserControl
             }
             column.Children.Add(new Canvas
             {
-                Height = 13,
-                Width = 13,
+                Height = 14,
+                Width = size,
                 Margin = new Thickness(0, 0, 0, 6),
                 Children = { new TextBlock { Text = label, FontSize = 10, Foreground = Ui.Resource<Brush>("DimText") } }
             });
             for (var day = 0; day < 7; day++)
             {
                 var date = weekStart.AddDays(day);
-                var cell = Cell(date, PlayHistory.Seconds(inst, date), date > DateTime.Today, 13, 13);
-                cell.Margin = new Thickness(0, 0, 0, 3);
+                var cell = Cell(date, PlayHistory.Seconds(inst, date), date > DateTime.Today, size, size);
+                cell.CornerRadius = new CornerRadius(Math.Clamp(size / 4.5, 3, 7));
+                cell.Margin = new Thickness(0, 0, 0, gap);
                 column.Children.Add(cell);
             }
             YearView.Children.Add(column);
@@ -269,18 +311,22 @@ public partial class InstanceOverview : UserControl
 
         var grid = new UniformGrid { Columns = 7, Margin = new Thickness(0, 0, -6, 0) };
         var lead = ((int)first.DayOfWeek + 6) % 7;
-        for (var i = 0; i < lead; i++)
-            grid.Children.Add(new Border { Height = 32, Margin = new Thickness(0, 0, 6, 6) });
         var days = DateTime.DaysInMonth(first.Year, first.Month);
+        _builtRows = (lead + days + 6) / 7;
+        var cellHeight = MonthCellHeight(_builtRows);
+        _builtStep = cellHeight;
+        MonthView.Width = 7 * (cellHeight * 2.75 + 6) - 6;
+        for (var i = 0; i < lead; i++)
+            grid.Children.Add(new Border { Height = cellHeight, Margin = new Thickness(0, 0, 6, 6) });
         for (var d = 1; d <= days; d++)
         {
             var date = new DateTime(first.Year, first.Month, d);
             var future = date > DateTime.Today;
             var seconds = future ? 0 : PlayHistory.Seconds(inst, date);
             var level = Level(seconds);
-            var cell = Cell(date, seconds, future, double.NaN, 32);
+            var cell = Cell(date, seconds, future, double.NaN, cellHeight);
             cell.Margin = new Thickness(0, 0, 6, 6);
-            cell.CornerRadius = new CornerRadius(7);
+            cell.CornerRadius = new CornerRadius(Math.Clamp(cellHeight / 4.5, 7, 12));
             cell.Padding = new Thickness(9, 0, 9, 0);
             if (future)
             {

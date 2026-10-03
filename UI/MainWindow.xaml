@@ -87,7 +87,7 @@
                         <TextBlock x:Name="AccountName" FontSize="14" FontWeight="Medium" Margin="8,0"
                                    VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}"/>
                         <c:Icon x:Name="AccountChevron" Kind="ChevronDown" Size="16" Foreground="{StaticResource SubtleText}"
-                                RenderTransformOrigin="0.5,0.5">
+                                VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                             <c:Icon.RenderTransform>
                                 <RotateTransform/>
                             </c:Icon.RenderTransform>
@@ -135,11 +135,10 @@
             </Border>
         </Grid>
 
-        <Popup x:Name="AccountPopup" PlacementTarget="{Binding ElementName=AccountButton}" Placement="Bottom"
-               HorizontalOffset="-12" VerticalOffset="2" AllowsTransparency="True" StaysOpen="False"
-               PopupAnimation="Fade" Closed="AccountPopup_Closed">
-            <ui:AccountMenu x:Name="AccountMenu" Margin="12,4,16,28"/>
-        </Popup>
+        <Border x:Name="AccountDismiss" Background="Transparent" Visibility="Collapsed"
+                WindowChrome.IsHitTestVisibleInChrome="True" MouseDown="AccountDismiss_MouseDown"/>
+        <ui:AccountMenu x:Name="AccountMenu" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed"
+                        WindowChrome.IsHitTestVisibleInChrome="True"/>
 
         <ui:WelcomeView x:Name="Welcome" Visibility="Collapsed"/>
 

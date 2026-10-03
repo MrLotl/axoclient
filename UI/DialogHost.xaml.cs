@@ -14,12 +14,14 @@ public partial class DialogHost : UserControl, IDialogService
     private Func<bool>? _validate;
     private CancellationTokenSource? _progressCancel;
     private bool _panelMode;
-    private readonly Stack<(FrameworkElement Panel, double Width, TaskCompletionSource<bool> Result)> _suspended = new();
+    private Func<Size, double>? _panelFit;
+    private readonly Stack<(FrameworkElement Panel, double Width, Func<Size, double>? Fit, TaskCompletionSource<bool> Result)> _suspended = new();
 
     public DialogHost()
     {
         InitializeComponent();
         IsVisibleChanged += (_, _) => OpenChanged?.Invoke(IsOpen);
+        SizeChanged += (_, _) => ApplyPanelFit();
     }
 
     public event Action<bool>? OpenChanged;
@@ -64,6 +66,22 @@ public partial class DialogHost : UserControl, IDialogService
         Visibility = Visibility.Visible;
         Dispatcher.BeginInvoke(() => FindFirst<TextBox>(panel)?.Focus(), DispatcherPriority.Input);
         return _result.Task;
+    }
+
+    public Task ShowPanelAsync(FrameworkElement panel, Func<Size, double> fit)
+    {
+        var task = ShowPanelAsync(panel);
+        _panelFit = fit;
+        ApplyPanelFit();
+        return task;
+    }
+
+    private void ApplyPanelFit()
+    {
+        if (!_panelMode || _panelFit == null)
+            return;
+        var host = Window.GetWindow(this) is { } window ? new Size(window.ActualWidth, window.ActualHeight) : new Size(1200, 760);
+        DialogBox.Width = FitWidth(_panelFit(host));
     }
 
     public void ClosePanel()
@@ -167,6 +185,7 @@ public partial class DialogHost : UserControl, IDialogService
     private void Reset(string title, bool showCancel, string? icon, bool iconDanger = false)
     {
         _panelMode = false;
+        _panelFit = null;
         StandardLayout.Visibility = Visibility.Visible;
         CustomContent.Content = null;
         CustomContent.Visibility = Visibility.Collapsed;
@@ -191,10 +210,11 @@ public partial class DialogHost : UserControl, IDialogService
     {
         if (_panelMode && _result != null && CustomContent.Content is FrameworkElement panel && IsOpen)
         {
-            _suspended.Push((panel, DialogBox.Width, _result));
+            _suspended.Push((panel, DialogBox.Width, _panelFit, _result));
             CustomContent.Content = null;
             _result = null;
             _panelMode = false;
+            _panelFit = null;
             return;
         }
         var previous = _result;
@@ -211,6 +231,7 @@ public partial class DialogHost : UserControl, IDialogService
         CustomContent.Content = null;
         _validate = null;
         _panelMode = false;
+        _panelFit = null;
         var finished = _result;
         _result = null;
         if (!RestoreSuspended())
@@ -222,14 +243,16 @@ public partial class DialogHost : UserControl, IDialogService
     {
         if (_suspended.Count == 0)
             return false;
-        var (panel, width, result) = _suspended.Pop();
+        var (panel, width, fit, result) = _suspended.Pop();
         _panelMode = true;
+        _panelFit = fit;
         _result = result;
         StandardLayout.Visibility = Visibility.Collapsed;
         CustomContent.Content = panel;
         CustomContent.Visibility = Visibility.Visible;
         DialogBox.Width = width;
         Visibility = Visibility.Visible;
+        ApplyPanelFit();
         return true;
     }
 
