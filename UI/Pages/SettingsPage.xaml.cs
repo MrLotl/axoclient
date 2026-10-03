@@ -35,6 +35,7 @@ public partial class SettingsPage : UserControl
         HeightBox.Text = (s.GameHeight > 0 ? s.GameHeight : 720).ToString();
         PreLaunchCheckBox.IsChecked = s.PreLaunchCheck;
         DiscordCheck.IsChecked = s.DiscordEnabled;
+        RelayCheck.IsChecked = s.JoinRelayEnabled;
         BadgeCheck.IsChecked = s.BadgeEnabled;
         _loading = false;
 
@@ -138,6 +139,7 @@ public partial class SettingsPage : UserControl
             return;
         _app.Settings.PreLaunchCheck = PreLaunchCheckBox.IsChecked == true;
         _app.Settings.DiscordEnabled = DiscordCheck.IsChecked == true;
+        _app.Settings.JoinRelayEnabled = RelayCheck.IsChecked == true;
         _app.SaveSettings();
     }
 

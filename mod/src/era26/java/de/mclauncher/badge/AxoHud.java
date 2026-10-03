@@ -1,5 +1,6 @@
 package de.mclauncher.badge;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import de.mclauncher.badge.hud.HudConfig;
 import de.mclauncher.badge.hud.HudInput;
 import de.mclauncher.badge.hud.HudModule;
@@ -32,10 +33,10 @@ import java.util.Map;
 
 /** Die eigenen Anzeigen im Bild (FPS, Ping, ...) und das Auswahlmenü dazu. */
 public final class AxoHud {
-	/** Taste, die das Auswahlmenü öffnet: rechte Umschalttaste (GLFW-Nummer). */
-	public static final int MENU_KEY = 344;
-	/** Taste, die Fullbright ein- und ausschaltet: G (GLFW-Nummer). */
-	public static final int FULLBRIGHT_KEY = 71;
+	/** Taste, die das Auswahlmenü öffnet: rechte Umschalttaste (ab 26.3 SDL- statt GLFW-Nummern, daher die Konstante). */
+	public static final int MENU_KEY = InputConstants.KEY_RSHIFT;
+	/** Taste, die Fullbright ein- und ausschaltet: G. */
+	public static final int FULLBRIGHT_KEY = InputConstants.KEY_G;
 	/** So weit wird die Helligkeit aufgedreht (der Regler in den Optionen endet bei 1). */
 	public static final float FULLBRIGHT_GAMMA = 16.0F;
 

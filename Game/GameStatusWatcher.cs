@@ -14,6 +14,9 @@ public sealed class GameStatusWatcher
     private readonly string _file;
     private readonly Timer _timer;
     private string? _server;
+    private string? _relay;
+    private string? _joinable;
+    private long _logOffset;
     private DateTime _lastReport = DateTime.MinValue;
     private int _ticking;
 
@@ -23,6 +26,7 @@ public sealed class GameStatusWatcher
         _inst = inst;
         _file = inst.GameFile(StatusFileName);
         _server = quickPlay?.Server;
+        _logOffset = JoinRelay.IsActiveFor(inst, app.Settings) && File.Exists(inst.LatestLog) ? new FileInfo(inst.LatestLog).Length : -1;
         _timer = new Timer(_ => Tick(), null, TimeSpan.Zero, PollInterval);
     }
 
@@ -48,15 +52,25 @@ public sealed class GameStatusWatcher
                 {
                     _server = server;
                     _app.Discord.ServerChanged(server);
-                    _app.Games.CurrentServer = server == null ? null : (server, _inst.MinecraftVersion);
                     _lastReport = DateTime.MinValue;
                 }
+            }
+            if (_logOffset >= 0 && ReadRelayDomain() is var relay && relay != _relay)
+            {
+                _relay = relay;
+                _lastReport = DateTime.MinValue;
+            }
+            var joinable = _server ?? _relay;
+            if (joinable != _joinable)
+            {
+                _joinable = joinable;
+                _app.Games.CurrentServer = joinable == null ? null : (joinable, _inst.MinecraftVersion);
             }
             if (DateTime.UtcNow - _lastReport > HeartbeatInterval)
             {
                 _lastReport = DateTime.UtcNow;
                 if (_app.Axo.Available)
-                    _app.Axo.SetStatusAsync(true, _app.LocalServers.FriendAddressFor(_server), _inst.MinecraftVersion, _inst.Name).Wait();
+                    _app.Axo.SetStatusAsync(true, _app.LocalServers.FriendAddressFor(joinable), _inst.MinecraftVersion, _inst.Name).Wait();
             }
         }
         catch (Exception ex)
@@ -67,6 +81,32 @@ public sealed class GameStatusWatcher
         {
             Interlocked.Exchange(ref _ticking, 0);
         }
+    }
+
+    private string? ReadRelayDomain()
+    {
+        var log = _inst.LatestLog;
+        if (!File.Exists(log))
+            return _relay;
+        using var stream = new FileStream(log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        if (stream.Length < _logOffset)
+            _logOffset = 0;
+        if (stream.Length == _logOffset)
+            return _relay;
+        stream.Seek(_logOffset, SeekOrigin.Begin);
+        var bytes = new byte[stream.Length - _logOffset];
+        stream.ReadExactly(bytes);
+        var complete = Array.LastIndexOf(bytes, (byte)'\n') + 1;
+        _logOffset += complete;
+        var relay = _relay;
+        foreach (var line in System.Text.Encoding.UTF8.GetString(bytes, 0, complete).Split('\n'))
+        {
+            if (JoinRelay.DomainFrom(line) is { } domain)
+                relay = domain;
+            else if (JoinRelay.IsWorldClosed(line))
+                relay = null;
+        }
+        return relay;
     }
 
     private void Stop()

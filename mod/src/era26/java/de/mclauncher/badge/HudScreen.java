@@ -1,10 +1,10 @@
 package de.mclauncher.badge;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import de.mclauncher.badge.hud.HudEditor;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -25,32 +25,37 @@ public class HudScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
-		if (event.button() == 1) {
+		if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
 			editor.rightClick(new AxoHud.Painter(null), AxoHud.texts(), width, height,
 				(int) event.x(), (int) event.y());
 			return true;
 		}
-		if (event.button() == 0 && editor.mouseDown(new AxoHud.Painter(null), AxoHud.texts(), width, height,
+		if (isLeft(event) && editor.mouseDown(new AxoHud.Painter(null), AxoHud.texts(), width, height,
 				(int) event.x(), (int) event.y())) {
 			onClose();
 			return true;
 		}
-		return event.button() == 0 || super.mouseClicked(event, doubled);
+		return isLeft(event) || super.mouseClicked(event, doubled);
 	}
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double offsetX, double offsetY) {
-		if (event.button() == 0)
+		if (isLeft(event))
 			editor.mouseDrag(new AxoHud.Painter(null), AxoHud.texts(), width, height,
 				(int) event.x(), (int) event.y());
-		return event.button() == 0 || super.mouseDragged(event, offsetX, offsetY);
+		return isLeft(event) || super.mouseDragged(event, offsetX, offsetY);
 	}
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		if (event.button() == 0)
+		if (isLeft(event))
 			editor.mouseUp();
-		return event.button() == 0 || super.mouseReleased(event);
+		return isLeft(event) || super.mouseReleased(event);
+	}
+
+	/** Ab 26.3 zählt Minecraft die Maustasten wie SDL ab 1 (links = 1, rechts = 3), davor ab 0. */
+	private static boolean isLeft(MouseButtonEvent event) {
+		return event.button() == InputConstants.MOUSE_BUTTON_LEFT;
 	}
 
 	@Override
@@ -66,7 +71,31 @@ public class HudScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-		return editor.keyPressed(event.key()) || super.keyPressed(event);
+		return editor.keyPressed(glfwKey(event.key())) || super.keyPressed(event);
+	}
+
+	/** Der Editor rechnet mit GLFW-Nummern; ab 26.3 kommen SDL-Nummern, daher über die Konstanten der Version übersetzen. */
+	private static int glfwKey(int key) {
+		if (key == InputConstants.KEY_ESCAPE)
+			return 256;
+		if (key == InputConstants.KEY_RETURN)
+			return 257;
+		if (key == InputConstants.KEY_BACKSPACE)
+			return 259;
+		if (key == InputConstants.KEY_NUMPADENTER)
+			return 335;
+		int[] digits = {InputConstants.KEY_0, InputConstants.KEY_1, InputConstants.KEY_2, InputConstants.KEY_3,
+			InputConstants.KEY_4, InputConstants.KEY_5, InputConstants.KEY_6, InputConstants.KEY_7, InputConstants.KEY_8,
+			InputConstants.KEY_9};
+		for (int i = 0; i < digits.length; i++)
+			if (key == digits[i])
+				return '0' + i;
+		int[] letters = {InputConstants.KEY_A, InputConstants.KEY_B, InputConstants.KEY_C, InputConstants.KEY_D,
+			InputConstants.KEY_E, InputConstants.KEY_F};
+		for (int i = 0; i < letters.length; i++)
+			if (key == letters[i])
+				return 'A' + i;
+		return -1;
 	}
 
 	@Override

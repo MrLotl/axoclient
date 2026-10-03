@@ -31,6 +31,7 @@ public class LauncherSettings
     public string? BadgeToken { get; set; }
     public string? BadgeTokenUuid { get; set; }
     public bool DiscordEnabled { get; set; } = true;
+    public bool JoinRelayEnabled { get; set; } = true;
 
     public int MaxRamMb { get; set; } = 4096;
     public string JvmPreset { get; set; } = JvmPresets.CustomId;

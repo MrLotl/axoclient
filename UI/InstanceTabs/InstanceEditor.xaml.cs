@@ -25,6 +25,7 @@ public partial class InstanceEditor : UserControl
     public event Action? Cancelled;
     public event Action<Installation>? Upgraded;
     public event Action? ModpacksRequested;
+    public event Action<Installation>? DataChanged;
 
     public InstanceEditor()
     {
@@ -569,6 +570,7 @@ public partial class InstanceEditor : UserControl
         var panel = new BackupPanel { Margin = new Thickness(22, 16, 22, 22) };
         panel.Show(_app, inst);
         await ShowPanelAsync("Sicherungen", inst, "Archive", panel, 720);
+        DataChanged?.Invoke(inst);
     }
 
     private async void Transfer_Click(object sender, RoutedEventArgs e)
@@ -578,6 +580,7 @@ public partial class InstanceEditor : UserControl
         var panel = new TransferPanel { Margin = new Thickness(22, 16, 22, 22) };
         panel.Show(_app, inst);
         await ShowPanelAsync("Daten übernehmen", inst, "Swap", panel, 600);
+        DataChanged?.Invoke(inst);
     }
 
     private async Task ShowPanelAsync(string title, Installation inst, string icon, FrameworkElement panel, double width)

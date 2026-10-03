@@ -34,6 +34,8 @@ public sealed class GameRunner(AppServices app)
     {
         var session = await app.Accounts.GetFreshSessionAsync();
         GameStatusWatcher.Reset(inst);
+        if (JoinRelay.IsActiveFor(inst, app.Settings))
+            await JoinRelay.EnsureInstalledAsync(app.ContentOf(inst), progress.Status);
         var process = await app.Installer.PrepareAsync(inst, session, app.Settings, progress, quickPlay);
         process.EnableRaisingEvents = true;
         process.Exited += (_, _) => app.Discord.GameExited();

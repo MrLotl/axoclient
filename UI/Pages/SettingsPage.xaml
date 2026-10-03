@@ -214,6 +214,16 @@
                             </StackPanel>
                         </DockPanel>
                         <Border Style="{StaticResource RowLine}"/>
+                        <DockPanel Style="{StaticResource OptionRow}">
+                            <CheckBox x:Name="RelayCheck" DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}"
+                                      Margin="20,0,0,0" Click="Check_Click"/>
+                            <StackPanel>
+                                <TextBlock Text="Freunde in Einzelspieler-Welten nachjoinen lassen" Style="{StaticResource OptionTitle}"/>
+                                <TextBlock Style="{StaticResource OptionHint}" TextWrapping="Wrap"
+                                           Text="Installiert e4mc in Fabric-Instanzen. Öffnest du eine Welt „für LAN“, bekommt sie eine öffentliche Adresse und Freunde können über „Nachjoinen“ beitreten."/>
+                            </StackPanel>
+                        </DockPanel>
+                        <Border Style="{StaticResource RowLine}"/>
                         <DockPanel Style="{StaticResource OptionRow}" Margin="18,14,18,16">
                             <CheckBox x:Name="BadgeCheck" DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}"
                                       Margin="20,0,0,0" Click="Badge_Click"/>

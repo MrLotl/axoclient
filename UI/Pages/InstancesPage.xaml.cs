@@ -39,6 +39,11 @@ public partial class InstancesPage : UserControl
             ShowHeader(inst);
             RefreshList();
         };
+        Editor.DataChanged += inst =>
+        {
+            if (inst == _current)
+                ShowHeader(inst);
+        };
         Editor.Deleted += ShowList;
         Editor.Upgraded += Open;
         Creator.Saved += (inst, _) => Open(inst, null);
@@ -274,6 +279,7 @@ public partial class InstancesPage : UserControl
         foreach (var candidate in _tabs.Values.Select(t => t.View).Distinct())
             Ui.Show(candidate, candidate == tab.View);
         tab.Show(_current);
+        ShowHeader(_current);
     }
 
     private void Back_Click(object sender, RoutedEventArgs e) => ShowList();
