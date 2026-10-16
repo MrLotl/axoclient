@@ -1,0 +1,691 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Console.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Live-Konsole",
+      "w": 1280,
+      "x": 6800,
+      "y": 300
+    },
+    "ConsoleServer.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Live-Konsole – Server-Logs",
+      "w": 1280,
+      "x": 2720,
+      "y": 4880
+    },
+    "InstanceCreate.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Neue Instanz",
+      "w": 1280,
+      "x": 6800,
+      "y": 2440
+    },
+    "InstanceDetail.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Übersicht",
+      "w": 1280,
+      "x": 0,
+      "y": 1520
+    },
+    "InstanceDetailMonth.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Aktivität (Monat)",
+      "w": 1280,
+      "x": 1360,
+      "y": 6100
+    },
+    "InstanceMods.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Mods",
+      "w": 1280,
+      "x": 1360,
+      "y": 1520
+    },
+    "InstanceModsAdd.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Mods – Hinzufügen",
+      "w": 1280,
+      "x": 8160,
+      "y": 6100
+    },
+    "InstanceModsRepair.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Mods – Reparieren",
+      "w": 1280,
+      "x": 5440,
+      "y": 6100
+    },
+    "InstanceModsShare.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Mods – Senden",
+      "w": 1280,
+      "x": 2720,
+      "y": 6100
+    },
+    "InstanceModsUpdates.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Mods – Nach Updates suchen",
+      "w": 1280,
+      "x": 6800,
+      "y": 6100
+    },
+    "InstanceModsVersion.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Mods – Version ändern",
+      "w": 1280,
+      "x": 4080,
+      "y": 6100
+    },
+    "InstancePacks.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Ressourcepacks",
+      "w": 1280,
+      "x": 2720,
+      "y": 1520
+    },
+    "InstancePacksAdd.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Ressourcepacks – Hinzufügen",
+      "w": 1280,
+      "x": 9520,
+      "y": 6100
+    },
+    "InstanceScreenshots.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Screenshots",
+      "w": 1280,
+      "x": 2720,
+      "y": 2440
+    },
+    "InstanceServers.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Server",
+      "w": 1280,
+      "x": 1360,
+      "y": 2440
+    },
+    "InstanceServersAdd.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz-Server – Hinzufügen",
+      "w": 1280,
+      "x": 0,
+      "y": 7320
+    },
+    "InstanceServersEdit.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz-Server – Bearbeiten",
+      "w": 1280,
+      "x": 1360,
+      "y": 7320
+    },
+    "InstanceServersShare.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz-Server – Senden",
+      "w": 1280,
+      "x": 2720,
+      "y": 7320
+    },
+    "InstanceSettings.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Einstellungen",
+      "w": 1280,
+      "x": 4080,
+      "y": 2440
+    },
+    "InstanceShaders.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Shader",
+      "w": 1280,
+      "x": 4080,
+      "y": 1520
+    },
+    "InstanceShadersAdd.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Shader – Hinzufügen",
+      "w": 1280,
+      "x": 10880,
+      "y": 6100
+    },
+    "InstanceShare.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Senden",
+      "w": 1280,
+      "x": 0,
+      "y": 6100
+    },
+    "InstanceWorlds.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanz – Welten",
+      "w": 1280,
+      "x": 0,
+      "y": 2440
+    },
+    "Instances.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanzen",
+      "w": 1280,
+      "x": 1360,
+      "y": 300
+    },
+    "LocalServers.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Lokale Server",
+      "w": 1280,
+      "x": 2720,
+      "y": 300
+    },
+    "LocalServersCreate.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Lokale Server – Server erstellen",
+      "w": 1280,
+      "x": 0,
+      "y": 4880
+    },
+    "LocalServersEdit.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Lokale Server – Server bearbeiten",
+      "w": 1280,
+      "x": 1360,
+      "y": 4880
+    },
+    "Main.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite",
+      "w": 1280,
+      "x": 0,
+      "y": 300
+    },
+    "MainAccounts.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Account-Menü",
+      "w": 1280,
+      "x": 2720,
+      "y": 3660
+    },
+    "MainAddFriend.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Freund hinzufügen",
+      "w": 1280,
+      "x": 0,
+      "y": 3660
+    },
+    "MainAddServer.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Server hinzufügen",
+      "w": 1280,
+      "x": 6800,
+      "y": 3660
+    },
+    "MainInstances.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Instanz-Auswahl",
+      "w": 1280,
+      "x": 5440,
+      "y": 3660
+    },
+    "MainLaunching.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Spiel startet",
+      "w": 1280,
+      "x": 8160,
+      "y": 3660
+    },
+    "MainNotifications.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Benachrichtigungen",
+      "w": 1280,
+      "x": 4080,
+      "y": 3660
+    },
+    "MainPendingFriend.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Anfrage ausstehend",
+      "w": 1280,
+      "x": 1360,
+      "y": 3660
+    },
+    "MainUpdate.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Update verfügbar",
+      "w": 1280,
+      "x": 9520,
+      "y": 3660
+    },
+    "Modpacks.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Modpacks",
+      "w": 1280,
+      "x": 5440,
+      "y": 2440
+    },
+    "ModpacksVersions.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Modpacks – Version wählen",
+      "w": 1280,
+      "x": 4080,
+      "y": 7320
+    },
+    "Settings.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Einstellungen",
+      "w": 1280,
+      "x": 8160,
+      "y": 300
+    },
+    "Skins.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Skins – Skins",
+      "w": 1280,
+      "x": 4080,
+      "y": 300
+    },
+    "SkinsAdopt.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Skins – Von Spieler übernehmen",
+      "w": 1280,
+      "x": 8160,
+      "y": 7320
+    },
+    "SkinsCapes.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Skins – Capes",
+      "w": 1280,
+      "x": 5440,
+      "y": 300
+    },
+    "SkinsCapesEditor.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Capes – Selbst pixeln",
+      "w": 1280,
+      "x": 9520,
+      "y": 7320
+    },
+    "SkinsCapesUpload.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Capes – Datei hochladen",
+      "w": 1280,
+      "x": 10880,
+      "y": 7320
+    },
+    "SkinsEdit.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Skins – Bearbeiten",
+      "w": 1280,
+      "x": 5440,
+      "y": 7320
+    },
+    "SkinsUpload.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Skins – Hochladen",
+      "w": 1280,
+      "x": 6800,
+      "y": 7320
+    },
+    "Updater.dc.html": {
+      "h": 320,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Update-Fenster",
+      "w": 520,
+      "x": 9520,
+      "y": 300
+    },
+    "Welcome.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Erster Start – Willkommen",
+      "w": 1280,
+      "x": 0,
+      "y": 8540
+    },
+    "WelcomeLogin.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Erster Start – Anmeldung",
+      "w": 1280,
+      "x": 1360,
+      "y": 8540
+    },
+    "WelcomeSetup.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Erster Start – Einrichten",
+      "w": 1280,
+      "x": 2720,
+      "y": 8540
+    },
+    "WelcomeDone.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Erster Start – Fertig",
+      "w": 1280,
+      "x": 4080,
+      "y": 8540
+    },
+    "WelcomeBack.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Nicht angemeldet – Willkommen zurück",
+      "w": 1280,
+      "x": 5440,
+      "y": 8540
+    },
+    "MainCrash.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Absturz",
+      "w": 1280,
+      "x": 0,
+      "y": 9760
+    },
+    "MainShareToast.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Popup: Freund hat etwas geschickt",
+      "w": 1280,
+      "x": 1360,
+      "y": 9760
+    },
+    "MainShareReceived.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Empfangen im Nachrichtencenter",
+      "w": 1280,
+      "x": 2720,
+      "y": 9760
+    },
+    "MainFriendProfile.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Freundesprofil",
+      "w": 1280,
+      "x": 4080,
+      "y": 9760
+    },
+    "MainWQHD.dc.html": {
+      "h": 1440,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Startseite – Vollbild WQHD (2560 × 1440)",
+      "w": 2560,
+      "x": 0,
+      "y": 10980
+    },
+    "InstancesWQHD.dc.html": {
+      "h": 1440,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Instanzen – Vollbild WQHD",
+      "w": 2560,
+      "x": 2640,
+      "y": 10980
+    },
+    "InstanceModsWQHD.dc.html": {
+      "h": 1440,
+      "is_interactive": true,
+      "radius": 8,
+      "title": "Mods – Vollbild WQHD",
+      "w": 2560,
+      "x": 5280,
+      "y": 10980
+    },
+    "Logo.dc.html": {
+      "h": 800,
+      "radius": 8,
+      "title": "Logo",
+      "w": 1280,
+      "x": 10120,
+      "y": 300
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-01T18:55:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "dialogs": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Startseite – Dialoge & Menüs",
+      "w": 240,
+      "x": 0,
+      "y": 3360
+    },
+    "instance": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Instanz-Ansichten",
+      "w": 240,
+      "x": 0,
+      "y": 1220
+    },
+    "instdlg": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Instanz – Dialoge",
+      "w": 240,
+      "x": 0,
+      "y": 5800
+    },
+    "localdlg": {
+      "kind": "title1",
+      "maxW": 4000,
+      "text": "Lokale Server – Dialoge & Logs",
+      "w": 240,
+      "x": 0,
+      "y": 4580
+    },
+    "main": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Hauptseiten",
+      "w": 240,
+      "x": 0,
+      "y": 0
+    },
+    "moredlg": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Server, Modpacks & Skins – Dialoge",
+      "w": 240,
+      "x": 0,
+      "y": 7020
+    },
+    "start": {
+      "kind": "title1",
+      "maxW": 6720,
+      "text": "Erster Start & Anmeldung",
+      "w": 240,
+      "x": 0,
+      "y": 8240
+    },
+    "social": {
+      "kind": "title1",
+      "maxW": 5360,
+      "text": "Absturz, Empfangen & Freundesprofil",
+      "w": 240,
+      "x": 0,
+      "y": 9460
+    },
+    "wqhd": {
+      "kind": "title1",
+      "maxW": 7840,
+      "text": "Vollbild WQHD – so wächst das Layout mit",
+      "w": 240,
+      "x": 0,
+      "y": 10680
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Instances.dc.html",
+    "LocalServers.dc.html",
+    "Skins.dc.html",
+    "SkinsCapes.dc.html",
+    "Console.dc.html",
+    "Settings.dc.html",
+    "InstanceDetail.dc.html",
+    "InstanceMods.dc.html",
+    "InstancePacks.dc.html",
+    "InstanceShaders.dc.html",
+    "InstanceWorlds.dc.html",
+    "InstanceServers.dc.html",
+    "InstanceScreenshots.dc.html",
+    "InstanceSettings.dc.html",
+    "MainAddFriend.dc.html",
+    "MainPendingFriend.dc.html",
+    "MainAccounts.dc.html",
+    "MainNotifications.dc.html",
+    "MainInstances.dc.html",
+    "MainAddServer.dc.html",
+    "MainLaunching.dc.html",
+    "LocalServersCreate.dc.html",
+    "LocalServersEdit.dc.html",
+    "ConsoleServer.dc.html",
+    "Updater.dc.html",
+    "Modpacks.dc.html",
+    "InstanceCreate.dc.html",
+    "MainUpdate.dc.html",
+    "InstanceShare.dc.html",
+    "InstanceDetailMonth.dc.html",
+    "InstanceModsShare.dc.html",
+    "InstanceModsVersion.dc.html",
+    "InstanceModsRepair.dc.html",
+    "InstanceModsUpdates.dc.html",
+    "InstanceModsAdd.dc.html",
+    "InstancePacksAdd.dc.html",
+    "InstanceShadersAdd.dc.html",
+    "InstanceServersAdd.dc.html",
+    "InstanceServersEdit.dc.html",
+    "InstanceServersShare.dc.html",
+    "ModpacksVersions.dc.html",
+    "SkinsEdit.dc.html",
+    "SkinsUpload.dc.html",
+    "SkinsAdopt.dc.html",
+    "SkinsCapesEditor.dc.html",
+    "SkinsCapesUpload.dc.html",
+    "Welcome.dc.html",
+    "WelcomeLogin.dc.html",
+    "WelcomeSetup.dc.html",
+    "WelcomeDone.dc.html",
+    "WelcomeBack.dc.html",
+    "MainCrash.dc.html",
+    "MainShareToast.dc.html",
+    "MainShareReceived.dc.html",
+    "MainFriendProfile.dc.html",
+    "MainWQHD.dc.html",
+    "InstancesWQHD.dc.html",
+    "InstanceModsWQHD.dc.html",
+    "Logo.dc.html"
+  ],
+  "pages": [],
+  "title": "AxoClient Launcher"
+}

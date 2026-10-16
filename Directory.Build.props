@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>1.0.0-dev</Version>
+    <Product>AxoClient</Product>
+    <Company>AxoClient</Company>
+    <!-- .Result und .Wait() sind verboten (Grundregel "Alles asynchron") -->
+    <WarningsAsErrors>$(WarningsAsErrors);VSTHRD002;VSTHRD103;CS4014</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

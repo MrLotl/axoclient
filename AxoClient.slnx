@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AxoClient.App/AxoClient.App.csproj" />
+    <Project Path="src/AxoClient.Core/AxoClient.Core.csproj" />
+    <Project Path="src/AxoClient.Tests/AxoClient.Tests.csproj" />
+  </Folder>
+</Solution>

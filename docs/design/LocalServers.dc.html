@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Lokale Server</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.num-input::-webkit-inner-spin-button,.num-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.num-input{-moz-appearance:textfield}
+.num-input:disabled{color:#8a8a8a!important}
+.small-btn{transition:background-color .12s ease}
+.small-btn:not(:disabled):hover{filter:brightness(1.15)}
+.small-btn:disabled{cursor:default!important}
+.act-btn{transition:background-color .12s ease, color .12s ease}
+.act-btn:hover{background-color:#404040!important;color:#e6e6e6!important}
+.act-trash:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.start-btn{transition:background-color .12s ease}
+.start-btn:hover{background-color:#2f4d37!important}
+.run-btn{transition:filter .12s ease}
+.run-btn:hover{filter:brightness(1.2)}
+.stat-btn{transition:background-color .12s ease}
+.stat-btn:hover{background-color:#2c2c2c!important}
+.upload-card{transition:box-shadow .12s ease, background-color .12s ease}
+.upload-card:hover{background-color:rgba(255,255,255,0.03)!important;box-shadow:inset 0 0 0 1.5px rgba(214,140,230,0.5)!important}
+.ram-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;margin:8px 0;border-radius:3px;background-color:#3a3a3a;background-image:linear-gradient(90deg,#db2777,#7c3aed);background-repeat:no-repeat;outline:none;cursor:pointer}
+.ram-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4);transition:box-shadow .12s ease}
+.ram-range:hover::-webkit-slider-thumb,.ram-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 6px rgba(214,140,230,0.35),0 2px 6px rgba(0,0,0,0.4)}
+.ram-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4)}
+.ram-range::-moz-range-track{height:6px;border-radius:3px;background:#3a3a3a}
+.ram-range::-moz-range-progress{height:6px;border-radius:3px;background:linear-gradient(90deg,#db2777,#7c3aed)}
+.chk{position:relative;display:flex;align-items:center;gap:10px;font-size:13px;color:#d9d9d9;cursor:pointer}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.chk:hover .sr:not(:checked) + span{box-shadow:inset 0 0 0 1.5px #6a6a6a!important}
+.chk .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.field{transition:box-shadow .12s ease}
+.field:focus-within,select.field:focus{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.6)!important}
+.field input::placeholder{color:#6b6b6b}
+.ghost-btn{transition:background-color .12s ease}
+.ghost-btn:hover{background-color:#3a3a3a!important}
+.grad-btn{transition:filter .12s ease, opacity .12s ease}
+.grad-btn:not(:disabled):hover{filter:brightness(1.12)}
+.grad-btn:disabled{opacity:.45;cursor:default!important;box-shadow:none!important}
+.danger-link:hover{background-color:rgba(244,112,103,0.12)!important}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; flex-direction: column; gap: 18px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #e6e6e6; white-space: nowrap">Lokale Server</h1>
+<span style="height: 22px; padding: 0 8px; border-radius: 11px; background: #2a2a2a; color: #a3a3a3; font-size: 12px; font-weight: 600; line-height: 22px">{{count}}</span>
+<div role="group" aria-label="Ansicht" style="margin-left: 8px; padding: 3px; border-radius: 10px; background: #2a2a2a; display: flex; gap: 2px; flex-shrink: 0">
+<button class="seg-btn" aria-label="Kartenansicht" aria-pressed="{{gridPressed}}" onClick="{{showGrid}}" style="{{gridStyle}}">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"></rect><rect x="9" y="2" width="5" height="5" rx="1"></rect><rect x="2" y="9" width="5" height="5" rx="1"></rect><rect x="9" y="9" width="5" height="5" rx="1"></rect></svg>
+</button>
+<button class="seg-btn" aria-label="Listenansicht" aria-pressed="{{listPressed}}" onClick="{{showList}}" style="{{listStyle}}">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.5 4h8.5M5.5 8h8.5M5.5 12h8.5"></path><path d="M2 4h.5M2 8h.5M2 12h.5"></path></svg>
+</button>
+</div>
+<span style="margin-left: 4px; font-size: 13px; color: #8a8a8a; white-space: nowrap">{{summary}}</span>
+<div style="flex-grow: 1"></div>
+<button class="tool-btn" aria-label="Server-Ordner öffnen" style="width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</button>
+<button class="tool-btn" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3"></path><path d="M2 8h8"></path><path d="M7 5l3 3-3 3"></path></svg>
+Server importieren
+</button>
+<button class="new-btn" onClick="{{openCreate}}" aria-haspopup="dialog" style="height: 36px; padding: 0 16px 0 14px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25)">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>
+Server erstellen
+</button>
+</div>
+
+<sc-if value="{{isList}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{servers}}" as="s" hint-placeholder-count="4">
+<article style="{{s.rowStyle}}">
+<img class="head" src="{{s.icon}}" alt="" style="width: 40px; height: 40px; border-radius: 9px; flex-shrink: 0">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 14px; font-weight: 600; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.name}}</h2>
+<span style="font-size: 12px; color: #8a8a8a; white-space: nowrap">{{s.type}} <span style="color: #6b6b6b">·</span> <button class="link-btn" aria-label="{{s.copyLabel}}" onClick="{{s.copy}}" style="padding: 0; border: 0; background: transparent; color: #8a8a8a; font-family: inherit; font-size: 12px; cursor: pointer">{{s.address}}</button></span>
+<sc-if value="{{s.hasReach}}" hint-placeholder-val="{{false}}">
+<button class="link-btn" title="Klicken, um die Adresse für Freunde zu kopieren" style="{{s.reachRowStyle}}">
+<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M2 8h12M8 2c1.8 1.7 2.6 3.7 2.6 6S9.8 12.3 8 14M8 2C6.2 3.7 5.4 5.7 5.4 8s.8 4.3 2.6 6"></path></svg>
+{{s.reachText}}
+</button>
+</sc-if>
+</div>
+<div style="width: 70px; display: flex; flex-direction: column; gap: 3px; flex-shrink: 0">
+<span style="font-size: 11px; color: #7a7a7a">Spieler</span>
+<span style="font-size: 12.5px; font-weight: 600; color: #e6e6e6; font-variant-numeric: tabular-nums">{{s.players}}</span>
+</div>
+<div style="width: 90px; margin-right: 4px; display: flex; flex-direction: column; gap: 3px; flex-shrink: 0">
+<span style="font-size: 11px; color: #7a7a7a">Laufzeit</span>
+<span style="font-size: 12.5px; font-weight: 600; color: #e6e6e6; white-space: nowrap">{{s.uptime}}</span>
+</div>
+<span style="{{s.statusStyle}}"><span style="{{s.dotStyle}}"></span>{{s.statusLabel}}</span>
+<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 4px">
+<sc-if value="{{s.running}}" hint-placeholder-val="{{false}}">
+<button class="start-btn" aria-label="{{s.joinLabel}}" title="Mit passender Instanz beitreten" style="height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: #263b2c; color: #3fb950; font-family: inherit; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer">
+<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.5h-3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3"></path><path d="M14 8H6"></path><path d="M9 5l-3 3 3 3"></path></svg>
+Beitreten
+</button>
+</sc-if>
+<button class="run-btn" onClick="{{s.toggle}}" style="{{s.runStyle}}; margin-right: 4px">
+<sc-if value="{{s.running}}" hint-placeholder-val="{{false}}">
+<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"></rect></svg>
+</sc-if>
+<sc-if value="{{s.stopped}}" hint-placeholder-val="{{true}}">
+<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 3.5v9l7-4.5z"></path></svg>
+</sc-if>
+{{s.runLabel}}
+</button>
+<a class="act-btn" href="ConsoleServer.dc.html" aria-label="{{s.consoleLabel}}" style="width: 32px; height: 32px; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center">
+<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<button class="act-btn" aria-label="{{s.folderLabel}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</button>
+<button class="act-btn" aria-label="{{s.settingsLabel}}" aria-haspopup="dialog" onClick="{{s.edit}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2"></circle><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"></path></svg>
+</button>
+<button class="act-btn act-trash" aria-label="{{s.removeLabel}}" onClick="{{s.remove}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h11"></path><path d="M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5"></path><path d="M4 4.5l.8 8.5a1 1 0 0 0 1 1h4.4a1 1 0 0 0 1-1l.8-8.5"></path></svg>
+</button>
+</div>
+</article>
+</sc-for>
+<button class="upload-card" onClick="{{openCreate}}" aria-haspopup="dialog" style="height: 62px; flex-shrink: 0; padding: 0; border: 0; border-radius: 12px; background: transparent; box-shadow: inset 0 0 0 1.5px #3a3a3a; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-family: inherit">
+<span style="width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>
+</span>
+<span style="font-size: 13.5px; font-weight: 600; color: #e6e6e6">Neuen Server aufsetzen</span>
+</button>
+</div>
+</sc-if>
+
+<sc-if value="{{isGrid}}" hint-placeholder-val="{{true}}">
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: start">
+<sc-for list="{{servers}}" as="s" hint-placeholder-count="4">
+<article style="{{s.cardStyle}}">
+<div style="display: flex; align-items: center; gap: 12px">
+<img class="head" src="{{s.icon}}" alt="" style="width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.name}}</h2>
+<span style="font-size: 12px; color: #8a8a8a">{{s.type}}</span>
+</div>
+<span style="{{s.statusStyle}}"><span style="{{s.dotStyle}}"></span>{{s.statusLabel}}</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<button class="stat-btn" aria-label="{{s.copyLabel}}" onClick="{{s.copy}}" style="padding: 8px 10px; border: 0; border-radius: 8px; background: #232323; display: flex; flex-direction: column; gap: 3px; text-align: left; cursor: pointer; font-family: inherit">
+<span style="font-size: 11px; color: #7a7a7a">{{s.addrTitle}}</span>
+<span style="font-size: 12.5px; font-weight: 600; color: #e6e6e6; white-space: nowrap; font-variant-numeric: tabular-nums">{{s.address}}</span>
+</button>
+<div style="padding: 8px 10px; border-radius: 8px; background: #232323; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 11px; color: #7a7a7a">Spieler</span>
+<span style="font-size: 12.5px; font-weight: 600; color: #e6e6e6; font-variant-numeric: tabular-nums">{{s.players}}</span>
+</div>
+<div style="padding: 8px 10px; border-radius: 8px; background: #232323; display: flex; flex-direction: column; gap: 5px">
+<span style="font-size: 11px; color: #7a7a7a">RAM {{s.ramLabel}}</span>
+<span aria-hidden="true" style="height: 5px; border-radius: 3px; background: #383838; overflow: hidden; display: block"><span style="{{s.ramBar}}"></span></span>
+</div>
+<div style="padding: 8px 10px; border-radius: 8px; background: #232323; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 11px; color: #7a7a7a">Laufzeit</span>
+<span style="font-size: 12.5px; font-weight: 600; color: #e6e6e6">{{s.uptime}}</span>
+</div>
+</div>
+
+<sc-if value="{{s.hasReach}}" hint-placeholder-val="{{false}}">
+<button class="link-btn" title="Klicken, um die Adresse für Freunde zu kopieren" style="{{s.reachStyle}}">
+<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"></circle><path d="M2 8h12M8 2c1.8 1.7 2.6 3.7 2.6 6S9.8 12.3 8 14M8 2C6.2 3.7 5.4 5.7 5.4 8s.8 4.3 2.6 6"></path></svg>
+{{s.reachText}}
+</button>
+</sc-if>
+
+<div style="display: flex; align-items: center; gap: 6px">
+<button class="run-btn" onClick="{{s.toggle}}" style="{{s.runStyle}}">
+<sc-if value="{{s.running}}" hint-placeholder-val="{{false}}">
+<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"></rect></svg>
+</sc-if>
+<sc-if value="{{s.stopped}}" hint-placeholder-val="{{true}}">
+<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 3.5v9l7-4.5z"></path></svg>
+</sc-if>
+{{s.runLabel}}
+</button>
+<sc-if value="{{s.running}}" hint-placeholder-val="{{false}}">
+<button class="start-btn" aria-label="{{s.joinLabel}}" style="height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: #263b2c; color: #3fb950; font-family: inherit; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.5h-3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3"></path><path d="M14 8H6"></path><path d="M9 5l-3 3 3 3"></path></svg>
+Beitreten
+</button>
+</sc-if>
+<div style="flex-grow: 1"></div>
+<a class="act-btn" href="ConsoleServer.dc.html" aria-label="{{s.consoleLabel}}" style="width: 32px; height: 32px; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center">
+<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<button class="act-btn" aria-label="{{s.folderLabel}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</button>
+<button class="act-btn" aria-label="{{s.settingsLabel}}" aria-haspopup="dialog" onClick="{{s.edit}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</button>
+<button class="act-btn act-trash" aria-label="{{s.removeLabel}}" onClick="{{s.remove}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h11"></path><path d="M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5"></path><path d="M4 4.5l.8 8.5a1 1 0 0 0 1 1h4.4a1 1 0 0 0 1-1l.8-8.5"></path></svg>
+</button>
+</div>
+</article>
+</sc-for>
+
+<button class="upload-card" onClick="{{openCreate}}" aria-haspopup="dialog" style="min-height: 220px; padding: 18px; border: 0; border-radius: 12px; background: transparent; box-shadow: inset 0 0 0 1.5px #3a3a3a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-family: inherit">
+<span style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center">
+<svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>
+</span>
+<span style="font-size: 14px; font-weight: 600; color: #e6e6e6">Neuen Server aufsetzen</span>
+<span style="font-size: 12px; color: #7a7a7a; text-align: center; max-width: 280px">Vanilla, Paper, Fabric oder Velocity · Version, Port und RAM wählst du im nächsten Schritt</span>
+</button>
+</div>
+</sc-if>
+
+</main>
+
+<!-- Create / edit dialog -->
+<sc-if value="{{hasDialog}}" hint-placeholder-val="{{false}}">
+<div onClick="{{backdrop}}" style="position: absolute; inset: 0; z-index: 50; background: rgba(10, 10, 10, 0.62); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center">
+<div role="dialog" aria-modal="true" aria-labelledby="srv-dlg-title" style="width: 720px; max-height: 740px; overflow-y: auto; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px">
+<h2 id="srv-dlg-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">{{dlgTitle}}</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{dlgSub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+
+<div style="display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 10px; background: #232323">
+<img class="head" src="{{form.icon}}" alt="Server-Bild" style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.35)">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 13px; font-weight: 600; color: #e6e6e6">Server-Bild</span>
+<span style="font-size: 11.5px; color: #7a7a7a">Wird auch als Server-Icon (64 × 64) im Spiel angezeigt</span>
+</div>
+<button class="ghost-btn" onClick="{{changeIcon}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #353535; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"></rect><circle cx="6" cy="6.5" r="1.2"></circle><path d="M14 11l-3.5-3.5L4 13"></path></svg>
+Ändern
+</button>
+<button class="ghost-btn" aria-label="Server-Bild zurücksetzen" title="Server-Bild zurücksetzen" onClick="{{resetIcon}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #bdbdbd; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9"></path><path d="M2.5 2.5v2.5H5"></path></svg>
+</button>
+</div>
+<label style="display: flex; flex-direction: column; gap: 7px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Name</span>
+<span class="field" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center">
+<input ref="{{focusRef}}" value="{{form.name}}" onChange="{{onName}}" placeholder="z. B. Survival mit Freunden" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 14px">
+</span>
+</label>
+
+<div style="display: flex; flex-direction: column; gap: 7px">
+<span id="sw-label" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Software</span>
+<div role="group" aria-labelledby="sw-label" style="padding: 3px; border-radius: 10px; background: #1f1f1f; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{software}}" as="o" hint-placeholder-count="4">
+<button class="seg-btn" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="{{o.style}}">{{o.label}}</button>
+</sc-for>
+</div>
+<span style="font-size: 11.5px; color: #7a7a7a">{{softwareHint}}</span>
+</div>
+
+<div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px">
+<label style="display: flex; flex-direction: column; gap: 7px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Version</span>
+<select class="field" value="{{form.version}}" onChange="{{onVersion}}" style="height: 40px; padding: 0 10px; border: 0; border-radius: 9px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; color: #f2f2f2; font-family: inherit; font-size: 13.5px; cursor: pointer">
+<sc-for list="{{versions}}" as="v" hint-placeholder-count="5">
+<option value="{{v}}">{{v}}</option>
+</sc-for>
+</select>
+</label>
+<label style="display: flex; flex-direction: column; gap: 7px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Port</span>
+<span class="field" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center">
+<input class="num-input" type="number" min="1024" max="65535" value="{{form.port}}" onChange="{{onPort}}" style="width: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px; font-variant-numeric: tabular-nums">
+</span>
+</label>
+<label style="display: flex; flex-direction: column; gap: 7px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Max. Spieler</span>
+<span class="field" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center">
+<input class="num-input" type="number" min="1" max="500" value="{{form.maxPlayers}}" onChange="{{onMax}}" style="width: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px; font-variant-numeric: tabular-nums">
+</span>
+</label>
+</div>
+
+<div style="margin-top: -6px; display: flex; flex-wrap: wrap; gap: 8px 18px">
+<label class="chk"><input class="sr" type="checkbox" checked="{{form.snapshots}}" onChange="{{toggleSnapshots}}"><span aria-hidden="true" style="{{snapBox}}"><sc-if value="{{form.snapshots}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Snapshots anzeigen</label>
+<label class="chk"><input class="sr" type="checkbox" checked="{{form.old}}" onChange="{{toggleOld}}"><span aria-hidden="true" style="{{oldBox}}"><sc-if value="{{form.old}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Alpha/Beta anzeigen</label>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<label for="srv-ram" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Arbeitsspeicher</label>
+<span style="font-size: 15px; font-weight: 700; color: #f2f2f2">{{form.ram}} GB</span>
+</div>
+<input id="srv-ram" class="ram-range" type="range" min="1" max="16" step="1" value="{{form.ram}}" onChange="{{onRam}}" style="{{ramFill}}">
+</div>
+
+<div style="display: flex; align-items: center; gap: 16px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px">
+<span id="lbl-open" style="font-size: 13.5px; font-weight: 500; color: #e6e6e6">Für Freunde im Internet öffnen</span>
+<span style="font-size: 12px; color: #8a8a8a; line-height: 1.45">Gibt den Port beim Start per UPnP im Router frei, damit Freunde über „Beitreten“ mitspielen können. Der Server ist dann aus dem Internet erreichbar – nutze eine Whitelist, wenn nicht jeder rein soll.</span>
+</div>
+<button role="switch" aria-labelledby="lbl-open" aria-checked="{{openChecked}}" onClick="{{toggleOpen}}" style="padding: 4px; margin: -4px; border: 0; background: transparent; cursor: pointer; display: flex; flex-shrink: 0"><span style="{{openTrack}}"><span style="{{openKnob}}"></span></span></button>
+</div>
+
+<sc-if value="{{isCreate}}" hint-placeholder-val="{{true}}">
+<label class="chk" style="padding: 10px 12px; border-radius: 9px; background: #232323">
+<input class="sr" type="checkbox" checked="{{form.eula}}" onChange="{{toggleEula}}">
+<span aria-hidden="true" style="{{eulaBox}}"><sc-if value="{{form.eula}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+<span>Ich akzeptiere die <span style="color: #ecc6f2; font-weight: 600">Minecraft-EULA</span></span>
+</label>
+</sc-if>
+
+<div style="display: flex; align-items: center; gap: 8px; padding-top: 2px">
+<sc-if value="{{isEdit}}" hint-placeholder-val="{{false}}">
+<button class="danger-link" onClick="{{deleteFromDialog}}" style="height: 38px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #f47067; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Server löschen</button>
+</sc-if>
+<div style="flex-grow: 1"></div>
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Abbrechen</button>
+<button class="grad-btn" disabled="{{submitDisabled}}" onClick="{{submit}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25)">{{submitLabel}}</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","options":["none","create","edit"],"default":"none"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var servers = [
+{ id: 'survival', name: 'Survival-Testserver', software: 'Paper', version: '1.21.4', note: '', port: 25565, maxPlayers: 10, online: 2, ram: 4, ramUsed: 2.1, uptime: '1 Std 12 Min', icon: '/_blob/3b2505f08645b22c7e3885b3c8a5085e' },
+{ id: 'plugins', name: 'Plugin-Entwicklung', software: 'Paper', version: '1.21.1', note: '', port: 25566, maxPlayers: 5, online: 0, ram: 2, icon: '/_blob/4de664d0bf9ba7a8bcdf780488c75db1' },
+{ id: 'proxy', name: 'Velocity-Proxy', software: 'Velocity', version: '3.4.0', note: 'Proxy', port: 25577, maxPlayers: 100, online: 0, ram: 1, icon: '/_blob/5537a3afcfa4bda184d10804aed5a059' },
+{ id: 'modded', name: 'Fabric Modded', software: 'Fabric', version: '1.21.1', note: '24 Mods', port: 25567, maxPlayers: 8, online: 0, ram: 6, icon: '/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6' }
+];
+var scene = props.scene || 'none';
+this.state = { servers: servers, running: { survival: true }, copied: null, dialog: null, editId: null, form: null };
+if (scene === 'create') { this.state.dialog = 'create'; this.state.form = { name: 'Bauprojekt', software: 'Paper', version: '1.21.4', port: 25568, maxPlayers: 10, ram: 4, eula: false, icon: '/_blob/1f48d344637828b690ffda3ef27db648', defaultIcon: '/_blob/1f48d344637828b690ffda3ef27db648' }; }
+if (scene === 'edit') { var s = servers[0]; this.state.dialog = 'edit'; this.state.editId = s.id; this.state.form = { name: s.name, software: s.software, version: s.version, port: s.port, maxPlayers: s.maxPlayers, ram: s.ram, eula: true, open: true, icon: s.icon, defaultIcon: s.icon }; }
+}
+componentDidUpdate() {
+if (this.wantFocus && this.focusEl) { this.focusEl.focus(); this.wantFocus = false; }
+}
+renderVals() {
+var self = this;
+var s = this.state;
+var versionsBy = { Vanilla: ['1.21.4', '1.21.1', '1.20.6', '1.20.1', '1.8.9'], Paper: ['1.21.4', '1.21.1', '1.20.6', '1.20.1', '1.8.8'], Fabric: ['1.21.4', '1.21.1', '1.20.6', '1.20.1'], Velocity: ['3.4.0', '3.3.0'] };
+var hints = { Vanilla: 'Offizieller Minecraft-Server ohne Plugins oder Mods', Paper: 'Schnell und unterstützt Bukkit/Spigot-Plugins', Fabric: 'Für Server mit Fabric-Mods', Velocity: 'Proxy, der mehrere Server miteinander verbindet' };
+function gb(v) { return v.toFixed(1).replace('.', ',') + ' GB'; }
+function close() { self.setState({ dialog: null, form: null, editId: null }); }
+function setForm(patch) { self.setState({ form: Object.assign({}, self.state.form, patch) }); }
+function nextPort() { var used = self.state.servers.map(function (x) { return x.port; }); var p = 25565; while (used.indexOf(p) !== -1) p++; return p; }
+
+var runningCount = s.servers.filter(function (d) { return s.running[d.id]; }).length;
+var servers = s.servers.map(function (d) {
+var on = !!s.running[d.id];
+var used = on ? (d.ramUsed || d.ram * 0.35) : 0;
+var pct = Math.round(used / d.ram * 100);
+var copied = s.copied === d.id;
+return {
+name: d.name, icon: d.icon,
+type: d.software + ' ' + d.version + (d.note ? ' · ' + d.note : ''),
+running: on, stopped: !on,
+address: 'localhost:' + d.port,
+addrTitle: copied ? 'Kopiert!' : 'Adresse',
+players: on ? (d.online + ' / ' + d.maxPlayers) : '–',
+uptime: on ? (d.uptime || 'gerade gestartet') : '–',
+ramLabel: on ? gb(used) + ' / ' + gb(d.ram) : '· ' + gb(d.ram),
+ramBar: 'display: block; height: 100%; border-radius: 3px; width: ' + pct + '%; background: linear-gradient(90deg, #ec4899, #8b5cf6)',
+cardStyle: 'padding: 16px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 14px; ' + (on ? 'box-shadow: inset 0 0 0 1px rgba(63, 185, 80, 0.35)' : ''),
+rowStyle: 'padding: 10px 12px; border-radius: 12px; background: #2a2a2a; display: flex; align-items: center; gap: 12px; ' + (on ? 'box-shadow: inset 0 0 0 1px rgba(63, 185, 80, 0.35)' : ''),
+hasReach: on,
+reachText: 'Freunde im Internet: 84.137.52.19:' + d.port,
+reachStyle: 'align-self: flex-start; margin-top: -4px; padding: 0; border: 0; background: transparent; color: #6fdc80; font-family: inherit; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer',
+reachRowStyle: 'align-self: flex-start; margin-top: 1px; padding: 0; border: 0; background: transparent; color: #6fdc80; font-family: inherit; font-size: 11.5px; font-weight: 500; display: flex; align-items: center; gap: 6px; cursor: pointer',
+statusLabel: on ? 'Läuft' : 'Gestoppt',
+statusStyle: 'height: 24px; padding: 0 10px; border-radius: 12px; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; flex-shrink: 0; ' + (on ? 'background: rgba(63, 185, 80, 0.14); color: #6fdc80' : 'background: #333333; color: #a3a3a3'),
+dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + (on ? '#3fb950; box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.2)' : '#6b6b6b'),
+runLabel: on ? 'Stoppen' : 'Starten',
+runStyle: 'height: 32px; padding: 0 14px; border: 0; border-radius: 8px; font-family: inherit; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; cursor: pointer; ' + (on ? 'background: #3d2626; color: #f47067' : 'background: #263b2c; color: #3fb950'),
+copyLabel: 'Adresse localhost:' + d.port + ' kopieren',
+joinLabel: d.name + ' beitreten',
+consoleLabel: 'Logs von ' + d.name + ' in der Live-Konsole öffnen',
+folderLabel: 'Ordner von ' + d.name + ' öffnen',
+settingsLabel: d.name + ' bearbeiten',
+removeLabel: d.name + ' löschen',
+toggle: function () { var r = Object.assign({}, s.running); r[d.id] = !on; self.setState({ running: r }); },
+copy: function () {
+self.setState({ copied: d.id });
+clearTimeout(self.copyTimer);
+self.copyTimer = setTimeout(function () { self.setState({ copied: null }); }, 1400);
+},
+edit: function () { self.wantFocus = true; self.setState({ dialog: 'edit', editId: d.id, form: { name: d.name, software: d.software, version: d.version, port: d.port, maxPlayers: d.maxPlayers, ram: d.ram, eula: true, icon: d.icon, defaultIcon: d.icon } }); },
+remove: function () { self.setState({ servers: s.servers.filter(function (x) { return x.id !== d.id; }) }); }
+};
+});
+
+var f = s.form || { name: '', software: 'Paper', version: '1.21.4', port: 25565, maxPlayers: 10, ram: 4, eula: false, icon: '/_blob/1f48d344637828b690ffda3ef27db648', defaultIcon: '/_blob/1f48d344637828b690ffda3ef27db648' };
+var iconChoices = ['/_blob/3b2505f08645b22c7e3885b3c8a5085e', '/_blob/4de664d0bf9ba7a8bcdf780488c75db1', '/_blob/5537a3afcfa4bda184d10804aed5a059', '/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6', '/_blob/1f48d344637828b690ffda3ef27db648', '/_blob/36f362f60f246657a0ee8a5d3be8d7e6', '/_blob/a10c2683c7db0da47b127e94efd0445a', '/_blob/417ed9b44cf2aebf90dab262c6f59701'];
+var isCreate = s.dialog === 'create';
+var segBase = 'height: 32px; padding: 0 6px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600; ';
+var software = ['Vanilla', 'Paper', 'Fabric', 'Velocity'].map(function (sw) {
+var on = f.software === sw;
+return {
+label: sw, pressed: on ? 'true' : 'false',
+style: segBase + (on ? 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)' : 'color: #8a8a8a; background: transparent'),
+pick: function () { var vs = versionsBy[sw]; setForm({ software: sw, version: vs.indexOf(f.version) !== -1 ? f.version : vs[0], ram: sw === 'Velocity' ? Math.min(f.ram, 2) : f.ram }); }
+};
+});
+function submit() {
+var form = self.state.form;
+if (!form || !form.name.trim() || (self.state.dialog === 'create' && !form.eula)) return;
+if (self.state.dialog === 'create') {
+var icons = ['/_blob/1f48d344637828b690ffda3ef27db648', '/_blob/36f362f60f246657a0ee8a5d3be8d7e6', '/_blob/a10c2683c7db0da47b127e94efd0445a'];
+var nu = { id: 'new' + Date.now(), name: form.name.trim(), software: form.software, version: form.version, note: form.software === 'Velocity' ? 'Proxy' : '', port: form.port, maxPlayers: form.maxPlayers, online: 0, ram: form.ram, icon: form.icon || icons[0] };
+self.setState({ servers: self.state.servers.concat([nu]), dialog: null, form: null });
+} else {
+self.setState({ servers: self.state.servers.map(function (x) { return x.id === self.state.editId ? Object.assign({}, x, { icon: form.icon, name: form.name.trim(), software: form.software, version: form.version, port: form.port, maxPlayers: form.maxPlayers, ram: form.ram, note: form.software === 'Velocity' ? 'Proxy' : (x.software === form.software ? x.note : '') }) : x; }), dialog: null, form: null, editId: null });
+}
+}
+
+return {
+servers: servers,
+count: s.servers.length,
+snapBox: 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; ' + (f.snapshots ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a'),
+oldBox: 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; ' + (f.old ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a'),
+toggleSnapshots: function () { setForm({ snapshots: !f.snapshots }); },
+toggleOld: function () { setForm({ old: !f.old }); },
+openChecked: f.open ? 'true' : 'false',
+openTrack: 'display: block; position: relative; width: 38px; height: 22px; border-radius: 11px; transition: background .15s ease; background: ' + (f.open ? 'linear-gradient(90deg, #ec4899, #8b5cf6); box-shadow: 0 0 10px rgba(217, 70, 239, 0.35)' : '#3d3d3d; box-shadow: inset 0 0 0 1px #4a4a4a'),
+openKnob: 'position: absolute; top: 3px; left: ' + (f.open ? '19px' : '3px') + '; width: 16px; height: 16px; border-radius: 8px; background: #ffffff; transition: left .15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.3)',
+toggleOpen: function () { setForm({ open: !f.open }); },
+summary: runningCount === 0 ? 'keiner läuft' : runningCount === 1 ? '1 läuft' : runningCount + ' laufen',
+isGrid: (s.view || 'grid') === 'grid', isList: s.view === 'list',
+gridPressed: s.view === 'list' ? 'false' : 'true', listPressed: s.view === 'list' ? 'true' : 'false',
+gridStyle: 'width: 34px; height: 30px; padding: 0; border: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; ' + (s.view !== 'list' ? 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)' : 'color: #8a8a8a; background: transparent'),
+listStyle: 'width: 34px; height: 30px; padding: 0; border: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; ' + (s.view === 'list' ? 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)' : 'color: #8a8a8a; background: transparent'),
+showGrid: function () { self.setState({ view: 'grid' }); },
+showList: function () { self.setState({ view: 'list' }); },
+hasDialog: !!s.dialog,
+isCreate: isCreate, isEdit: s.dialog === 'edit',
+dlgTitle: isCreate ? 'Server erstellen' : 'Server bearbeiten',
+dlgSub: isCreate ? 'Der Server wird lokal auf diesem PC aufgesetzt. Danach kannst du ihn mit einem Klick starten.' : 'Änderungen an Software oder Version werden beim nächsten Start übernommen.',
+form: f, software: software, softwareHint: hints[f.software], versions: versionsBy[f.software],
+ramFill: 'background-size: ' + ((f.ram - 1) / 15 * 100) + '% 100%',
+eulaBox: 'width: 16px; height: 16px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; ' + (f.eula ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a'),
+submitLabel: isCreate ? 'Server erstellen' : 'Speichern',
+submitDisabled: !f.name.trim() || (isCreate && !f.eula),
+submit: submit,
+backdrop: function (e) { if (e.target === e.currentTarget) close(); },
+closeDialog: close,
+focusRef: function (el) { self.focusEl = el; },
+openCreate: function () { self.wantFocus = true; self.setState({ dialog: 'create', editId: null, form: { name: '', software: 'Paper', version: '1.21.4', port: nextPort(), maxPlayers: 10, ram: 4, eula: false, icon: '/_blob/1f48d344637828b690ffda3ef27db648', defaultIcon: '/_blob/1f48d344637828b690ffda3ef27db648' } }); },
+onName: function (e) { setForm({ name: e.target.value }); },
+onVersion: function (e) { setForm({ version: e.target.value }); },
+onPort: function (e) { setForm({ port: parseInt(e.target.value, 10) || 0 }); },
+onMax: function (e) { setForm({ maxPlayers: parseInt(e.target.value, 10) || 0 }); },
+onRam: function (e) { setForm({ ram: parseInt(e.target.value, 10) }); },
+toggleEula: function () { setForm({ eula: !f.eula }); },
+changeIcon: function () { var i = iconChoices.indexOf(f.icon); setForm({ icon: iconChoices[(i + 1) % iconChoices.length] }); },
+resetIcon: function () { setForm({ icon: f.defaultIcon }); },
+deleteFromDialog: function () { self.setState({ servers: s.servers.filter(function (x) { return x.id !== s.editId; }), dialog: null, form: null, editId: null }); }
+};
+}
+}
+</script>
+</body>
+</html>

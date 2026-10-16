@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>AxoClient</AssemblyName>
+    <RootNamespace>AxoClient.App</RootNamespace>
+    <ApplicationIcon>Assets\axoclient.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UiDir>$(MSBuildProjectDirectory)\..\..\ui</UiDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AxoClient.Core\AxoClient.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Die Svelte-Oberfläche wird von Vite nach wwwroot gebaut und als Ressource eingebettet.
+       So liefert das Fenster nur mitgelieferte Dateien aus (Sicherheit: keine fremden Seiten). -->
+  <Target Name="BuildUi" BeforeTargets="BeforeBuild" Condition="'$(SkipUi)' != 'true' And ('$(Configuration)' == 'Release' Or !Exists('wwwroot\index.html'))">
+    <Exec Command="npm ci" WorkingDirectory="$(UiDir)" Condition="!Exists('$(UiDir)\node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(UiDir)" />
+  </Target>
+
+  <Target Name="EmbedUi" BeforeTargets="PrepareForBuild" AfterTargets="BuildUi">
+    <ItemGroup>
+      <EmbeddedResource Include="wwwroot\**\*" LogicalName="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <Content Include="Assets\axoclient.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

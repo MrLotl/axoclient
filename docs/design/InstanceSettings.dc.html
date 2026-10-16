@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Survival mit Freunden · Einstellungen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.hero-btn{transition:background-color .12s ease}
+.hero-btn:hover{background-color:rgba(255,255,255,0.16)!important}
+.play-btn{transition:background-color .12s ease, transform .12s ease}
+.play-btn:hover{background-color:#2f4d37!important}
+.play-btn:active{transform:scale(0.98)}
+.back-btn{transition:background-color .12s ease}
+.back-btn:hover{background-color:rgba(0,0,0,0.55)!important}
+.month-nav:hover{background-color:#353535!important}.field-input:focus{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.55)!important}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:#d9d9d9;cursor:pointer}
+.chk{position:relative}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.chk:hover .sr:not(:checked) + span{box-shadow:inset 0 0 0 1.5px #6a6a6a!important}
+.chk .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.ram-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;margin:8px 0;border-radius:3px;background-color:#3a3a3a;background-image:linear-gradient(90deg,#db2777,#7c3aed);background-repeat:no-repeat;outline:none;cursor:pointer}
+.ram-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4);transition:box-shadow .12s ease}
+.ram-range:hover::-webkit-slider-thumb,.ram-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 6px rgba(214,140,230,0.35),0 2px 6px rgba(0,0,0,0.4)}
+.ram-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4)}
+.ram-range::-moz-range-track{height:6px;border-radius:3px;background:#3a3a3a}
+.ram-range::-moz-range-progress{height:6px;border-radius:3px;background:linear-gradient(90deg,#db2777,#7c3aed)}
+.danger-btn{transition:background-color .12s ease}
+.danger-btn:hover{background-color:rgba(244,112,103,0.16)!important}
+.loader-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.small-btn{transition:background-color .12s ease}
+.small-btn:hover{background-color:#404040!important}
+.save-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+
+.tab-btn{transition:color .12s ease}
+.tab-btn:not([aria-current="page"]):hover{color:#d9d9d9!important}
+.search-box:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.45)!important}
+.search-box input::placeholder{color:#6b6b6b}
+.search-box input::-webkit-search-cancel-button{display:none}
+.act-btn{transition:background-color .12s ease, color .12s ease}
+.act-btn:hover{background-color:#404040!important;color:#e6e6e6!important}
+.activate-btn{transition:background-color .12s ease}
+.activate-btn:not([aria-pressed="true"]):hover{background-color:#404040!important;color:#f2f2f2!important}
+.start-btn{transition:background-color .12s ease}
+.start-btn:hover{background-color:#2f4d37!important}
+.act-trash:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; flex-direction: column; gap: 16px">
+
+<!-- Hero -->
+<section aria-label="Instanz" style="position: relative; height: 200px; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: #1a1a1a">
+<img class="head" src="{{hero.image}}" alt="" style="{{hero.imgStyle}}">
+<div style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(24, 24, 24, 0.94) 0%, rgba(24, 24, 24, 0.72) 45%, rgba(24, 24, 24, 0.35) 100%)"></div>
+<div style="position: absolute; inset: 0; box-sizing: border-box; padding: 16px 20px 20px; display: flex; flex-direction: column; justify-content: space-between">
+<a class="back-btn" href="Instances.dc.html" style="align-self: flex-start; height: 30px; padding: 0 12px 0 8px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(6px); color: #e6e6e6; font-size: 13px; font-weight: 500; text-decoration: none; display: flex; align-items: center; gap: 6px">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8l4.5 4.5"></path></svg>
+Zurück
+</a>
+<div style="display: flex; align-items: flex-end; gap: 16px">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px; color: #ffffff">{{hero.name}}</h1>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600">
+<span style="height: 24px; padding: 0 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #f2f2f2; line-height: 24px">{{hero.version}}</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #f2f2f2; line-height: 24px">12 Mods</span>
+</div>
+</div>
+<a class="hero-btn" href="InstanceShare.dc.html" aria-label="Instanz an Freunde senden" title="Instanz senden" style="width: 44px; height: 44px; border-radius: 10px; background: rgba(255, 255, 255, 0.09); backdrop-filter: blur(8px); color: #f2f2f2; display: flex; align-items: center; justify-content: center; text-decoration: none; flex-shrink: 0">
+<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="3.5" r="1.8"></circle><circle cx="4" cy="8" r="1.8"></circle><circle cx="12" cy="12.5" r="1.8"></circle><path d="M5.6 7.1l4.8-2.7M5.6 8.9l4.8 2.7"></path></svg>
+</a>
+<button class="hero-btn" aria-label="Instanzordner öffnen" style="width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.09); backdrop-filter: blur(8px); color: #f2f2f2; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</button>
+<button class="play-btn" style="height: 44px; padding: 0 24px 0 20px; border: 0; border-radius: 10px; background: #263b2c; color: #3fb950; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 9px; cursor: pointer; flex-shrink: 0">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 3.5v9l7-4.5z"></path></svg>
+Spielen
+</button>
+</div>
+</div>
+</section>
+
+<!-- Tabs -->
+<nav aria-label="Instanz-Bereiche" style="flex-shrink: 0; height: 38px; display: flex; align-items: stretch; gap: 4px; border-bottom: 1px solid #2f2f2f">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+<sc-if value="{{t.isLink}}" hint-placeholder-val="{{false}}">
+<a class="tab-btn" href="{{t.href}}" aria-current="{{t.current}}" style="{{t.style}}">
+{{t.label}}
+<sc-if value="{{t.hasCount}}" hint-placeholder-val="{{false}}">
+<span style="{{t.countStyle}}">{{t.count}}</span>
+</sc-if>
+<span aria-hidden="true" style="{{t.barStyle}}"></span>
+</a>
+</sc-if>
+<sc-if value="{{t.isButton}}" hint-placeholder-val="{{true}}">
+<button class="tab-btn" aria-current="{{t.current}}" onClick="{{t.pick}}" style="{{t.style}}">
+{{t.label}}
+<sc-if value="{{t.hasCount}}" hint-placeholder-val="{{false}}">
+<span style="{{t.countStyle}}">{{t.count}}</span>
+</sc-if>
+<span aria-hidden="true" style="{{t.barStyle}}"></span>
+</button>
+</sc-if>
+</sc-for>
+</nav>
+
+
+
+
+
+
+<!-- Settings -->
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-content: start">
+
+<!-- Images -->
+<section style="padding: 18px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #e6e6e6">Bilder</h2>
+<span style="font-size: 12px; color: #8a8a8a">Wie die Instanz in der Liste und oben im Banner aussieht</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 14px">
+<img class="head" src="{{icon.image}}" alt="Instanzbild" style="width: 84px; height: 84px; border-radius: 12px; object-fit: cover; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,0.35)">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 13px; font-weight: 600; color: #e6e6e6">Instanzbild</span>
+<span style="font-size: 12px; color: #8a8a8a">Für Karten und Liste · quadratisch</span>
+</div>
+<button class="small-btn" onClick="{{changeIcon}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #353535; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"></rect><circle cx="6" cy="6.5" r="1.2"></circle><path d="M14 11l-3.5-3.5L4 13"></path></svg>
+Ändern
+</button>
+<button class="small-btn" aria-label="Instanzbild zurücksetzen" title="Instanzbild zurücksetzen" onClick="{{resetIcon}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #bdbdbd; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9"></path><path d="M2.5 2.5v2.5H5"></path></svg>
+</button>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="position: relative; height: 120px; border-radius: 10px; overflow: hidden; background: #1c1c1c">
+<img class="head" src="{{banner.image}}" alt="Bannerbild" style="{{banner.imgStyle}}">
+<div style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(24,24,24,0.85) 0%, rgba(24,24,24,0.35) 70%, rgba(24,24,24,0.1) 100%)"></div>
+<span style="position: absolute; left: 12px; bottom: 10px; font-size: 13px; font-weight: 700; color: #ffffff">{{hero.name}}</span>
+<sc-if value="{{banner.isAuto}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; right: 8px; top: 8px; height: 20px; padding: 0 7px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.85), rgba(139, 92, 246, 0.85)); color: #ffffff; font-size: 10.5px; font-weight: 600; line-height: 20px">Automatisch</span>
+</sc-if>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex-grow: 1; font-size: 13px; font-weight: 600; color: #e6e6e6">Bannerbild</span>
+<button class="small-btn" onClick="{{autoBanner}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #353535; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l7.5-7.5"></path><path d="M9 4l3 3"></path><path d="M12 1.8v2M11 2.8h2M4.5 2v2M3.5 3h2M13.5 9v2M12.5 10h2"></path></svg>
+An Instanzbild anpassen
+</button>
+<button class="small-btn" onClick="{{changeBanner}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #353535; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"></rect><circle cx="6" cy="6.5" r="1.2"></circle><path d="M14 11l-3.5-3.5L4 13"></path></svg>
+Ändern
+</button>
+<button class="small-btn" aria-label="Bannerbild zurücksetzen" title="Bannerbild zurücksetzen" onClick="{{resetBanner}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #bdbdbd; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9"></path><path d="M2.5 2.5v2.5H5"></path></svg>
+</button>
+</div>
+</div>
+
+</section>
+
+<!-- General -->
+<section style="padding: 18px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #e6e6e6">Allgemein</h2>
+<span style="font-size: 12px; color: #8a8a8a">Name, Mod-Loader und Spielversion</span>
+</div>
+
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Name</span>
+<input class="field-input" value="{{draft.name}}" onChange="{{onName}}" style="height: 38px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #333333; color: #f2f2f2; font-family: inherit; font-size: 13.5px">
+</label>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="loader-label" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Mod-Loader</span>
+<div role="group" aria-labelledby="loader-label" style="padding: 3px; border-radius: 10px; background: #1f1f1f; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{loaders}}" as="l" hint-placeholder-count="5">
+<button class="loader-btn" aria-pressed="{{l.pressed}}" onClick="{{l.pick}}" style="{{l.style}}">{{l.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Minecraft-Version</span>
+<span style="position: relative; display: flex; flex-grow: 1; min-width: 0"><select class="field-input" value="{{draft.version}}" onChange="{{onVersion}}" style="width: 100%; appearance: none; -webkit-appearance: none; height: 38px; padding: 0 36px 0 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #333333; color: #f2f2f2; font-family: inherit; font-size: 13.5px; cursor: pointer">
+<sc-for list="{{versions}}" as="v" hint-placeholder-count="8">
+<option value="{{v.id}}">{{v.label}}</option>
+</sc-for>
+</select><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a3a3a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; top: 50%; margin-top: -7px; pointer-events: none"><path d="M4 6l4 4 4-4"></path></svg></span>
+</label>
+<div style="display: flex; flex-wrap: wrap; gap: 8px 18px">
+<label class="chk"><input class="sr" type="checkbox" checked="{{draft.onlyAxo}}" onChange="{{toggleAxo}}"><span aria-hidden="true" style="{{chk.axo}}"><sc-if value="{{draft.onlyAxo}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Nur AxoClient-kompatible</label>
+<label class="chk"><input class="sr" type="checkbox" checked="{{draft.snapshots}}" onChange="{{toggleSnap}}"><span aria-hidden="true" style="{{chk.snap}}"><sc-if value="{{draft.snapshots}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Snapshots anzeigen</label>
+<label class="chk"><input class="sr" type="checkbox" checked="{{draft.old}}" onChange="{{toggleOld}}"><span aria-hidden="true" style="{{chk.old}}"><sc-if value="{{draft.old}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Alpha/Beta anzeigen</label>
+</div>
+<sc-if value="{{incompatible}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; color: #e3b341">Diese Version wird von AxoClient nicht unterstützt. Das Spiel startet ohne AxoClient-Funktionen.</span>
+</sc-if>
+</div>
+</section>
+
+<!-- Performance -->
+<section style="grid-column: 1 / -1; padding: 18px; border-radius: 12px; background: #2a2a2a; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px 28px">
+<div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #e6e6e6">Leistung &amp; Java</h2>
+<span style="font-size: 12px; color: #8a8a8a">Arbeitsspeicher und Start-Argumente für diese Instanz</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<label for="ram" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Arbeitsspeicher</label>
+<span style="font-size: 20px; font-weight: 700; color: #f2f2f2">{{draft.ram}} GB</span>
+</div>
+<input id="ram" class="ram-range" type="range" min="1" max="16" step="1" value="{{draft.ram}}" onChange="{{onRam}}" style="{{ramFill}}">
+<div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b6b6b"><span>1 GB</span><span>{{ramHint}}</span><span>16 GB</span></div>
+</div>
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Java-Argumente</span>
+<textarea class="field-input" rows="3" onChange="{{onJava}}" value="{{draft.java}}" spellcheck="false" style="resize: none; min-height: 96px; box-sizing: border-box; padding: 10px 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #333333; color: #d4d4d4; font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5"></textarea>
+</label>
+</section>
+</div>
+
+<!-- Action bar -->
+<div style="flex-shrink: 0; padding-top: 14px; border-top: 1px solid #2f2f2f; display: flex; align-items: center; gap: 10px">
+<button class="danger-btn" onClick="{{onDelete}}" style="{{deleteStyle}}">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h11"></path><path d="M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5"></path><path d="M4 4.5l.8 8.5a1 1 0 0 0 1 1h4.4a1 1 0 0 0 1-1l.8-8.5"></path></svg>
+{{deleteLabel}}
+</button>
+<div style="flex-grow: 1"></div>
+<span style="{{statusStyle}}">{{statusText}}</span>
+<button class="tool-btn" onClick="{{cancel}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer">Abbrechen</button>
+<button class="new-btn save-btn" disabled="{{saveDisabled}}" onClick="{{save}}" style="height: 38px; padding: 0 20px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25)">Speichern</button>
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var initial = { name: 'Survival mit Freunden', loader: 'Fabric', version: '1.21.4', onlyAxo: true, snapshots: false, old: false, ram: 6, java: '-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions', icon: 0, banner: 0, bannerAuto: false };
+this.state = { saved: initial, draft: Object.assign({}, initial) };
+}
+renderVals() {
+var self = this;
+var draft = this.state.draft;
+var saved = this.state.saved;
+function set(patch) { self.setState({ draft: Object.assign({}, self.state.draft, patch), confirmDelete: false, justSaved: false }); }
+
+var images = [
+'/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6', '/_blob/c478ff1d64e58c156d1356caea212505', '/_blob/36f362f60f246657a0ee8a5d3be8d7e6',
+'/_blob/1f48d344637828b690ffda3ef27db648', '/_blob/a10c2683c7db0da47b127e94efd0445a', '/_blob/417ed9b44cf2aebf90dab262c6f59701'
+];
+var bannerIdx = draft.bannerAuto ? draft.icon : draft.banner;
+var bannerImgStyle = 'position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 70%' + (draft.bannerAuto ? '; filter: saturate(1.15)' : '');
+
+var allVersions = [
+{ id: '1.21.4', type: 'release', axo: true }, { id: '1.21.3', type: 'release' }, { id: '1.21.1', type: 'release', axo: true },
+{ id: '1.20.6', type: 'release', axo: true }, { id: '1.20.4', type: 'release' }, { id: '1.20.1', type: 'release', axo: true },
+{ id: '1.19.4', type: 'release' }, { id: '1.18.2', type: 'release' }, { id: '1.16.5', type: 'release' }, { id: '1.12.2', type: 'release' },
+{ id: '1.8.9', type: 'release', axo: true },
+{ id: '25w14a', type: 'snapshot' }, { id: '25w10a', type: 'snapshot' }, { id: '24w46a', type: 'snapshot' },
+{ id: 'b1.7.3', type: 'old' }, { id: 'a1.2.6', type: 'old' }
+];
+var typeLabel = { release: '', snapshot: ' (Snapshot)', old: ' (Alpha/Beta)' };
+var versions = allVersions.filter(function (v) {
+if (v.id === draft.version) return true;
+if (v.type === 'snapshot' && !draft.snapshots) return false;
+if (v.type === 'old' && !draft.old) return false;
+if (draft.onlyAxo && !v.axo) return false;
+return true;
+}).map(function (v) { return { id: v.id, label: v.id + typeLabel[v.type] + (v.axo ? '  ·  AxoClient' : '') }; });
+var cur = allVersions.filter(function (v) { return v.id === draft.version; })[0];
+
+var loaderBase = 'height: 30px; padding: 0 6px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; ';
+var loaders = ['Vanilla', 'Fabric', 'Forge', 'NeoForge', 'Quilt'].map(function (l) {
+var on = l === draft.loader;
+return {
+label: l, pressed: on ? 'true' : 'false',
+style: loaderBase + (on ? 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)' : 'color: #8a8a8a; background: transparent'),
+pick: function () { set({ loader: l }); }
+};
+});
+
+var dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+function box(on) { return 'width: 16px; height: 16px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; transition: background .12s ease; ' + (on ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a'); }
+var confirmDelete = !!this.state.confirmDelete;
+var ramHint = draft.ram < 4 ? 'Zu wenig für Mods' : draft.ram > 10 ? 'Mehr als nötig' : 'Empfohlen: 4–8 GB';
+
+return {
+draft: draft,
+hero: {
+image: images[bannerIdx], imgStyle: bannerImgStyle,
+name: draft.name || 'Unbenannte Instanz',
+version: draft.version + (draft.loader === 'Vanilla' ? '' : ' · ' + draft.loader)
+},
+icon: { image: images[draft.icon] },
+banner: { image: images[bannerIdx], imgStyle: bannerImgStyle, isAuto: !!draft.bannerAuto },
+loaders: loaders, versions: versions,
+incompatible: !!cur && !cur.axo,
+ramHint: ramHint,
+ramFill: 'background-size: ' + ((draft.ram - 1) / 15 * 100) + '% 100%',
+chk: { axo: box(draft.onlyAxo), snap: box(draft.snapshots), old: box(draft.old) },
+saveDisabled: !dirty,
+statusText: this.state.justSaved ? 'Gespeichert' : dirty ? 'Ungespeicherte Änderungen' : '',
+statusStyle: 'font-size: 12.5px; margin-right: 6px; color: ' + (this.state.justSaved ? '#3fb950' : '#e3b341'),
+deleteLabel: confirmDelete ? 'Wirklich löschen?' : 'Instanz löschen',
+deleteStyle: 'height: 38px; padding: 0 14px; border: 0; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; ' + (confirmDelete ? 'background: #c42b1c !important; color: #ffffff' : 'background: transparent; color: #f47067; box-shadow: inset 0 0 0 1px rgba(244, 112, 103, 0.45)'),
+onName: function (e) { set({ name: e.target.value }); },
+onVersion: function (e) { set({ version: e.target.value }); },
+toggleAxo: function () { set({ onlyAxo: !draft.onlyAxo }); },
+toggleSnap: function () { set({ snapshots: !draft.snapshots }); },
+toggleOld: function () { set({ old: !draft.old }); },
+onRam: function (e) { set({ ram: parseInt(e.target.value, 10) }); },
+onJava: function (e) { set({ java: e.target.value }); },
+changeIcon: function () { set({ icon: (draft.icon + 1) % images.length }); },
+changeBanner: function () { set({ banner: ((draft.bannerAuto ? draft.icon : draft.banner) + 1) % images.length, bannerAuto: false }); },
+autoBanner: function () { set({ bannerAuto: true }); },
+resetIcon: function () { set({ icon: 0 }); },
+resetBanner: function () { set({ banner: 0, bannerAuto: false }); },
+cancel: function () { self.setState({ draft: Object.assign({}, saved), confirmDelete: false, justSaved: false }); },
+save: function () { self.setState({ saved: Object.assign({}, draft), justSaved: true, confirmDelete: false }); },
+onDelete: function () { self.setState({ confirmDelete: !confirmDelete }); },
+tabs: this.tabs()
+};
+}
+tabs() {
+var tabDefs = [
+['overview', 'Übersicht', null], ['mods', 'Mods', 12], ['packs', 'Ressourcepacks', 8], ['shaders', 'Shader', 8],
+['worlds', 'Welten', 4], ['servers', 'Server', 3], ['shots', 'Screenshots', 12], ['settings', 'Einstellungen', null]
+];
+var links = { overview: 'InstanceDetail.dc.html', mods: 'InstanceMods.dc.html', packs: 'InstancePacks.dc.html', shaders: 'InstanceShaders.dc.html', worlds: 'InstanceWorlds.dc.html', servers: 'InstanceServers.dc.html', shots: 'InstanceScreenshots.dc.html', settings: 'InstanceSettings.dc.html' };
+return tabDefs.map(function (t) {
+var on = t[0] === 'settings';
+return {
+label: t[1], count: t[2], hasCount: t[2] !== null,
+href: links[t[0]] || '', isLink: !!links[t[0]], isButton: !links[t[0]],
+current: on ? 'page' : 'false',
+style: 'position: relative; height: 38px; padding: 0 12px; border: 0; background: transparent; cursor: pointer; text-decoration: none; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; color: ' + (on ? '#f2f2f2' : '#8a8a8a'),
+countStyle: 'min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: ' + (on ? 'rgba(236, 72, 153, 0.18)' : '#2c2c2c') + '; color: ' + (on ? '#ecc6f2' : '#8a8a8a'),
+barStyle: 'position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: ' + (on ? 'linear-gradient(90deg, #ec4899, #8b5cf6)' : 'transparent'),
+pick: function () {}
+};
+});
+}
+}
+</script>
+</body>
+</html>

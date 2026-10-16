@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Skins</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.pick-card{transition:background-color .12s ease, box-shadow .12s ease}
+.pick-card:not([aria-pressed="true"]):not([data-active="true"]):hover{background-color:#2f2f2f!important}
+.act-btn{transition:background-color .12s ease, color .12s ease}
+.act-btn:hover{background-color:#404040!important;color:#e6e6e6!important}
+.act-trash:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.ghost-btn{transition:background-color .12s ease}
+.ghost-btn:hover{background-color:#3a3a3a!important}
+.second-btn{transition:background-color .12s ease}
+.second-btn:not(:disabled):hover{background-color:#444444!important}
+.second-btn:disabled{opacity:.45;cursor:default!important}
+.grad-btn{transition:filter .12s ease, opacity .12s ease}
+.grad-btn:not(:disabled):hover{filter:brightness(1.12)}
+.grad-btn:disabled{opacity:.45;cursor:default!important;box-shadow:none!important}
+.field{transition:box-shadow .12s ease}
+.field:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.6)!important}
+.field input::placeholder{color:#6b6b6b}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.pick-row{position:relative;transition:background-color .12s ease}
+.pick-row:hover{background-color:#323232!important}
+.pick-row .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.cat-chip{transition:background-color .12s ease, color .12s ease}
+.cat-chip:not([aria-pressed="true"]):hover{background-color:#353535!important;color:#e6e6e6!important}
+.inst-btn{transition:filter .12s ease, background-color .12s ease}
+.inst-btn:not(:disabled):hover{filter:brightness(1.15)}
+.mini-x{transition:background-color .12s ease, color .12s ease}
+.mini-x:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.cat-row{transition:background-color .12s ease}
+.cat-row:hover{background-color:#2f2f2f!important}
+@keyframes axo-spin{to{transform:rotate(360deg)}}
+.drop{transition:box-shadow .12s ease, background-color .12s ease}
+.drop:hover{background-color:rgba(255,255,255,0.03)!important;box-shadow:inset 0 0 0 1.5px rgba(214,140,230,0.5)!important}
+.drop input:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:4px}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; gap: 24px">
+
+<!-- Current skin preview -->
+<section aria-label="Aktueller Skin" style="width: 360px; flex-shrink: 0; box-sizing: border-box; padding: 20px; border-radius: 14px; background: radial-gradient(120% 70% at 50% 85%, #2f2f2f 0%, #2a2a2a 55%, #262626 100%); display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #8a8a8a; text-transform: uppercase; letter-spacing: 0.8px">Aktueller Skin</h2>
+
+</div>
+<div style="flex-grow: 1; min-height: 0; display: flex; align-items: center; justify-content: center">
+<img src="{{active.render}}" alt="{{active.alt}}" style="max-height: 470px; max-width: 100%; display: block; object-fit: contain; filter: drop-shadow(0 18px 28px rgba(0,0,0,0.4))">
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: #323232">
+<span style="font-size: 12px; color: #8a8a8a">Skin</span>
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">{{active.name}}</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: #323232">
+<span style="font-size: 12px; color: #8a8a8a">Cape</span>
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">{{activeCape.name}}</span>
+</div>
+</div>
+</section>
+
+<!-- Library -->
+<section aria-label="Bibliothek" style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: center; gap: 12px">
+<div role="group" aria-label="Kategorie" style="padding: 3px; border-radius: 10px; background: #2a2a2a; display: flex; gap: 2px">
+<button class="seg-btn" aria-pressed="{{skinsPressed}}" onClick="{{showSkins}}" style="{{skinsTabStyle}}">Skins</button>
+<a class="seg-btn" href="SkinsCapes.dc.html" style="height: 30px; padding: 0 16px; border-radius: 8px; display: flex; align-items: center; text-decoration: none; font-size: 13px; font-weight: 600; color: #8a8a8a; background: transparent">Capes</a>
+</div>
+<span style="font-size: 13px; color: #8a8a8a">{{countLabel}}</span>
+<div style="flex-grow: 1"></div>
+<sc-if value="{{isSkins}}" hint-placeholder-val="{{true}}">
+<button class="tool-btn" aria-haspopup="dialog" onClick="{{openAdopt}}" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3"></path><path d="M2 8h8"></path><path d="M7 5l3 3-3 3"></path></svg>
+Von Spieler übernehmen
+</button>
+<button class="new-btn" aria-haspopup="dialog" onClick="{{openUpload}}" style="height: 36px; padding: 0 16px 0 14px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25)">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V3"></path><path d="M4.5 6.5L8 3l3.5 3.5"></path><path d="M2.5 11v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V11"></path></svg>
+Skin hochladen
+</button>
+</sc-if>
+</div>
+
+<!-- Skins grid -->
+<sc-if value="{{isSkins}}" hint-placeholder-val="{{true}}">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-content: start; overflow-y: auto; min-height: 0">
+<sc-for list="{{skins}}" as="s" hint-placeholder-count="4">
+<div class="pick-card" data-active="{{s.pressed}}" style="{{s.cardStyle}}">
+<button aria-pressed="{{s.pressed}}" aria-label="{{s.label}}" onClick="{{s.pick}}" style="position: relative; width: 100%; height: 230px; padding: 0; border: 0; border-radius: 8px; background: #262626; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer">
+<img src="{{s.render}}" alt="" style="height: 200px; width: auto; display: block; filter: drop-shadow(0 10px 16px rgba(0,0,0,0.35))">
+<sc-if value="{{s.isActive}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; top: 8px; right: 8px; height: 22px; padding: 0 8px; border-radius: 11px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-size: 11px; font-weight: 600; line-height: 22px">Aktiv</span>
+</sc-if>
+</button>
+<div style="display: flex; align-items: center; gap: 6px; padding: 0 2px">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left">
+<span style="font-size: 14px; font-weight: 600; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.name}}</span>
+<span style="font-size: 12px; color: #8a8a8a">{{s.source}}</span>
+</div>
+<button class="act-btn" aria-label="{{s.editLabel}}" title="Bearbeiten" aria-haspopup="dialog" onClick="{{s.edit}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L5.5 13.5H2.5v-3z"></path><path d="M9 4l3 3"></path></svg>
+</button>
+<button class="act-btn act-trash" aria-label="{{s.removeLabel}}" onClick="{{s.remove}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h11"></path><path d="M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5"></path><path d="M4 4.5l.8 8.5a1 1 0 0 0 1 1h4.4a1 1 0 0 0 1-1l.8-8.5"></path><path d="M6.75 7v4.5M9.25 7v4.5"></path></svg>
+</button>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<!-- Capes grid -->
+<sc-if value="{{isCapes}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-content: start; overflow-y: auto; min-height: 0">
+<sc-for list="{{capes}}" as="c" hint-placeholder-count="5">
+<button class="pick-card" aria-pressed="{{c.pressed}}" aria-label="{{c.label}}" onClick="{{c.pick}}" style="{{c.cardStyle}}">
+<div style="position: relative; height: 200px; border-radius: 8px; background: #262626; display: flex; align-items: center; justify-content: center; overflow: hidden">
+<sc-if value="{{c.hasImage}}" hint-placeholder-val="{{true}}">
+<img class="head" src="{{c.image}}" alt="" style="width: 90px; height: 144px; display: block; border-radius: 3px; box-shadow: 0 10px 20px rgba(0,0,0,0.35)">
+</sc-if>
+<sc-if value="{{c.isNone}}" hint-placeholder-val="{{false}}">
+<div style="width: 90px; height: 144px; box-sizing: border-box; border: 2px dashed #4a4a4a; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6b6b6b">
+<svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"></circle><path d="M4.2 11.8l7.6-7.6"></path></svg>
+</div>
+</sc-if>
+<sc-if value="{{c.isActive}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; top: 8px; right: 8px; height: 22px; padding: 0 8px; border-radius: 11px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-size: 11px; font-weight: 600; line-height: 22px">Aktiv</span>
+</sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 2px; text-align: left">
+<span style="font-size: 14px; font-weight: 600; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</span>
+<span style="font-size: 12px; color: #8a8a8a">{{c.source}}</span>
+</div>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</section>
+
+</main>
+
+<!-- Dialogs -->
+<sc-if value="{{hasDialog}}" hint-placeholder-val="{{false}}">
+<div onClick="{{backdrop}}" style="position: absolute; inset: 0; z-index: 50; background: rgba(10, 10, 10, 0.62); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center">
+<sc-if value="{{dlg.skin}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-skin-title" style="width: 680px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-skin-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">{{sk.title}}</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{sk.sub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<div style="display: flex; gap: 20px">
+<div style="width: 230px; height: 320px; flex-shrink: 0; border-radius: 12px; background: radial-gradient(120% 70% at 50% 85%, #333333 0%, #2a2a2a 55%, #252525 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; position: relative">
+<sc-if value="{{sk.hasRender}}" hint-placeholder-val="{{true}}">
+<img src="{{sk.render}}" alt="3D-Vorschau des Skins" style="height: 270px; width: auto; max-width: 200px; object-fit: contain; filter: drop-shadow(0 14px 22px rgba(0,0,0,0.45))">
+</sc-if>
+<sc-if value="{{sk.noRender}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12.5px; color: #6b6b6b; text-align: center; padding: 0 24px">Die 3D-Vorschau erscheint, sobald du eine Datei wählst</span>
+</sc-if>
+<span style="position: absolute; left: 10px; bottom: 10px; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(0,0,0,0.4); color: #d9d9d9; font-size: 11px; font-weight: 600; line-height: 22px">{{sk.model}}</span>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 7px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Skin-Datei</span>
+<label class="drop" style="position: relative; height: 92px; box-sizing: border-box; padding: 0 16px; border-radius: 10px; background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #3a3a3a; display: flex; align-items: center; gap: 14px; cursor: pointer">
+<input type="file" accept="image/png" onChange="{{sk.onFile}}" style="position: absolute; width: 1px; height: 1px; opacity: 0">
+<span style="width: 44px; height: 44px; border-radius: 11px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V3"></path><path d="M4.5 6.5L8 3l3.5 3.5"></path><path d="M2.5 11v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V11"></path></svg></span>
+<sc-if value="{{sk.hasFile}}" hint-placeholder-val="{{true}}">
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{sk.file}}</span>
+<span style="font-size: 12px; color: #8a8a8a">{{sk.fileMeta}} · <span style="color: #ecc6f2">Andere Datei wählen</span></span>
+</span>
+</sc-if>
+<sc-if value="{{sk.noFile}}" hint-placeholder-val="{{false}}">
+<span style="flex-grow: 1; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">PNG auswählen oder hierher ziehen</span>
+<span style="font-size: 12px; color: #8a8a8a">64 × 64 oder 64 × 32 Pixel</span>
+</span>
+</sc-if>
+</label>
+</div>
+<label style="display: flex; flex-direction: column; gap: 7px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Name</span>
+<span class="field" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center; gap: 10px; color: #7a7a7a">
+<input value="{{sk.name}}" onChange="{{sk.onName}}" onKeyDown="{{sk.onKey}}" placeholder="z. B. Sommer-Outfit" maxlength="32" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px">
+</span>
+</label>
+<div style="display: flex; flex-direction: column; gap: 7px">
+<span id="lbl-model" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Modell</span>
+<div role="group" aria-labelledby="lbl-model" style="padding: 3px; border-radius: 10px; background: #1f1f1f; display: flex; gap: 2px">
+<button class="seg-btn" aria-pressed="{{sk.classicPressed}}" onClick="{{sk.pickClassic}}" style="{{sk.classicStyle}}">Classic</button>
+<button class="seg-btn" aria-pressed="{{sk.slimPressed}}" onClick="{{sk.pickSlim}}" style="{{sk.slimStyle}}">Slim</button>
+</div>
+<span style="font-size: 12px; color: #7a7a7a">{{sk.modelHint}}</span>
+</div>
+</div>
+</div>
+<div style="display: flex; justify-content: flex-end; gap: 8px">
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<button class="grad-btn" disabled="{{sk.disabled}}" onClick="{{sk.save}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px">{{sk.submit}}</button>
+</div>
+</div>
+</sc-if><sc-if value="{{dlg.adopt}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-adopt-title" style="width: 460px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3"></path><path d="M2 8h8"></path><path d="M7 5l3 3-3 3"></path></svg></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-adopt-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">Skin von Spieler übernehmen</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">Gib den Minecraft-Namen ein. Der Skin wird in deine Bibliothek kopiert.</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<div style="display: flex; gap: 8px">
+<label class="field" style="flex-grow: 1; height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center; gap: 10px; color: #7a7a7a">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#7a7a7a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.5" r="2.8"></circle><path d="M2.5 14c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8"></path></svg>
+<input aria-label="Minecraft-Name" value="{{ad.name}}" onChange="{{ad.onName}}" onKeyDown="{{ad.onKey}}" placeholder="z. B. Granulator444" maxlength="16" spellcheck="false" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px">
+</label>
+<button class="second-btn" disabled="{{ad.searchDisabled}}" onClick="{{ad.search}}" style="height: 40px; padding: 0 16px; border: 0; border-radius: 9px; background: #383838; color: #f2f2f2; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Suchen</button>
+</div>
+<div style="height: 300px; border-radius: 12px; background: radial-gradient(120% 70% at 50% 85%, #333333 0%, #2a2a2a 55%, #252525 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; position: relative">
+<sc-if value="{{ad.found}}" hint-placeholder-val="{{false}}">
+<img src="{{ad.render}}" alt="3D-Vorschau des Skins von {{ad.foundName}}" style="height: 240px; width: auto; object-fit: contain; filter: drop-shadow(0 14px 22px rgba(0,0,0,0.45))">
+<span style="position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px"><span style="font-size: 13px; font-weight: 600; color: #f2f2f2">{{ad.foundName}}</span><span style="height: 20px; padding: 0 7px; border-radius: 6px; background: rgba(0,0,0,0.4); color: #d9d9d9; font-size: 11px; font-weight: 600; line-height: 20px">{{ad.foundModel}}</span></span>
+</sc-if>
+<sc-if value="{{ad.loading}}" hint-placeholder-val="{{false}}">
+<span style="width: 32px; height: 32px; box-sizing: border-box; border-radius: 16px; border: 3px solid #3a3a3a; border-top-color: #d36ad8; animation: axo-spin .8s linear infinite"></span>
+<span style="font-size: 12.5px; color: #8a8a8a">Lade Skin …</span>
+</sc-if>
+<sc-if value="{{ad.missing}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 13.5px; font-weight: 600; color: #f0c95a">Spieler nicht gefunden</span>
+<span style="font-size: 12.5px; color: #8a8a8a">Prüfe die Schreibweise des Namens.</span>
+</sc-if>
+<sc-if value="{{ad.empty}}" hint-placeholder-val="{{true}}">
+<span style="font-size: 12.5px; color: #6b6b6b; text-align: center; padding: 0 40px">Hier erscheint die 3D-Vorschau des Skins</span>
+</sc-if>
+</div>
+<div style="display: flex; justify-content: flex-end; gap: 8px">
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<button class="grad-btn" disabled="{{ad.disabled}}" onClick="{{ad.save}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px">Speichern</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","options":["none","edit","upload","adopt"],"default":"none"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var sc = props.scene || 'none';
+this.state = sc === 'edit' ? { dialog: 'skin', editId: 'Mr_L0tl', fName: 'Mr_L0tl', fModel: 'Classic', fFile: 'Mr_L0tl.png', fRender: '/_blob/a0269106360de387583458330e50552b' }
+: sc === 'upload' ? { dialog: 'skin', editId: null, fName: 'Neuer Skin', fModel: 'Slim', fFile: 'axolotl_hoodie.png', fRender: '/_blob/fbed8053039bd9ffca68d63120b8e748' }
+: sc === 'adopt' ? { dialog: 'adopt', aName: 'Granulator444', aFound: 'Granulator444' } : {};
+}
+componentWillUnmount() { clearTimeout(this.searchTimer); }
+renderVals() { return Object.assign(this.baseVals(), this.dlgVals()); }
+dlgVals() {
+var self = this;
+var s = this.state;
+var d = s.dialog;
+var RENDERS = { Mr_L0tl: '/_blob/a0269106360de387583458330e50552b', Bauarbeiter_Autm: '/_blob/bc101ce504fd693b87cc43e8288c913f', Granulator444: '/_blob/29e3266d8cdec2bf5ff2620afb0818e4', X_Phil_1876: '/_blob/fbed8053039bd9ffca68d63120b8e748' };
+var SLIM = { X_Phil_1876: true };
+var keys = Object.keys(RENDERS);
+function renderFor(name) {
+if (RENDERS[name]) return RENDERS[name];
+var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 997;
+return RENDERS[keys[h % keys.length]];
+}
+function close() { clearTimeout(self.searchTimer); self.setState({ dialog: null, aLoading: false }); }
+var segBase = 'flex: 1 1 0; height: 34px; padding: 0 12px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; ';
+var segOn = segBase + 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)';
+var segOff = segBase + 'color: #8a8a8a; background: transparent';
+var model = s.fModel || 'Classic';
+var editing = !!s.editId;
+function saveSkin() {
+var name = (self.state.fName || '').trim();
+if (!name) return;
+if (self.state.editId) {
+var e = Object.assign({}, self.state.edits || {}); e[self.state.editId] = { name: name, source: model, render: self.state.fRender, big: self.state.fRender };
+self.setState({ edits: e, dialog: null });
+} else {
+var id = 'u' + Date.now();
+self.setState({ extra: (self.state.extra || []).concat([{ id: id, name: name, source: model, render: self.state.fRender || RENDERS.Mr_L0tl, big: self.state.fRender || RENDERS.Mr_L0tl }]), skin: id, dialog: null });
+}
+}
+function search() {
+var n = (self.state.aName || '').trim();
+if (!n) return;
+self.setState({ aLoading: true, aFound: null, aMissing: false });
+clearTimeout(self.searchTimer);
+self.searchTimer = setTimeout(function () {
+if (n.length < 3) self.setState({ aLoading: false, aMissing: true });
+else self.setState({ aLoading: false, aFound: n });
+}, 700);
+}
+var found = s.aFound;
+return {
+hasDialog: !!d,
+dlg: { skin: d === 'skin', adopt: d === 'adopt' },
+backdrop: function (e) { if (e.target === e.currentTarget) close(); },
+closeDialog: close,
+openUpload: function () { self.setState({ dialog: 'skin', editId: null, fName: '', fModel: 'Classic', fFile: '', fRender: '' }); },
+openAdopt: function () { self.setState({ dialog: 'adopt', aName: '', aFound: null, aMissing: false, aLoading: false }); },
+sk: {
+title: editing ? 'Skin bearbeiten' : 'Skin hochladen',
+sub: editing ? 'Datei ersetzen, umbenennen oder das Modell ändern.' : 'Lade eine PNG-Datei im Minecraft-Skinformat hoch.',
+name: s.fName || '', model: model,
+classicStyle: model === 'Classic' ? segOn : segOff, slimStyle: model === 'Slim' ? segOn : segOff,
+classicPressed: model === 'Classic' ? 'true' : 'false', slimPressed: model === 'Slim' ? 'true' : 'false',
+pickClassic: function () { self.setState({ fModel: 'Classic' }); },
+pickSlim: function () { self.setState({ fModel: 'Slim' }); },
+modelHint: model === 'Slim' ? 'Schmale Arme, 3 Pixel breit' : 'Breite Arme, 4 Pixel breit',
+hasFile: !!s.fFile, noFile: !s.fFile,
+file: s.fFile || '', fileMeta: '64 × 64 px · PNG',
+render: s.fRender || '', hasRender: !!s.fRender, noRender: !s.fRender,
+onFile: function (e) { var fl = e.target.files && e.target.files[0]; if (!fl) return; self.setState({ fFile: fl.name, fRender: self.state.fRender || renderFor(fl.name), fName: self.state.fName || fl.name.replace(/\.png$/i, '') }); },
+onName: function (e) { self.setState({ fName: e.target.value }); },
+onKey: function (e) { if (e.key === 'Enter') saveSkin(); if (e.key === 'Escape') close(); },
+submit: editing ? 'Speichern' : 'Hochladen',
+disabled: !(s.fName || '').trim() || !s.fFile,
+save: saveSkin
+},
+ad: {
+name: s.aName || '',
+onName: function (e) { self.setState({ aName: e.target.value, aMissing: false }); },
+onKey: function (e) { if (e.key === 'Enter') search(); if (e.key === 'Escape') close(); },
+search: search, searchDisabled: !(s.aName || '').trim() || !!s.aLoading,
+loading: !!s.aLoading, missing: !!s.aMissing && !s.aLoading,
+found: !!found && !s.aLoading, empty: !found && !s.aLoading && !s.aMissing,
+foundName: found || '', render: found ? renderFor(found) : '',
+foundModel: found && SLIM[found] ? 'Slim' : 'Classic',
+disabled: !found || !!s.aLoading,
+save: function () {
+var id = 'p' + Date.now();
+self.setState({ extra: (self.state.extra || []).concat([{ id: id, name: found, source: (SLIM[found] ? 'Slim' : 'Classic') + ' · von Spieler', render: renderFor(found), big: renderFor(found) }]), skin: id, dialog: null });
+}
+}
+};
+}
+baseVals() {
+var self = this;
+var tab = this.state.tab || 'skins';
+var skinId = this.state.skin || 'Mr_L0tl';
+var RENDERS = { Mr_L0tl: '/_blob/a0269106360de387583458330e50552b', Bauarbeiter_Autm: '/_blob/bc101ce504fd693b87cc43e8288c913f', Granulator444: '/_blob/29e3266d8cdec2bf5ff2620afb0818e4', X_Phil_1876: '/_blob/fbed8053039bd9ffca68d63120b8e748' };
+var capeId = this.state.cape || 'mojang';
+
+var segBase = 'height: 30px; padding: 0 16px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; ';
+var segOn = segBase + 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)';
+var segOff = segBase + 'color: #8a8a8a; background: transparent';
+
+var cardBase = 'padding: 10px; border: 0; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; font-family: inherit; ';
+var cardOn = cardBase + 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.10), rgba(139, 92, 246, 0.10)), #2a2a2a; box-shadow: inset 0 0 0 1.5px rgba(214, 140, 230, 0.45)';
+var cardOff = cardBase + 'background: #2a2a2a; box-shadow: none';
+
+var skinData = [
+{ id: 'Mr_L0tl', name: 'Mr_L0tl', source: 'Classic', render: '/_blob/dace65fc3269212829948400bdc6ac96', big: '/_blob/a0269106360de387583458330e50552b' },
+{ id: 'Bauarbeiter_Autm', name: 'Bauarbeiter_Autm', source: 'Classic', render: '/_blob/bc101ce504fd693b87cc43e8288c913f', big: '/_blob/bc101ce504fd693b87cc43e8288c913f' },
+{ id: 'Granulator444', name: 'Granulator444', source: 'Classic', render: '/_blob/29e3266d8cdec2bf5ff2620afb0818e4', big: '/_blob/29e3266d8cdec2bf5ff2620afb0818e4' },
+{ id: 'X_Phil_1876', name: 'X_Phil_1876', source: 'Slim', render: '/_blob/fbed8053039bd9ffca68d63120b8e748', big: '/_blob/fbed8053039bd9ffca68d63120b8e748' }
+];
+var capeData = [
+{ id: 'none', name: 'Kein Cape', source: 'Ausblenden', image: '' },
+{ id: 'mojang', name: 'Mojang-Cape', source: 'Von deinem Account', image: '/_blob/c0ab89741db3636b1a4deb17c0855b35' },
+{ id: 'axo', name: 'Axo Pink', source: 'AxoClient', image: '/_blob/83ce33e00b1d261ebed9255fcae45c88' },
+{ id: 'midnight', name: 'Midnight', source: 'AxoClient', image: '/_blob/6a9e3329b7c4a8ad8e59553993b34ee5' },
+{ id: 'mint', name: 'Mint', source: 'AxoClient', image: '/_blob/d5b65566da250863c8645727650a5681' }
+];
+
+var edits = this.state.edits || {};
+skinData = skinData.concat(this.state.extra || []).map(function (s) { return edits[s.id] ? Object.assign({}, s, edits[s.id]) : s; });
+var removed = this.state.removed || [];
+var remaining = skinData.filter(function (s) { return removed.indexOf(s.id) === -1; });
+if (remaining.length && !remaining.some(function (s) { return s.id === skinId; })) { skinId = remaining[0].id; }
+var skins = remaining.map(function (s) {
+var on = s.id === skinId;
+return Object.assign({}, s, {
+isActive: on, pressed: on ? 'true' : 'false', cardStyle: (on ? cardOn : cardOff).replace('cursor: pointer; ', ''),
+label: 'Skin ' + s.name + (on ? ' (aktiv)' : ' anwenden'),
+editLabel: 'Skin ' + s.name + ' bearbeiten',
+removeLabel: 'Skin ' + s.name + ' löschen',
+pick: function () { self.setState({ skin: s.id }); },
+edit: function () { self.setState({ dialog: 'skin', editId: s.id, fName: s.name, fModel: s.source.indexOf('Slim') === 0 ? 'Slim' : 'Classic', fFile: s.id + '.png', fRender: s.big }); },
+remove: function () { self.setState({ removed: removed.concat([s.id]) }); }
+});
+});
+var capes = capeData.map(function (c) {
+var on = c.id === capeId;
+return Object.assign({}, c, {
+isActive: on, pressed: on ? 'true' : 'false', cardStyle: on ? cardOn : cardOff,
+hasImage: !!c.image, isNone: !c.image,
+label: 'Cape ' + c.name + (on ? ' (aktiv)' : ' anwenden'),
+pick: function () { self.setState({ cape: c.id }); }
+});
+});
+var activeSkin = skinData.filter(function (s) { return s.id === skinId; })[0];
+var activeCape = capeData.filter(function (c) { return c.id === capeId; })[0];
+
+return {
+skins: skins, capes: capes,
+active: { name: activeSkin.name, render: activeSkin.big, alt: '3D-Modell des Skins ' + activeSkin.name },
+activeCape: activeCape,
+isSkins: tab === 'skins', isCapes: tab === 'capes',
+skinsPressed: tab === 'skins' ? 'true' : 'false', capesPressed: tab === 'capes' ? 'true' : 'false',
+skinsTabStyle: tab === 'skins' ? segOn : segOff, capesTabStyle: tab === 'capes' ? segOn : segOff,
+countLabel: tab === 'skins' ? remaining.length + ' Skins' : capeData.length + ' Capes',
+showSkins: function () { self.setState({ tab: 'skins' }); },
+showCapes: function () { self.setState({ tab: 'capes' }); }
+};
+}
+boxStyle(on) { return ''; }
+}
+</script>
+</body>
+</html>

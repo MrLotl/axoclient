@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Live-Konsole</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.search-box:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.45)!important}
+.search-box input::placeholder{color:#6b6b6b}
+.search-box input::-webkit-search-cancel-button{display:none}
+.log-row:hover{background-color:rgba(255,255,255,0.03)}
+.log-scroll::-webkit-scrollbar{width:10px}
+.log-scroll::-webkit-scrollbar-thumb{background:#333;border-radius:5px;border:2px solid #191919}
+.log-scroll::-webkit-scrollbar-track{background:transparent}
+.menu-item{transition:background-color .12s ease}
+.menu-item:hover{background-color:#383838!important}
+.src-btn{transition:background-color .12s ease}
+.src-btn:hover{background-color:#323232!important}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; flex-direction: column; gap: 16px">
+
+<!-- Header row -->
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #e6e6e6">Live-Konsole</h1>
+<div style="position: relative">
+<button class="src-btn" aria-haspopup="listbox" aria-expanded="{{srcOpen}}" aria-label="Log-Quelle wählen" onClick="{{toggleSrc}}" style="height: 30px; padding: 0 8px 0 10px; border: 0; border-radius: 15px; background: #2a2a2a; display: flex; align-items: center; gap: 8px; font-family: inherit; font-size: 12px; color: #a3a3a3; cursor: pointer">
+<span style="{{src.dotStyle}}"></span>
+<span style="color: #d9d9d9; font-weight: 500">{{src.statusLabel}}</span>
+<span>{{src.kindLabel}} · <span style="color: #e6e6e6; font-weight: 500">{{src.name}}</span> · {{src.type}}</span>
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a3a3a3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="{{srcChevron}}"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+<sc-if value="{{srcOpen}}" hint-placeholder-val="{{false}}">
+<div role="listbox" aria-label="Log-Quelle" style="position: absolute; top: 38px; left: 0; z-index: 20; width: 340px; box-sizing: border-box; padding: 6px; border-radius: 12px; background: #2c2c2c; box-shadow: 0 16px 40px rgba(0,0,0,0.5), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{srcGroups}}" as="g" hint-placeholder-count="2">
+<span style="padding: 8px 10px 4px; font-size: 11px; font-weight: 600; color: #7a7a7a; text-transform: uppercase; letter-spacing: 0.7px">{{g.title}}</span>
+<sc-for list="{{g.items}}" as="o" hint-placeholder-count="2">
+<button class="menu-item" role="option" aria-selected="{{o.selected}}" onClick="{{o.pick}}" style="{{o.style}}">
+<img class="head" src="{{o.icon}}" alt="" style="width: 28px; height: 28px; border-radius: 6px; object-fit: cover; flex-shrink: 0">
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; text-align: left">
+<span style="font-size: 13px; font-weight: 600; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.name}}</span>
+<span style="font-size: 11.5px; color: #8a8a8a">{{o.type}}</span>
+</span>
+<span style="{{o.statusStyle}}"><span style="{{o.dotStyle}}"></span>{{o.statusLabel}}</span>
+</button>
+</sc-for>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<div style="flex-grow: 1"></div>
+<button class="tool-btn" onClick="{{copy}}" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect><path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg>
+{{copyLabel}}
+</button>
+<button class="tool-btn" onClick="{{clear}}" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h11"></path><path d="M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5"></path><path d="M4 4.5l.8 8.5a1 1 0 0 0 1 1h4.4a1 1 0 0 0 1-1l.8-8.5"></path></svg>
+Leeren
+</button>
+<button class="tool-btn" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+Logs-Ordner öffnen
+</button>
+</div>
+
+<!-- Filter row -->
+<div style="display: flex; align-items: center; gap: 12px">
+<label class="search-box" style="width: 320px; height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; background: #2a2a2a; display: flex; align-items: center; gap: 8px; color: #8a8a8a; box-shadow: inset 0 0 0 1px transparent">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<input type="search" aria-label="Logs durchsuchen" placeholder="Logs durchsuchen…" value="{{query}}" onChange="{{onQuery}}" style="flex-grow: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: transparent; color: #e6e6e6; font-family: inherit; font-size: 13px">
+</label>
+
+<div role="group" aria-label="Filter" style="padding: 3px; border-radius: 10px; background: #2a2a2a; display: flex; gap: 2px">
+<button class="seg-btn" aria-pressed="{{f.all.pressed}}" onClick="{{f.all.pick}}" style="{{f.all.style}}">Alle <span style="{{f.all.countStyle}}">{{counts.all}}</span></button>
+<button class="seg-btn" aria-pressed="{{f.warn.pressed}}" onClick="{{f.warn.pick}}" style="{{f.warn.style}}"><span style="width: 7px; height: 7px; border-radius: 4px; background: #e3b341"></span>Warnungen <span style="{{f.warn.countStyle}}">{{counts.warn}}</span></button>
+<button class="seg-btn" aria-pressed="{{f.error.pressed}}" onClick="{{f.error.pick}}" style="{{f.error.style}}"><span style="width: 7px; height: 7px; border-radius: 4px; background: #f47067"></span>Fehler <span style="{{f.error.countStyle}}">{{counts.error}}</span></button>
+</div>
+
+<div style="flex-grow: 1"></div>
+
+<button role="switch" aria-checked="{{followChecked}}" onClick="{{toggleFollow}}" style="height: 36px; padding: 0 12px 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; cursor: pointer">
+Mitlaufen
+<span style="{{trackStyle}}"><span style="{{knobStyle}}"></span></span>
+</button>
+</div>
+
+<!-- Log output -->
+<div style="flex-grow: 1; min-height: 0; border-radius: 12px; background: #191919; box-shadow: inset 0 0 0 1px #2a2a2a; display: flex; flex-direction: column; overflow: hidden">
+<div class="log-scroll" ref="{{logRef}}" role="log" aria-live="polite" style="flex-grow: 1; min-height: 0; overflow-y: auto; padding: 10px 0; font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.65">
+<sc-for list="{{lines}}" as="l" hint-placeholder-count="20">
+<div class="log-row" style="{{l.rowStyle}}">
+<span style="color: #5f5f5f; flex-shrink: 0">{{l.time}}</span>
+<span style="{{l.levelStyle}}">{{l.level}}</span>
+<span style="color: #7a7a7a; flex-shrink: 0; width: 132px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{l.thread}}</span>
+<span style="{{l.msgStyle}}">{{l.msg}}</span>
+</div>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<p style="margin: 40px 0; text-align: center; font-family: 'Inter', system-ui, sans-serif; font-size: 13px; color: #6b6b6b">{{emptyText}}</p>
+</sc-if>
+</div>
+<div style="height: 32px; flex-shrink: 0; padding: 0 14px; border-top: 1px solid #262626; display: flex; align-items: center; gap: 16px; font-size: 12px; color: #6b6b6b">
+<span>{{shownLabel}}</span>
+<span>logs/latest.log</span>
+<div style="flex-grow: 1"></div>
+<span>{{followLabel}}</span>
+</div>
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"source":{"editor":"enum","options":["inst-survival","srv-survival","srv-plugins","srv-proxy","srv-modded"],"default":"inst-survival"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+componentDidMount() { this.scrollToEnd(); }
+componentDidUpdate() { this.scrollToEnd(); }
+scrollToEnd() {
+if (this.state.follow === false || !this.logEl) return;
+this.logEl.scrollTop = this.logEl.scrollHeight;
+}
+renderVals() {
+var self = this;
+var filter = this.state.filter || 'all';
+var follow = this.state.follow !== false;
+var query = this.state.query || '';
+var cleared = !!this.state.cleared;
+
+var sourceId = this.state.source || this.props.source || 'inst-survival';
+var sources = [
+{ id: 'inst-survival', group: 'Instanzen', kind: 'Instanz', name: 'Survival mit Freunden', type: '1.21.4 · Fabric', running: true, icon: '/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6' },
+{ id: 'srv-survival', group: 'Lokale Server', kind: 'Server', name: 'Survival-Testserver', type: 'Paper 1.21.4', running: true, icon: '/_blob/3b2505f08645b22c7e3885b3c8a5085e' },
+{ id: 'srv-plugins', group: 'Lokale Server', kind: 'Server', name: 'Plugin-Entwicklung', type: 'Paper 1.21.1', running: false, icon: '/_blob/4de664d0bf9ba7a8bcdf780488c75db1' },
+{ id: 'srv-proxy', group: 'Lokale Server', kind: 'Server', name: 'Velocity-Proxy', type: 'Velocity 3.4', running: false, icon: '/_blob/5537a3afcfa4bda184d10804aed5a059' },
+{ id: 'srv-modded', group: 'Lokale Server', kind: 'Server', name: 'Fabric Modded', type: 'Fabric 1.21.1', running: false, icon: '/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6' }
+];
+var logsBySource = {
+'inst-survival': [
+['19:42:01', 'INFO', 'main', 'Loading Minecraft 1.21.4 with Fabric Loader 0.16.10'],
+['19:42:01', 'INFO', 'main', 'Loading 47 mods: fabric-api 0.114.0, sodium 0.6.6, iris 1.8.5, axoclient-core 1.0.0, …'],
+['19:42:02', 'WARN', 'main', 'Mod "betterf3" uses deprecated config format, it will be migrated'],
+['19:42:03', 'INFO', 'main', 'SpongePowered MIXIN Subsystem Version=0.8.7 Source=fabric-loader'],
+['19:42:05', 'INFO', 'Render thread', 'Backend library: LWJGL version 3.3.3-snapshot'],
+['19:42:05', 'INFO', 'Render thread', 'Setting user: Mr_L0tl'],
+['19:42:06', 'INFO', 'Render thread', '[AxoClient] Core geladen, Profil "Mr_L0tl" aktiv'],
+['19:42:07', 'INFO', 'Render thread', 'Reloading ResourceManager: vanilla, fabric, sodium, iris, axoclient'],
+['19:42:08', 'WARN', 'Render thread', 'Missing sound for event: minecraft:item.goat_horn.play'],
+['19:42:09', 'ERROR', 'Render thread', 'Failed to load texture: axoclient:textures/cape/midnight.png'],
+['19:42:09', 'ERROR', 'Render thread', 'java.io.FileNotFoundException: axoclient:textures/cape/midnight.png'],
+['19:42:10', 'INFO', 'Render thread', 'Sound engine started'],
+['19:42:10', 'INFO', 'Render thread', 'Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas'],
+['19:42:11', 'INFO', 'Render thread', '[Iris] Shaderpack geladen'],
+['19:42:14', 'INFO', 'Render thread', 'Connecting to blockheim.de, 25565'],
+['19:42:15', 'WARN', 'Netty Client IO #0', 'Unknown custom payload identifier: blockheim:hud_sync'],
+['19:42:15', 'INFO', 'Render thread', 'Loaded 1,384 advancements'],
+['19:42:16', 'INFO', 'Render thread', '[CHAT] Willkommen auf Blockheim SMP, Mr_L0tl!'],
+['19:42:18', 'INFO', 'Render thread', '[CHAT] Bauarbeiter_Autm ist dem Spiel beigetreten'],
+['19:42:31', 'WARN', 'Render thread', 'Can’t keep up! Is the server overloaded? Running 2041ms behind'],
+['19:42:44', 'INFO', 'Render thread', '[CHAT] <Bauarbeiter_Autm> na, auch wieder da? :D'],
+['19:43:02', 'ERROR', 'Render thread', 'Error executing task on Client: java.lang.NullPointerException in EntityRenderer.render'],
+['19:43:05', 'INFO', 'Render thread', '[CHAT] Granulator444 ist dem Spiel beigetreten'],
+['19:43:20', 'INFO', 'Render thread', 'Screenshot gespeichert als 2026-10-01_19.43.20.png']
+],
+'srv-survival': [
+['18:30:02', 'INFO', 'ServerMain', 'Loading Paper 1.21.4-232 for Minecraft 1.21.4'],
+['18:30:04', 'INFO', 'Server thread', 'Starting minecraft server version 1.21.4'],
+['18:30:04', 'INFO', 'Server thread', 'Default game type: SURVIVAL'],
+['18:30:05', 'INFO', 'Server thread', 'Starting Minecraft server on *:25565'],
+['18:30:05', 'WARN', 'Server thread', '**** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!'],
+['18:30:06', 'INFO', 'Server thread', '[AxoBridge] Enabling AxoBridge v1.0.0'],
+['18:30:07', 'INFO', 'Server thread', 'Preparing level "world"'],
+['18:30:10', 'INFO', 'Server thread', 'Preparing start region for dimension minecraft:overworld'],
+['18:30:11', 'INFO', 'Server thread', 'Done (6.214s)! For help, type "help"'],
+['18:31:40', 'INFO', 'User Authenticator #1', 'UUID of player Mr_L0tl is 0ec0c29d-bbf8-4100-88bf-ac9b1fed9e69'],
+['18:31:40', 'INFO', 'Server thread', 'Mr_L0tl[/127.0.0.1:52144] logged in with entity id 214'],
+['18:31:40', 'INFO', 'Server thread', 'Mr_L0tl joined the game'],
+['18:33:02', 'INFO', 'Server thread', 'Bauarbeiter_Autm joined the game'],
+['18:36:15', 'WARN', 'Server thread', 'Can\u2019t keep up! Is the server overloaded? Running 2210ms or 44 ticks behind'],
+['18:37:20', 'INFO', 'Server thread', '<Bauarbeiter_Autm> test test, hört mich wer?'],
+['18:39:51', 'ERROR', 'Server thread', 'Could not pass event PlayerInteractEvent to AxoBridge v1.0.0'],
+['18:39:51', 'ERROR', 'Server thread', 'java.lang.IllegalStateException: Bridge not initialized'],
+['18:41:03', 'INFO', 'Server thread', '[Mr_L0tl: Set own game mode to Creative Mode]']
+],
+'srv-plugins': [
+['17:58:30', 'INFO', 'Server thread', '[DevTools] Reloading plugin DevTools v0.3.1'],
+['18:02:11', 'INFO', 'Server thread', 'Stopping the server'],
+['18:02:11', 'INFO', 'Server thread', 'Stopping server'],
+['18:02:11', 'INFO', 'Server thread', 'Saving players'],
+['18:02:12', 'INFO', 'Server thread', 'Saving worlds'],
+['18:02:12', 'INFO', 'Server thread', 'ThreadedAnvilChunkStorage: All dimensions are saved'],
+['18:02:12', 'INFO', 'Server thread', 'Server gestoppt (letzte Sitzung: heute, 16:40–18:02)']
+],
+'srv-proxy': [
+['17:20:44', 'INFO', 'Velocity Main', 'Shutting down the proxy...'],
+['17:20:44', 'INFO', 'Velocity Main', 'Closing endpoint /0.0.0.0:25577'],
+['17:20:45', 'WARN', 'Velocity Main', 'Server "lobby" did not respond during shutdown'],
+['17:20:45', 'INFO', 'Velocity Main', 'Goodbye!']
+],
+'srv-modded': [
+['Gestern', 'INFO', 'main', 'Loading Minecraft 1.21.1 with Fabric Loader 0.16.10'],
+['Gestern', 'INFO', 'Server thread', 'Stopping server'],
+['Gestern', 'INFO', 'Server thread', 'Saving worlds'],
+['Gestern', 'INFO', 'Server thread', 'Server gestoppt']
+]
+};
+var src = sources.filter(function (x) { return x.id === sourceId; })[0] || sources[0];
+var all = cleared ? [] : logsBySource[src.id];
+
+var levelColor = { INFO: '#7aa2f7', WARN: '#e3b341', ERROR: '#f47067' };
+var counts = {
+all: all.length,
+warn: all.filter(function (l) { return l[1] === 'WARN'; }).length,
+error: all.filter(function (l) { return l[1] === 'ERROR'; }).length
+};
+var q = query.toLowerCase();
+var lines = all.filter(function (l) {
+if (filter === 'warn' && l[1] !== 'WARN') return false;
+if (filter === 'error' && l[1] !== 'ERROR') return false;
+if (q && (l[2] + ' ' + l[3]).toLowerCase().indexOf(q) === -1) return false;
+return true;
+}).map(function (l) {
+var lvl = l[1];
+return {
+time: l[0], level: lvl, thread: l[2], msg: l[3],
+rowStyle: 'display: flex; gap: 14px; padding: 0 16px; ' + (lvl === 'ERROR' ? 'background: rgba(244, 112, 103, 0.07); box-shadow: inset 2px 0 0 #f47067' : lvl === 'WARN' ? 'background: rgba(227, 179, 65, 0.05)' : ''),
+levelStyle: 'flex-shrink: 0; width: 44px; font-weight: 700; color: ' + levelColor[lvl],
+msgStyle: 'flex-grow: 1; min-width: 0; word-break: break-word; color: ' + (lvl === 'ERROR' ? '#ffb4ae' : lvl === 'WARN' ? '#f0d58a' : '#d4d4d4')
+};
+});
+
+var segBase = 'height: 30px; padding: 0 12px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; ';
+var segOn = segBase + 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)';
+var segOff = segBase + 'color: #8a8a8a; background: transparent';
+var f = {};
+['all', 'warn', 'error'].forEach(function (id) {
+var on = id === filter;
+f[id] = {
+pressed: on ? 'true' : 'false',
+style: on ? segOn : segOff,
+countStyle: 'min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: ' + (on ? 'rgba(255,255,255,0.08)' : '#333333') + '; color: ' + (on ? '#ecc6f2' : '#a3a3a3'),
+pick: function () { self.setState({ filter: id }); }
+};
+});
+
+return {
+src: {
+name: src.name, type: src.type, kindLabel: src.kind,
+statusLabel: src.running ? 'Läuft' : 'Gestoppt',
+dotStyle: 'width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; background: ' + (src.running ? '#3fb950; box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.18)' : '#6b6b6b')
+},
+srcOpen: !!this.state.srcOpen,
+srcChevron: 'transition: transform .15s ease; transform: rotate(' + (this.state.srcOpen ? '180deg' : '0deg') + ')',
+toggleSrc: function () { self.setState({ srcOpen: !self.state.srcOpen }); },
+srcGroups: ['Instanzen', 'Lokale Server'].map(function (gname) {
+return { title: gname, items: sources.filter(function (x) { return x.group === gname; }).map(function (x) {
+var on = x.id === src.id;
+return {
+name: x.name, type: x.type, icon: x.icon, selected: on ? 'true' : 'false',
+statusLabel: x.running ? 'Läuft' : 'Gestoppt',
+statusStyle: 'display: flex; align-items: center; gap: 6px; font-size: 11.5px; flex-shrink: 0; color: ' + (x.running ? '#6fdc80' : '#8a8a8a'),
+dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + (x.running ? '#3fb950' : '#6b6b6b'),
+style: 'height: 44px; padding: 0 8px; border: 0; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-family: inherit; background: ' + (on ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.14), rgba(139, 92, 246, 0.14))' : 'transparent'),
+pick: function () { self.setState({ source: x.id, srcOpen: false, cleared: false, filter: 'all' }); }
+};
+}) };
+}),lines: lines, counts: counts, f: f, query: query,
+empty: lines.length === 0,
+emptyText: cleared ? 'Konsole geleert. Neue Einträge erscheinen hier.' : 'Keine Einträge für diesen Filter.',
+shownLabel: lines.length + ' von ' + counts.all + ' Einträgen',
+followLabel: follow ? 'Mitlaufen aktiv' : 'Mitlaufen pausiert',
+followChecked: follow ? 'true' : 'false',
+trackStyle: 'position: relative; width: 32px; height: 18px; border-radius: 9px; transition: background .15s ease; background: ' + (follow ? 'linear-gradient(90deg, #ec4899, #8b5cf6); box-shadow: 0 0 10px rgba(217, 70, 239, 0.35)' : '#3d3d3d; box-shadow: inset 0 0 0 1px #4a4a4a'),
+knobStyle: 'position: absolute; top: 2px; left: ' + (follow ? '16px' : '2px') + '; width: 14px; height: 14px; border-radius: 7px; background: #ffffff; transition: left .15s ease',
+copyLabel: this.state.copied ? 'Kopiert!' : 'Kopieren',
+logRef: function (el) { self.logEl = el; },
+onQuery: function (e) { self.setState({ query: e.target.value }); },
+toggleFollow: function () { self.setState({ follow: !follow }); },
+clear: function () { self.setState({ cleared: true }); },
+copy: function () {
+self.setState({ copied: true });
+setTimeout(function () { self.setState({ copied: false }); }, 1500);
+}
+};
+}
+}
+</script>
+</body>
+</html>

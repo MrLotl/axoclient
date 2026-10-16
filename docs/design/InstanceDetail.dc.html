@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Survival mit Freunden</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.hero-btn{transition:background-color .12s ease}
+.hero-btn:hover{background-color:rgba(255,255,255,0.16)!important}
+.play-btn{transition:background-color .12s ease, transform .12s ease}
+.play-btn:hover{background-color:#2f4d37!important}
+.play-btn:active{transform:scale(0.98)}
+.back-btn{transition:background-color .12s ease}
+.back-btn:hover{background-color:rgba(0,0,0,0.55)!important}
+.month-nav:hover{background-color:#353535!important}
+
+.tab-btn{transition:color .12s ease}
+.tab-btn:not([aria-current="page"]):hover{color:#d9d9d9!important}
+.ghost-btn{transition:background-color .12s ease}
+.ghost-btn:hover{background-color:#3a3a3a!important}
+.second-btn{transition:background-color .12s ease}
+.second-btn:not(:disabled):hover{background-color:#444444!important}
+.second-btn:disabled{opacity:.45;cursor:default!important}
+.grad-btn{transition:filter .12s ease, opacity .12s ease}
+.grad-btn:not(:disabled):hover{filter:brightness(1.12)}
+.grad-btn:disabled{opacity:.45;cursor:default!important;box-shadow:none!important}
+.field{transition:box-shadow .12s ease}
+.field:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.6)!important}
+.field input::placeholder{color:#6b6b6b}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.pick-row{position:relative;transition:background-color .12s ease}
+.pick-row:hover{background-color:#323232!important}
+.pick-row .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.cat-chip{transition:background-color .12s ease, color .12s ease}
+.cat-chip:not([aria-pressed="true"]):hover{background-color:#353535!important;color:#e6e6e6!important}
+.inst-btn{transition:filter .12s ease, background-color .12s ease}
+.inst-btn:not(:disabled):hover{filter:brightness(1.15)}
+.mini-x{transition:background-color .12s ease, color .12s ease}
+.mini-x:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.cat-row{transition:background-color .12s ease}
+.cat-row:hover{background-color:#2f2f2f!important}
+@keyframes axo-spin{to{transform:rotate(360deg)}}
+.link-btn{transition:color .12s ease}
+.link-btn:hover{color:#f5d0fb!important}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; flex-direction: column; gap: 16px">
+
+<!-- Hero -->
+<section aria-label="Instanz" style="position: relative; height: 200px; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: #1a1a1a">
+<img class="head" src="/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 70%">
+<div style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(24, 24, 24, 0.94) 0%, rgba(24, 24, 24, 0.72) 45%, rgba(24, 24, 24, 0.35) 100%)"></div>
+<div style="position: absolute; inset: 0; box-sizing: border-box; padding: 16px 20px 20px; display: flex; flex-direction: column; justify-content: space-between">
+<a class="back-btn" href="Instances.dc.html" style="align-self: flex-start; height: 30px; padding: 0 12px 0 8px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(6px); color: #e6e6e6; font-size: 13px; font-weight: 500; text-decoration: none; display: flex; align-items: center; gap: 6px">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8l4.5 4.5"></path></svg>
+Zurück
+</a>
+<div style="display: flex; align-items: flex-end; gap: 16px">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px; color: #ffffff">Survival mit Freunden</h1>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600">
+<span style="height: 24px; padding: 0 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #f2f2f2; line-height: 24px">1.21.4 · Fabric</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #f2f2f2; line-height: 24px">12 Mods</span>
+</div>
+</div>
+<button class="hero-btn" aria-label="Instanz an Freunde senden" title="Instanz senden" aria-haspopup="dialog" onClick="{{openInstShare}}" style="width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.09); backdrop-filter: blur(8px); color: #f2f2f2; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="3.5" r="1.8"></circle><circle cx="4" cy="8" r="1.8"></circle><circle cx="12" cy="12.5" r="1.8"></circle><path d="M5.6 7.1l4.8-2.7M5.6 8.9l4.8 2.7"></path></svg>
+</button>
+<button class="hero-btn" aria-label="Instanzordner öffnen" style="width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.09); backdrop-filter: blur(8px); color: #f2f2f2; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</button>
+<button class="play-btn" style="height: 44px; padding: 0 24px 0 20px; border: 0; border-radius: 10px; background: #263b2c; color: #3fb950; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 9px; cursor: pointer; flex-shrink: 0">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 3.5v9l7-4.5z"></path></svg>
+Spielen
+</button>
+</div>
+</div>
+</section>
+
+<!-- Tabs -->
+<nav aria-label="Instanz-Bereiche" style="flex-shrink: 0; height: 38px; display: flex; align-items: stretch; gap: 4px; border-bottom: 1px solid #2f2f2f">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+<sc-if value="{{t.isLink}}" hint-placeholder-val="{{false}}">
+<a class="tab-btn" href="{{t.href}}" aria-current="{{t.current}}" style="{{t.style}}">
+{{t.label}}
+<sc-if value="{{t.hasCount}}" hint-placeholder-val="{{false}}">
+<span style="{{t.countStyle}}">{{t.count}}</span>
+</sc-if>
+<span aria-hidden="true" style="{{t.barStyle}}"></span>
+</a>
+</sc-if>
+<sc-if value="{{t.isButton}}" hint-placeholder-val="{{true}}">
+<button class="tab-btn" aria-current="{{t.current}}" onClick="{{t.pick}}" style="{{t.style}}">
+{{t.label}}
+<sc-if value="{{t.hasCount}}" hint-placeholder-val="{{false}}">
+<span style="{{t.countStyle}}">{{t.count}}</span>
+</sc-if>
+<span aria-hidden="true" style="{{t.barStyle}}"></span>
+</button>
+</sc-if>
+</sc-for>
+</nav>
+
+<sc-if value="{{isOverview}}" hint-placeholder-val="{{true}}">
+<!-- Stat widgets -->
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; flex-shrink: 0">
+
+<article style="padding: 16px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.8"></circle><path d="M8 4.8V8l2.2 1.4"></path></svg>
+</span>
+<span style="font-size: 13px; font-weight: 500; color: #a3a3a3">Spielzeit gesamt</span>
+</div>
+<span style="font-size: 26px; font-weight: 700; color: #f2f2f2; letter-spacing: -0.4px">{{stats.total}}</span>
+<span style="font-size: 12px; color: #8a8a8a">seit 12. März 2026</span>
+</article>
+
+<article style="padding: 16px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5"></rect><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"></path></svg>
+</span>
+<span style="font-size: 13px; font-weight: 500; color: #a3a3a3">Diese Woche</span>
+</div>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px">
+<span style="font-size: 26px; font-weight: 700; color: #f2f2f2; letter-spacing: -0.4px">{{stats.week}}</span>
+<div aria-hidden="true" style="height: 30px; display: flex; align-items: flex-end; gap: 3px">
+<sc-for list="{{weekBars}}" as="b" hint-placeholder-count="7">
+<span style="{{b.style}}"></span>
+</sc-for>
+</div>
+</div>
+<span style="font-size: 12px; color: #8a8a8a">{{stats.weekSub}}</span>
+</article>
+
+<article style="padding: 16px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9"></path><path d="M2.5 2.5v2.5H5"></path><path d="M8 5.5V8l1.8 1.2"></path></svg>
+</span>
+<span style="font-size: 13px; font-weight: 500; color: #a3a3a3">Zuletzt gespielt</span>
+</div>
+<span style="font-size: 26px; font-weight: 700; color: #f2f2f2; letter-spacing: -0.4px">Heute, 19:42</span>
+<span style="font-size: 12px; color: #8a8a8a">Sitzung: 1 Std 15 Min</span>
+</article>
+
+<article style="padding: 16px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</span>
+<span style="font-size: 13px; font-weight: 500; color: #a3a3a3">Ordnergröße</span>
+</div>
+<span style="font-size: 26px; font-weight: 700; color: #f2f2f2; letter-spacing: -0.4px">2,4 GB</span>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div aria-hidden="true" style="height: 6px; border-radius: 3px; overflow: hidden; display: flex; gap: 2px">
+<span style="width: 66%; background: #e05aa8"></span>
+<span style="width: 21%; background: #9b5cf0"></span>
+<span style="flex-grow: 1; background: #4a4a4a"></span>
+</div>
+<span style="font-size: 12px; color: #8a8a8a">Welten 1,6 GB · Mods 510 MB · Rest 290 MB</span>
+</div>
+</article>
+</div>
+
+<!-- Activity -->
+<section aria-label="Aktivität" style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 18px 20px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 12px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 600; color: #e6e6e6">Aktivität</h2>
+<span style="font-size: 13px; color: #8a8a8a">{{activitySub}}</span>
+<div style="flex-grow: 1"></div>
+<sc-if value="{{isMonth}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 6px">
+<button class="month-nav" aria-label="Vorheriger Monat" onClick="{{prevMonth}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #303030; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8l4.5 4.5"></path></svg>
+</button>
+<span style="width: 120px; text-align: center; font-size: 13px; font-weight: 600; color: #e6e6e6">{{monthTitle}}</span>
+<button class="month-nav" aria-label="Nächster Monat" onClick="{{nextMonth}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #303030; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+</button>
+</div>
+</sc-if>
+<div role="group" aria-label="Zeitraum" style="padding: 3px; border-radius: 10px; background: #222222; display: flex; gap: 2px">
+<button class="seg-btn" aria-pressed="{{monthPressed}}" onClick="{{showMonth}}" style="{{monthTabStyle}}">Monat</button>
+<button class="seg-btn" aria-pressed="{{yearPressed}}" onClick="{{showYear}}" style="{{yearTabStyle}}">Jahr</button>
+</div>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; display: flex; gap: 28px">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 12px">
+
+<!-- Year heatmap -->
+<sc-if value="{{isYear}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; gap: 6px">
+<div aria-hidden="true" style="width: 22px; padding-top: 19px; display: grid; grid-template-rows: repeat(7, 13px); row-gap: 3px; font-size: 10px; color: #6b6b6b">
+<span></span><span style="line-height: 13px">Mo</span><span></span><span style="line-height: 13px">Mi</span><span></span><span style="line-height: 13px">Fr</span><span></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div aria-hidden="true" style="display: flex; gap: 3px; height: 13px; font-size: 10px; color: #6b6b6b">
+<sc-for list="{{weeks}}" as="w" hint-placeholder-count="53">
+<span style="width: 13px; overflow: visible; white-space: nowrap">{{w.label}}</span>
+</sc-for>
+</div>
+<div style="display: flex; gap: 3px">
+<sc-for list="{{weeks}}" as="w" hint-placeholder-count="53">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<sc-for list="{{w.days}}" as="d" hint-placeholder-count="7">
+<span title="{{d.title}}" onMouseEnter="{{d.hover}}" style="{{d.style}}"></span>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<!-- Month calendar -->
+<sc-if value="{{isMonth}}" hint-placeholder-val="{{false}}">
+<div style="width: 100%; max-width: 660px; display: flex; flex-direction: column; gap: 6px">
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; font-size: 11px; font-weight: 600; color: #6b6b6b">
+<span style="padding-left: 9px">Mo</span><span style="padding-left: 9px">Di</span><span style="padding-left: 9px">Mi</span><span style="padding-left: 9px">Do</span><span style="padding-left: 9px">Fr</span><span style="padding-left: 9px">Sa</span><span style="padding-left: 9px">So</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{monthCells}}" as="c" hint-placeholder-count="35">
+<div title="{{c.title}}" onMouseEnter="{{c.hover}}" style="{{c.style}}">
+<span style="{{c.numStyle}}">{{c.num}}</span>
+<span style="{{c.valStyle}}">{{c.val}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<div style="display: flex; align-items: center; gap: 16px; font-size: 12px; color: #8a8a8a">
+<span style="flex-grow: 1; color: #bdbdbd">{{hoverText}}</span>
+<span>Weniger</span>
+<div aria-hidden="true" style="display: flex; gap: 3px">
+<span style="width: 13px; height: 13px; border-radius: 3px; background: #333333"></span>
+<span style="width: 13px; height: 13px; border-radius: 3px; background: #4a2647"></span>
+<span style="width: 13px; height: 13px; border-radius: 3px; background: #7a2f73"></span>
+<span style="width: 13px; height: 13px; border-radius: 3px; background: #b03d9e"></span>
+<span style="width: 13px; height: 13px; border-radius: 3px; background: #e865c4"></span>
+</div>
+<span>Mehr</span>
+</div>
+</div>
+
+<!-- Side stats -->
+<div style="width: 200px; flex-shrink: 0; padding-left: 24px; border-left: 1px solid #333333; display: flex; flex-direction: column; justify-content: center; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 12px; color: #8a8a8a">Spieltage</span>
+<span style="font-size: 18px; font-weight: 700; color: #f2f2f2">{{side.days}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 12px; color: #8a8a8a">Ø pro Spieltag</span>
+<span style="font-size: 18px; font-weight: 700; color: #f2f2f2">{{side.avg}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 12px; color: #8a8a8a">Längste Serie</span>
+<span style="font-size: 18px; font-weight: 700; color: #f2f2f2">{{side.streak}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 12px; color: #8a8a8a">Aktivster Wochentag</span>
+<span style="font-size: 18px; font-weight: 700; color: #f2f2f2">{{side.weekday}}</span>
+</div>
+</div>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isOther}}" hint-placeholder-val="{{false}}">
+<section style="flex-grow: 1; min-height: 0; border-radius: 12px; box-shadow: inset 0 0 0 1.5px #2f2f2f; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px">
+<span style="font-size: 15px; font-weight: 600; color: #a3a3a3">[{{activeTab}}-Ansicht]</span>
+<span style="font-size: 13px; color: #6b6b6b">Wird als nächster Schritt gestaltet</span>
+</section>
+</sc-if>
+
+</main>
+
+<!-- Dialogs -->
+<sc-if value="{{hasDialog}}" hint-placeholder-val="{{false}}">
+<div onClick="{{backdrop}}" style="position: absolute; inset: 0; z-index: 50; background: rgba(10, 10, 10, 0.62); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center">
+<sc-if value="{{dlg.instShare}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-is-title" style="width: 500px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<img class="head" src="/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6" alt="" style="width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex-shrink: 0">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-is-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">„Survival mit Freunden“ senden</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{is.sub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<sc-if value="{{sh.sent}}" hint-placeholder-val="{{false}}">
+<div style="padding: 26px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+<span style="width: 52px; height: 52px; border-radius: 26px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(167, 60, 200, 0.35)"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></span>
+<span style="font-size: 15px; font-weight: 600; color: #f2f2f2">{{sh.sentTitle}}</span>
+<span style="font-size: 13px; color: #8a8a8a">Deine Freunde bekommen eine Benachrichtigung im Launcher.</span>
+</div>
+</sc-if>
+<sc-if value="{{is.showSteps}}" hint-placeholder-val="{{true}}">
+<div aria-label="Schritt {{is.stepNum}} von 2" style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600">
+<span style="{{is.s1}}"><span style="{{is.d1}}">1</span>Freunde</span>
+<span style="width: 24px; height: 1px; background: #3a3a3a"></span>
+<span style="{{is.s2}}"><span style="{{is.d2}}">2</span>Inhalte</span>
+</div>
+</sc-if>
+<sc-if value="{{is.step1}}" hint-placeholder-val="{{true}}">
+<label class="field" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center; gap: 10px; color: #7a7a7a">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<input aria-label="Freunde suchen" placeholder="Freunde suchen …" value="{{sh.query}}" onChange="{{sh.onQuery}}" spellcheck="false" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px">
+</label>
+<div style="max-height: 236px; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{sh.friends}}" as="f" hint-placeholder-count="3">
+<label class="pick-row" style="{{f.rowStyle}}">
+<input class="sr" type="checkbox" checked="{{f.on}}" onChange="{{f.toggle}}">
+<span aria-hidden="true" style="{{f.box}}"><sc-if value="{{f.on}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+<img class="head" src="{{f.head}}" alt="" style="width: 34px; height: 34px; border-radius: 6px; flex-shrink: 0">
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">{{f.id}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #a3a3a3"><span style="{{f.dot}}"></span>{{f.status}}</span>
+</span>
+</label>
+</sc-for>
+<sc-if value="{{sh.noFriends}}" hint-placeholder-val="{{false}}">
+<p style="margin: 16px 0; text-align: center; font-size: 13px; color: #6b6b6b">Kein Freund gefunden.</p>
+</sc-if>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex-grow: 1; font-size: 12.5px; color: #8a8a8a">{{sh.countLabel}}</span>
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<button class="grad-btn" disabled="{{sh.disabled}}" onClick="{{is.next}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px">Weiter<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg></button>
+</div>
+</sc-if>
+<sc-if value="{{is.step2}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="flex-grow: 1; font-size: 13px; font-weight: 600; color: #e6e6e6">Was soll übertragen werden?</span>
+<button class="link-btn" onClick="{{is.toggleAll}}" style="padding: 0; border: 0; background: transparent; color: #ecc6f2; font-family: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer">{{is.allLabel}}</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{is.opts}}" as="o" hint-placeholder-count="6">
+<label class="pick-row" style="{{o.rowStyle}}">
+<input class="sr" type="checkbox" checked="{{o.on}}" onChange="{{o.toggle}}">
+<span aria-hidden="true" style="{{o.box}}"><sc-if value="{{o.on}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">{{o.label}}</span>
+<span style="font-size: 11.5px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.detail}}</span>
+</span>
+</label>
+</sc-for>
+</div>
+<div style="padding: 10px 12px; border-radius: 10px; background: #242424; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #a3a3a3">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#8a8a8a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"></circle><path d="M8 7.2v4M8 4.8v.01"></path></svg>
+<span style="flex-grow: 1">{{is.summary}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<button class="ghost-btn" onClick="{{is.back}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Zurück</button>
+<div style="flex-grow: 1"></div>
+<button class="grad-btn" disabled="{{is.disabled}}" onClick="{{sh.send}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2L7 9"></path><path d="M14 2l-4.5 12-2.5-5-5-2.5z"></path></svg>{{is.sendLabel}}</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","options":["none","share","month"],"default":"none"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var sc = props.scene || 'none';
+this.state = sc === 'share' ? { dialog: 'instShare', shareSel: ['Granulator444', 'Bauarbeiter_Autm'], isStep: 2 } : sc === 'month' ? { view: 'month' } : {};
+}
+renderVals() { return Object.assign(this.baseVals(), this.dlgVals()); }
+dlgVals() {
+var self = this;
+var s = this.state;
+var d = s.dialog;
+function close() { clearTimeout(self.sentTimer); self.setState({ dialog: null, shareSent: false }); }
+var OPTS = [
+['mods', 'Mods', '12 Mods mit Versionen', 0, true], ['packs', 'Ressourcepacks', '8 Ressourcepacks', 0, true],
+['shaders', 'Shader', '8 Shader', 0, true], ['servers', 'Server', '3 Server aus der Liste', 0, true],
+['settings', 'Einstellungen', 'Version, Loader, RAM, Java-Argumente', 0, true], ['ingame', 'Ingame-Einstellungen', 'Steuerung, Grafik, Sound (options.txt)', 0.1, false]
+];
+var picked = s.isOpts || OPTS.filter(function (o) { return o[4]; }).map(function (o) { return o[0]; });
+var opts = OPTS.map(function (o) {
+var on = picked.indexOf(o[0]) !== -1;
+return {
+label: o[1], detail: o[2], on: on, box: self.boxStyle(on),
+rowStyle: 'height: 62px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; ' + (on ? 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.09), rgba(139, 92, 246, 0.09)), #2f2f2f; box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.22)' : 'background: #2e2e2e'),
+toggle: function () { var cur = self.state.isOpts || picked; self.setState({ isOpts: on ? cur.filter(function (x) { return x !== o[0]; }) : cur.concat([o[0]]) }); }
+};
+});
+var mb = OPTS.filter(function (o) { return picked.indexOf(o[0]) !== -1; }).reduce(function (a, o) { return a + o[3]; }, 0);
+var sh = this.shareVals({});
+var n = (s.shareSel || []).length;
+var step = s.isStep || 1;
+var dot = function (on, done) { return 'width: 18px; height: 18px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; margin-right: 7px; ' + (on || done ? 'background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff' : 'background: #333333; color: #8a8a8a'); };
+var all = picked.length === OPTS.length;
+return {
+hasDialog: !!d, dlg: { instShare: d === 'instShare' },
+backdrop: function (e) { if (e.target === e.currentTarget) close(); },
+closeDialog: close,
+openInstShare: function () { self.setState({ dialog: 'instShare', isStep: 1, shareSel: [], shareQuery: '', shareSent: false, isOpts: null }); },
+sh: sh,
+is: {
+sub: step === 1 ? 'Wähle aus, wer die Instanz bekommen soll.' : 'Für ' + (n === 1 ? (s.shareSel || [])[0] : n + ' Freunde') + ' · 1.21.4 · Fabric',
+stepNum: step, showSteps: !s.shareSent, step1: step === 1 && !s.shareSent, step2: step === 2 && !s.shareSent,
+s1: 'display: flex; align-items: center; color: ' + (step === 1 ? '#f2f2f2' : '#a3a3a3'),
+s2: 'display: flex; align-items: center; color: ' + (step === 2 ? '#f2f2f2' : '#6b6b6b'),
+d1: dot(step === 1, step > 1), d2: dot(step === 2, false),
+next: function () { self.setState({ isStep: 2 }); },
+back: function () { self.setState({ isStep: 1 }); },
+opts: opts,
+allLabel: all ? 'Keine auswählen' : 'Alle auswählen',
+toggleAll: function () { self.setState({ isOpts: all ? [] : OPTS.map(function (o) { return o[0]; }) }); },
+summary: picked.length ? 'Es werden nur Namen und Versionen übertragen – der Launcher deines Freundes lädt die offiziellen Dateien selbst herunter. Welten und Screenshots bleiben bei dir.' : 'Wähle mindestens einen Inhalt aus.',
+disabled: picked.length === 0,
+sendLabel: 'An ' + (n === 1 ? (s.shareSel || [])[0] : n + ' Freunde') + ' senden'
+}
+};
+}
+baseVals() {
+var self = this;
+var view = this.state.view || 'year';
+var monthOffset = this.state.monthOffset || 0;
+var DAY = 86400000;
+var today = new Date(2026, 9, 1);
+var start = new Date(2026, 2, 12);
+var MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+var MONTHS_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+var WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+var WD_LONG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+var LEVELS = ['#333333', '#4a2647', '#7a2f73', '#b03d9e', '#e865c4'];
+
+function key(d) { return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+function rnd(n) { var x = Math.sin(n * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); }
+function minutesFor(d) {
+if (d < start || d > today) return 0;
+if (key(d) === key(today)) return 75;
+var n = Math.round(d.getTime() / DAY);
+var wd = d.getDay();
+var weekend = wd === 0 || wd === 6;
+var r = rnd(n);
+if (r > (weekend ? 0.82 : 0.5)) return 0;
+var m = 20 + Math.floor(rnd(n + 7) * (weekend ? 300 : 170));
+if (rnd(n + 3) > 0.92) m += 120;
+return m;
+}
+function level(m) { return m === 0 ? 0 : m < 60 ? 1 : m < 120 ? 2 : m < 210 ? 3 : 4; }
+function fmt(m) { if (!m) return 'Nicht gespielt'; var h = Math.floor(m / 60), mm = m % 60; return h ? (h + ' Std' + (mm ? ' ' + mm + ' Min' : '')) : (mm + ' Min'); }
+function fmtShort(m) { if (!m) return ''; return m >= 60 ? (Math.round(m / 6) / 10).toFixed(1).replace('.', ',') + ' h' : m + ' m'; }
+function dateLabel(d) { return WD[d.getDay()] + ', ' + d.getDate() + '. ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+
+var hoverKey = this.state.hover || null;
+var hoverText = 'Fahre über einen Tag, um die Spielzeit zu sehen';
+
+// Year grid: 53 weeks ending this week, Monday first
+var lastMonday = new Date(today.getTime() - ((today.getDay() + 6) % 7) * DAY);
+var firstMonday = new Date(lastMonday.getTime() - 52 * 7 * DAY);
+var weeks = [];
+var total = 0, playDays = 0, wdSum = [0, 0, 0, 0, 0, 0, 0], streak = 0, best = 0;
+var prevMonth = -1;
+for (var w = 0; w < 53; w++) {
+var days = [];
+var label = '';
+for (var i = 0; i < 7; i++) {
+var d = new Date(firstMonday.getTime() + (w * 7 + i) * DAY);
+d = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+var future = d > today;
+var m = minutesFor(d);
+if (!future) {
+total += m;
+if (m) { playDays++; wdSum[d.getDay()] += m; streak++; best = Math.max(best, streak); } else if (d >= start) { streak = 0; }
+}
+if (i === 0 && d.getMonth() !== prevMonth) { label = w === 0 ? '' : MONTHS[d.getMonth()]; prevMonth = d.getMonth(); }
+var k = key(d);
+if (k === hoverKey) hoverText = dateLabel(d) + ': ' + fmt(m);
+(function (k2) {
+days.push({
+title: future ? '' : dateLabel(d) + ' · ' + fmt(m),
+style: 'display: block; width: 13px; height: 13px; border-radius: 3px; ' + (future ? 'visibility: hidden' : 'background: ' + LEVELS[level(m)] + (k2 === hoverKey ? '; box-shadow: 0 0 0 1.5px #f2f2f2' : '')),
+hover: function () { if (self.state.hover !== k2) self.setState({ hover: k2 }); }
+});
+})(k);
+}
+weeks.push({ label: label, days: days });
+}
+
+// This week (Mon..today) and previous week
+var weekMin = 0, prevWeekMin = 0, weekBars = [];
+for (var j = 0; j < 7; j++) {
+var wdDay = new Date(lastMonday.getTime() + j * DAY);
+var pm = minutesFor(new Date(wdDay.getTime() - 7 * DAY));
+prevWeekMin += pm;
+var cm = wdDay <= today ? minutesFor(wdDay) : 0;
+weekMin += cm;
+weekBars.push({ style: 'display: block; width: 6px; border-radius: 2px; height: ' + Math.max(3, Math.round(Math.min(cm, 300) / 300 * 30)) + 'px; background: ' + (wdDay <= today ? (cm ? '#d35bb8' : '#3a3a3a') : '#303030') });
+}
+var diff = weekMin - prevWeekMin;
+
+// Month calendar
+var mDate = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+var lead = (mDate.getDay() + 6) % 7;
+var dim = new Date(mDate.getFullYear(), mDate.getMonth() + 1, 0).getDate();
+var monthCells = [];
+var monthTotal = 0;
+var CELL = 'height: 32px; box-sizing: border-box; padding: 0 9px; border-radius: 7px; display: flex; align-items: center; justify-content: space-between; gap: 4px; font-variant-numeric: tabular-nums; line-height: 1; ';
+for (var c = 0; c < lead; c++) monthCells.push({ title: '', num: '', val: '', style: CELL + 'background: transparent', numStyle: '', valStyle: '', hover: null });
+for (var day = 1; day <= dim; day++) {
+var cd = new Date(mDate.getFullYear(), mDate.getMonth(), day);
+var cfuture = cd > today;
+var cmn = minutesFor(cd);
+monthTotal += cmn;
+var lv = level(cmn);
+var ck = key(cd);
+if (ck === hoverKey) hoverText = dateLabel(cd) + ': ' + fmt(cmn);
+(function (k3) {
+monthCells.push({
+title: cfuture ? '' : dateLabel(cd) + ' · ' + fmt(cmn),
+num: day, val: cfuture ? '' : fmtShort(cmn),
+style: CELL + (cfuture ? 'background: transparent; box-shadow: inset 0 0 0 1px #2e2e2e' : 'background: ' + LEVELS[lv]) + (k3 === hoverKey ? '; box-shadow: 0 0 0 1.5px #f2f2f2' : (k3 === key(today) ? '; box-shadow: inset 0 0 0 1.5px #ecc6f2' : '')),
+numStyle: 'font-size: 12px; font-weight: 600; color: ' + (cfuture ? '#4f4f4f' : lv >= 3 ? '#ffffff' : lv ? '#e0c6e6' : '#8a8a8a'),
+valStyle: 'font-size: 11px; font-weight: 600; white-space: nowrap; color: ' + (lv >= 3 ? '#ffffff' : '#f2d9f6'),
+hover: function () { if (self.state.hover !== k3) self.setState({ hover: k3 }); }
+});
+})(ck);
+}
+
+while (monthCells.length % 7) monthCells.push({ title: '', num: '', val: '', style: CELL + 'background: transparent', numStyle: '', valStyle: '', hover: null });
+var bestWd = wdSum.indexOf(Math.max.apply(null, wdSum));
+var segBase = 'height: 28px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; ';
+var segOn = segBase + 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)';
+var segOff = segBase + 'color: #8a8a8a; background: transparent';
+
+var tabId = this.state.tab || 'overview';
+var tabDefs = [
+['overview', 'Übersicht', null], ['mods', 'Mods', 12], ['packs', 'Ressourcepacks', 8], ['shaders', 'Shader', 8],
+['worlds', 'Welten', 4], ['servers', 'Server', 3], ['shots', 'Screenshots', 12], ['settings', 'Einstellungen', null]
+];
+var activeTab = 'Übersicht';
+var links = { mods: 'InstanceMods.dc.html', packs: 'InstancePacks.dc.html', shaders: 'InstanceShaders.dc.html', worlds: 'InstanceWorlds.dc.html', servers: 'InstanceServers.dc.html', shots: 'InstanceScreenshots.dc.html', settings: 'InstanceSettings.dc.html' };
+var tabs = tabDefs.map(function (t) {
+var on = t[0] === tabId;
+if (on) activeTab = t[1];
+return {
+label: t[1], count: t[2], hasCount: t[2] !== null,
+href: links[t[0]] || '', isLink: !!links[t[0]], isButton: !links[t[0]],
+current: on ? 'page' : 'false',
+style: 'position: relative; height: 38px; padding: 0 12px; border: 0; background: transparent; cursor: pointer; text-decoration: none; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; color: ' + (on ? '#f2f2f2' : '#8a8a8a'),
+countStyle: 'min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: ' + (on ? 'rgba(236, 72, 153, 0.18)' : '#2c2c2c') + '; color: ' + (on ? '#ecc6f2' : '#8a8a8a'),
+barStyle: 'position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: ' + (on ? 'linear-gradient(90deg, #ec4899, #8b5cf6)' : 'transparent'),
+pick: function () { self.setState({ tab: t[0] }); }
+};
+});
+
+return {
+tabs: tabs, activeTab: activeTab,
+isOverview: tabId === 'overview', isOther: tabId !== 'overview',
+stats: {
+total: Math.round(total / 60) + ' Std',
+week: fmt(weekMin),
+weekSub: (diff >= 0 ? '+' : '−') + fmt(Math.abs(diff)) + ' ggü. Vorwoche'
+},
+weekBars: weekBars,
+weeks: weeks,
+monthCells: monthCells,
+monthTitle: MONTHS_LONG[mDate.getMonth()] + ' ' + mDate.getFullYear(),
+activitySub: view === 'year' ? fmt(total) + ' im letzten Jahr' : fmt(monthTotal) + ' in diesem Monat',
+hoverText: hoverText,
+side: {
+days: playDays + ' Tage',
+avg: fmt(Math.round(total / Math.max(playDays, 1))),
+streak: best + ' Tage',
+weekday: WD_LONG[bestWd]
+},
+isYear: view === 'year', isMonth: view === 'month',
+yearPressed: view === 'year' ? 'true' : 'false', monthPressed: view === 'month' ? 'true' : 'false',
+yearTabStyle: view === 'year' ? segOn : segOff, monthTabStyle: view === 'month' ? segOn : segOff,
+showYear: function () { self.setState({ view: 'year' }); },
+showMonth: function () { self.setState({ view: 'month' }); },
+prevMonth: function () { self.setState({ monthOffset: monthOffset - 1 }); },
+nextMonth: function () { if (monthOffset < 0) self.setState({ monthOffset: monthOffset + 1 }); }
+};
+}
+
+shareVals(meta) {
+var self = this;
+var s = this.state;
+var sel = s.shareSel || [];
+var q = (s.shareQuery || '').toLowerCase();
+var all = [
+{ id: 'Bauarbeiter_Autm', head: '/_blob/051ea2f3b4c503ccdca147cd85d64ade', status: 'Online', color: '#3fb950' },
+{ id: 'Granulator444', head: '/_blob/87e40120538c99ab26e30ba2e3d891ae', status: 'Im Spiel', color: '#4c8dff' },
+{ id: 'X_Phil_1876', head: '/_blob/56f6fa87300b8ae095b4efdfb98713c7', status: 'Offline', color: '#6b6b6b' }
+];
+var friends = all.filter(function (f) { return !q || f.id.toLowerCase().indexOf(q) !== -1; }).map(function (f) {
+var on = sel.indexOf(f.id) !== -1;
+return {
+id: f.id, head: f.head, status: f.status, on: on,
+dot: 'width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; background: ' + f.color,
+box: self.boxStyle(on),
+rowStyle: 'height: 52px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; ' + (on ? 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.10), rgba(139, 92, 246, 0.10)), #2e2e2e' : 'background: transparent'),
+toggle: function () { var cur = self.state.shareSel || []; self.setState({ shareSel: on ? cur.filter(function (x) { return x !== f.id; }) : cur.concat([f.id]) }); }
+};
+});
+var n = sel.length;
+return {
+icon: meta.icon, title: meta.title, sub: meta.sub,
+query: s.shareQuery || '', onQuery: function (e) { self.setState({ shareQuery: e.target.value }); },
+friends: friends, noFriends: friends.length === 0,
+countLabel: n ? n + (n === 1 ? ' Freund ausgewählt' : ' Freunde ausgewählt') : 'Niemand ausgewählt',
+disabled: n === 0,
+sent: !!s.shareSent, picking: !s.shareSent,
+sentTitle: 'An ' + (n === 1 ? sel[0] : n + ' Freunde') + ' gesendet',
+send: function () {
+self.setState({ shareSent: true });
+clearTimeout(self.sentTimer);
+self.sentTimer = setTimeout(function () { self.setState({ dialog: null, shareSent: false, shareSel: [] }); }, 1600);
+}
+};
+}
+boxStyle(on) {
+return 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; transition: background .12s ease; ' + (on ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a');
+}
+}
+</script>
+</body>
+</html>

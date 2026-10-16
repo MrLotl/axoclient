@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Neue Instanz</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.hero-btn{transition:background-color .12s ease}
+.hero-btn:hover{background-color:rgba(255,255,255,0.16)!important}
+.play-btn{transition:filter .12s ease, transform .12s ease}
+.play-btn:hover{filter:brightness(1.12)}
+.play-btn:active{transform:scale(0.98)}
+.back-btn{transition:background-color .12s ease}
+.back-btn:hover{background-color:rgba(0,0,0,0.55)!important}
+.month-nav:hover{background-color:#353535!important}.field-input::placeholder{color:#6b6b6b}
+.field-input:focus{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.55)!important}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:#d9d9d9;cursor:pointer}
+.chk{position:relative}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.chk:hover .sr:not(:checked) + span{box-shadow:inset 0 0 0 1.5px #6a6a6a!important}
+.chk .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.ram-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;margin:8px 0;border-radius:3px;background-color:#3a3a3a;background-image:linear-gradient(90deg,#db2777,#7c3aed);background-repeat:no-repeat;outline:none;cursor:pointer}
+.ram-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4);transition:box-shadow .12s ease}
+.ram-range:hover::-webkit-slider-thumb,.ram-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 6px rgba(214,140,230,0.35),0 2px 6px rgba(0,0,0,0.4)}
+.ram-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4)}
+.ram-range::-moz-range-track{height:6px;border-radius:3px;background:#3a3a3a}
+.ram-range::-moz-range-progress{height:6px;border-radius:3px;background:linear-gradient(90deg,#db2777,#7c3aed)}
+.danger-btn{transition:background-color .12s ease}
+.danger-btn:hover{background-color:rgba(244,112,103,0.16)!important}
+.loader-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.small-btn{transition:background-color .12s ease}
+.small-btn:hover{background-color:#404040!important}
+.save-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+
+.tab-btn{transition:color .12s ease}
+.tab-btn:not([aria-current="page"]):hover{color:#d9d9d9!important}
+.search-box:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.45)!important}
+.search-box input::placeholder{color:#6b6b6b}
+.search-box input::-webkit-search-cancel-button{display:none}
+.act-btn{transition:background-color .12s ease, color .12s ease}
+.act-btn:hover{background-color:#404040!important;color:#e6e6e6!important}
+.activate-btn{transition:background-color .12s ease}
+.activate-btn:not([aria-pressed="true"]):hover{background-color:#404040!important;color:#f2f2f2!important}
+.start-btn{transition:background-color .12s ease}
+.start-btn:hover{background-color:#2f4d37!important}
+.act-trash:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.back-link{transition:background-color .12s ease, color .12s ease}
+.back-link:hover{background-color:#2c2c2c!important;color:#e6e6e6!important}
+.src-card{transition:background-color .12s ease, box-shadow .12s ease}
+.src-card:not([aria-pressed="true"]):hover{background-color:#303030!important}
+.open-btn:hover{background-color:#2f4d37!important}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; flex-direction: column; gap: 16px">
+
+<!-- Header -->
+<div style="flex-shrink: 0; display: flex; align-items: center; gap: 14px">
+<a class="back-link" href="Instances.dc.html" aria-label="Zurück zu den Instanzen" style="width: 34px; height: 34px; border-radius: 8px; background: #2a2a2a; color: #bdbdbd; display: flex; align-items: center; justify-content: center; text-decoration: none">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8l4.5 4.5"></path></svg>
+</a>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #e6e6e6">Neue Instanz</h1>
+<span style="font-size: 12.5px; color: #8a8a8a">Alles hier kannst du später in den Instanz-Einstellungen ändern</span>
+</div>
+<div style="height: 52px; box-sizing: border-box; padding: 6px 14px 6px 6px; border-radius: 12px; background: #2a2a2a; display: flex; align-items: center; gap: 12px; max-width: 360px">
+<img class="head" src="{{icon.image}}" alt="" style="width: 72px; height: 40px; border-radius: 7px; object-fit: cover; flex-shrink: 0">
+<span style="min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{hero.name}}</span>
+<span style="font-size: 12px; color: #8a8a8a">{{hero.version}}</span>
+</span>
+</div>
+</div>
+
+<!-- Settings -->
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-content: start">
+
+<!-- Images -->
+<section style="padding: 18px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #e6e6e6">Bilder</h2>
+<span style="font-size: 12px; color: #8a8a8a">Wie die Instanz in der Liste und oben im Banner aussieht</span>
+</div>
+
+<div style="display: flex; align-items: center; gap: 14px">
+<img class="head" src="{{icon.image}}" alt="Instanzbild" style="width: 84px; height: 84px; border-radius: 12px; object-fit: cover; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,0.35)">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 13px; font-weight: 600; color: #e6e6e6">Instanzbild</span>
+<span style="font-size: 12px; color: #8a8a8a">Für Karten und Liste · quadratisch</span>
+</div>
+<button class="small-btn" onClick="{{changeIcon}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #353535; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"></rect><circle cx="6" cy="6.5" r="1.2"></circle><path d="M14 11l-3.5-3.5L4 13"></path></svg>
+Ändern
+</button>
+<button class="small-btn" aria-label="Instanzbild zurücksetzen" title="Instanzbild zurücksetzen" onClick="{{resetIcon}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #bdbdbd; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9"></path><path d="M2.5 2.5v2.5H5"></path></svg>
+</button>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="position: relative; height: 120px; border-radius: 10px; overflow: hidden; background: #1c1c1c">
+<img class="head" src="{{banner.image}}" alt="Bannerbild" style="{{banner.imgStyle}}">
+<div style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(24,24,24,0.85) 0%, rgba(24,24,24,0.35) 70%, rgba(24,24,24,0.1) 100%)"></div>
+<span style="position: absolute; left: 12px; bottom: 10px; font-size: 13px; font-weight: 700; color: #ffffff">{{hero.name}}</span>
+<sc-if value="{{banner.isAuto}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; right: 8px; top: 8px; height: 20px; padding: 0 7px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.85), rgba(139, 92, 246, 0.85)); color: #ffffff; font-size: 10.5px; font-weight: 600; line-height: 20px">Automatisch</span>
+</sc-if>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex-grow: 1; font-size: 13px; font-weight: 600; color: #e6e6e6">Bannerbild</span>
+<button class="small-btn" onClick="{{autoBanner}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #353535; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l7.5-7.5"></path><path d="M9 4l3 3"></path><path d="M12 1.8v2M11 2.8h2M4.5 2v2M3.5 3h2M13.5 9v2M12.5 10h2"></path></svg>
+An Instanzbild anpassen
+</button>
+<button class="small-btn" onClick="{{changeBanner}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #353535; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"></rect><circle cx="6" cy="6.5" r="1.2"></circle><path d="M14 11l-3.5-3.5L4 13"></path></svg>
+Ändern
+</button>
+<button class="small-btn" aria-label="Bannerbild zurücksetzen" title="Bannerbild zurücksetzen" onClick="{{resetBanner}}" style="width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #bdbdbd; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9"></path><path d="M2.5 2.5v2.5H5"></path></svg>
+</button>
+</div>
+</div>
+
+</section>
+
+<!-- General -->
+<section style="padding: 18px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #e6e6e6">Allgemein</h2>
+<span style="font-size: 12px; color: #8a8a8a">Name, Mod-Loader und Spielversion</span>
+</div>
+
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Name</span>
+<input class="field-input" value="{{draft.name}}" onChange="{{onName}}" placeholder="z. B. Hardcore mit Freunden" style="height: 38px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #333333; color: #f2f2f2; font-family: inherit; font-size: 13.5px">
+</label>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="loader-label" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Mod-Loader</span>
+<div role="group" aria-labelledby="loader-label" style="padding: 3px; border-radius: 10px; background: #1f1f1f; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{loaders}}" as="l" hint-placeholder-count="5">
+<button class="loader-btn" aria-pressed="{{l.pressed}}" onClick="{{l.pick}}" style="{{l.style}}">{{l.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Minecraft-Version</span>
+<span style="position: relative; display: flex"><select class="field-input" value="{{draft.version}}" onChange="{{onVersion}}" style="width: 100%; appearance: none; -webkit-appearance: none; height: 38px; padding: 0 36px 0 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #333333; color: #f2f2f2; font-family: inherit; font-size: 13.5px; cursor: pointer">
+<sc-for list="{{versions}}" as="v" hint-placeholder-count="8">
+<option value="{{v.id}}">{{v.label}}</option>
+</sc-for>
+</select><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a3a3a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; top: 50%; margin-top: -7px; pointer-events: none"><path d="M4 6l4 4 4-4"></path></svg></span>
+</label>
+<div style="display: flex; flex-wrap: wrap; gap: 8px 18px">
+<label class="chk"><input class="sr" type="checkbox" checked="{{draft.onlyAxo}}" onChange="{{toggleAxo}}"><span aria-hidden="true" style="{{chk.axo}}"><sc-if value="{{draft.onlyAxo}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Nur AxoClient-kompatible</label>
+<label class="chk"><input class="sr" type="checkbox" checked="{{draft.snapshots}}" onChange="{{toggleSnap}}"><span aria-hidden="true" style="{{chk.snap}}"><sc-if value="{{draft.snapshots}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Snapshots anzeigen</label>
+<label class="chk"><input class="sr" type="checkbox" checked="{{draft.old}}" onChange="{{toggleOld}}"><span aria-hidden="true" style="{{chk.old}}"><sc-if value="{{draft.old}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>Alpha/Beta anzeigen</label>
+</div>
+<sc-if value="{{incompatible}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; color: #e3b341">Diese Version wird von AxoClient nicht unterstützt. Das Spiel startet ohne AxoClient-Funktionen.</span>
+</sc-if>
+</div>
+</section>
+
+<!-- Source -->
+<section style="grid-column: 1 / -1; padding: 18px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #e6e6e6">Ausgangspunkt</h2>
+<span style="font-size: 12px; color: #8a8a8a">Womit die Instanz startet</span>
+</div>
+<div role="group" aria-label="Ausgangspunkt" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{sources}}" as="o" hint-placeholder-count="4">
+<button class="src-card" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="{{o.style}}">
+<span style="{{o.iconStyle}}"><sc-if value="{{o.isEmpty}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg></sc-if><sc-if value="{{o.isCopy}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect><path d="M10.5 5.5V4a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></sc-if><sc-if value="{{o.isImport}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3"></path><path d="M2 8h8"></path><path d="M7 5l3 3-3 3"></path></svg></sc-if><sc-if value="{{o.isPack}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8l5.5 3.1v6.2L8 14.2 2.5 11.1V4.9z"></path><path d="M2.5 4.9L8 8l5.5-3.1M8 8v6.2"></path></svg></sc-if></span>
+<span style="display: flex; flex-direction: column; gap: 2px; text-align: left">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">{{o.label}}</span>
+<span style="font-size: 12px; color: #8a8a8a; line-height: 1.4">{{o.sub}}</span>
+</span>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{src.copy}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; background: #242424">
+<label style="flex-grow: 1; display: flex; align-items: center; gap: 12px">
+<span style="font-size: 12.5px; font-weight: 600; color: #a3a3a3; white-space: nowrap">Kopieren von</span>
+<span style="position: relative; display: flex; flex-grow: 1; min-width: 0"><select class="field-input" value="{{draft.copyFrom}}" onChange="{{onCopyFrom}}" style="width: 100%; appearance: none; -webkit-appearance: none; height: 36px; padding: 0 36px 0 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #333333; color: #f2f2f2; font-family: inherit; font-size: 13px; cursor: pointer">
+<option value="survival">Survival mit Freunden · 1.21.4 · Fabric</option><option value="pvp">PvP · 1.8.9 · Forge</option><option value="create">Create Modpack · 1.20.1 · Forge</option><option value="skyblock">Skyblock · 1.21.1 · Fabric</option>
+</select><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a3a3a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; top: 50%; margin-top: -7px; pointer-events: none"><path d="M4 6l4 4 4-4"></path></svg></span>
+</label>
+<span style="font-size: 12px; color: #8a8a8a">Mods, Packs, Shader und Einstellungen – ohne Welten</span>
+</div>
+</sc-if>
+<sc-if value="{{src.import}}" hint-placeholder-val="{{false}}">
+<label class="src-card" style="height: 76px; border-radius: 10px; background: transparent; box-shadow: inset 0 0 0 1.5px #3a3a3a; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; color: #a3a3a3; font-size: 13px">
+<input type="file" accept=".zip,.mrpack" style="position: absolute; width: 1px; height: 1px; opacity: 0">
+<svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="#ecc6f2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V3"></path><path d="M4.5 6.5L8 3l3.5 3.5"></path><path d="M2.5 11v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V11"></path></svg>
+<span><span style="color: #f2f2f2; font-weight: 600">Datei auswählen</span> oder hierher ziehen · .zip, .mrpack, CurseForge-Export</span>
+</label>
+</sc-if>
+<sc-if value="{{src.pack}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 10px; background: #242424">
+<span style="flex-grow: 1; font-size: 12.5px; color: #a3a3a3">Modpacks bringen Version, Loader und Mods selbst mit – sie werden auf der Modpack-Seite installiert.</span>
+<a class="tool-btn" href="Modpacks.dc.html" style="height: 34px; padding: 0 14px; border-radius: 8px; background: #353535; color: #f2f2f2; font-size: 12.5px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px">Modpacks ansehen<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg></a>
+</div>
+</sc-if>
+</section>
+
+<!-- Performance -->
+<section style="grid-column: 1 / -1; padding: 18px; border-radius: 12px; background: #2a2a2a; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px 28px">
+<div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 600; color: #e6e6e6">Leistung &amp; Java</h2>
+<span style="font-size: 12px; color: #8a8a8a">Arbeitsspeicher und Start-Argumente für diese Instanz</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<label for="ram" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Arbeitsspeicher</label>
+<span style="font-size: 20px; font-weight: 700; color: #f2f2f2">{{draft.ram}} GB</span>
+</div>
+<input id="ram" class="ram-range" type="range" min="1" max="16" step="1" value="{{draft.ram}}" onChange="{{onRam}}" style="{{ramFill}}">
+<div style="display: flex; justify-content: space-between; font-size: 11px; color: #6b6b6b"><span>1 GB</span><span>{{ramHint}}</span><span>16 GB</span></div>
+</div>
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Java-Argumente</span>
+<textarea class="field-input" rows="3" onChange="{{onJava}}" value="{{draft.java}}" spellcheck="false" style="resize: none; min-height: 96px; box-sizing: border-box; padding: 10px 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #333333; color: #d4d4d4; font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5"></textarea>
+</label>
+</section>
+</div>
+
+<!-- Action bar -->
+<div style="flex-shrink: 0; padding-top: 14px; border-top: 1px solid #2f2f2f; display: flex; align-items: center; gap: 10px">
+<span style="flex-grow: 1; font-size: 12.5px; color: #8a8a8a">{{summary}}</span>
+<sc-if value="{{creating}}" hint-placeholder-val="{{false}}">
+<div style="width: 220px; display: flex; flex-direction: column; gap: 6px; margin-right: 6px">
+<div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #ecc6f2"><span>{{stage}}</span><span style="font-variant-numeric: tabular-nums">{{pct}} %</span></div>
+<div role="progressbar" aria-label="Instanz wird erstellt" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pct}}" style="height: 6px; border-radius: 3px; background: #333333; overflow: hidden"><span style="{{barStyle}}"></span></div>
+</div>
+</sc-if>
+<sc-if value="{{editing}}" hint-placeholder-val="{{true}}">
+<a class="tool-btn" href="Instances.dc.html" style="height: 38px; padding: 0 18px; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-size: 13px; font-weight: 500; text-decoration: none; display: flex; align-items: center">Abbrechen</a>
+<button class="new-btn save-btn" disabled="{{saveDisabled}}" onClick="{{create}}" style="height: 38px; padding: 0 20px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); display: flex; align-items: center; gap: 8px"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>Instanz erstellen</button>
+</sc-if>
+<sc-if value="{{created}}" hint-placeholder-val="{{false}}">
+<a class="open-btn" href="InstanceDetail.dc.html" style="height: 38px; padding: 0 18px; border-radius: 8px; background: #263b2c; color: #3fb950; font-size: 13px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg>Erstellt · Instanz öffnen</a>
+</sc-if>
+</div>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+componentWillUnmount() { clearInterval(this.timer); }
+constructor(props) {
+super(props);
+var initial = { name: '', loader: 'Fabric', version: '1.21.4', onlyAxo: true, snapshots: false, old: false, ram: 4, java: '-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200', icon: 3, banner: 3, bannerAuto: true, source: 'empty', copyFrom: 'survival' };
+this.state = { saved: initial, draft: Object.assign({}, initial), prog: null };
+}
+renderVals() {
+var self = this;
+var draft = this.state.draft;
+var prog = this.state.prog;
+var saved = this.state.saved;
+function set(patch) { self.setState({ draft: Object.assign({}, self.state.draft, patch), confirmDelete: false, justSaved: false }); }
+
+var images = [
+'/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6', '/_blob/c478ff1d64e58c156d1356caea212505', '/_blob/36f362f60f246657a0ee8a5d3be8d7e6',
+'/_blob/1f48d344637828b690ffda3ef27db648', '/_blob/a10c2683c7db0da47b127e94efd0445a', '/_blob/417ed9b44cf2aebf90dab262c6f59701'
+];
+var bannerIdx = draft.bannerAuto ? draft.icon : draft.banner;
+var bannerImgStyle = 'position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 70%' + (draft.bannerAuto ? '; filter: saturate(1.15)' : '');
+
+var allVersions = [
+{ id: '1.21.4', type: 'release', axo: true }, { id: '1.21.3', type: 'release' }, { id: '1.21.1', type: 'release', axo: true },
+{ id: '1.20.6', type: 'release', axo: true }, { id: '1.20.4', type: 'release' }, { id: '1.20.1', type: 'release', axo: true },
+{ id: '1.19.4', type: 'release' }, { id: '1.18.2', type: 'release' }, { id: '1.16.5', type: 'release' }, { id: '1.12.2', type: 'release' },
+{ id: '1.8.9', type: 'release', axo: true },
+{ id: '25w14a', type: 'snapshot' }, { id: '25w10a', type: 'snapshot' }, { id: '24w46a', type: 'snapshot' },
+{ id: 'b1.7.3', type: 'old' }, { id: 'a1.2.6', type: 'old' }
+];
+var typeLabel = { release: '', snapshot: ' (Snapshot)', old: ' (Alpha/Beta)' };
+var versions = allVersions.filter(function (v) {
+if (v.id === draft.version) return true;
+if (v.type === 'snapshot' && !draft.snapshots) return false;
+if (v.type === 'old' && !draft.old) return false;
+if (draft.onlyAxo && !v.axo) return false;
+return true;
+}).map(function (v) { return { id: v.id, label: v.id + typeLabel[v.type] + (v.axo ? '  ·  AxoClient' : '') }; });
+var cur = allVersions.filter(function (v) { return v.id === draft.version; })[0];
+
+var loaderBase = 'height: 30px; padding: 0 6px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; ';
+var loaders = ['Vanilla', 'Fabric', 'Forge', 'NeoForge', 'Quilt'].map(function (l) {
+var on = l === draft.loader;
+return {
+label: l, pressed: on ? 'true' : 'false',
+style: loaderBase + (on ? 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)' : 'color: #8a8a8a; background: transparent'),
+pick: function () { set({ loader: l }); }
+};
+});
+
+var dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+function box(on) { return 'width: 16px; height: 16px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; transition: background .12s ease; ' + (on ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a'); }
+var confirmDelete = !!this.state.confirmDelete;
+var ramHint = draft.ram < 4 ? 'Zu wenig für Mods' : draft.ram > 10 ? 'Mehr als nötig' : 'Empfohlen: 4–8 GB';
+
+return {
+draft: draft,
+hero: {
+image: images[bannerIdx], imgStyle: bannerImgStyle,
+name: draft.name.trim() || 'Neue Instanz',
+version: draft.version + (draft.loader === 'Vanilla' ? '' : ' · ' + draft.loader)
+},
+icon: { image: images[draft.icon] },
+banner: { image: images[bannerIdx], imgStyle: bannerImgStyle, isAuto: !!draft.bannerAuto },
+loaders: loaders, versions: versions,
+incompatible: !!cur && !cur.axo,
+ramHint: ramHint,
+ramFill: 'background-size: ' + ((draft.ram - 1) / 15 * 100) + '% 100%',
+chk: { axo: box(draft.onlyAxo), snap: box(draft.snapshots), old: box(draft.old) },
+saveDisabled: !draft.name.trim(),
+statusText: this.state.justSaved ? 'Gespeichert' : dirty ? 'Ungespeicherte Änderungen' : '',
+statusStyle: 'font-size: 12.5px; margin-right: 6px; color: ' + (this.state.justSaved ? '#3fb950' : '#e3b341'),
+deleteLabel: confirmDelete ? 'Wirklich löschen?' : 'Instanz löschen',
+deleteStyle: 'height: 38px; padding: 0 14px; border: 0; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; ' + (confirmDelete ? 'background: #c42b1c !important; color: #ffffff' : 'background: transparent; color: #f47067; box-shadow: inset 0 0 0 1px rgba(244, 112, 103, 0.45)'),
+onName: function (e) { set({ name: e.target.value }); },
+onVersion: function (e) { set({ version: e.target.value }); },
+toggleAxo: function () { set({ onlyAxo: !draft.onlyAxo }); },
+toggleSnap: function () { set({ snapshots: !draft.snapshots }); },
+toggleOld: function () { set({ old: !draft.old }); },
+onRam: function (e) { set({ ram: parseInt(e.target.value, 10) }); },
+onJava: function (e) { set({ java: e.target.value }); },
+changeIcon: function () { set({ icon: (draft.icon + 1) % images.length }); },
+changeBanner: function () { set({ banner: ((draft.bannerAuto ? draft.icon : draft.banner) + 1) % images.length, bannerAuto: false }); },
+autoBanner: function () { set({ bannerAuto: true }); },
+resetIcon: function () { set({ icon: 0 }); },
+resetBanner: function () { set({ banner: 0, bannerAuto: false }); },
+cancel: function () { self.setState({ draft: Object.assign({}, saved), confirmDelete: false, justSaved: false }); },
+save: function () { self.setState({ saved: Object.assign({}, draft), justSaved: true, confirmDelete: false }); },
+onDelete: function () { self.setState({ confirmDelete: !confirmDelete }); },
+sources: [['empty', 'Leer', 'Nur Minecraft und der Loader'], ['copy', 'Von Instanz kopieren', 'Inhalte einer bestehenden Instanz'], ['import', 'Importieren', 'Datei von einem anderen Launcher'], ['pack', 'Modpack', 'Fertige Sammlung auswählen']].map(function (o) {
+var on = draft.source === o[0];
+return {
+label: o[1], sub: o[2], pressed: on ? 'true' : 'false', icon: '',
+isEmpty: o[0] === 'empty', isCopy: o[0] === 'copy', isImport: o[0] === 'import', isPack: o[0] === 'pack',
+style: 'padding: 14px; border: 0; border-radius: 10px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-family: inherit; ' + (on ? 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.10), rgba(139, 92, 246, 0.10)), #2f2f2f; box-shadow: inset 0 0 0 1.5px rgba(214, 140, 230, 0.45)' : 'background: #262626; box-shadow: inset 0 0 0 1px #333333'),
+iconStyle: 'width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' + (on ? 'background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff' : 'background: #333333; color: #bdbdbd'),
+pick: function () { set({ source: o[0] }); }
+};
+}),
+src: { copy: draft.source === 'copy', import: draft.source === 'import', pack: draft.source === 'pack' },
+onCopyFrom: function (e) { set({ copyFrom: e.target.value }); },
+summary: (draft.name.trim() ? '„' + draft.name.trim() + '“' : 'Gib der Instanz einen Namen') + ' · ' + draft.version + (draft.loader === 'Vanilla' ? '' : ' · ' + draft.loader) + ' · ' + draft.ram + ' GB RAM',
+creating: prog !== null && prog < 100, created: prog !== null && prog >= 100, editing: prog === null,
+pct: Math.round(prog || 0),
+stage: (prog || 0) < 40 ? 'Lade Minecraft …' : (prog || 0) < 75 ? 'Installiere ' + draft.loader + ' …' : 'Richte Instanz ein …',
+barStyle: 'display: block; height: 100%; width: ' + (prog || 0) + '%; border-radius: 3px; background: linear-gradient(90deg, #db2777, #7c3aed); transition: width .1s linear',
+create: function () {
+if (!draft.name.trim()) return;
+self.setState({ prog: 0 });
+clearInterval(self.timer);
+self.timer = setInterval(function () { var p = Math.min(100, (self.state.prog || 0) + 1 + Math.random() * 3); self.setState({ prog: p }); if (p >= 100) clearInterval(self.timer); }, 70);
+}
+};
+}
+}
+</script>
+</body>
+</html>

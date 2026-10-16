@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Survival mit Freunden · Ressourcepacks</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.hero-btn{transition:background-color .12s ease}
+.hero-btn:hover{background-color:rgba(255,255,255,0.16)!important}
+.play-btn{transition:background-color .12s ease, transform .12s ease}
+.play-btn:hover{background-color:#2f4d37!important}
+.play-btn:active{transform:scale(0.98)}
+.back-btn{transition:background-color .12s ease}
+.back-btn:hover{background-color:rgba(0,0,0,0.55)!important}
+.month-nav:hover{background-color:#353535!important}
+
+.tab-btn{transition:color .12s ease}
+.tab-btn:not([aria-current="page"]):hover{color:#d9d9d9!important}
+.search-box:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.45)!important}
+.search-box input::placeholder{color:#6b6b6b}
+.search-box input::-webkit-search-cancel-button{display:none}
+.act-btn{transition:background-color .12s ease, color .12s ease}
+.act-btn:hover{background-color:#404040!important;color:#e6e6e6!important}
+.act-trash:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.ghost-btn{transition:background-color .12s ease}
+.ghost-btn:hover{background-color:#3a3a3a!important}
+.second-btn{transition:background-color .12s ease}
+.second-btn:not(:disabled):hover{background-color:#444444!important}
+.second-btn:disabled{opacity:.45;cursor:default!important}
+.grad-btn{transition:filter .12s ease, opacity .12s ease}
+.grad-btn:not(:disabled):hover{filter:brightness(1.12)}
+.grad-btn:disabled{opacity:.45;cursor:default!important;box-shadow:none!important}
+.field{transition:box-shadow .12s ease}
+.field:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.6)!important}
+.field input::placeholder{color:#6b6b6b}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.pick-row{position:relative;transition:background-color .12s ease}
+.pick-row:hover{background-color:#323232!important}
+.pick-row .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.cat-chip{transition:background-color .12s ease, color .12s ease}
+.cat-chip:not([aria-pressed="true"]):hover{background-color:#353535!important;color:#e6e6e6!important}
+.inst-btn{transition:filter .12s ease, background-color .12s ease}
+.inst-btn:not(:disabled):hover{filter:brightness(1.15)}
+.mini-x{transition:background-color .12s ease, color .12s ease}
+.mini-x:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.cat-row{transition:background-color .12s ease}
+.cat-row:hover{background-color:#2f2f2f!important}
+@keyframes axo-spin{to{transform:rotate(360deg)}}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; flex-direction: column; gap: 16px">
+
+<!-- Hero -->
+<section aria-label="Instanz" style="position: relative; height: 200px; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: #1a1a1a">
+<img class="head" src="/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 70%">
+<div style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(24, 24, 24, 0.94) 0%, rgba(24, 24, 24, 0.72) 45%, rgba(24, 24, 24, 0.35) 100%)"></div>
+<div style="position: absolute; inset: 0; box-sizing: border-box; padding: 16px 20px 20px; display: flex; flex-direction: column; justify-content: space-between">
+<a class="back-btn" href="Instances.dc.html" style="align-self: flex-start; height: 30px; padding: 0 12px 0 8px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); backdrop-filter: blur(6px); color: #e6e6e6; font-size: 13px; font-weight: 500; text-decoration: none; display: flex; align-items: center; gap: 6px">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8l4.5 4.5"></path></svg>
+Zurück
+</a>
+<div style="display: flex; align-items: flex-end; gap: 16px">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.4px; color: #ffffff">Survival mit Freunden</h1>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600">
+<span style="height: 24px; padding: 0 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #f2f2f2; line-height: 24px">1.21.4 · Fabric</span>
+<span style="height: 24px; padding: 0 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #f2f2f2; line-height: 24px">12 Mods</span>
+</div>
+</div>
+<a class="hero-btn" href="InstanceShare.dc.html" aria-label="Instanz an Freunde senden" title="Instanz senden" style="width: 44px; height: 44px; border-radius: 10px; background: rgba(255, 255, 255, 0.09); backdrop-filter: blur(8px); color: #f2f2f2; display: flex; align-items: center; justify-content: center; text-decoration: none; flex-shrink: 0">
+<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="3.5" r="1.8"></circle><circle cx="4" cy="8" r="1.8"></circle><circle cx="12" cy="12.5" r="1.8"></circle><path d="M5.6 7.1l4.8-2.7M5.6 8.9l4.8 2.7"></path></svg>
+</a>
+<button class="hero-btn" aria-label="Instanzordner öffnen" style="width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.09); backdrop-filter: blur(8px); color: #f2f2f2; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</button>
+<button class="play-btn" style="height: 44px; padding: 0 24px 0 20px; border: 0; border-radius: 10px; background: #263b2c; color: #3fb950; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 9px; cursor: pointer; flex-shrink: 0">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M5 3.5v9l7-4.5z"></path></svg>
+Spielen
+</button>
+</div>
+</div>
+</section>
+
+<!-- Tabs -->
+<nav aria-label="Instanz-Bereiche" style="flex-shrink: 0; height: 38px; display: flex; align-items: stretch; gap: 4px; border-bottom: 1px solid #2f2f2f">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+<sc-if value="{{t.isLink}}" hint-placeholder-val="{{false}}">
+<a class="tab-btn" href="{{t.href}}" aria-current="{{t.current}}" style="{{t.style}}">
+{{t.label}}
+<sc-if value="{{t.hasCount}}" hint-placeholder-val="{{false}}">
+<span style="{{t.countStyle}}">{{t.count}}</span>
+</sc-if>
+<span aria-hidden="true" style="{{t.barStyle}}"></span>
+</a>
+</sc-if>
+<sc-if value="{{t.isButton}}" hint-placeholder-val="{{true}}">
+<button class="tab-btn" aria-current="{{t.current}}" onClick="{{t.pick}}" style="{{t.style}}">
+{{t.label}}
+<sc-if value="{{t.hasCount}}" hint-placeholder-val="{{false}}">
+<span style="{{t.countStyle}}">{{t.count}}</span>
+</sc-if>
+<span aria-hidden="true" style="{{t.barStyle}}"></span>
+</button>
+</sc-if>
+</sc-for>
+</nav>
+
+
+<!-- Toolbar -->
+<div style="flex-shrink: 0; display: flex; align-items: center; gap: 10px">
+<label class="search-box" style="width: 260px; height: 36px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; background: #2a2a2a; display: flex; align-items: center; gap: 8px; color: #8a8a8a; box-shadow: inset 0 0 0 1px transparent">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<input type="search" aria-label="Ressourcepacks durchsuchen" placeholder="Ressourcepacks durchsuchen…" value="{{query}}" onChange="{{onQuery}}" style="flex-grow: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: transparent; color: #e6e6e6; font-family: inherit; font-size: 13px">
+</label>
+
+<div role="group" aria-label="Ansicht" style="padding: 3px; border-radius: 10px; background: #2a2a2a; display: flex; gap: 2px">
+<button class="seg-btn" aria-label="Kartenansicht" aria-pressed="{{gridPressed}}" onClick="{{showGrid}}" style="{{gridStyle}}">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"></rect><rect x="9" y="2" width="5" height="5" rx="1"></rect><rect x="2" y="9" width="5" height="5" rx="1"></rect><rect x="9" y="9" width="5" height="5" rx="1"></rect></svg>
+</button>
+<button class="seg-btn" aria-label="Listenansicht" aria-pressed="{{listPressed}}" onClick="{{showList}}" style="{{listStyle}}">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.5 4h8.5M5.5 8h8.5M5.5 12h8.5"></path><path d="M2 4h.5M2 8h.5M2 12h.5"></path></svg>
+</button>
+</div>
+
+<span style="min-width: 0; font-size: 13px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{summary}}</span>
+<div style="flex-grow: 1"></div>
+
+<button class="tool-btn" aria-label="Resourcepack-Ordner öffnen" style="width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+</button>
+<button class="tool-btn" title="Paket-Profile: Zusammenstellungen von Ressourcepacks speichern und wechseln" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L2.5 5 8 8l5.5-3z"></path><path d="M2.5 8L8 11l5.5-3"></path><path d="M2.5 11L8 14l5.5-3"></path></svg>
+Profile
+</button>
+<button class="tool-btn" onClick="{{repair}}" style="position: relative; height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 2.3a3.2 3.2 0 0 0-3.9 4.1L2.6 10.1a1.4 1.4 0 0 0 2 2l3.7-3.7a3.2 3.2 0 0 0 4.1-3.9l-1.9 1.9-1.6-.4-.4-1.6z"></path></svg>
+Reparieren
+<sc-if value="{{hasIssues}}" hint-placeholder-val="{{true}}">
+<span style="min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: rgba(227, 179, 65, 0.18); color: #e3b341; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center">{{issueCount}}</span>
+</sc-if>
+</button>
+<button class="tool-btn" onClick="{{checkUpdates}}" style="height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #2a2a2a; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 0 1-9.6 3.7"></path><path d="M2.5 8a5.5 5.5 0 0 1 9.6-3.7"></path><path d="M12.5 1.8v2.7H9.8"></path><path d="M3.5 14.2v-2.7h2.7"></path></svg>
+{{updateLabel}}
+</button>
+<button class="new-btn" onClick="{{openAdd}}" style="height: 36px; padding: 0 16px 0 14px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25)">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>
+Packs hinzufügen
+</button>
+</div>
+
+<!-- Grid view -->
+<sc-if value="{{isGrid}}" hint-placeholder-val="{{true}}">
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-content: start">
+<sc-for list="{{mods}}" as="m" hint-placeholder-count="8">
+<article class="mod-card" style="{{m.cardStyle}}">
+<div style="position: relative; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #1c1c1c; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{m.hasIcon}}" hint-placeholder-val="{{true}}"><img src="{{m.icon}}" alt="" style="position: absolute; inset: -20%; width: 140%; height: 140%; object-fit: cover; filter: blur(22px) saturate(1.3); opacity: 0.45"></sc-if>
+<sc-if value="{{m.hasIcon}}" hint-placeholder-val="{{true}}"><img src="{{m.icon}}" alt="" style="position: relative; height: calc(100% - 36px); aspect-ratio: 1 / 1; border-radius: 18px; object-fit: cover"></sc-if><sc-if value="{{m.noIcon}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="position: relative; height: calc(100% - 36px); aspect-ratio: 1 / 1; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 48px; font-weight: 700; background: {{m.color}}">{{m.letter}}</span></sc-if>
+<sc-if value="{{m.hasUpdate}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; top: 8px; right: 8px; height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(63, 185, 80, 0.2); backdrop-filter: blur(6px); color: #6fdc80; font-size: 11px; font-weight: 600; line-height: 22px">Update verfügbar</span>
+</sc-if>
+<sc-if value="{{m.hasIssue}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; top: 8px; right: 8px; height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(227, 179, 65, 0.2); backdrop-filter: blur(6px); color: #f0c95a; font-size: 11px; font-weight: 600; line-height: 22px">Veraltetes Format</span>
+</sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 2px">
+<h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</h3>
+<span style="font-size: 12px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.version}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; padding: 0 2px">
+<button class="act-btn" aria-label="{{m.shareLabel}}" title="Senden" onClick="{{m.share}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="3.5" r="1.8"></circle><circle cx="4" cy="8" r="1.8"></circle><circle cx="12" cy="12.5" r="1.8"></circle><path d="M5.6 7.1l4.8-2.7M5.6 8.9l4.8 2.7"></path></svg>
+</button>
+<button class="act-btn" aria-label="{{m.versionsLabel}}" title="Version ändern" onClick="{{m.versions}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L2.5 5 8 8l5.5-3z"></path><path d="M2.5 8L8 11l5.5-3"></path><path d="M2.5 11L8 14l5.5-3"></path></svg>
+</button>
+<button class="act-btn act-trash" aria-label="{{m.removeLabel}}" onClick="{{m.remove}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h11"></path><path d="M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5"></path><path d="M4 4.5l.8 8.5a1 1 0 0 0 1 1h4.4a1 1 0 0 0 1-1l.8-8.5"></path></svg>
+</button>
+<div style="flex-grow: 1"></div>
+<button role="switch" aria-checked="{{m.checked}}" aria-label="{{m.toggleLabel}}" onClick="{{m.toggle}}" style="padding: 4px; margin: -4px; border: 0; background: transparent; cursor: pointer; display: flex">
+<span style="{{m.trackStyle}}"><span style="{{m.knobStyle}}"></span></span>
+</button>
+</div>
+</article>
+</sc-for>
+</div>
+</sc-if>
+
+<!-- List view -->
+<sc-if value="{{isList}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{mods}}" as="m" hint-placeholder-count="8">
+<article class="mod-card" style="{{m.rowStyle}}">
+<sc-if value="{{m.hasIcon}}" hint-placeholder-val="{{true}}"><img src="{{m.icon}}" alt="" style="width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex-shrink: 0"></sc-if><sc-if value="{{m.noIcon}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 18px; font-weight: 700; background: {{m.color}}">{{m.letter}}</span></sc-if>
+<div style="width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">
+<h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.name}}</h3>
+<span style="font-size: 12px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.version}}</span>
+</div>
+<span style="flex-grow: 1; min-width: 0; font-size: 12px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.desc}}</span>
+<sc-if value="{{m.hasUpdate}}" hint-placeholder-val="{{false}}">
+<span style="height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(63, 185, 80, 0.16); color: #6fdc80; font-size: 11px; font-weight: 600; line-height: 22px; flex-shrink: 0">Update</span>
+</sc-if>
+<sc-if value="{{m.hasIssue}}" hint-placeholder-val="{{false}}">
+<span style="height: 22px; padding: 0 8px; border-radius: 11px; background: rgba(227, 179, 65, 0.16); color: #f0c95a; font-size: 11px; font-weight: 600; line-height: 22px; flex-shrink: 0">Veraltetes Format</span>
+</sc-if>
+<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0">
+<button class="act-btn" aria-label="{{m.shareLabel}}" title="Senden" onClick="{{m.share}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="3.5" r="1.8"></circle><circle cx="4" cy="8" r="1.8"></circle><circle cx="12" cy="12.5" r="1.8"></circle><path d="M5.6 7.1l4.8-2.7M5.6 8.9l4.8 2.7"></path></svg>
+</button>
+<button class="act-btn" aria-label="{{m.versionsLabel}}" title="Version ändern" onClick="{{m.versions}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2L2.5 5 8 8l5.5-3z"></path><path d="M2.5 8L8 11l5.5-3"></path><path d="M2.5 11L8 14l5.5-3"></path></svg>
+</button>
+<button class="act-btn act-trash" aria-label="{{m.removeLabel}}" onClick="{{m.remove}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #353535; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h11"></path><path d="M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5"></path><path d="M4 4.5l.8 8.5a1 1 0 0 0 1 1h4.4a1 1 0 0 0 1-1l.8-8.5"></path></svg>
+</button>
+<button role="switch" aria-checked="{{m.checked}}" aria-label="{{m.toggleLabel}}" onClick="{{m.toggle}}" style="margin-left: 8px; padding: 4px; border: 0; background: transparent; cursor: pointer; display: flex">
+<span style="{{m.trackStyle}}"><span style="{{m.knobStyle}}"></span></span>
+</button>
+</div>
+</article>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<p style="margin: 40px 0; text-align: center; font-size: 13px; color: #6b6b6b">Keine Ressourcepacks gefunden.</p>
+</sc-if>
+
+</main>
+
+<!-- Dialogs -->
+<sc-if value="{{hasDialog}}" hint-placeholder-val="{{false}}">
+<div onClick="{{backdrop}}" style="position: absolute; inset: 0; z-index: 50; background: rgba(10, 10, 10, 0.62); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center">
+<sc-if value="{{dlg.share}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-share-title" style="width: 440px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<img class="head" src="{{sh.icon}}" alt="" style="width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex-shrink: 0">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-share-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">{{sh.title}}</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{sh.sub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<sc-if value="{{sh.sent}}" hint-placeholder-val="{{false}}">
+<div style="padding: 26px 0 14px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+<span style="width: 52px; height: 52px; border-radius: 26px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(167, 60, 200, 0.35)"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></span>
+<span style="font-size: 15px; font-weight: 600; color: #f2f2f2">{{sh.sentTitle}}</span>
+<span style="font-size: 13px; color: #8a8a8a">Deine Freunde bekommen eine Benachrichtigung im Launcher.</span>
+</div>
+</sc-if>
+<sc-if value="{{sh.picking}}" hint-placeholder-val="{{true}}">
+<label class="field" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center; gap: 10px; color: #7a7a7a">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<input aria-label="Freunde suchen" placeholder="Freunde suchen …" value="{{sh.query}}" onChange="{{sh.onQuery}}" spellcheck="false" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px">
+</label>
+<div style="max-height: 236px; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{sh.friends}}" as="f" hint-placeholder-count="3">
+<label class="pick-row" style="{{f.rowStyle}}">
+<input class="sr" type="checkbox" checked="{{f.on}}" onChange="{{f.toggle}}">
+<span aria-hidden="true" style="{{f.box}}"><sc-if value="{{f.on}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+<img class="head" src="{{f.head}}" alt="" style="width: 34px; height: 34px; border-radius: 6px; flex-shrink: 0">
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">{{f.id}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #a3a3a3"><span style="{{f.dot}}"></span>{{f.status}}</span>
+</span>
+</label>
+</sc-for>
+<sc-if value="{{sh.noFriends}}" hint-placeholder-val="{{false}}">
+<p style="margin: 16px 0; text-align: center; font-size: 13px; color: #6b6b6b">Kein Freund gefunden.</p>
+</sc-if>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex-grow: 1; font-size: 12.5px; color: #8a8a8a">{{sh.countLabel}}</span>
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<button class="grad-btn" disabled="{{sh.disabled}}" onClick="{{sh.send}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2L7 9"></path><path d="M14 2l-4.5 12-2.5-5-5-2.5z"></path></svg>Senden</button>
+</div>
+</sc-if>
+</div>
+</sc-if><sc-if value="{{dlg.version}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-ver-title" style="width: 500px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<sc-if value="{{ver.hasIcon}}" hint-placeholder-val="{{true}}"><img src="{{ver.icon}}" alt="" style="width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex-shrink: 0"></sc-if><sc-if value="{{ver.noIcon}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 17px; font-weight: 700; background: {{ver.color}}">{{ver.letter}}</span></sc-if>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-ver-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">{{ver.title}}</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{ver.sub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<label class="pick-row" style="height: 36px; box-sizing: border-box; padding: 0 10px; margin: 0 -10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; color: #d9d9d9">
+<input class="sr" type="checkbox" checked="{{ver.compatOnly}}" onChange="{{ver.toggleCompat}}">
+<span aria-hidden="true" style="{{ver.compatBox}}"><sc-if value="{{ver.compatOnly}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+{{ver.compatLabel}}
+</label>
+<div role="radiogroup" aria-label="Versionen" style="max-height: 300px; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{ver.list}}" as="v" hint-placeholder-count="4">
+<label class="pick-row" style="{{v.rowStyle}}">
+<input class="sr" type="radio" name="version-pick" checked="{{v.on}}" onChange="{{v.pick}}">
+<span aria-hidden="true" style="{{v.radio}}"><span style="{{v.radioDot}}"></span></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 14px; font-weight: 600; color: #f2f2f2; font-variant-numeric: tabular-nums">{{v.v}}</span>
+<span style="font-size: 12px; color: #8a8a8a">{{v.meta}}</span>
+</span>
+<sc-if value="{{v.isBeta}}" hint-placeholder-val="{{false}}"><span style="height: 20px; padding: 0 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; line-height: 20px; flex-shrink: 0; background: rgba(227, 179, 65, 0.16); color: #f0c95a">Beta</span></sc-if>
+<sc-if value="{{v.isLatest}}" hint-placeholder-val="{{false}}"><span style="height: 20px; padding: 0 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; line-height: 20px; flex-shrink: 0; background: rgba(63, 185, 80, 0.16); color: #6fdc80">Neueste</span></sc-if>
+<sc-if value="{{v.isInstalled}}" hint-placeholder-val="{{false}}"><span style="height: 20px; padding: 0 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; line-height: 20px; flex-shrink: 0; background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(139, 92, 246, 0.2)); color: #ecc6f2">Installiert</span></sc-if>
+</label>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex-grow: 1; font-size: 12.5px; color: #8a8a8a">{{ver.hint}}</span>
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<button class="grad-btn" disabled="{{ver.disabled}}" onClick="{{ver.apply}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px">{{ver.applyLabel}}</button>
+</div>
+</div>
+</sc-if><sc-if value="{{dlg.repair}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-rep-title" style="width: 560px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: rgba(227, 179, 65, 0.14); color: #f0c95a; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 2.3a3.2 3.2 0 0 0-3.9 4.1L2.6 10.1a1.4 1.4 0 0 0 2 2l3.7-3.7a3.2 3.2 0 0 0 4.1-3.9l-1.9 1.9-1.6-.4-.4-1.6z"></path></svg></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-rep-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">{{rp.title}}</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{rp.sub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<sc-if value="{{rp.hasIssues}}" hint-placeholder-val="{{true}}">
+<div style="max-height: 340px; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{rp.list}}" as="i" hint-placeholder-count="3">
+<label class="pick-row" style="{{i.rowStyle}}">
+<input class="sr" type="checkbox" checked="{{i.on}}" onChange="{{i.toggle}}">
+<span aria-hidden="true" style="{{i.box}}"><sc-if value="{{i.on}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">{{i.name}}</span><span style="{{i.sevStyle}}">{{i.sev}}</span></span>
+<span style="font-size: 12.5px; color: #d0d0d0; line-height: 1.4">{{i.problem}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #8a8a8a"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#6fdc80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9.5 4.5L13 8l-3.5 3.5"></path></svg>{{i.fix}}</span>
+</span>
+</label>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<div style="flex-grow: 1"></div>
+<button class="second-btn" disabled="{{rp.selDisabled}}" onClick="{{rp.fixSel}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #383838; color: #f2f2f2; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap">Auswahl reparieren ({{rp.selCount}})</button>
+<button class="grad-btn" onClick="{{rp.fixAll}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 2.3a3.2 3.2 0 0 0-3.9 4.1L2.6 10.1a1.4 1.4 0 0 0 2 2l3.7-3.7a3.2 3.2 0 0 0 4.1-3.9l-1.9 1.9-1.6-.4-.4-1.6z"></path></svg>Alles reparieren</button>
+</div>
+</sc-if>
+<sc-if value="{{rp.working}}" hint-placeholder-val="{{false}}">
+<div style="padding: 34px 0 26px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+<span style="width: 34px; height: 34px; box-sizing: border-box; border-radius: 17px; border: 3px solid #3a3a3a; border-top-color: #d36ad8; animation: axo-spin .8s linear infinite"></span>
+<span style="font-size: 13px; color: #a3a3a3">Repariere {{rp.workCount}} …</span>
+</div>
+</sc-if>
+<sc-if value="{{rp.allGood}}" hint-placeholder-val="{{false}}">
+<div style="padding: 22px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+<span style="width: 48px; height: 48px; border-radius: 24px; background: rgba(63, 185, 80, 0.16); color: #3fb950; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></span>
+<span style="font-size: 15px; font-weight: 600; color: #f2f2f2">Keine Probleme gefunden</span>
+<span style="font-size: 13px; color: #8a8a8a">Alles ist bereit zum Spielen.</span>
+</div>
+<div style="display: flex; justify-content: flex-end"><button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Schließen</button></div>
+</sc-if>
+</div>
+</sc-if><sc-if value="{{dlg.updates}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-up-title" style="width: 560px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 0 1-9.6 3.7"></path><path d="M2.5 8a5.5 5.5 0 0 1 9.6-3.7"></path><path d="M12.5 1.8v2.7H9.8"></path><path d="M3.5 14.2v-2.7h2.7"></path></svg></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-up-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">{{up.title}}</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{up.sub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<sc-if value="{{up.scanning}}" hint-placeholder-val="{{false}}">
+<div style="padding: 34px 0 26px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+<span style="width: 34px; height: 34px; box-sizing: border-box; border-radius: 17px; border: 3px solid #3a3a3a; border-top-color: #d36ad8; animation: axo-spin .8s linear infinite"></span>
+<span style="font-size: 13px; color: #a3a3a3">Vergleiche {{up.total}} mit Modrinth und CurseForge …</span>
+</div>
+</sc-if>
+<sc-if value="{{up.hasList}}" hint-placeholder-val="{{true}}">
+<div style="max-height: 340px; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{up.list}}" as="i" hint-placeholder-count="2">
+<label class="pick-row" style="{{i.rowStyle}}">
+<input class="sr" type="checkbox" checked="{{i.on}}" onChange="{{i.toggle}}">
+<span aria-hidden="true" style="{{i.box}}"><sc-if value="{{i.on}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">{{i.name}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums"><span style="color: #8a8a8a">{{i.from}}</span><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8a8a8a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9.5 4.5L13 8l-3.5 3.5"></path></svg><span style="color: #6fdc80; font-weight: 600">{{i.to}}</span></span>
+<span style="font-size: 12px; color: #a3a3a3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{i.note}}</span>
+</span>
+<span style="font-size: 12px; color: #7a7a7a; flex-shrink: 0">{{i.size}}</span>
+</label>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<div style="flex-grow: 1"></div>
+<button class="second-btn" disabled="{{up.selDisabled}}" onClick="{{up.doSel}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #383838; color: #f2f2f2; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap">Auswahl aktualisieren ({{up.selCount}})</button>
+<button class="grad-btn" onClick="{{up.doAll}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px">Alle aktualisieren</button>
+</div>
+</sc-if>
+<sc-if value="{{up.working}}" hint-placeholder-val="{{false}}">
+<div style="padding: 34px 0 26px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+<span style="width: 34px; height: 34px; box-sizing: border-box; border-radius: 17px; border: 3px solid #3a3a3a; border-top-color: #d36ad8; animation: axo-spin .8s linear infinite"></span>
+<span style="font-size: 13px; color: #a3a3a3">Lade {{up.workCount}} herunter …</span>
+</div>
+</sc-if>
+<sc-if value="{{up.none}}" hint-placeholder-val="{{false}}">
+<div style="padding: 22px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+<span style="width: 48px; height: 48px; border-radius: 24px; background: rgba(63, 185, 80, 0.16); color: #3fb950; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></span>
+<span style="font-size: 15px; font-weight: 600; color: #f2f2f2">Alles ist aktuell</span>
+<span style="font-size: 13px; color: #8a8a8a">Für diese Instanz gibt es gerade keine neueren Versionen.</span>
+</div>
+<div style="display: flex; justify-content: flex-end"><button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Schließen</button></div>
+</sc-if>
+</div>
+</sc-if><sc-if value="{{dlg.add}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-add-title" style="width: 1120px; height: 680px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-add-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">{{ad.title}}</h2>
+<span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">{{ad.sub}}</span>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+</button>
+</div>
+<div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 16px">
+
+<section aria-label="Installiert" style="min-height: 0; box-sizing: border-box; padding: 14px; border-radius: 12px; background: #242424; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 8px">
+<h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #e6e6e6">Bereits installiert</h3>
+<span style="height: 20px; padding: 0 7px; border-radius: 10px; background: #2f2f2f; color: #a3a3a3; font-size: 11px; font-weight: 600; line-height: 20px">{{ad.installedCount}}</span>
+</div>
+<label class="field" style="height: 34px; box-sizing: border-box; padding: 0 10px; border-radius: 8px; background: #1c1c1c; box-shadow: inset 0 0 0 1px #333333; display: flex; align-items: center; gap: 8px; color: #7a7a7a">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<input aria-label="Installierte filtern" placeholder="Filtern …" value="{{ad.leftQuery}}" onChange="{{ad.onLeftQuery}}" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 12.5px">
+</label>
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{ad.installed}}" as="x" hint-placeholder-count="8">
+<div style="{{x.rowStyle}}">
+<sc-if value="{{x.hasIcon}}" hint-placeholder-val="{{true}}"><img src="{{x.icon}}" alt="" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; flex-shrink: 0"></sc-if><sc-if value="{{x.noIcon}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 14px; font-weight: 700; background: {{x.color}}">{{x.letter}}</span></sc-if>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 13px; font-weight: 600; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{x.name}}</span>
+<span style="font-size: 11.5px; color: #7a7a7a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{x.version}}</span>
+</span>
+<sc-if value="{{x.isNew}}" hint-placeholder-val="{{false}}">
+<span style="height: 20px; padding: 0 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; line-height: 20px; flex-shrink: 0; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff">Neu</span>
+<button class="mini-x" aria-label="{{x.undoLabel}}" onClick="{{x.undo}}" style="width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: #333333; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section aria-label="Entdecken" style="min-height: 0; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 10px">
+<label class="field" style="flex-grow: 1; height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center; gap: 10px; color: #7a7a7a">
+<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg>
+<input aria-label="{{ad.searchLabel}}" placeholder="{{ad.searchLabel}}" value="{{ad.query}}" onChange="{{ad.onQuery}}" spellcheck="false" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px">
+</label>
+<span style="position: relative; display: inline-flex; flex-shrink: 0"><select aria-label="Sortierung" value="{{ad.sort}}" onChange="{{ad.onSort}}" style="appearance: none; -webkit-appearance: none; height: 40px; padding: 0 36px 0 12px; border: 0; border-radius: 9px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; color: #e6e6e6; font-family: inherit; font-size: 13px; cursor: pointer">
+<option value="popular">Beliebteste</option>
+<option value="name">Name (A–Z)</option>
+</select><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a3a3a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; top: 50%; margin-top: -7px; pointer-events: none"><path d="M4 6l4 4 4-4"></path></svg></span>
+<div role="group" aria-label="Ansicht" style="padding: 3px; border-radius: 10px; background: #1f1f1f; display: flex; gap: 2px; flex-shrink: 0">
+<button aria-label="Kartenansicht" aria-pressed="false" style="width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8a8a8a; background: transparent"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"></rect><rect x="9" y="2" width="5" height="5" rx="1"></rect><rect x="2" y="9" width="5" height="5" rx="1"></rect><rect x="9" y="9" width="5" height="5" rx="1"></rect></svg></button>
+<button aria-label="Listenansicht" aria-pressed="true" style="width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.5 4h8.5M5.5 8h8.5M5.5 12h8.5"></path><path d="M2 4h.5M2 8h.5M2 12h.5"></path></svg></button>
+</div>
+</div>
+<div role="group" aria-label="Kategorien" style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ad.cats}}" as="c" hint-placeholder-count="5">
+<button class="cat-chip" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="{{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{ad.results}}" as="r" hint-placeholder-count="6">
+<article class="cat-row" style="padding: 12px 14px 12px 12px; border-radius: 12px; background: #262626; display: flex; align-items: center; gap: 14px">
+<sc-if value="{{r.hasIcon}}" hint-placeholder-val="{{true}}"><img src="{{r.icon}}" alt="" style="width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex-shrink: 0"></sc-if><sc-if value="{{r.noIcon}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 22px; font-weight: 700; background: {{r.color}}">{{r.letter}}</span></sc-if>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: baseline; gap: 8px; min-width: 0">
+<h4 style="margin: 0; font-size: 14.5px; font-weight: 600; color: #f2f2f2; white-space: nowrap">{{r.name}}</h4>
+<sc-if value="{{r.hasAuthor}}" hint-placeholder-val="{{true}}"><span style="font-size: 12px; color: #7a7a7a; white-space: nowrap">von {{r.author}}</span></sc-if>
+</div>
+<span style="font-size: 12.5px; color: #bdbdbd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.desc}}</span>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #7a7a7a"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5"></path><path d="M4.8 7L8 10.2 11.2 7"></path><path d="M2.5 11.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1"></path></svg>{{r.downloads}}<span>·</span>{{r.catText}}</span>
+</div>
+<sc-if value="{{r.canInstall}}" hint-placeholder-val="{{true}}">
+<button class="inst-btn" aria-label="{{r.installLabel}}" onClick="{{r.install}}" style="width: 128px; height: 34px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; flex-shrink: 0"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5"></path><path d="M4.8 7L8 10.2 11.2 7"></path><path d="M2.5 11.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1"></path></svg>Installieren</button>
+</sc-if>
+<sc-if value="{{r.isAdded}}" hint-placeholder-val="{{false}}">
+<button class="inst-btn" aria-label="{{r.undoLabel}}" onClick="{{r.undo}}" style="width: 128px; height: 34px; border: 0; border-radius: 8px; background: rgba(236, 72, 153, 0.12); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.4); color: #ecc6f2; font-family: inherit; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; flex-shrink: 0"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg>Hinzugefügt</button>
+</sc-if>
+<sc-if value="{{r.isInstalled}}" hint-placeholder-val="{{false}}">
+<span style="width: 128px; height: 34px; border-radius: 8px; background: #2f2f2f; color: #8a8a8a; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; flex-shrink: 0"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg>Installiert</span>
+</sc-if>
+</article>
+</sc-for>
+<sc-if value="{{ad.noResults}}" hint-placeholder-val="{{false}}">
+<p style="margin: 40px 0; text-align: center; font-size: 13px; color: #6b6b6b">Nichts gefunden. Versuch einen anderen Suchbegriff.</p>
+</sc-if>
+</div>
+</section>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex-grow: 1; font-size: 12.5px; color: #8a8a8a">{{ad.footer}}</span>
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<button class="grad-btn" onClick="{{ad.done}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px">{{ad.doneLabel}}</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","options":["none","share","version","repair","updates","add"],"default":"none"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = this.initScene(props.scene || 'none');
+}
+renderVals() { return Object.assign(this.baseVals(), this.dlgVals()); }
+baseVals() {
+var self = this;
+var view = this.state.view || 'grid';
+var query = (this.state.query || '').toLowerCase();
+var disabled = this.state.disabled || { 'xalis-enchanted-books': true };
+var removed = this.state.removed || [];
+var checked = !!this.state.checked;
+var repaired = !!this.state.repaired;
+
+var data = this.baseData().concat(this.addedItems());
+var present = data.filter(function (m) { return removed.indexOf(m.id) === -1; });
+var issueCount = repaired ? 0 : present.filter(function (m) { return m.issue; }).length;
+var updateCount = present.filter(function (m) { return m.update; }).length;
+var activeCount = present.filter(function (m) { return !disabled[m.id]; }).length;
+
+var mods = present.filter(function (m) {
+return !query || (m.name + ' ' + m.desc).toLowerCase().indexOf(query) !== -1;
+}).map(function (m) {
+var on = !disabled[m.id];
+var track = 'display: block; position: relative; width: 34px; height: 20px; border-radius: 10px; transition: background .15s ease; background: ' + (on ? 'linear-gradient(90deg, #ec4899, #8b5cf6); box-shadow: 0 0 10px rgba(217, 70, 239, 0.35)' : '#3d3d3d; box-shadow: inset 0 0 0 1px #4a4a4a');
+var knob = 'position: absolute; top: 3px; left: ' + (on ? '17px' : '3px') + '; width: 14px; height: 14px; border-radius: 7px; background: #ffffff; transition: left .15s ease';
+return {
+name: m.name, version: self.shownVersion(m), icon: m.icon, desc: m.desc, hasIcon: !!m.icon, noIcon: !m.icon, letter: m.name.charAt(0).toUpperCase(), color: m.color || '#7c3aed',
+share: function () { self.openShare(m); }, versions: function () { self.openVersions(m); },
+hasUpdate: !!m.update && checked && !self.isUpdated(m.id),
+hasIssue: false,
+checked: on ? 'true' : 'false',
+trackStyle: track, knobStyle: knob,
+cardStyle: 'padding: 10px; border-radius: 12px; background: #2a2a2a; display: flex; flex-direction: column; gap: 10px; transition: opacity .15s ease; opacity: ' + (on ? '1' : '0.55'),
+rowStyle: 'padding: 8px 12px 8px 8px; border-radius: 10px; background: #2a2a2a; display: flex; align-items: center; gap: 14px; transition: opacity .15s ease; opacity: ' + (on ? '1' : '0.55'),
+shareLabel: m.name + ' an Freunde senden',
+versionsLabel: 'Version von ' + m.name + ' ändern',
+removeLabel: m.name + ' löschen',
+toggleLabel: m.name + (on ? ' deaktivieren' : ' aktivieren'),
+toggle: function () { var d = Object.assign({}, disabled); d[m.id] = on; self.setState({ disabled: d }); },
+remove: function () { self.setState({ removed: removed.concat([m.id]) }); }
+};
+});
+
+var segBase = 'width: 34px; height: 30px; padding: 0; border: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; ';
+var segOn = segBase + 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)';
+var segOff = segBase + 'color: #8a8a8a; background: transparent';
+
+var tabDefs = [
+['overview', 'Übersicht', null], ['mods', 'Mods', 12], ['packs', 'Ressourcepacks', present.length], ['shaders', 'Shader', 8],
+['worlds', 'Welten', 4], ['servers', 'Server', 3], ['shots', 'Screenshots', 12], ['settings', 'Einstellungen', null]
+];
+var links = { overview: 'InstanceDetail.dc.html', mods: 'InstanceMods.dc.html', packs: 'InstancePacks.dc.html', shaders: 'InstanceShaders.dc.html', worlds: 'InstanceWorlds.dc.html', servers: 'InstanceServers.dc.html', shots: 'InstanceScreenshots.dc.html', settings: 'InstanceSettings.dc.html' };
+var tabs = tabDefs.map(function (t) {
+var on = t[0] === 'packs';
+return {
+label: t[1], count: t[2], hasCount: t[2] !== null,
+href: links[t[0]] || '', isLink: !!links[t[0]], isButton: !links[t[0]],
+current: on ? 'page' : 'false',
+style: 'position: relative; height: 38px; padding: 0 12px; border: 0; background: transparent; cursor: pointer; text-decoration: none; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; color: ' + (on ? '#f2f2f2' : '#8a8a8a'),
+countStyle: 'min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: ' + (on ? 'rgba(236, 72, 153, 0.18)' : '#2c2c2c') + '; color: ' + (on ? '#ecc6f2' : '#8a8a8a'),
+barStyle: 'position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: ' + (on ? 'linear-gradient(90deg, #ec4899, #8b5cf6)' : 'transparent'),
+pick: function () {}
+};
+});
+
+return {
+tabs: tabs, mods: mods, query: this.state.query || '',
+empty: mods.length === 0,
+summary: activeCount + ' von ' + present.length + ' aktiv',
+isGrid: view === 'grid', isList: view === 'list',
+gridPressed: view === 'grid' ? 'true' : 'false', listPressed: view === 'list' ? 'true' : 'false',
+gridStyle: view === 'grid' ? segOn : segOff, listStyle: view === 'list' ? segOn : segOff,
+hasIssues: issueCount > 0, issueCount: issueCount,
+updateLabel: checked ? (updateCount ? updateCount + ' Updates installieren' : 'Alles aktuell') : 'Nach Updates suchen',
+showGrid: function () { self.setState({ view: 'grid' }); },
+showList: function () { self.setState({ view: 'list' }); },
+onQuery: function (e) { self.setState({ query: e.target.value }); },
+checkUpdates: function () { self.setState({ checked: true }); },
+repair: function () { self.setState({ repaired: true }); }
+};
+}
+baseData() {
+return [
+{ id: 'faithful-32x', name: 'Faithful 32x', version: '1.21.4-june-2026', icon: '/_blob/6f92266a7d7b5468a008e81bf6546225', desc: 'Vanilla-Look in doppelter Auflösung' },
+{ id: 'fresh-animations', name: 'Fresh Animations', version: '1.10.2', icon: '/_blob/17051ae836a9312d2aff8427b0dd25d0', desc: 'Lebendigere Animationen für Mobs', update: true },
+{ id: 'better-leaves', name: 'Better Leaves', version: '9.4', icon: '/_blob/f301ec94782048d1b7344c96d6f669d7', desc: 'Buschigere, schönere Blätter', update: true },
+{ id: 'fast-better-grass', name: 'Fast Better Grass', version: '26.2', icon: '/_blob/da584bbe21d18ab6c3f491dbb43d1159', desc: 'Gras-Textur auch an den Seiten' },
+{ id: 'default-dark-mode', name: 'Default Dark Mode', version: '2025.5.1-1.21.4', icon: '/_blob/c7f5326d5dcdf27b745f6776bf50e5ab', desc: 'Dunkle Menüs und Oberflächen' },
+{ id: 'low-on-fire', name: 'Low On Fire', version: '26.3', icon: '/_blob/39710df9fe5e873112dca0e1a1b32a40', desc: 'Kleineres Feuer im Sichtfeld' },
+{ id: 'xalis-enchanted-books', name: 'xali\u2019s Enchanted Books', version: '1.0.0-beta.2', icon: '/_blob/c158ab1893c52972000928d5b3af12fc', desc: 'Eigene Texturen je Verzauberung' },
+{ id: 'visible-ores', name: 'Visible Ores', version: '1.4 · 1.20', icon: '/_blob/6597089e96bba3fcd9cbe1e99c1fe703', desc: 'Leuchtende Ränder an Erzen', issue: true }
+];
+}
+
+initScene(scene) {
+var C = this.cfg();
+var base = this.baseData();
+var upd = base.filter(function (m) { return m.update; })[0] || base[0];
+if (scene === 'share') return { dialog: 'share', shareItem: base[1].id, shareSel: ['Granulator444'] };
+if (scene === 'version') return { dialog: 'version', verItem: upd.id };
+if (scene === 'repair') return { dialog: 'repair' };
+if (scene === 'updates') return { dialog: 'updates', checked: true, scanning: false };
+if (scene === 'add') return { dialog: 'add', pendingAdd: [C.catalog.filter(function (c) { return !c.installed; })[0].id] };
+return {};
+}
+openShare(m) { this.setState({ dialog: 'share', shareItem: m.id, shareSel: [], shareQuery: '', shareSent: false }); }
+openVersions(m) { this.setState({ dialog: 'version', verItem: m.id, verPick: null, verCompat: true }); }
+isFixed(id) { return (this.state.fixed || []).indexOf(id) !== -1; }
+isUpdated(id) { return (this.state.updated || []).indexOf(id) !== -1; }
+vary(v, k) {
+if (!k) return v;
+return v.replace(/(\d+)\.(\d+)(?:\.(\d+))?/, function (_, a, b, c) {
+if (c !== undefined) { var n = parseInt(c, 10) + k; if (n < 0) return a + '.' + Math.max(0, parseInt(b, 10) - 1) + '.' + (10 + n); return a + '.' + b + '.' + n; }
+return a + '.' + Math.max(0, parseInt(b, 10) + k);
+});
+}
+shownVersion(m) {
+var o = (this.state.verOverride || {})[m.id];
+if (o) return o;
+return this.isUpdated(m.id) ? this.vary(m.version, 1) : m.version;
+}
+letterOf(m) { return { hasIcon: !!m.icon, noIcon: !m.icon, letter: (m.name || '?').charAt(0).toUpperCase(), color: m.color || 'linear-gradient(135deg, #db2777, #7c3aed)' }; }
+addedItems() {
+var added = this.state.added || [];
+return this.cfg().catalog.filter(function (c) { return added.indexOf(c.id) !== -1; }).map(function (c) {
+return { id: c.id, name: c.name, version: c.version, icon: c.icon || '', shot: c.shot || '', desc: c.desc, color: c.color };
+});
+}
+dlgVals() {
+var self = this;
+var s = this.state;
+var C = this.cfg();
+var removed = s.removed || [];
+var base = this.baseData();
+var items = base.concat(this.addedItems());
+var present = items.filter(function (m) { return removed.indexOf(m.id) === -1; });
+function byId(id) { return items.filter(function (x) { return x.id === id; })[0]; }
+var d = s.dialog;
+function close() { clearTimeout(self.workTimer); clearTimeout(self.scanTimer); self.setState({ dialog: null, shareSent: false, working: false, scanning: false, pendingAdd: [] }); }
+function rowStyle(on, h) { return 'min-height: ' + (h || 52) + 'px; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; ' + (on ? 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.09), rgba(139, 92, 246, 0.09)), #2f2f2f; box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.22)' : 'background: #2e2e2e'); }
+function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+// Share
+var shItem = byId(s.shareItem) || items[0];
+var sh = this.shareVals({ icon: shItem.icon || C.fallbackIcon, title: '„' + shItem.name + '“ senden', sub: 'Wähle aus, wer ' + C.nounAcc + ' bekommen soll. Es wird Version ' + this.shownVersion(shItem) + ' verschickt.' });
+
+// Versions
+var vItem = byId(s.verItem) || items[0];
+var curV = this.shownVersion(vItem);
+var compatOnly = s.verCompat !== false;
+var latest = this.vary(vItem.version, vItem.update ? 1 : 0);
+var dates = ['vor 3 Tagen', 'vor 3 Wochen', 'vor 2 Monaten', 'vor 4 Monaten', 'vor 7 Monaten'];
+var ks = vItem.update ? [1, 0, -1, -2, -3] : [0, -1, -2, -3];
+var raw = ks.map(function (k, i) { return { v: self.vary(vItem.version, k), k: k, mc: k <= -3 ? C.mcOld : C.mc, beta: k === -2, date: dates[i] }; });
+var pick = s.verPick || curV;
+var pickRaw = raw.filter(function (r) { return r.v === pick; })[0];
+var curRaw = raw.filter(function (r) { return r.v === curV; })[0];
+var vlist = raw.filter(function (r) { return !compatOnly || r.mc === C.mc || r.v === curV; }).map(function (r) {
+var on = r.v === pick;
+return {
+v: r.v, on: on, meta: C.loaderLabel + 'Minecraft ' + r.mc + ' · ' + r.date,
+isInstalled: r.v === curV, isLatest: r.v === latest, isBeta: r.beta,
+rowStyle: rowStyle(on, 56),
+radio: 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' + (on ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a'),
+radioDot: 'width: 6px; height: 6px; border-radius: 3px; background: ' + (on ? '#ffffff' : 'transparent'),
+pick: function () { self.setState({ verPick: r.v }); }
+};
+});
+var downgrade = pickRaw && curRaw && pickRaw.k < curRaw.k;
+var ver = Object.assign(this.letterOf(vItem), {
+icon: vItem.icon, title: 'Version von ' + vItem.name, sub: 'Installiert ist ' + curV + '. Wähle eine andere Version aus.',
+list: vlist, compatOnly: compatOnly, compatBox: this.boxStyle(compatOnly),
+compatLabel: 'Nur Versionen für ' + C.compat + ' anzeigen',
+toggleCompat: function () { self.setState({ verCompat: !compatOnly }); },
+disabled: pick === curV,
+hint: pick === curV ? 'Diese Version ist bereits installiert' : downgrade ? 'Downgrade von ' + curV + ' auf ' + pick : 'Update von ' + curV + ' auf ' + pick,
+applyLabel: downgrade ? 'Downgrade installieren' : 'Version installieren',
+apply: function () {
+var o = Object.assign({}, s.verOverride || {}); o[vItem.id] = pick;
+self.setState({ verOverride: o, dialog: null });
+}
+});
+
+// Repair
+var issues = C.issues.filter(function (i) { return !self.isFixed(i.id); });
+var rsel = s.repSel || issues.map(function (i) { return i.id; });
+var sevColors = { 'Startet nicht': ['rgba(244, 112, 103, 0.16)', '#ff8a80'], 'Fehler': ['rgba(240, 136, 62, 0.16)', '#f5a35c'], 'Warnung': ['rgba(227, 179, 65, 0.16)', '#f0c95a'] };
+var working = !!s.working;
+function doFix(ids) {
+if (!ids.length) return;
+self.setState({ working: true, workCount: plural(ids.length, 'Problem', 'Probleme') });
+self.workTimer = setTimeout(function () { self.setState({ working: false, fixed: (self.state.fixed || []).concat(ids), repSel: null, dialog: null }); }, 1200);
+}
+var rsCount = issues.filter(function (i) { return rsel.indexOf(i.id) !== -1; }).length;
+var rp = {
+title: 'Ressourcepacks prüfen',
+sub: C.target + ' · 1.21.4 · Fabric',
+hasIssues: issues.length > 0 && !working, working: working && d === 'repair', allGood: !issues.length && !working, workCount: s.workCount || '',
+list: issues.map(function (i) {
+var on = rsel.indexOf(i.id) !== -1;
+var c = sevColors[i.sev] || sevColors['Warnung'];
+return {
+name: i.name, icon: i.icon, problem: i.problem, fix: i.fix, sev: i.sev, on: on,
+sevStyle: 'height: 18px; padding: 0 7px; border-radius: 9px; font-size: 10.5px; font-weight: 600; line-height: 18px; background: ' + c[0] + '; color: ' + c[1],
+box: self.boxStyle(on), rowStyle: rowStyle(on, 76),
+toggle: function () { var cur = self.state.repSel || issues.map(function (x) { return x.id; }); self.setState({ repSel: on ? cur.filter(function (x) { return x !== i.id; }) : cur.concat([i.id]) }); }
+};
+}),
+selCount: rsCount, selDisabled: rsCount === 0,
+fixSel: function () { doFix(issues.filter(function (i) { return rsel.indexOf(i.id) !== -1; }).map(function (i) { return i.id; })); },
+fixAll: function () { doFix(issues.map(function (i) { return i.id; })); }
+};
+
+// Updates
+var upAll = present.filter(function (m) { return m.update && !self.isUpdated(m.id); });
+var usel = s.upSel || upAll.map(function (m) { return m.id; });
+var scanning = d === 'updates' && !!s.scanning;
+function doUpdate(ids) {
+if (!ids.length) return;
+self.setState({ working: true, workCount: plural(ids.length, 'Update', 'Updates') });
+self.workTimer = setTimeout(function () {
+var o = Object.assign({}, self.state.verOverride || {});
+ids.forEach(function (id) { delete o[id]; });
+self.setState({ working: false, updated: (self.state.updated || []).concat(ids), verOverride: o, upSel: null, dialog: null });
+}, 1300);
+}
+var usCount = upAll.filter(function (m) { return usel.indexOf(m.id) !== -1; }).length;
+var up = {
+title: scanning ? 'Suche nach Updates …' : working ? 'Updates werden installiert' : upAll.length ? plural(upAll.length, 'Update verfügbar', 'Updates verfügbar') : 'Alles aktuell',
+sub: 'Für „' + C.target + '“ · ' + C.compat,
+total: plural(present.length, C.noun, C.nounPl),
+scanning: scanning, hasList: !scanning && !working && upAll.length > 0, working: working && d === 'updates', none: !scanning && !working && !upAll.length, workCount: s.workCount || '',
+list: upAll.map(function (m) {
+var on = usel.indexOf(m.id) !== -1;
+var info = C.notes[m.id] || ['Fehlerbehebungen und kleinere Verbesserungen', '1,0 MB'];
+return {
+name: m.name, icon: m.icon, from: self.shownVersion(m), to: self.vary(m.version, 1), note: info[0], size: info[1], on: on,
+box: self.boxStyle(on), rowStyle: rowStyle(on, 76),
+toggle: function () { var cur = self.state.upSel || upAll.map(function (x) { return x.id; }); self.setState({ upSel: on ? cur.filter(function (x) { return x !== m.id; }) : cur.concat([m.id]) }); }
+};
+}),
+selCount: usCount, selDisabled: usCount === 0,
+doSel: function () { doUpdate(upAll.filter(function (m) { return usel.indexOf(m.id) !== -1; }).map(function (m) { return m.id; })); },
+doAll: function () { doUpdate(upAll.map(function (m) { return m.id; })); }
+};
+
+// Add
+var pending = s.pendingAdd || [];
+var have = present.map(function (m) { return m.id; });
+var lq = (s.addLeft || '').toLowerCase();
+var installed = present.concat(C.catalog.filter(function (c) { return pending.indexOf(c.id) !== -1; }).map(function (c) { return Object.assign({}, c, { isNew: true }); }))
+.filter(function (m) { return !lq || m.name.toLowerCase().indexOf(lq) !== -1; })
+.map(function (m) {
+return Object.assign(self.letterOf(m), {
+name: m.name, version: m.isNew ? m.version + ' · wird installiert' : self.shownVersion(m), icon: m.icon || '', isNew: !!m.isNew,
+undoLabel: m.name + ' nicht installieren',
+rowStyle: 'height: 48px; box-sizing: border-box; padding: 0 8px; border-radius: 8px; display: flex; align-items: center; gap: 10px; ' + (m.isNew ? 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.10), rgba(139, 92, 246, 0.10))' : 'background: transparent'),
+undo: function () { self.setState({ pendingAdd: (self.state.pendingAdd || []).filter(function (x) { return x !== m.id; }) }); }
+});
+});
+installed.sort(function (a, b) { return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0); });
+var cat = s.addCat || C.cats[0];
+var q = (s.addQuery || '').toLowerCase();
+var sort = s.addSort || 'popular';
+var res = C.catalog.filter(function (c) { return (cat === C.cats[0] || c.cats.indexOf(cat) !== -1) && (!q || (c.name + ' ' + c.desc).toLowerCase().indexOf(q) !== -1); }).slice();
+res.sort(sort === 'name' ? function (a, b) { return a.name.localeCompare(b.name); } : function (a, b) { return b.dl - a.dl; });
+var results = res.map(function (c) {
+var inst = have.indexOf(c.id) !== -1;
+var isAdded = pending.indexOf(c.id) !== -1;
+return Object.assign(self.letterOf(c), {
+name: c.name, author: c.author || '', hasAuthor: !!c.author, desc: c.desc, icon: c.icon || '',
+downloads: (c.dl >= 1 ? c.dl.toFixed(1).replace('.', ',') + ' Mio.' : Math.round(c.dl * 1000) + ' Tsd.') + ' Downloads',
+catText: c.cats.join(' · '),
+canInstall: !inst && !isAdded, isAdded: isAdded, isInstalled: inst,
+installLabel: c.name + ' installieren', undoLabel: c.name + ' wieder entfernen',
+install: function () { self.setState({ pendingAdd: (self.state.pendingAdd || []).concat([c.id]) }); },
+undo: function () { self.setState({ pendingAdd: (self.state.pendingAdd || []).filter(function (x) { return x !== c.id; }) }); }
+});
+});
+var chipBase = 'height: 30px; padding: 0 12px; border: 0; border-radius: 15px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; ';
+var ad = {
+title: C.nounPl + ' hinzufügen', sub: 'Für „' + C.target + '“ · ' + C.compat + ' – es werden nur passende ' + C.nounPl + ' angezeigt',
+installed: installed, installedCount: present.length,
+leftQuery: s.addLeft || '', onLeftQuery: function (e) { self.setState({ addLeft: e.target.value }); },
+searchLabel: C.nounPl + ' durchsuchen …', query: s.addQuery || '', onQuery: function (e) { self.setState({ addQuery: e.target.value }); },
+sort: sort, onSort: function (e) { self.setState({ addSort: e.target.value }); },
+cats: C.cats.map(function (k) { var on = k === cat; return { label: k, pressed: on ? 'true' : 'false', style: chipBase + (on ? 'color: #ffffff; background: linear-gradient(135deg, #db2777, #7c3aed)' : 'color: #a3a3a3; background: #2c2c2c'), pick: function () { self.setState({ addCat: k }); } }; }),
+results: results, noResults: results.length === 0,
+footer: pending.length ? plural(pending.length, C.noun, C.nounPl) + ' ' + (pending.length === 1 ? 'wird' : 'werden') + ' beim Bestätigen installiert' : 'Wähle rechts aus, was du installieren möchtest',
+doneLabel: pending.length ? plural(pending.length, C.noun, C.nounPl) + ' installieren' : 'Fertig',
+done: function () { self.setState({ added: (self.state.added || []).concat(pending), pendingAdd: [], dialog: null }); }
+};
+
+return {
+hasDialog: !!d,
+dlg: { share: d === 'share', version: d === 'version', repair: d === 'repair', updates: d === 'updates', add: d === 'add' },
+backdrop: function (e) { if (e.target === e.currentTarget && !self.state.working) close(); },
+closeDialog: close,
+sh: sh, ver: ver, rp: rp, up: up, ad: ad,
+hasIssues: issues.length > 0, issueCount: issues.length,
+updateLabel: s.checked && upAll.length ? plural(upAll.length, 'Update verfügbar', 'Updates verfügbar') : 'Nach Updates suchen',
+repair: function () { self.setState({ dialog: 'repair', repSel: null, working: false }); },
+checkUpdates: function () {
+self.setState({ dialog: 'updates', scanning: true, upSel: null, working: false });
+clearTimeout(self.scanTimer);
+self.scanTimer = setTimeout(function () { self.setState({ scanning: false, checked: true }); }, 1000);
+},
+openAdd: function () { self.setState({ dialog: 'add', pendingAdd: [], addQuery: '', addCat: null }); }
+};
+}
+
+shareVals(meta) {
+var self = this;
+var s = this.state;
+var sel = s.shareSel || [];
+var q = (s.shareQuery || '').toLowerCase();
+var all = [
+{ id: 'Bauarbeiter_Autm', head: '/_blob/051ea2f3b4c503ccdca147cd85d64ade', status: 'Online', color: '#3fb950' },
+{ id: 'Granulator444', head: '/_blob/87e40120538c99ab26e30ba2e3d891ae', status: 'Im Spiel', color: '#4c8dff' },
+{ id: 'X_Phil_1876', head: '/_blob/56f6fa87300b8ae095b4efdfb98713c7', status: 'Offline', color: '#6b6b6b' }
+];
+var friends = all.filter(function (f) { return !q || f.id.toLowerCase().indexOf(q) !== -1; }).map(function (f) {
+var on = sel.indexOf(f.id) !== -1;
+return {
+id: f.id, head: f.head, status: f.status, on: on,
+dot: 'width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; background: ' + f.color,
+box: self.boxStyle(on),
+rowStyle: 'height: 52px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; ' + (on ? 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.10), rgba(139, 92, 246, 0.10)), #2e2e2e' : 'background: transparent'),
+toggle: function () { var cur = self.state.shareSel || []; self.setState({ shareSel: on ? cur.filter(function (x) { return x !== f.id; }) : cur.concat([f.id]) }); }
+};
+});
+var n = sel.length;
+return {
+icon: meta.icon, title: meta.title, sub: meta.sub,
+query: s.shareQuery || '', onQuery: function (e) { self.setState({ shareQuery: e.target.value }); },
+friends: friends, noFriends: friends.length === 0,
+countLabel: n ? n + (n === 1 ? ' Freund ausgewählt' : ' Freunde ausgewählt') : 'Niemand ausgewählt',
+disabled: n === 0,
+sent: !!s.shareSent, picking: !s.shareSent,
+sentTitle: 'An ' + (n === 1 ? sel[0] : n + ' Freunde') + ' gesendet',
+send: function () {
+self.setState({ shareSent: true });
+clearTimeout(self.sentTimer);
+self.sentTimer = setTimeout(function () { self.setState({ dialog: null, shareSent: false, shareSel: [] }); }, 1600);
+}
+};
+}
+boxStyle(on) {
+return 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; transition: background .12s ease; ' + (on ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a');
+}
+cfg() {
+return {
+"target": "Survival mit Freunden",
+"compat": "1.21.4 · Fabric",
+"mc": "1.21.4",
+"mcOld": "1.21.3",
+"fallbackIcon": "/_blob/532ac75fc0a1ca9b21fc14f3b3a23fc6",
+"noun": "Ressourcepack",
+"nounPl": "Ressourcepacks",
+"nounAcc": "das Pack",
+"loaderLabel": "",
+"issues": [
+{
+"id": "visible-ores",
+"name": "Visible Ores",
+"icon": "/_blob/6597089e96bba3fcd9cbe1e99c1fe703",
+"sev": "Warnung",
+"problem": "Veraltetes Format – für Minecraft 1.20 gebaut",
+"fix": "Pack-Format wird für 1.21.4 angepasst"
+},
+{
+"id": "fresh-deps",
+"name": "Fresh Animations",
+"icon": "/_blob/17051ae836a9312d2aff8427b0dd25d0",
+"sev": "Fehler",
+"problem": "Benötigt die Mods Entity Model Features und Entity Texture Features",
+"fix": "Beide Mods werden installiert (2,8 MB)"
+}
+],
+"notes": {
+"fresh-animations": [
+"Neue Animationen für Füchse und Axolotl",
+"4,1 MB"
+],
+"better-leaves": [
+"Unterstützung für Kirschblätter",
+"2,2 MB"
+]
+},
+"cats": [
+"Alle",
+"Vanilla-Stil",
+"Realistisch",
+"Oberfläche",
+"Animationen"
+],
+"catalog": [
+{
+"id": "stay-true",
+"name": "Stay True",
+"desc": "Vanilla-Texturen mit mehr Abwechslung pro Biom",
+"dl": 8.4,
+"cats": [
+"Vanilla-Stil"
+],
+"version": "1.21.4-r3",
+"color": "linear-gradient(135deg, #2f9e44, #5c940d)"
+},
+{
+"id": "bare-bones",
+"name": "Bare Bones",
+"desc": "Schlichte, flache Texturen im Stil der Trailer",
+"dl": 6.9,
+"cats": [
+"Vanilla-Stil"
+],
+"version": "1.21.4",
+"color": "linear-gradient(135deg, #74c0fc, #4dabf7)"
+},
+{
+"id": "faithful-32x",
+"name": "Faithful 32x",
+"desc": "Vanilla-Look in doppelter Auflösung",
+"dl": 6.1,
+"cats": [
+"Vanilla-Stil"
+],
+"version": "1.21.4-june-2026",
+"icon": "/_blob/6f92266a7d7b5468a008e81bf6546225",
+"installed": true
+},
+{
+"id": "fresh-animations",
+"name": "Fresh Animations",
+"desc": "Lebendigere Animationen für Mobs",
+"dl": 5.8,
+"cats": [
+"Animationen"
+],
+"version": "1.10.2",
+"icon": "/_blob/17051ae836a9312d2aff8427b0dd25d0",
+"installed": true
+},
+{
+"id": "clear-glass",
+"name": "Clear Glass",
+"desc": "Glas ohne Rahmen – verbundene, klare Scheiben",
+"dl": 3.2,
+"cats": [
+"Vanilla-Stil"
+],
+"version": "2.3",
+"color": "linear-gradient(135deg, #99e9f2, #3bc9db)"
+},
+{
+"id": "mizunos-16",
+"name": "Mizuno’s 16 Craft",
+"desc": "Warme Fantasy-Texturen im 16x-Stil",
+"dl": 2.7,
+"cats": [
+"Realistisch"
+],
+"version": "1.21.4",
+"color": "linear-gradient(135deg, #d9480f, #a61e4d)"
+},
+{
+"id": "dark-ui",
+"name": "Dark UI Plus",
+"desc": "Dunkle Menüs, Inventare und Tooltips",
+"dl": 1.9,
+"cats": [
+"Oberfläche"
+],
+"version": "4.0",
+"color": "linear-gradient(135deg, #495057, #212529)"
+},
+{
+"id": "3d-ores",
+"name": "3D Ores",
+"desc": "Erze ragen plastisch aus dem Stein",
+"dl": 0.84,
+"cats": [
+"Realistisch"
+],
+"version": "1.5",
+"color": "linear-gradient(135deg, #20c997, #087f5b)"
+}
+]
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+bin/
+obj/
+node_modules/
+ui/dist/
+src/AxoClient.App/wwwroot/
+*.user
+.vs/
+.idea/
+Releases/
+TestResults/

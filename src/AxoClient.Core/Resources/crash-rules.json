@@ -1,0 +1,109 @@
+{
+  "formatVersion": 1,
+  "rules": [
+    {
+      "id": "outOfMemory",
+      "match": ["java\\.lang\\.OutOfMemoryError", "Java heap space", "GC overhead limit exceeded"],
+      "cause": "crash.cause.outOfMemory",
+      "actions": ["increaseRam"]
+    },
+    {
+      "id": "heapTooLarge",
+      "match": ["Could not reserve enough space for", "Invalid maximum heap size"],
+      "cause": "crash.cause.heapTooLarge",
+      "actions": ["recommendedRam"]
+    },
+    {
+      "id": "wrongJava",
+      "match": ["UnsupportedClassVersionError", "has been compiled by a more recent version of the Java Runtime"],
+      "cause": "crash.cause.wrongJava",
+      "actions": ["javaAuto"]
+    },
+    {
+      "id": "modCorrupt",
+      "match": ["java\\.util\\.zip\\.ZipException", "zip END header not found", "Failed to read mod file", "NoClassDefFoundError"],
+      "cause": "crash.cause.modCorrupt",
+      "actions": ["repairInstance"],
+      "findMod": "stacktrace"
+    },
+    {
+      "id": "fabricResolution",
+      "match": ["Mod resolution failed", "Incompatible mods? found", "Some of your mods are incompatible"],
+      "cause": "crash.cause.dependency",
+      "actions": ["checkMods", "disableMod"],
+      "findMod": "fabricResolution"
+    },
+    {
+      "id": "mixin",
+      "match": ["MixinApplyError", "InvalidMixinException", "Mixin apply for mod .* failed", "MixinTransformerError"],
+      "cause": "crash.cause.mixin",
+      "actions": ["updateMod", "disableMod"],
+      "findMod": "mixin"
+    },
+    {
+      "id": "duplicateMod",
+      "match": ["Duplicate mods? found", "Found duplicate mods", "DuplicateModsFoundException", "duplicate mod ids"],
+      "cause": "crash.cause.duplicate",
+      "actions": ["keepNewest"]
+    },
+    {
+      "id": "graphicsDriverCrash",
+      "match": ["EXCEPTION_ACCESS_VIOLATION[\\s\\S]{0,4000}(atio6axx|atioglxx|nvoglv64|ig\\d+icd64|ig9icd64|igxelpicd64)\\.dll"],
+      "in": ["hserr", "log"],
+      "cause": "crash.cause.graphicsDriver",
+      "actions": ["updateDriver", "disableShaders"]
+    },
+    {
+      "id": "openGl",
+      "match": ["Pixel format not accelerated", "GLFW error 65542", "GLFW error 65543", "WGL: The driver does not appear to support OpenGL", "Failed to create the GLFW window"],
+      "cause": "crash.cause.openGl",
+      "actions": ["updateDriver"]
+    },
+    {
+      "id": "shaderCompile",
+      "match": ["Failed to compile shader", "Shader compilation failed", "Error compiling program", "net\\.irisshaders\\..*ShaderCompileException"],
+      "cause": "crash.cause.shader",
+      "actions": ["disableShaders"]
+    },
+    {
+      "id": "configBroken",
+      "match": ["(?:JsonSyntaxException|MalformedJsonException|ParsingException|Failed to load config)[^\\n]*config[\\\\/](?<file>[A-Za-z0-9_.\\-]+\\.(?:json|json5|toml))"],
+      "cause": "crash.cause.config",
+      "actions": ["resetConfig"]
+    },
+    {
+      "id": "nativesMissing",
+      "match": ["UnsatisfiedLinkError", "Failed to locate library: lwjgl", "Can't load library: .*lwjgl", "no lwjgl in java\\.library\\.path"],
+      "cause": "crash.cause.natives",
+      "actions": ["repairGameFiles"]
+    },
+    {
+      "id": "serverEula",
+      "server": true,
+      "match": ["You need to agree to the EULA in order to run the server"],
+      "cause": "crash.cause.serverEula",
+      "actions": ["acceptEula"]
+    },
+    {
+      "id": "serverPortInUse",
+      "server": true,
+      "match": ["FAILED TO BIND TO PORT", "Address already in use", "Perhaps a server is already running on that port"],
+      "cause": "crash.cause.serverPort",
+      "actions": ["changePort"]
+    },
+    {
+      "id": "serverPlugin",
+      "server": true,
+      "match": ["Could not load 'plugins[\\\\/](?<file>[^']+)'", "Error occurred while enabling (?<file>\\S+)"],
+      "cause": "crash.cause.serverPlugin",
+      "actions": ["disablePlugin"]
+    },
+    {
+      "id": "serverOutOfMemory",
+      "server": true,
+      "match": ["java\\.lang\\.OutOfMemoryError"],
+      "cause": "crash.cause.outOfMemory",
+      "actions": ["increaseRam"]
+    }
+  ]
+}

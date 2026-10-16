@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Willkommen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.head{image-rendering:pixelated}
+.win-btn{transition:background-color .12s ease}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.ms-btn{transition:filter .12s ease, transform .12s ease}
+.ms-btn:hover{filter:brightness(1.1)}
+.ms-btn:active{transform:scale(0.98)}
+.link-btn{transition:color .12s ease}
+.link-btn:hover{color:#f5d0fb!important}
+.acc-row{transition:background-color .12s ease, box-shadow .12s ease}
+.acc-row:hover{background-color:#323232!important}
+.copy-btn{transition:background-color .12s ease}
+.copy-btn:hover{background-color:#3a3a3a!important}
+.ghost-btn{transition:background-color .12s ease}
+.ghost-btn:hover{background-color:#3a3a3a!important}
+.second-btn{transition:background-color .12s ease}
+.second-btn:not(:disabled):hover{background-color:#444444!important}
+.second-btn:disabled{opacity:.45;cursor:default!important}
+.grad-btn{transition:filter .12s ease, opacity .12s ease}
+.grad-btn:not(:disabled):hover{filter:brightness(1.12)}
+.grad-btn:disabled{opacity:.45;cursor:default!important;box-shadow:none!important}
+.field{transition:box-shadow .12s ease}
+.field:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.6)!important}
+.field input::placeholder{color:#6b6b6b}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.pick-row{position:relative;transition:background-color .12s ease}
+.pick-row:hover{background-color:#323232!important}
+.pick-row .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.cat-chip{transition:background-color .12s ease, color .12s ease}
+.cat-chip:not([aria-pressed="true"]):hover{background-color:#353535!important;color:#e6e6e6!important}
+.inst-btn{transition:filter .12s ease, background-color .12s ease}
+.inst-btn:not(:disabled):hover{filter:brightness(1.15)}
+.mini-x{transition:background-color .12s ease, color .12s ease}
+.mini-x:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.cat-row{transition:background-color .12s ease}
+.cat-row:hover{background-color:#2f2f2f!important}
+@keyframes axo-spin{to{transform:rotate(360deg)}}
+@keyframes axo-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes axo-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ram-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;margin:8px 0;border-radius:3px;background-color:#3a3a3a;background-image:linear-gradient(90deg,#db2777,#7c3aed);background-repeat:no-repeat;outline:none;cursor:pointer}
+.ram-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4)}
+.ram-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#ffffff;border:0;box-shadow:0 0 0 4px rgba(214,140,230,0.25),0 2px 6px rgba(0,0,0,0.4)}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+<div aria-hidden="true" style="position: absolute; left: -160px; top: -200px; width: 760px; height: 600px; border-radius: 50%; background: radial-gradient(closest-side, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.07) 60%, rgba(31, 31, 31, 0))"></div>
+<div aria-hidden="true" style="position: absolute; right: -200px; bottom: -260px; width: 820px; height: 640px; border-radius: 50%; background: radial-gradient(closest-side, rgba(139, 92, 246, 0.14), rgba(31, 31, 31, 0))"></div>
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center; z-index: 2">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+<div style="position: absolute; top: 13px; right: 14px; display: flex; gap: 4px; z-index: 2">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg></button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg></button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg></button>
+</div>
+
+
+<!-- Step: welcome -->
+<sc-if value="{{st.welcome}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; inset: 52px 0 0 0; display: grid; grid-template-columns: minmax(0, 1fr) 520px; animation: axo-fade .3s ease-out">
+<div style="box-sizing: border-box; padding: 70px 40px 60px 96px; display: flex; flex-direction: column; justify-content: center; gap: 30px">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<img src="/_blob/f799e57da31063260c630de0899f9def" alt="AxoClient" style="width: 64px; height: 64px; border-radius: 16px">
+<span style="align-self: flex-start; height: 26px; padding: 0 10px; border-radius: 13px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.22); color: #f5d0fb; font-size: 12px; font-weight: 600; line-height: 26px">Erster Start</span>
+<h1 style="margin: 0; font-size: 46px; line-height: 1.08; font-weight: 800; letter-spacing: -1.2px; color: #f5f5f5">Willkommen bei<br><span style="background: linear-gradient(90deg, #f472b6, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent">AxoClient</span></h1>
+<p style="margin: 0; max-width: 460px; font-size: 15px; line-height: 1.55; color: #a3a3a3">Melde dich mit deinem Microsoft-Konto an. Danach richten wir Java und deinen ersten Spielstart automatisch ein.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 18px; max-width: 470px"><div style="display: flex; align-items: flex-start; gap: 14px">
+<span style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8l5.5 3.1v6.2L8 14.2 2.5 11.1V4.9z"></path><path d="M2.5 4.9L8 8l5.5-3.1M8 8v6.2"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14.5px; font-weight: 600; color: #f2f2f2">Instanzen &amp; Modpacks</span><span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">Mods, Shader und Ressourcepacks pro Instanz – mit einem Klick installiert.</span></span>
+</div><div style="display: flex; align-items: flex-start; gap: 14px">
+<span style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2.5"></circle><path d="M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"></path><path d="M11 3.2a2.4 2.4 0 0 1 0 4.4M12.5 9.6c1.3.5 2 1.8 2 3.9"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14.5px; font-weight: 600; color: #f2f2f2">Mit Freunden spielen</span><span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">Sieh, wer online ist, joine nach und teile ganze Instanzen.</span></span>
+</div><div style="display: flex; align-items: flex-start; gap: 14px">
+<span style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.5h10v9.5l-5 2-5-2z"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14.5px; font-weight: 600; color: #f2f2f2">Skins &amp; Axo-Capes</span><span style="font-size: 13px; color: #8a8a8a; line-height: 1.45">Skins verwalten und eigene Capes direkt im Launcher pixeln.</span></span>
+</div></div>
+<div style="display: flex; flex-direction: column; gap: 12px; max-width: 360px">
+<button class="ms-btn" onClick="{{login}}" style="height: 50px; padding: 0 22px; border: 0; border-radius: 12px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 10px 28px rgba(167, 60, 200, 0.35)"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5.5" height="5.5" rx="1"></rect><rect x="8.5" y="2" width="5.5" height="5.5" rx="1"></rect><rect x="2" y="8.5" width="5.5" height="5.5" rx="1"></rect><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1"></rect></svg>Mit Microsoft anmelden</button>
+<span style="font-size: 12px; color: #6b6b6b; line-height: 1.5">Du brauchst ein Konto mit Minecraft: Java Edition. AxoClient sieht dein Passwort nie – die Anmeldung läuft über Microsoft.</span>
+</div>
+</div>
+<div style="position: relative; display: flex; align-items: center; justify-content: center">
+<div aria-hidden="true" style="position: absolute; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(closest-side, rgba(236, 72, 153, 0.22), rgba(139, 92, 246, 0.10) 60%, rgba(31, 31, 31, 0))"></div>
+<img src="/_blob/a0269106360de387583458330e50552b" alt="" style="position: relative; height: 470px; width: auto; filter: drop-shadow(0 26px 40px rgba(0,0,0,0.5)); animation: axo-float 4s ease-in-out infinite">
+<img class="head" src="/_blob/83ce33e00b1d261ebed9255fcae45c88" alt="" style="position: absolute; right: 64px; top: 110px; width: 50px; height: 80px; border-radius: 3px; transform: rotate(12deg); box-shadow: 0 12px 24px rgba(0,0,0,0.45); animation: axo-float 5s ease-in-out infinite">
+<img class="head" src="/_blob/6a9e3329b7c4a8ad8e59553993b34ee5" alt="" style="position: absolute; left: 70px; bottom: 140px; width: 44px; height: 70px; border-radius: 3px; transform: rotate(-10deg); box-shadow: 0 12px 24px rgba(0,0,0,0.45); animation: axo-float 4.6s ease-in-out infinite">
+</div>
+</div>
+</sc-if>
+
+<!-- Step: login -->
+<sc-if value="{{st.login}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: 52px 0 0 0; display: flex; align-items: center; justify-content: center; animation: axo-fade .3s ease-out">
+<div style="width: 460px; box-sizing: border-box; padding: 32px; border-radius: 18px; background: #262626; box-shadow: 0 24px 60px rgba(0,0,0,0.4), inset 0 0 0 1px #333333; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center">
+<span style="width: 40px; height: 40px; box-sizing: border-box; border-radius: 20px; border: 3.5px solid #3a3a3a; border-top-color: #d36ad8; animation: axo-spin .8s linear infinite"></span>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 21px; font-weight: 700; color: #f2f2f2">Anmeldung bei Microsoft</h1>
+<span style="font-size: 13.5px; color: #a3a3a3; line-height: 1.5">Wir haben das Anmeldefenster von Microsoft geöffnet. Melde dich dort mit deinem Konto an.</span>
+</div>
+<span style="font-size: 12px; color: #6b6b6b; line-height: 1.45">Der Launcher macht automatisch weiter, sobald du angemeldet bist. Schließe das Anmeldefenster, um abzubrechen.</span>
+</div>
+</div>
+</sc-if>
+
+<!-- Step: setup -->
+<sc-if value="{{st.setup}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: 52px 0 0 0; box-sizing: border-box; padding: 40px 0 36px; display: flex; flex-direction: column; align-items: center; gap: 26px; animation: axo-fade .3s ease-out">
+<div style="display: flex; align-items: center; gap: 16px">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 56px; height: 56px; border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.4)">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; color: #f5f5f5">Hallo Mr_L0tl!</h1>
+<span style="font-size: 14px; color: #a3a3a3">Noch kurz einrichten, dann geht’s los.</span>
+</div>
+</div>
+<div style="width: 760px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+<section style="padding: 18px; border-radius: 14px; background: #262626; box-shadow: inset 0 0 0 1px #313131; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between"><label for="w-ram" style="font-size: 12px; font-weight: 600; color: #a3a3a3">Arbeitsspeicher</label><span style="font-size: 22px; font-weight: 700; color: #f2f2f2">{{ram}} GB</span></div>
+<input id="w-ram" class="ram-range" type="range" min="2" max="16" step="1" value="{{ram}}" onChange="{{onRam}}" style="{{ramFill}}">
+<span style="font-size: 12px; color: #7a7a7a">Dein PC hat 32 GB. Für Mods empfehlen wir 6 GB.</span>
+</section>
+<section style="padding: 18px; border-radius: 14px; background: #262626; box-shadow: inset 0 0 0 1px #313131; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Java</span>
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 14px; font-weight: 600; color: #f2f2f2; flex-grow: 1">Automatisch</span><span style="width: 22px; height: 22px; border-radius: 11px; background: #3fb950; color: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></span></div>
+<span style="font-size: 12px; color: #7a7a7a; line-height: 1.45">Wird beim ersten Start passend zu jeder Minecraft-Version geladen – du musst nichts installieren.</span>
+</section>
+<section style="grid-column: 1 / -1; padding: 18px; border-radius: 14px; background: #262626; box-shadow: inset 0 0 0 1px #313131; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Von anderen Launchern übernehmen</span><span style="font-size: 12px; color: #7a7a7a">Wir haben auf deinem PC gefunden:</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{imports}}" as="im" hint-placeholder-count="2">
+<label class="pick-row" style="{{im.rowStyle}}">
+<input class="sr" type="checkbox" checked="{{im.on}}" onChange="{{im.toggle}}">
+<span aria-hidden="true" style="{{im.box}}"><sc-if value="{{im.on}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></sc-if></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13.5px; font-weight: 600; color: #f2f2f2">{{im.name}}</span><span style="font-size: 12px; color: #8a8a8a">{{im.detail}}</span></span>
+</label>
+</sc-for>
+</div>
+</section>
+</div>
+<div style="flex-grow: 1"></div>
+<button class="ms-btn" onClick="{{finish}}" style="height: 50px; padding: 0 22px; border: 0; border-radius: 12px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 10px 28px rgba(167, 60, 200, 0.35); width: 280px">Fertig einrichten<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg></button>
+</div>
+</sc-if>
+
+<!-- Step: done -->
+<sc-if value="{{st.done}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: 52px 0 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; animation: axo-fade .3s ease-out">
+<span style="width: 72px; height: 72px; border-radius: 36px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 36px rgba(167, 60, 200, 0.4)"><svg width="32" height="32" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"></path></svg></span>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+<h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: #f5f5f5">Alles bereit!</h1>
+<span style="font-size: 14px; color: #a3a3a3">{{doneText}}</span>
+</div>
+<a class="ms-btn" href="Main.dc.html" style="height: 50px; padding: 0 22px; border-radius: 12px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 10px 28px rgba(167, 60, 200, 0.35); width: 260px; text-decoration: none">Zum Launcher</a>
+</div>
+</sc-if>
+
+<!-- Steps -->
+<div aria-hidden="true" style="position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 8px">
+<sc-for list="{{dots}}" as="d" hint-placeholder-count="4"><span style="{{d.style}}"></span></sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","options":["welcome","login","setup","done"],"default":"welcome"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var sc = props.scene || 'welcome';
+this.state = { step: sc, ram: 6, java: sc === 'setup' ? 38 : 0, imports: ['official'], copied: false };
+}
+componentDidMount() { if (this.state.step === 'setup') this.startJava(); }
+componentWillUnmount() { clearTimeout(this.loginTimer); clearInterval(this.javaTimer); clearTimeout(this.copyTimer); }
+startJava() {
+var self = this;
+clearInterval(this.javaTimer);
+this.javaTimer = setInterval(function () { var p = Math.min(100, self.state.java + 1 + Math.random() * 2); self.setState({ java: p }); if (p >= 100) clearInterval(self.javaTimer); }, 120);
+}
+renderVals() {
+var self = this;
+var s = this.state;
+var steps = ['welcome', 'login', 'setup', 'done'];
+var IMPORTS = [['official', 'Offizieller Launcher', '3 Instanzen · 5 Welten'], ['modrinth', 'Modrinth App', '2 Instanzen · mit Mods · 1 Welt']];
+var j = s.java;
+function box(on) { return 'width: 18px; height: 18px; box-sizing: border-box; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ffffff; ' + (on ? 'background: linear-gradient(135deg, #db2777, #7c3aed)' : 'background: #1f1f1f; box-shadow: inset 0 0 0 1.5px #4a4a4a'); }
+var imported = (s.imports.indexOf('official') !== -1 ? 3 : 0) + (s.imports.indexOf('modrinth') !== -1 ? 2 : 0);
+return {
+st: { welcome: s.step === 'welcome', login: s.step === 'login', setup: s.step === 'setup', done: s.step === 'done' },
+dots: steps.map(function (k, i) { var cur = steps.indexOf(s.step); return { style: 'display: block; height: 6px; border-radius: 3px; transition: width .2s ease; width: ' + (i === cur ? '22px' : '6px') + '; background: ' + (i <= cur ? 'linear-gradient(90deg, #ec4899, #8b5cf6)' : '#3a3a3a') }; }),
+login: function () {
+self.setState({ step: 'login' });
+clearTimeout(self.loginTimer);
+self.loginTimer = setTimeout(function () { self.setState({ step: 'setup' }); self.startJava(); }, 3500);
+},
+back: function () { clearTimeout(self.loginTimer); self.setState({ step: 'welcome' }); },
+reopen: function () {},
+copyLabel: s.copied ? 'Kopiert' : 'Kopieren',
+copy: function () { self.setState({ copied: true }); clearTimeout(self.copyTimer); self.copyTimer = setTimeout(function () { self.setState({ copied: false }); }, 1400); },
+ram: s.ram, onRam: function (e) { self.setState({ ram: parseInt(e.target.value, 10) }); },
+ramFill: 'background-size: ' + ((s.ram - 2) / 14 * 100) + '% 100%',
+javaLabel: j >= 100 ? 'Java 21 installiert' : 'Java 21 wird geladen …',
+javaPct: j >= 100 ? 'Fertig' : Math.round(j) + ' %', javaNow: Math.round(j),
+javaColor: j >= 100 ? '#3fb950' : '#ecc6f2',
+javaBar: 'display: block; height: 100%; width: ' + j + '%; border-radius: 3px; background: ' + (j >= 100 ? '#3fb950' : 'linear-gradient(90deg, #db2777, #7c3aed)'),
+imports: IMPORTS.map(function (im) { var on = s.imports.indexOf(im[0]) !== -1; return {
+name: im[1], detail: im[2], on: on, box: box(on),
+rowStyle: 'height: 60px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; ' + (on ? 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.09), rgba(139, 92, 246, 0.09)), #2e2e2e; box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.22)' : 'background: #2e2e2e'),
+toggle: function () { self.setState({ imports: on ? s.imports.filter(function (x) { return x !== im[0]; }) : s.imports.concat([im[0]]) }); }
+}; }),
+finish: function () { self.setState({ step: 'done' }); },
+doneText: imported ? imported + ' Installationen wurden übernommen. Viel Spaß beim Spielen!' : 'Deine erste Instanz „Vanilla 1.21.4“ wartet schon auf dich.'
+};
+}
+}
+</script>
+</body>
+</html>

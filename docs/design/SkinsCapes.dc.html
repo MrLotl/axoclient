@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>AxoClient – Capes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#4a4a4a;background-clip:padding-box;border:2px solid transparent}
+*::-webkit-scrollbar-corner{background:transparent}
+a{color:#9a9a9a}a:hover{color:#d9d9d9}
+.head{image-rendering:pixelated}
+.icon-btn{transition:background-color .12s ease}
+.icon-btn:hover{background-color:#3a3a3a!important}
+.win-btn:hover{background-color:#2c2c2c!important}
+.win-close:hover{background-color:#c42b1c!important}
+.nav-btn{transition:background-color .12s ease, color .12s ease}
+.nav-btn:not([aria-current="page"]):hover{background-color:#2a2a2a!important;color:#d9d9d9!important}
+.tool-btn{transition:background-color .12s ease}
+.tool-btn:hover{background-color:#353535!important}
+.new-btn{transition:filter .12s ease}
+.new-btn:hover{filter:brightness(1.12)}
+.tool-btn,.new-btn{white-space:nowrap;flex-shrink:0}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.pick-card{transition:background-color .12s ease, box-shadow .12s ease}
+.pick-card:not([aria-pressed="true"]):not([data-active="true"]):hover{background-color:#2f2f2f!important}
+.upload-card{transition:box-shadow .12s ease, background-color .12s ease}
+.upload-card:hover{background-color:rgba(255,255,255,0.03)!important;box-shadow:inset 0 0 0 1.5px rgba(214,140,230,0.5)!important}
+.act-btn{transition:background-color .12s ease, color .12s ease}
+.act-btn:hover{background-color:#404040!important;color:#e6e6e6!important}
+.act-trash:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.ghost-btn{transition:background-color .12s ease}
+.ghost-btn:hover{background-color:#3a3a3a!important}
+.second-btn{transition:background-color .12s ease}
+.second-btn:not(:disabled):hover{background-color:#444444!important}
+.second-btn:disabled{opacity:.45;cursor:default!important}
+.grad-btn{transition:filter .12s ease, opacity .12s ease}
+.grad-btn:not(:disabled):hover{filter:brightness(1.12)}
+.grad-btn:disabled{opacity:.45;cursor:default!important;box-shadow:none!important}
+.field{transition:box-shadow .12s ease}
+.field:focus-within{box-shadow:inset 0 0 0 1px rgba(214,140,230,0.6)!important}
+.field input::placeholder{color:#6b6b6b}
+.sr{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.pick-row{position:relative;transition:background-color .12s ease}
+.pick-row:hover{background-color:#323232!important}
+.pick-row .sr:focus-visible + span{outline:2px solid rgba(214,140,230,0.7);outline-offset:2px}
+.cat-chip{transition:background-color .12s ease, color .12s ease}
+.cat-chip:not([aria-pressed="true"]):hover{background-color:#353535!important;color:#e6e6e6!important}
+.inst-btn{transition:filter .12s ease, background-color .12s ease}
+.inst-btn:not(:disabled):hover{filter:brightness(1.15)}
+.mini-x{transition:background-color .12s ease, color .12s ease}
+.mini-x:hover{background-color:#4a2a2a!important;color:#ff8a80!important}
+.cat-row{transition:background-color .12s ease}
+.cat-row:hover{background-color:#2f2f2f!important}
+@keyframes axo-spin{to{transform:rotate(360deg)}}
+.seg-btn:not([aria-pressed="true"]):hover{color:#d9d9d9!important}
+.tool{transition:background-color .12s ease, color .12s ease}
+.tool:not([aria-pressed="true"]):hover{background-color:#353535!important;color:#e6e6e6!important}
+.swatch{transition:transform .1s ease}
+.swatch:hover{transform:scale(1.12)}
+.drop{transition:box-shadow .12s ease, background-color .12s ease}
+.drop:hover{background-color:rgba(255,255,255,0.03)!important;box-shadow:inset 0 0 0 1.5px rgba(214,140,230,0.5)!important}
+.canvas{cursor:crosshair;user-select:none;-webkit-user-select:none}
+.canvas span:hover{outline:1px solid rgba(255,255,255,0.7);outline-offset:-1px}
+.mini-grid,.mini-grid span{pointer-events:none}
+/* Tastatur-Fokus */
+button:focus{outline:none}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:2px!important;box-shadow:0 0 0 5px rgba(224,122,216,0.18)}
+input[type="range"]:focus-visible{outline:2px solid #e07ad8!important;outline-offset:4px!important}
+.sr:focus-visible + span{outline:2px solid #e07ad8!important;outline-offset:2px!important}
+label:has(> input[type="file"]:focus-visible){outline:2px solid #e07ad8!important;outline-offset:2px!important}
+.field:focus-within,.search-box:focus-within{box-shadow:inset 0 0 0 1.5px rgba(224,122,216,0.75)!important}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; background: #1f1f1f; font-family: 'Inter', system-ui, sans-serif; color: #e6e6e6">
+
+<!-- Title bar -->
+<div style="position: absolute; left: 19px; top: 10px; height: 32px; display: flex; align-items: center">
+<div style="display: flex; align-items: baseline; gap: 5px">
+<span style="font-size: 28px; line-height: 1; letter-spacing: -0.5px"><span style="font-weight: 600; color: #434343">Axo</span><span style="font-weight: 500; color: #3d3d3d">Client</span></span>
+<span style="font-size: 12px; line-height: 1; font-weight: 500; color: #3d3d3d">v1.0</span>
+</div>
+</div>
+
+<div style="position: absolute; top: 10px; right: 14px; display: flex; align-items: center; gap: 8px">
+<button class="icon-btn" aria-label="Benachrichtigungen (1 neu)" style="position: relative; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: #242424; color: #d9d9d9; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1H3z"></path><path d="M6.5 14c.3.6.9 1 1.5 1s1.2-.4 1.5-1"></path><path d="M8 1.5V3"></path></svg>
+<span style="position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: #e83d3d; box-shadow: 0 0 0 2px #1f1f1f; color: #ffffff; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center">1</span>
+</button>
+
+<button class="icon-btn" aria-label="Account-Menü öffnen" style="height: 32px; padding: 4px 6px 4px 4px; border: 0; border-radius: 8px; background: #242424; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit">
+<img class="head" src="/_blob/7d18b1aae1244f736c7ebddaa43d2158" alt="" style="width: 24px; height: 24px; border-radius: 5px; display: block">
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">Mr_L0tl</span>
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"></path></svg>
+</button>
+
+<div style="display: flex; gap: 4px; margin-left: 4px">
+<button class="win-btn" aria-label="Minimieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 13h10"></path></svg>
+</button>
+<button class="win-btn" aria-label="Maximieren" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linejoin="round"><path d="M8.5 8.5h9v9h-9z"></path></svg>
+</button>
+<button class="win-btn win-close" aria-label="Schließen" style="width: 26px; height: 26px; padding: 0; border: 0; border-radius: 4px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#d9d9d9" stroke-width="1.5" stroke-linecap="round"><path d="M8 8l10 10M18 8L8 18"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- Sidebar -->
+<nav aria-label="Hauptnavigation" style="position: absolute; left: 0; top: 52px; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px">
+<a class="nav-btn" href="Main.dc.html" aria-label="Home" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L10 3.5l7 6V16a1 1 0 0 1-1 1h-3.5v-5h-5v5H4a1 1 0 0 1-1-1z"></path></svg>
+</a>
+<a class="nav-btn" href="Instances.dc.html" aria-label="Instanzen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="3" height="12" rx="0.5"></rect><rect x="6.5" y="3" width="3" height="13.5" rx="0.5"></rect><rect x="10.5" y="5.5" width="3" height="11" rx="0.5"></rect><path d="M14.3 6.6l2.4-.6 2.6 10-2.4.6z"></path><path d="M1.5 17.5h17"></path></svg>
+</a>
+<a class="nav-btn" href="LocalServers.dc.html" aria-label="Lokale Server" title="Lokale Server" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="6" rx="1.5"></rect><rect x="3" y="11" width="14" height="6" rx="1.5"></rect><path d="M6 6h.01M6 14h.01"></path><path d="M10 6h4M10 14h4"></path></svg>
+</a>
+<a class="nav-btn" href="Skins.dc.html" aria-label="Skins" aria-current="page" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14); text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3.2"></circle><path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"></path></svg>
+</a>
+<a class="nav-btn" href="Console.dc.html" aria-label="Live-Konsole" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2"></rect><path d="M6 8.5l2.5 2-2.5 2"></path><path d="M10.5 12.5H14"></path></svg>
+</a>
+<a class="nav-btn" href="Settings.dc.html" aria-label="Einstellungen" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #8a8a8a; background: transparent; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</a>
+</nav>
+
+<!-- Content area -->
+<main style="position: absolute; left: 66px; top: 52px; right: 0; bottom: 0; box-sizing: border-box; padding: 24px 28px; background: #222222; border-top-left-radius: 18px; display: flex; gap: 24px">
+
+<!-- Preview -->
+<section aria-label="Vorschau" style="width: 360px; flex-shrink: 0; box-sizing: border-box; padding: 20px; border-radius: 14px; background: radial-gradient(120% 70% at 50% 85%, #2f2f2f 0%, #2a2a2a 55%, #262626 100%); display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<div role="group" aria-label="Sichtbar für" style="padding: 3px; border-radius: 9px; background: #222222; display: flex; gap: 2px">
+<button class="seg-btn" aria-pressed="{{viewAxoPressed}}" onClick="{{showAxo}}" style="{{viewAxoStyle}}">AxoClient</button>
+<button class="seg-btn" aria-pressed="{{viewMcPressed}}" onClick="{{showMc}}" style="{{viewMcStyle}}">Vanilla</button>
+</div>
+<div role="group" aria-label="Rücken" style="padding: 3px; border-radius: 9px; background: #222222; display: flex; gap: 2px">
+<button class="seg-btn" aria-pressed="{{capePressed}}" onClick="{{showCape}}" style="{{capeTabStyle}}">Cape</button>
+<button class="seg-btn" aria-pressed="{{elytraPressed}}" onClick="{{showElytra}}" style="{{elytraTabStyle}}">Elytra</button>
+</div>
+</div>
+<span style="font-size: 12px; color: #7a7a7a">{{viewHint}}</span>
+<div style="flex-grow: 1; min-height: 0; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{back.isImage}}" hint-placeholder-val="{{true}}">
+<img src="{{back.image}}" alt="{{back.alt}}" style="height: 400px; width: auto; max-width: 100%; display: block; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 18px 28px rgba(0,0,0,0.4))">
+</sc-if>
+<sc-if value="{{back.isCustom}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
+<sc-if value="{{back.capeView}}" hint-placeholder-val="{{true}}">
+<div class="mini-grid" style="width: 170px; height: 272px; display: grid; grid-template-columns: repeat({{back.cols}}, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); box-shadow: 0 18px 30px rgba(0,0,0,0.45); border-radius: 3px; overflow: hidden; transform: perspective(600px) rotateX(8deg)"><sc-for list="{{back.cells}}" as="q" hint-placeholder-count="160"><span style="{{q.s}}"></span></sc-for></div>
+</sc-if>
+<sc-if value="{{back.elytraView}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; gap: 0; padding: 0 30px 24px">
+<div style="position: relative; transform-origin: 100% 0; transform: rotate(16deg); clip-path: polygon(0 0, 100% 0, 100% 36%, 24% 100%, 0 88%)"><div style="position: relative"><div class="mini-grid" style="width: 110px; height: 176px; display: grid; grid-template-columns: repeat({{back.cols}}, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); "><sc-for list="{{back.cells}}" as="q" hint-placeholder-count="160"><span style="{{q.s}}"></span></sc-for></div><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.28) 100%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.25) 100%); pointer-events: none"></span></div></div>
+<div style="position: relative; transform-origin: 0 0; transform: rotate(-16deg); clip-path: polygon(0 0, 100% 0, 100% 88%, 76% 100%, 0 36%)"><div style="position: relative; transform: scaleX(-1)"><div class="mini-grid" style="width: 110px; height: 176px; display: grid; grid-template-columns: repeat({{back.cols}}, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); "><sc-for list="{{back.cells}}" as="q" hint-placeholder-count="160"><span style="{{q.s}}"></span></sc-for></div><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.28) 100%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.25) 100%); pointer-events: none"></span></div></div>
+</div>
+</sc-if>
+<span style="font-size: 12px; color: #8a8a8a">Eigenes Cape · {{back.name}}</span>
+</div>
+</sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: #323232">
+<span style="font-size: 12px; color: #8a8a8a">Minecraft-Cape</span>
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">{{mcName}}</span>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: #323232">
+<span style="font-size: 12px; color: #8a8a8a">AxoClient-Cape</span>
+<span style="font-size: 14px; font-weight: 500; color: #e6e6e6">{{axoName}}</span>
+</div>
+</div>
+</section>
+
+<!-- Library -->
+<section aria-label="Capes" style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: center; gap: 12px">
+<div role="group" aria-label="Kategorie" style="padding: 3px; border-radius: 10px; background: #2a2a2a; display: flex; gap: 2px">
+<a class="seg-btn" href="Skins.dc.html" style="height: 30px; padding: 0 16px; border-radius: 8px; display: flex; align-items: center; text-decoration: none; font-size: 13px; font-weight: 600; color: #8a8a8a; background: transparent">Skins</a>
+<a class="seg-btn" href="SkinsCapes.dc.html" aria-pressed="true" aria-current="page" style="height: 30px; padding: 0 16px; border-radius: 8px; display: flex; align-items: center; text-decoration: none; font-size: 13px; font-weight: 600; color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)">Capes</a>
+</div>
+<span style="font-size: 13px; color: #8a8a8a">{{countLabel}}</span>
+<div style="flex-grow: 1"></div>
+<button class="new-btn" aria-haspopup="dialog" onClick="{{openEditor}}" style="height: 36px; padding: 0 16px 0 14px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25)">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V3"></path><path d="M4.5 6.5L8 3l3.5 3.5"></path><path d="M2.5 11v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V11"></path></svg>
+Eigenes Cape hochladen
+</button>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; display: flex; flex-direction: column; gap: 22px">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<div role="radiogroup" aria-label="{{g.title}}" style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: baseline; gap: 10px">
+<h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #e6e6e6">{{g.title}}</h3>
+<span style="font-size: 12px; color: #7a7a7a">{{g.sub}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px">
+<sc-for list="{{g.items}}" as="c" hint-placeholder-count="4">
+<button class="pick-card" role="radio" aria-checked="{{c.pressed}}" aria-pressed="{{c.pressed}}" aria-label="{{c.label}}" onClick="{{c.pick}}" style="{{c.cardStyle}}">
+<div style="position: relative; height: 168px; border-radius: 8px; background: #262626; display: flex; align-items: center; justify-content: center; overflow: hidden">
+<sc-if value="{{c.hasImage}}" hint-placeholder-val="{{true}}">
+<img class="head" src="{{c.image}}" alt="" style="width: 80px; height: 128px; display: block; border-radius: 3px; box-shadow: 0 10px 20px rgba(0,0,0,0.35)">
+</sc-if>
+<sc-if value="{{c.isPixel}}" hint-placeholder-val="{{false}}">
+<div class="mini-grid" style="width: 80px; height: 128px; display: grid; grid-template-columns: repeat({{c.cols}}, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); border-radius: 3px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.35)"><sc-for list="{{c.cells}}" as="q" hint-placeholder-count="160"><span style="{{q.s}}"></span></sc-for></div>
+</sc-if>
+<sc-if value="{{c.isNone}}" hint-placeholder-val="{{false}}">
+<div style="width: 80px; height: 128px; box-sizing: border-box; border: 2px dashed #4a4a4a; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6b6b6b">
+<svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5.5"></circle><path d="M4.2 11.8l7.6-7.6"></path></svg>
+</div>
+</sc-if>
+<sc-if value="{{c.isLink}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; left: 8px; bottom: 8px; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #f2f2f2; font-size: 11px; font-weight: 600; line-height: 22px; display: flex; align-items: center; gap: 5px"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9.5l3-3"></path><path d="M9 4l1-1a2.8 2.8 0 0 1 4 4l-1 1"></path><path d="M7 12l-1 1a2.8 2.8 0 0 1-4-4l1-1"></path></svg>{{c.linkLabel}}</span>
+</sc-if>
+<sc-if value="{{c.isActive}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; top: 8px; right: 8px; height: 22px; padding: 0 8px; border-radius: 11px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-size: 11px; font-weight: 600; line-height: 22px">Aktiv</span>
+</sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 2px; text-align: left">
+<span style="font-size: 14px; font-weight: 600; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</span>
+<span style="font-size: 12px; color: #8a8a8a">{{c.source}}</span>
+</div>
+</button>
+</sc-for>
+<sc-if value="{{g.isAxo}}" hint-placeholder-val="{{false}}">
+<button class="upload-card" aria-haspopup="dialog" onClick="{{openEditor}}" style="padding: 10px; border: 0; border-radius: 12px; background: transparent; box-shadow: inset 0 0 0 1.5px #3a3a3a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-family: inherit; color: #a3a3a3; min-height: 220px">
+<span style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"></path></svg>
+</span>
+<span style="font-size: 13px; font-weight: 600; color: #e6e6e6">Eigenes Cape</span>
+<span style="font-size: 11.5px; color: #7a7a7a; text-align: center; padding: 0 8px">Selbst pixeln oder PNG hochladen</span>
+</button>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+</main>
+
+<!-- Dialogs -->
+<sc-if value="{{hasDialog}}" hint-placeholder-val="{{false}}">
+<div onClick="{{backdrop}}" style="position: absolute; inset: 0; z-index: 50; background: rgba(10, 10, 10, 0.62); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center">
+<sc-if value="{{dlg.editor}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-labelledby="dlg-ed-title" style="width: 1060px; height: 680px; box-sizing: border-box; padding: 22px; border-radius: 16px; background: #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(139, 92, 246, 0.18)); color: #ecc6f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.5h10v9.5l-5 2-5-2z"></path></svg></span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<h2 id="dlg-ed-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #f2f2f2">Eigenes Cape</h2>
+<span style="font-size: 13px; color: #8a8a8a">Pixel dein Cape selbst oder lade eine fertige Datei hoch. Nur für AxoClient-Spieler sichtbar.</span>
+</div>
+<div role="group" aria-label="Art" style="padding: 3px; border-radius: 10px; background: #1f1f1f; display: flex; gap: 2px; margin-right: 6px">
+<button class="seg-btn" aria-pressed="{{ed.pixelPressed}}" onClick="{{ed.modePixel}}" style="{{ed.pixelStyle}}">Selbst pixeln</button>
+<button class="seg-btn" aria-pressed="{{ed.filePressed}}" onClick="{{ed.modeFile}}" style="{{ed.fileStyle}}">Datei hochladen</button>
+</div>
+<button class="ghost-btn" aria-label="Schließen" onClick="{{closeDialog}}" style="width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #a3a3a3; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px">
+
+<div style="min-height: 0; border-radius: 12px; background: #242424; display: flex">
+<sc-if value="{{ed.isPixel}}" hint-placeholder-val="{{true}}">
+<div style="width: 210px; flex-shrink: 0; box-sizing: border-box; padding: 16px; border-right: 1px solid #2f2f2f; display: flex; flex-direction: column; gap: 16px; overflow-y: auto">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Werkzeug</span>
+<div role="group" aria-label="Werkzeug" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{ed.tools}}" as="tl" hint-placeholder-count="4">
+<button class="tool" aria-pressed="{{tl.pressed}}" aria-label="{{tl.label}}" title="{{tl.label}}" onClick="{{tl.pick}}" style="{{tl.style}}">
+<sc-if value="{{tl.isPen}}" hint-placeholder-val="{{true}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L5.5 13.5H2.5v-3z"></path></svg></sc-if>
+<sc-if value="{{tl.isEraser}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l4.5 4.5-6 6H4l-2-2a1.4 1.4 0 0 1 0-2z"></path><path d="M6.5 5.5l4.5 4.5M7 13.5h7"></path></svg></sc-if>
+<sc-if value="{{tl.isFill}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2.5l5.5 5.5-4.5 4.5a1.4 1.4 0 0 1-2 0L2.5 9a1.4 1.4 0 0 1 0-2z"></path><path d="M2.5 8h9.8M13.5 10.5s1 1.4 1 2a1 1 0 0 1-2 0c0-.6 1-2 1-2z"></path></svg></sc-if>
+<sc-if value="{{tl.isPick}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.8a1.9 1.9 0 0 1 2.7 2.7l-1.3 1.3.8.8-1.1 1.1-3.8-3.8 1.1-1.1.8.8z"></path><path d="M7.9 6.4L3 11.3V13h1.7l4.9-4.9"></path></svg></sc-if>
+<sc-if value="{{tl.isMove}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v13M1.5 8h13"></path><path d="M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2"></path></svg></sc-if>
+</button>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Farbe</span>
+<div role="group" aria-label="Farbpalette" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{ed.palette}}" as="p" hint-placeholder-count="16">
+<button class="swatch" aria-label="{{p.label}}" aria-pressed="{{p.pressed}}" onClick="{{p.pick}}" style="{{p.style}}"></button>
+</sc-for>
+<label class="swatch" aria-label="Eigene Farbe" title="Eigene Farbe" style="position: relative; aspect-ratio: 1; border-radius: 6px; background: conic-gradient(#ef4444, #f59e0b, #4ade80, #38bdf8, #7c3aed, #ec4899, #ef4444); cursor: pointer; display: block">
+<input type="color" value="{{ed.color}}" onChange="{{ed.onColor}}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer">
+</label>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #a3a3a3"><span style="{{ed.currentSwatch}}"></span><span style="font-family: 'JetBrains Mono', ui-monospace, monospace">{{ed.color}}</span></div>
+</div>
+<label style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Pixel</span>
+<span style="position: relative; display: flex; flex-grow: 1; min-width: 0"><select value="{{ed.res}}" onChange="{{ed.onRes}}" style="width: 100%; appearance: none; -webkit-appearance: none; height: 36px; padding: 0 36px 0 12px; border: 0; border-radius: 8px; outline: none; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; color: #f2f2f2; font-family: inherit; font-size: 12.5px; cursor: pointer">
+<option value="0">10 × 16 · Standard</option>
+<option value="1">20 × 32 · HD</option>
+<option value="2">40 × 64 · Ultra HD</option>
+<option value="3">80 × 128 · 8-fach</option>
+<option value="4">160 × 256 · 16-fach</option>
+</select><svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#a3a3a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; top: 50%; margin-top: -7px; pointer-events: none"><path d="M4 6l4 4 4-4"></path></svg></span>
+<span style="font-size: 11.5px; color: #7a7a7a; line-height: 1.4">Beim Wechsel wird dein Bild umgerechnet. Ein importiertes Bild, auf das noch nicht gemalt wurde, wird in der neuen Auflösung neu eingesetzt.</span>
+</label>
+<div style="flex-grow: 1"></div>
+<button class="second-btn" onClick="{{ed.importImage}}" style="height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: #333333; color: #e6e6e6; font-family: inherit; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer">
+<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"></rect><circle cx="6" cy="6.5" r="1.2"></circle><path d="M14 11l-3.5-3.5L4 13"></path></svg>Bild importieren
+</button>
+<button class="ghost-btn" onClick="{{ed.clear}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: #8a8a8a; font-family: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer">Alles leeren</button>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background-image: radial-gradient(#2c2c2c 1px, transparent 1px); background-size: 14px 14px">
+<div class="canvas" role="img" aria-label="Pixel-Leinwand für das Cape" onMouseDown="{{ed.down}}" onMouseOver="{{ed.over}}" onMouseUp="{{ed.up}}" onMouseLeave="{{ed.up}}" style="{{ed.canvasStyle}}">
+<sc-for list="{{ed.cells}}" as="q" hint-placeholder-count="160">
+<span data-i="{{q.i}}" style="{{q.s}}"></span>
+</sc-for>
+</div>
+<span style="font-size: 11.5px; color: #6b6b6b">{{ed.canvasHint}}</span>
+</div>
+</sc-if>
+<sc-if value="{{ed.isFile}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<label class="drop" style="position: relative; flex-grow: 1; border-radius: 12px; box-shadow: inset 0 0 0 1.5px #3a3a3a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; cursor: pointer; text-align: center">
+<input type="file" accept="image/png" onChange="{{ed.onFile}}" style="position: absolute; width: 1px; height: 1px; opacity: 0">
+<span style="width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); color: #ecc6f2; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11V3"></path><path d="M4.5 6.5L8 3l3.5 3.5"></path><path d="M2.5 11v1.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V11"></path></svg></span>
+<span style="font-size: 15px; font-weight: 600; color: #f2f2f2">{{ed.fileTitle}}</span>
+<span style="font-size: 12.5px; color: #8a8a8a">{{ed.fileSub}}</span>
+</label>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 12px; color: #8a8a8a">
+<div style="padding: 12px; border-radius: 10px; background: #2a2a2a; display: flex; flex-direction: column; gap: 3px"><span style="font-weight: 600; color: #d9d9d9">Standard</span>64 × 32 Pixel</div>
+<div style="padding: 12px; border-radius: 10px; background: #2a2a2a; display: flex; flex-direction: column; gap: 3px"><span style="font-weight: 600; color: #d9d9d9">HD</span>128 × 64 oder 256 × 128</div>
+<div style="padding: 12px; border-radius: 10px; background: #2a2a2a; display: flex; flex-direction: column; gap: 3px"><span style="font-weight: 600; color: #d9d9d9">Elytra</span>wird aus derselben Datei erzeugt</div>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="min-height: 0; display: flex; flex-direction: column; gap: 14px">
+<div style="flex-grow: 1; min-height: 0; border-radius: 12px; background: radial-gradient(120% 70% at 50% 85%, #333333 0%, #2a2a2a 55%, #252525 100%); display: flex; flex-direction: column; padding: 12px; gap: 10px; box-sizing: border-box">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="font-size: 11px; font-weight: 600; color: #7a7a7a; text-transform: uppercase; letter-spacing: 0.7px">Vorschau</span>
+<div role="group" aria-label="Vorschau" style="padding: 3px; border-radius: 9px; background: #222222; display: flex; gap: 2px">
+<button class="seg-btn" aria-pressed="{{ed.capePressed}}" onClick="{{ed.viewCape}}" style="{{ed.capeStyle}}">Cape</button>
+<button class="seg-btn" aria-pressed="{{ed.elytraPressed}}" onClick="{{ed.viewElytra}}" style="{{ed.elytraStyle}}">Elytra</button>
+</div>
+</div>
+<div style="flex-grow: 1; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{ed.showGrid}}" hint-placeholder-val="{{true}}">
+<sc-if value="{{ed.capeView}}" hint-placeholder-val="{{true}}">
+<div class="mini-grid" style="width: 140px; height: 224px; display: grid; grid-template-columns: repeat({{ed.cols}}, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); border-radius: 3px; overflow: hidden; box-shadow: 0 16px 28px rgba(0,0,0,0.45); transform: perspective(600px) rotateX(8deg)"><sc-for list="{{ed.cells}}" as="q" hint-placeholder-count="160"><span style="{{q.s}}"></span></sc-for></div>
+</sc-if>
+<sc-if value="{{ed.elytraView}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; gap: 0; padding: 0 24px 20px">
+<div style="position: relative; transform-origin: 100% 0; transform: rotate(16deg); clip-path: polygon(0 0, 100% 0, 100% 36%, 24% 100%, 0 88%)"><div style="position: relative"><div class="mini-grid" style="width: 100px; height: 160px; display: grid; grid-template-columns: repeat({{ed.cols}}, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); "><sc-for list="{{ed.cells}}" as="q" hint-placeholder-count="160"><span style="{{q.s}}"></span></sc-for></div><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.28) 100%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.25) 100%); pointer-events: none"></span></div></div>
+<div style="position: relative; transform-origin: 0 0; transform: rotate(-16deg); clip-path: polygon(0 0, 100% 0, 100% 88%, 76% 100%, 0 36%)"><div style="position: relative; transform: scaleX(-1)"><div class="mini-grid" style="width: 100px; height: 160px; display: grid; grid-template-columns: repeat({{ed.cols}}, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); "><sc-for list="{{ed.cells}}" as="q" hint-placeholder-count="160"><span style="{{q.s}}"></span></sc-for></div><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.28) 100%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.25) 100%); pointer-events: none"></span></div></div>
+</div>
+</sc-if>
+</sc-if>
+<sc-if value="{{ed.showUpload}}" hint-placeholder-val="{{false}}">
+<sc-if value="{{ed.capeView}}" hint-placeholder-val="{{true}}">
+<div style="width: 140px; height: 224px; position: relative; overflow: hidden; border-radius: 3px; box-shadow: 0 16px 28px rgba(0,0,0,0.45); transform: perspective(600px) rotateX(8deg)"><img src="{{ed.upImg}}" alt="Vorschau der hochgeladenen Cape-Datei" style="position: absolute; left: -14px; top: -14px; width: 896px; height: 448px; image-rendering: pixelated"></div>
+</sc-if>
+<sc-if value="{{ed.elytraView}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; gap: 0; padding: 0 24px 20px">
+<div style="width: 100px; height: 160px; position: relative; transform-origin: 100% 0; transform: rotate(16deg); clip-path: polygon(0 0, 100% 0, 100% 36%, 24% 100%, 0 88%)"><div style="position: absolute; inset: 0; overflow: hidden"><img src="{{ed.upImg}}" alt="" style="position: absolute; left: -10px; top: -10px; width: 640px; height: 320px; image-rendering: pixelated"><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.28) 100%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.25) 100%); pointer-events: none"></span></div></div>
+<div style="width: 100px; height: 160px; position: relative; transform-origin: 0 0; transform: rotate(-16deg); clip-path: polygon(0 0, 100% 0, 100% 88%, 76% 100%, 0 36%)"><div style="position: absolute; inset: 0; overflow: hidden; transform: scaleX(-1)"><img src="{{ed.upImg}}" alt="" style="position: absolute; left: -10px; top: -10px; width: 640px; height: 320px; image-rendering: pixelated"><span aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.28) 100%), linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.25) 100%); pointer-events: none"></span></div></div>
+</div>
+</sc-if>
+</sc-if>
+<sc-if value="{{ed.showEmpty}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12.5px; color: #6b6b6b; text-align: center; padding: 0 30px">Wähle eine Datei, um die Vorschau zu sehen</span>
+</sc-if>
+</div>
+</div>
+<label style="display: flex; flex-direction: column; gap: 7px">
+<span style="font-size: 12px; font-weight: 600; color: #a3a3a3">Name</span>
+<span class="field" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 9px; background: #1f1f1f; box-shadow: inset 0 0 0 1px #3a3a3a; display: flex; align-items: center; gap: 10px; color: #7a7a7a"><input value="{{ed.name}}" onChange="{{ed.onName}}" placeholder="z. B. Mein Axo-Cape" maxlength="24" style="flex-grow: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: #f2f2f2; font-family: inherit; font-size: 13.5px"></span>
+</label>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="flex-grow: 1; font-size: 12.5px; color: #8a8a8a">{{ed.footer}}</span>
+<button class="ghost-btn" onClick="{{closeDialog}}" style="height: 38px; padding: 0 16px; border: 0; border-radius: 9px; background: #333333; color: #d9d9d9; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap">Abbrechen</button>
+<button class="grad-btn" disabled="{{ed.disabled}}" onClick="{{ed.save}}" style="height: 38px; padding: 0 18px; border: 0; border-radius: 9px; background: linear-gradient(135deg, #db2777, #7c3aed); color: #ffffff; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(167, 60, 200, 0.25); white-space: nowrap; display: flex; align-items: center; gap: 8px">Cape speichern</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","options":["none","editor","upload"],"default":"none"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var sc = props.scene || 'none';
+this.state = { mc: 'mojang', axo: 'axo', see: 'axo', wear: 'cape', custom: [] };
+if (sc === 'editor' || sc === 'upload') Object.assign(this.state, this.freshEditor(sc === 'upload' ? 'file' : 'pixel'), { dialog: 'editor' });
+}
+RES() { return [[10, 16], [20, 32], [40, 64], [80, 128], [160, 256]]; }
+defaultPixels(cols, rows) {
+var px = [];
+function mix(a, b, t) { var pa = [parseInt(a.substr(1, 2), 16), parseInt(a.substr(3, 2), 16), parseInt(a.substr(5, 2), 16)]; var pb = [parseInt(b.substr(1, 2), 16), parseInt(b.substr(3, 2), 16), parseInt(b.substr(5, 2), 16)]; return '#' + pa.map(function (v, i) { var x = Math.round(v + (pb[i] - v) * t).toString(16); return x.length < 2 ? '0' + x : x; }).join(''); }
+for (var y = 0; y < rows; y++) for (var x = 0; x < cols; x++) {
+var u = (x + 0.5) / cols, v = (y + 0.5) / rows;
+var c = mix('#db2777', '#7c3aed', v);
+var edge = u < 0.1 || u > 0.9 || v < 0.0625 || v > 0.9375;
+if (edge) c = mix('#9d174d', '#4c1d95', v);
+var dx = Math.abs(u - 0.5), dy = Math.abs(v - 0.42);
+if (dx / 0.22 + dy / 0.16 < 1) c = '#ffffff';
+if (dx / 0.12 + dy / 0.09 < 1) c = mix('#ec4899', '#8b5cf6', v);
+px.push(c);
+}
+return px;
+}
+freshEditor(mode) {
+var r = this.RES()[0];
+return { edMode: mode, edRes: 0, edPx: this.defaultPixels(r[0], r[1]), edTool: 'pen', edColor: '#ffffff', edView: 'cape', edName: '', edImg: '', edFile: '' };
+}
+cellsOf(px, cols, rows, gap) {
+return { cols: cols, cells: px.map(function (c) { return { s: 'display: block; background: ' + (c || 'transparent') }; }) };
+}
+renderVals() {
+var self = this;
+var s = this.state;
+var cardBase = 'padding: 10px; border: 0; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; font-family: inherit; ';
+var cardOn = cardBase + 'background: linear-gradient(135deg, rgba(236, 72, 153, 0.10), rgba(139, 92, 246, 0.10)), #2a2a2a; box-shadow: inset 0 0 0 1.5px rgba(214, 140, 230, 0.45)';
+var cardOff = cardBase + 'background: #2a2a2a; box-shadow: none';
+var MOJ = { image: '/_blob/c0ab89741db3636b1a4deb17c0855b35', back: '/_blob/1503ef2c69aa20f8c51bd475cbdb6402', elytra: '/_blob/fa19f32bdd9816793d699ea54de4b603' };
+var NONE = { back: '/_blob/9ef235edd0fde16a216454d3876478b2', elytra: '/_blob/8a9be97410addb95d1bf40e27cb1c87f' };
+var AXO = [
+{ id: 'axo', name: 'Axo Pink', image: '/_blob/83ce33e00b1d261ebed9255fcae45c88', back: '/_blob/6a424ff12d1c139ddc2e375513e2c550', elytra: '/_blob/3ba3685fade9f0926049d511f74a339e' },
+{ id: 'midnight', name: 'Midnight', image: '/_blob/6a9e3329b7c4a8ad8e59553993b34ee5', back: '/_blob/b87c26c3ac7daef29dca72514184ad40', elytra: '/_blob/f55e56a0853acfcd7f0cddfc04ff0dc8' },
+{ id: 'mint', name: 'Mint', image: '/_blob/d5b65566da250863c8645727650a5681', back: '/_blob/80c13f510a012700e48cd3ecc3c13906', elytra: '/_blob/9ac712ce6439368b46b09996bdfca9a5' },
+{ id: 'sunset', name: 'Sunset', image: '/_blob/f3d1d08253146fa8be4839a7a0ac9ee2', back: '/_blob/dcc8555897a2ff45db994ba635f668c5', elytra: '/_blob/2d2cbd29bf389018a1300a441d2bf109' },
+{ id: 'galaxy', name: 'Galaxy', image: '/_blob/77487b0544833c8b15ad0faa9bb203c0', back: '/_blob/6d67be693955792f6845c1d8a84022b8', elytra: '/_blob/358295c7bd1f5a575a3bb9c918896b08' },
+{ id: 'lava', name: 'Lava', image: '/_blob/7f1e58c133919eb32fc271dd497f0af3', back: '/_blob/0a6d719fbcbb28b7b616109d920fa23e', elytra: '/_blob/760a63dfbb2f39d87f36a59e37a97f6d' }
+];
+var custom = s.custom || [];
+function card(c, on, pick) {
+return Object.assign({ hasImage: false, isPixel: false, isNone: false, isLink: false, linkLabel: '', cols: 1, cells: [] }, c, {
+isActive: on, pressed: on ? 'true' : 'false', cardStyle: on ? cardOn : cardOff,
+label: 'Cape ' + c.name + (on ? ' (aktiv)' : ' auswählen'), pick: pick
+});
+}
+var mcItems = [
+card({ name: 'Kein Cape', source: 'Für alle ausblenden', isNone: true }, s.mc === 'none', function () { self.setState({ mc: 'none' }); }),
+card({ name: 'Mojang-Cape', source: 'Von deinem Microsoft-Konto', hasImage: true, image: MOJ.image }, s.mc === 'mojang', function () { self.setState({ mc: 'mojang' }); })
+];
+var axoItems = [
+card({ name: 'Kein Cape', source: 'Für AxoClient-Spieler ausblenden', isNone: true }, s.axo === 'none', function () { self.setState({ axo: 'none' }); }),
+card(s.mc === 'mojang' ? { name: 'Mojang-Cape nutzen', source: 'Wie in Vanilla', hasImage: true, image: MOJ.image, isLink: true, linkLabel: 'Mojang' } : { name: 'Mojang-Cape nutzen', source: 'Gerade kein Mojang-Cape gewählt', isNone: true, isLink: true, linkLabel: 'Mojang' }, s.axo === 'useMojang', function () { self.setState({ axo: 'useMojang' }); })
+].concat(AXO.map(function (c) { return card({ name: c.name, source: 'AxoClient', hasImage: true, image: c.image }, s.axo === c.id, function () { self.setState({ axo: c.id }); }); }))
+.concat(custom.map(function (c) {
+var base = c.img ? { hasImage: true, image: c.img } : Object.assign({ isPixel: true }, self.cellsOf(c.px, c.cols, c.rows));
+return card(Object.assign({ name: c.name, source: 'Eigenes Cape' }, base), s.axo === c.id, function () { self.setState({ axo: c.id }); });
+}));
+var groups = [
+{ title: 'Minecraft-Capes', sub: 'Offizielle Capes deines Microsoft-Kontos · für alle sichtbar', isAxo: false, items: mcItems },
+{ title: 'AxoClient-Capes', sub: 'Nur für andere AxoClient-Spieler sichtbar · überdeckt dein Minecraft-Cape', isAxo: true, items: axoItems }
+];
+// Preview resolution
+var wear = s.wear || 'cape';
+var see = s.see || 'axo';
+var mcCape = s.mc === 'mojang' ? MOJ : NONE;
+var mcName = s.mc === 'mojang' ? 'Mojang-Cape' : 'Kein Cape';
+var axoName, shown, customShown = null;
+if (s.axo === 'none') { axoName = 'Kein Cape'; shown = NONE; }
+else if (s.axo === 'useMojang') { axoName = 'Mojang-Cape (' + (s.mc === 'mojang' ? 'übernommen' : 'keins gewählt') + ')'; shown = mcCape; }
+else {
+var a = AXO.filter(function (x) { return x.id === s.axo; })[0];
+if (a) { axoName = a.name; shown = a; }
+else { customShown = custom.filter(function (x) { return x.id === s.axo; })[0]; axoName = customShown ? customShown.name : 'Kein Cape'; shown = NONE; }
+}
+if (see === 'mc') { shown = mcCape; customShown = null; }
+var back = customShown && !customShown.img
+? Object.assign({ isImage: false, isCustom: true, capeView: wear === 'cape', elytraView: wear === 'elytra', name: customShown.name, image: '', alt: '' }, this.cellsOf(customShown.px, customShown.cols, customShown.rows))
+: { isImage: true, isCustom: false, image: wear === 'elytra' ? shown.elytra : shown.back, alt: 'Rückansicht von Mr_L0tl', cols: 1, cells: [], capeView: true, elytraView: false, name: '' };
+if (customShown && customShown.img) back.image = wear === 'elytra' ? NONE.elytra : NONE.back;
+
+var segBase = 'height: 26px; padding: 0 11px; border: 0; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; ';
+var segOn = segBase + 'color: #ecc6f2; background: linear-gradient(135deg, rgba(236, 72, 153, 0.16), rgba(139, 92, 246, 0.16)); box-shadow: inset 0 0 0 1px rgba(214, 140, 230, 0.14)';
+var segOff = segBase + 'color: #8a8a8a; background: transparent';
+var segBig = 'height: 30px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600; ';
+
+// Editor
+var d = s.dialog;
+var R = this.RES()[s.edRes || 0];
+var cols = R[0], rows = R[1];
+var px = s.edPx || [];
+var cell = Math.floor(430 / rows);
+var gap = rows <= 16 ? 1 : 0;
+function paint(i) {
+var p = (self.state.edPx || []).slice();
+var tool = self.state.edTool;
+if (tool === 'move') return;
+if (tool === 'pick') { if (p[i]) self.setState({ edColor: p[i], edTool: 'pen' }); return; }
+if (tool === 'fill') {
+var target = p[i], col = self.state.edColor;
+if (target === col) return;
+var stack = [i], seen = {};
+while (stack.length) { var k = stack.pop(); if (seen[k] || p[k] !== target) continue; seen[k] = 1; p[k] = col; var x = k % cols, y = Math.floor(k / cols); if (x > 0) stack.push(k - 1); if (x < cols - 1) stack.push(k + 1); if (y > 0) stack.push(k - cols); if (y < rows - 1) stack.push(k + cols); }
+self.setState({ edPx: p }); return;
+}
+var v = tool === 'eraser' ? '' : self.state.edColor;
+if (p[i] === v) return;
+p[i] = v; self.setState({ edPx: p });
+}
+function idx(e) { var a = e.target && e.target.getAttribute ? e.target.getAttribute('data-i') : null; return a === null ? -1 : parseInt(a, 10); }
+var PALETTE = ['#ffffff', '#d9d9d9', '#8a8a8a', '#3a3a3a', '#111111', '#f9a8d4', '#ec4899', '#db2777', '#a78bfa', '#7c3aed', '#38bdf8', '#2563eb', '#4ade80', '#16a34a', '#f59e0b', '#ef4444', '#7c4a2d'];
+var color = s.edColor || '#ffffff';
+var TOOLS = [['pen', 'Stift'], ['eraser', 'Radierer'], ['fill', 'Füllen'], ['pick', 'Farbe aufnehmen'], ['move', 'Bild verschieben und zoomen']];
+var isPixel = s.edMode !== 'file';
+var hasImg = !!s.edImg;
+function save() {
+var name = (self.state.edName || '').trim() || 'Eigenes Cape';
+var id = 'c' + Date.now();
+var entry = isPixel ? { id: id, name: name, cols: cols, rows: rows, px: (self.state.edPx || []).slice() } : { id: id, name: name, img: self.state.edImg };
+self.setState({ custom: (self.state.custom || []).concat([entry]), axo: id, see: 'axo', dialog: null });
+}
+var ed = Object.assign(this.cellsOf(px, cols, rows), {
+isPixel: isPixel, isFile: !isPixel,
+pixelPressed: isPixel ? 'true' : 'false', filePressed: isPixel ? 'false' : 'true',
+pixelStyle: isPixel ? segOn.replace(segBase, segBig) : segOff.replace(segBase, segBig),
+fileStyle: !isPixel ? segOn.replace(segBase, segBig) : segOff.replace(segBase, segBig),
+modePixel: function () { self.setState({ edMode: 'pixel' }); },
+modeFile: function () { self.setState({ edMode: 'file' }); },
+tools: TOOLS.map(function (t) { var on = (s.edTool || 'pen') === t[0]; return { label: t[1], pressed: on ? 'true' : 'false', isPen: t[0] === 'pen', isEraser: t[0] === 'eraser', isFill: t[0] === 'fill', isPick: t[0] === 'pick', isMove: t[0] === 'move', style: 'height: 36px; padding: 0; border: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; ' + (on ? 'color: #ffffff; background: linear-gradient(135deg, #db2777, #7c3aed)' : 'color: #a3a3a3; background: #2c2c2c'), pick: function () { self.setState({ edTool: t[0] }); } }; }),
+palette: PALETTE.map(function (c) { var on = c === color; return { label: 'Farbe ' + c, pressed: on ? 'true' : 'false', style: 'aspect-ratio: 1; padding: 0; border: 0; border-radius: 6px; cursor: pointer; background: ' + c + '; box-shadow: ' + (on ? '0 0 0 2px #2a2a2a, 0 0 0 4px #ecc6f2' : 'inset 0 0 0 1px rgba(255,255,255,0.12)'), pick: function () { self.setState({ edColor: c, edTool: self.state.edTool === 'eraser' || self.state.edTool === 'pick' ? 'pen' : self.state.edTool }); } }; }),
+color: color, onColor: function (e) { self.setState({ edColor: e.target.value, edTool: 'pen' }); },
+currentSwatch: 'width: 18px; height: 18px; border-radius: 5px; background: ' + color + '; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15)',
+res: String(s.edRes || 0),
+onRes: function (e) {
+var n = parseInt(e.target.value, 10); var NR = self.RES()[n]; var old = self.state.edPx || [];
+var np = [];
+for (var y = 0; y < NR[1]; y++) for (var x = 0; x < NR[0]; x++) { var ox = Math.floor(x * cols / NR[0]), oy = Math.floor(y * rows / NR[1]); np.push(old[oy * cols + ox] || ''); }
+self.setState({ edRes: n, edPx: np });
+},
+importImage: function () {},
+clear: function () { self.setState({ edPx: px.map(function () { return ''; }) }); },
+canvasStyle: 'display: grid; grid-template-columns: repeat(' + cols + ', ' + cell + 'px); grid-auto-rows: ' + cell + 'px; gap: ' + gap + 'px; padding: ' + gap + 'px; background: ' + (gap ? '#333333' : '#2a2a2a') + '; border-radius: 4px; box-shadow: 0 12px 30px rgba(0,0,0,0.4)',
+cells: px.map(function (c, i) { return { i: i, s: 'display: block; background: ' + (c || ((i % cols + Math.floor(i / cols)) % 2 ? '#2b2b2b' : '#262626')) }; }),
+canvasHint: (s.edTool === 'move' ? 'Importiere ein Bild oder male etwas, um es zu verschieben' : 'Klicken und ziehen zum Malen'),
+down: function (e) { var i = idx(e); if (i < 0) return; if (e.preventDefault) e.preventDefault(); self.painting = true; paint(i); },
+over: function (e) { if (!self.painting) return; var i = idx(e); if (i >= 0 && self.state.edTool !== 'fill' && self.state.edTool !== 'pick') paint(i); },
+up: function () { self.painting = false; },
+capePressed: (s.edView || 'cape') === 'cape' ? 'true' : 'false', elytraPressed: s.edView === 'elytra' ? 'true' : 'false',
+capeStyle: (s.edView || 'cape') === 'cape' ? segOn : segOff, elytraStyle: s.edView === 'elytra' ? segOn : segOff,
+viewCape: function () { self.setState({ edView: 'cape' }); }, viewElytra: function () { self.setState({ edView: 'elytra' }); },
+capeView: (s.edView || 'cape') === 'cape', elytraView: s.edView === 'elytra',
+showGrid: isPixel, showUpload: !isPixel && hasImg, showEmpty: !isPixel && !hasImg,
+upImg: s.edImg || '',
+fileTitle: hasImg ? s.edFile : 'Cape-Datei auswählen oder hierher ziehen',
+fileSub: hasImg ? 'Klicken, um eine andere Datei zu wählen' : 'PNG im Cape-Format · die Vorschau zeigt Cape und Elytra',
+onFile: function (e) {
+var fl = e.target.files && e.target.files[0]; if (!fl) return;
+var r = new FileReader();
+r.onload = function () { self.setState({ edImg: r.result, edFile: fl.name, edName: self.state.edName || fl.name.replace(/\.png$/i, '') }); };
+r.readAsDataURL(fl);
+},
+name: s.edName || '', onName: function (e) { self.setState({ edName: e.target.value }); },
+footer: isPixel ? 'Tipp: Mit der Pipette übernimmst du eine Farbe direkt von der Leinwand.' : 'Die Datei wird geprüft, bevor das Cape für andere sichtbar wird.',
+disabled: !isPixel && !hasImg,
+save: save
+});
+
+return {
+groups: groups, mcName: mcName, axoName: axoName, back: back,
+viewHint: see === 'axo' ? 'So sehen dich andere AxoClient-Spieler' : 'So sehen dich Spieler ohne AxoClient',
+viewAxoPressed: see === 'axo' ? 'true' : 'false', viewMcPressed: see === 'mc' ? 'true' : 'false',
+viewAxoStyle: see === 'axo' ? segOn : segOff, viewMcStyle: see === 'mc' ? segOn : segOff,
+showAxo: function () { self.setState({ see: 'axo' }); }, showMc: function () { self.setState({ see: 'mc' }); },
+capePressed: wear === 'cape' ? 'true' : 'false', elytraPressed: wear === 'elytra' ? 'true' : 'false',
+capeTabStyle: wear === 'cape' ? segOn : segOff, elytraTabStyle: wear === 'elytra' ? segOn : segOff,
+showCape: function () { self.setState({ wear: 'cape' }); },
+showElytra: function () { self.setState({ wear: 'elytra' }); },
+countLabel: (1 + AXO.length + custom.length) + ' Capes',
+hasDialog: !!d, dlg: { editor: d === 'editor' },
+backdrop: function (e) { if (e.target === e.currentTarget) self.setState({ dialog: null }); },
+closeDialog: function () { self.setState({ dialog: null }); },
+openEditor: function () { self.setState(Object.assign(self.freshEditor('pixel'), { dialog: 'editor' })); },
+ed: ed
+};
+}
+}
+</script>
+</body>
+</html>
