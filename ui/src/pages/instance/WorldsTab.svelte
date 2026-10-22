@@ -133,7 +133,7 @@
     <div class="grow"></div>
     <button class="btn btn-tool square" aria-label={t('worlds.openFolder')} title={t('worlds.openFolder')} onclick={() => call('shell.openFolder', { kind: 'instanceSub', id: instanceId, sub: 'saves' })}><Icon name="folder" /></button>
     <button class="btn btn-tool square" class:pressed={showBackups} onclick={() => (showBackups = !showBackups)} aria-pressed={showBackups} aria-label={t('worlds.backups', { count: backups.length })} title={t('worlds.backups', { count: backups.length })}><Icon name="archive" /></button>
-    <button class="btn btn-grad" style="height: 36px" onclick={pickImport}><Icon name="import" stroke={1.8} />{t('worlds.import')}</button>
+    <button class="btn btn-tool" onclick={pickImport}><Icon name="import" stroke={1.8} />{t('worlds.import')}</button>
   </div>
 
   {#if showBackups}
@@ -170,7 +170,7 @@
             <button class="icon-btn small" aria-label={t('worlds.openFolder')} title={t('common.openFolder')} onclick={() => call('shell.openFolder', { kind: 'world', id: instanceId, sub: w.folder })}><Icon name="folder" size={14} /></button>
             <button class="icon-btn small" aria-label={t('worlds.deleteNamed', { name: w.name })} title={t('common.delete')} onclick={() => remove(w)}><Icon name="trash" size={14} /></button>
             <div class="grow"></div>
-            <button class="btn btn-green sm play" onclick={() => app.launch(instanceId, { world: w.folder })}><Icon name="play" size={12} />{t('common.play')}</button>
+            <button class="btn btn-second sm play" onclick={() => app.launch(instanceId, { world: w.folder })}><Icon name="play" size={12} />{t('common.play')}</button>
           </div>
         </article>
       {/each}

@@ -66,7 +66,6 @@
     font-weight: 700;
     cursor: pointer;
     overflow: hidden;
-    box-shadow: 0 8px 24px color-mix(in srgb, color-mix(in srgb, var(--accent-from) 50%, var(--accent-to)) 30%, transparent);
     transition: filter 0.12s ease, transform 0.12s ease;
   }
   .play.compact {
@@ -85,12 +84,10 @@
   }
   .play.busy {
     background: #3a3a3a;
-    box-shadow: none;
   }
   .play.running {
-    background: var(--green-bg);
-    color: var(--green);
-    box-shadow: none;
+    background: var(--panel-4);
+    color: var(--text-strong);
   }
   .fill {
     position: absolute;

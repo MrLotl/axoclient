@@ -170,11 +170,11 @@
                 {#if state === 'done'}
                   <span class="installed"><Icon name="check" size={13} />{installedProjects.has(p.id) ? t('content.installed') : t('content.added')}</span>
                 {:else if state === 'busy'}
-                  <button class="btn btn-grad sm" disabled><span class="spinner"></span>{t('content.installingShort')}</button>
+                  <button class="btn btn-second sm" disabled><span class="spinner"></span>{t('content.installingShort')}</button>
                 {:else}
                   <div class="split">
-                    <button class="btn btn-grad sm" onclick={() => install(p)}><Icon name="download" size={13} stroke={1.8} />{t('content.install')}</button>
-                    <button class="btn btn-grad sm more" aria-label={t('content.versions')} aria-expanded={versionsFor === p.id} onclick={() => openVersions(p)}><Icon name="chevronDown" size={13} /></button>
+                    <button class="btn btn-second sm" onclick={() => install(p)}><Icon name="download" size={13} stroke={1.8} />{t('content.install')}</button>
+                    <button class="btn btn-second sm more" aria-label={t('content.versions')} aria-expanded={versionsFor === p.id} onclick={() => openVersions(p)}><Icon name="chevronDown" size={13} /></button>
                   </div>
                   {#if versionsFor === p.id}
                     <div class="menu versions" role="menu">
@@ -386,12 +386,11 @@
     position: relative;
     flex-shrink: 0;
   }
-  /* Ein durchgehender Verlauf über beide Teile, getrennt nur durch eine feine Linie */
+  /* Ein durchgehender Button aus zwei Teilen, getrennt nur durch eine feine Linie */
   .split {
     display: flex;
     border-radius: 8px;
-    background: var(--accent);
-    box-shadow: var(--accent-shadow);
+    background: var(--panel-4);
     overflow: hidden;
   }
   .split .btn {
@@ -406,7 +405,7 @@
   .split .more {
     width: 28px;
     padding: 0;
-    border-left: 1px solid rgba(255, 255, 255, 0.22);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
   }
   .versions {
     position: absolute;

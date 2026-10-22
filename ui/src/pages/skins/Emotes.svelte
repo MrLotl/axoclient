@@ -157,7 +157,7 @@
     <div class="head">
       <span class="section-label">{t('emotes.own', { count: imported.length })}</span>
       <div class="grow"></div>
-      <button class="btn btn-grad sm" disabled={importing} onclick={pick}>
+      <button class="btn btn-tool" disabled={importing} onclick={pick}>
         {#if importing}<span class="spinner"></span>{:else}<Icon name="upload" size={14} stroke={1.8} />{/if}{t('emotes.import')}
       </button>
     </div>
@@ -166,7 +166,7 @@
         <span class="empty-icon"><Icon name="upload" size={22} /></span>
         <strong>{t('emotes.emptyTitle')}</strong>
         <p>{t('emotes.emptyText')}</p>
-        <button class="btn btn-grad" disabled={importing} onclick={pick}>{t('emotes.import')}</button>
+        <button class="btn btn-second" disabled={importing} onclick={pick}>{t('emotes.import')}</button>
       </div>
     {:else}
       <div class="grid">

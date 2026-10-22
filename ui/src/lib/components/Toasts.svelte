@@ -10,7 +10,7 @@
       <span class="icon"><Icon name={toast.kind === 'error' ? 'warning' : toast.kind === 'success' ? 'check' : 'info'} size={15} /></span>
       <span class="text">{toast.text}</span>
       {#if toast.action}
-        <button class="btn btn-grad sm" onclick={() => { toast.action!.run(); app.dismissToast(toast.id); }}>{toast.action.label}</button>
+        <button class="btn btn-second sm" onclick={() => { toast.action!.run(); app.dismissToast(toast.id); }}>{toast.action.label}</button>
       {/if}
       <button class="icon-btn flat" style="width:26px;height:26px" aria-label={t('common.close')} onclick={() => app.dismissToast(toast.id)}><Icon name="x" size={12} /></button>
     </div>

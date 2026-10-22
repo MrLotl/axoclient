@@ -36,7 +36,6 @@
   --faint: #6b6b6b;
   --green: #3fb950;
   --green-bg: #263b2c;
-  --green-bg-hover: #2f4d37;
   --red: #f47067;
   --red-soft: rgba(244, 112, 103, 0.14);
   --yellow: #e3b341;
@@ -88,11 +87,9 @@ input[type="range"]:focus-visible { outline: 2px solid var(--focus) !important; 
 .btn-flat:not(:disabled):hover { background: #333333; color: var(--text); }
 .btn-second { background: var(--panel-4); color: var(--text-strong); font-weight: 600; transition: background-color .12s ease; }
 .btn-second:not(:disabled):hover { background: #444444; }
-.btn-grad { background: var(--accent); color: #ffffff; font-weight: 600; box-shadow: var(--accent-shadow); transition: filter .12s ease, opacity .12s ease; }
+/* Nur für die wichtigste Aktion eines Bereichs (Spielen, Speichern/Bestätigen im Dialog). Alles andere bleibt neutral. */
+.btn-grad { background: var(--accent); color: #ffffff; font-weight: 600; transition: filter .12s ease, opacity .12s ease; }
 .btn-grad:not(:disabled):hover { filter: brightness(1.12); }
-.btn-grad:disabled { box-shadow: none; }
-.btn-green { background: var(--green-bg); color: var(--green); font-weight: 600; transition: background-color .12s ease; }
-.btn-green:not(:disabled):hover { background: var(--green-bg-hover); }
 .btn-danger { background: transparent; color: var(--red); transition: background-color .12s ease; }
 .btn-danger:not(:disabled):hover { background: var(--red-soft); }
 .btn-tool { height: 36px; padding: 0 14px; border-radius: 8px; background: var(--panel); color: var(--text-2); font-size: 13px; font-weight: 500; }
@@ -102,8 +99,6 @@ input[type="range"]:focus-visible { outline: 2px solid var(--focus) !important; 
 .icon-btn:not(:disabled):hover { background: #3a3a3a; }
 .icon-btn.flat { background: transparent; color: var(--muted); }
 .icon-btn.flat:not(:disabled):hover { background: #3a3a3a; color: var(--text); }
-.icon-btn.green { background: var(--green-bg); color: var(--green); }
-.icon-btn.green:not(:disabled):hover { background: var(--green-bg-hover); }
 .icon-btn.trash { background: #3a3a3a; color: var(--muted); }
 .icon-btn.trash:not(:disabled):hover { background: #4a2a2a; color: #ff8a80; }
 .icon-btn:disabled { opacity: 0.4; cursor: default; }

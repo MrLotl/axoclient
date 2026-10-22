@@ -58,7 +58,7 @@
     <div class="grow"></div>
     <button class="btn btn-tool" onclick={() => app.navigate({ page: 'modpacks' })}><Icon name="download" />{t('instances.modpacks')}</button>
     <button class="btn btn-tool" onclick={importFile}><Icon name="import" />{t('instances.import')}</button>
-    <button class="btn btn-grad" style="height: 36px" onclick={() => app.navigate({ page: 'instanceCreate' })}><Icon name="plus" stroke={1.8} />{t('instances.new')}</button>
+    <button class="btn btn-tool" onclick={() => app.navigate({ page: 'instanceCreate' })}><Icon name="plus" stroke={1.8} />{t('instances.new')}</button>
   </div>
 
   {#if app.instances.length === 0}
@@ -67,7 +67,7 @@
       <h2>{t('instances.emptyTitle')}</h2>
       <p>{t('instances.emptyText')}</p>
       <div class="row">
-        <button class="btn btn-grad" onclick={() => app.navigate({ page: 'instanceCreate' })}><Icon name="plus" />{t('instances.new')}</button>
+        <button class="btn btn-second" onclick={() => app.navigate({ page: 'instanceCreate' })}><Icon name="plus" />{t('instances.new')}</button>
         <button class="btn btn-second" onclick={() => app.navigate({ page: 'modpacks' })}><Icon name="download" />{t('instances.browseModpacks')}</button>
       </div>
     </div>

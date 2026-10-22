@@ -205,7 +205,7 @@
     <button class="btn btn-tool" onclick={() => (dialog = 'updates')}>
       <Icon name="refresh" />{updates.length ? t('content.updatesCount', { count: updates.length }) : t('content.checkUpdates')}
     </button>
-    <button class="btn btn-grad" style="height: 36px" disabled={addBlocked} title={addBlocked ? t('content.modLock.full') : undefined} onclick={() => (dialog = 'add')}><Icon name="plus" stroke={1.8} />{t(`content.${key}.add`)}</button>
+    <button class="btn btn-tool" disabled={addBlocked} title={addBlocked ? t('content.modLock.full') : undefined} onclick={() => (dialog = 'add')}><Icon name="plus" stroke={1.8} />{t(`content.${key}.add`)}</button>
   </div>
 
   {#if loaded && items.length === 0}
@@ -213,7 +213,7 @@
       <span class="empty-icon"><Icon name={type === 'mod' ? 'puzzle' : type === 'resourcePack' ? 'image' : 'sun'} size={22} /></span>
       <h2>{t(`content.${key}.emptyTitle`)}</h2>
       <p>{t(`content.${key}.emptyText`)}</p>
-      <button class="btn btn-grad" disabled={addBlocked} onclick={() => (dialog = 'add')}><Icon name="plus" />{t(`content.${key}.add`)}</button>
+      <button class="btn btn-second" disabled={addBlocked} onclick={() => (dialog = 'add')}><Icon name="plus" />{t(`content.${key}.add`)}</button>
     </div>
   {:else if view === 'grid'}
     <div class="grid" style="--k: {size}">

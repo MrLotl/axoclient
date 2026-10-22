@@ -84,7 +84,7 @@
     <div class="grow"></div>
     {#if tab === 'skins'}
       <button class="btn btn-tool" onclick={() => (dialog = 'adopt')}><Icon name="user" />{t('skins.adopt')}</button>
-      <button class="btn btn-grad" style="height: 36px" onclick={() => (dialog = 'upload')}><Icon name="upload" stroke={1.8} />{t('skins.upload')}</button>
+      <button class="btn btn-tool" onclick={() => (dialog = 'upload')}><Icon name="upload" stroke={1.8} />{t('skins.upload')}</button>
     {/if}
   </div>
 
@@ -115,7 +115,7 @@
                 <span class="sub">{s.model === 'slim' ? 'Slim' : 'Classic'}{s.player ? ` · ${t('skins.fromPlayer')}` : ''}</span>
               </div>
               <div class="actions">
-                <button class="btn {s.active ? 'btn-ghost' : 'btn-grad'} sm grow" disabled={s.active || applying !== null} onclick={() => apply(s)}>
+                <button class="btn {s.active ? 'btn-ghost' : 'btn-second'} sm grow" disabled={s.active || applying !== null} onclick={() => apply(s)}>
                   {#if applying === s.id}<span class="spinner"></span>{/if}{s.active ? t('skins.active') : t('skins.use')}
                 </button>
                 <button class="icon-btn small" aria-label={t('skins.editNamed', { name: s.name })} title={t('common.edit')} onclick={() => (dialog = { edit: s })}><Icon name="edit" size={14} /></button>

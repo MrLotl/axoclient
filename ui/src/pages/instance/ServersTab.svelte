@@ -145,7 +145,7 @@
     <span class="summary">{t('servers.count', { count: servers.length })}</span>
     <div class="grow"></div>
     <button class="btn btn-tool" onclick={() => load()}><Icon name="refresh" />{t('servers.refresh')}</button>
-    <button class="btn btn-grad" style="height: 36px" onclick={() => edit(null)}><Icon name="plus" stroke={1.8} />{t('servers.add')}</button>
+    <button class="btn btn-tool" onclick={() => edit(null)}><Icon name="plus" stroke={1.8} />{t('servers.add')}</button>
   </div>
   <div class="list" bind:this={listEl} class:dragging={drag?.active} class:settling>
     {#each shown as s, i (s.index)}
@@ -178,7 +178,7 @@
           <button class="icon-btn small" aria-label={t('common.send')} title={t('common.send')} onclick={() => (app.dialog = { kind: 'share', data: { mode: 'server', server: { name: s.name, address: s.address } } })}><Icon name="send" size={14} /></button>
           <button class="icon-btn small" aria-label={t('common.edit')} title={t('common.edit')} onclick={() => edit(s)}><Icon name="edit" size={14} /></button>
           <button class="icon-btn small trash" aria-label={t('servers.removeNamed', { name: s.name })} onclick={() => remove(s)}><Icon name="trash" size={14} /></button>
-          <button class="btn btn-green sm" onclick={() => app.launch(instanceId, { server: s.address })}><Icon name="play" size={12} />{t('common.join')}</button>
+          <button class="btn btn-second sm" onclick={() => app.launch(instanceId, { server: s.address })}><Icon name="play" size={12} />{t('common.join')}</button>
         </div>
       </div>
     {:else}

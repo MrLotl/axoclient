@@ -39,7 +39,7 @@
             <span class="name truncate">{f.name}</span>
             <span class="status">{t('friends.wantsToBeFriends')}</span>
           </div>
-          <button class="icon-btn green" aria-label={t('friends.accept', { name: f.name })} title={t('friends.acceptShort')} onclick={() => act('social.accept', f.uuid)}>
+          <button class="icon-btn" aria-label={t('friends.accept', { name: f.name })} title={t('friends.acceptShort')} onclick={() => act('social.accept', f.uuid)}>
             <Icon name="check" size={14} />
           </button>
           <button class="icon-btn trash" aria-label={t('friends.decline', { name: f.name })} title={t('friends.declineShort')} onclick={() => act('social.decline', f.uuid)}>
@@ -69,7 +69,7 @@
             </span>
           </button>
           {#if f.join}
-            <button class="icon-btn green" aria-label={t('friends.join', { name: f.name })} title={t('friends.joinShort')} onclick={() => app.joinAddress(f.join!)}>
+            <button class="icon-btn" aria-label={t('friends.join', { name: f.name })} title={t('friends.joinShort')} onclick={() => app.joinAddress(f.join!)}>
               <Icon name="play" />
             </button>
           {/if}

@@ -74,7 +74,7 @@
         {:else}
           <div class="row">
             {#if friend.join}
-              <button class="btn btn-green" onclick={() => { onclose(); app.joinAddress(friend.join!); }}><Icon name="play" size={13} />{t('friends.joinShort')}</button>
+              <button class="btn btn-second" onclick={() => { onclose(); app.joinAddress(friend.join!); }}><Icon name="play" size={13} />{t('friends.joinShort')}</button>
             {/if}
             <button class="btn btn-second" onclick={invite}><Icon name="send" size={14} stroke={1.6} />{t('friends.invite')}</button>
             <div class="grow"></div>

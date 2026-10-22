@@ -125,7 +125,7 @@
     <div class="grow"></div>
     <button class="btn btn-tool" style="width: 36px; padding: 0" aria-label={t('localServers.openRoot')} title={t('localServers.openRoot')} onclick={() => call('shell.openFolder', { kind: 'servers' })}><Icon name="folder" /></button>
     <button class="btn btn-tool" onclick={importServer}><Icon name="import" />{t('localServers.import.button')}</button>
-    <button class="btn btn-grad" style="height: 36px" onclick={create}><Icon name="plus" stroke={1.8} />{t('localServers.create')}</button>
+    <button class="btn btn-tool" onclick={create}><Icon name="plus" stroke={1.8} />{t('localServers.create')}</button>
   </div>
 
   <div class="grid scroll">
@@ -186,7 +186,7 @@
           {#if s.players.length}<div class="players">{#each s.players as p (p)}<span class="chip">{p}</span>{/each}</div>{/if}
 
           <div class="actions">
-            <button class="btn {s.running ? 'btn-second' : 'btn-green'} sm" disabled={!!job} onclick={() => toggle(s)}>
+            <button class="btn {s.running ? 'btn-ghost' : 'btn-second'} sm" disabled={!!job} onclick={() => toggle(s)}>
               {#if job}<span class="spinner dark"></span>{:else}<Icon name={s.running ? 'stop' : 'play'} size={12} />{/if}
               {s.running ? t('common.stop') : t('common.start')}
             </button>
@@ -287,8 +287,8 @@
     height: 116px;
     margin-bottom: 26px;
     background:
-      radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent-from) 32%, transparent), transparent 60%),
-      radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--accent-to) 28%, transparent), transparent 60%),
+      radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent-from) 18%, transparent), transparent 60%),
+      radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--accent-to) 14%, transparent), transparent 60%),
       #2a2a2a;
   }
   .cover-img {

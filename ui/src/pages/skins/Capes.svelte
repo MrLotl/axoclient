@@ -183,7 +183,7 @@
             <span class="cape-name truncate">{c.name}</span>
             <span class="st {c.status}" title={c.reason ?? ''}>{c.active ? t('skins.active') : status(c)}</span>
             {#if c.status === 'approved'}
-              <button class="btn btn-grad sm full" disabled={c.active} onclick={() => setAxo('custom', c.id)}>{c.active ? t('skins.active') : t('skins.use')}</button>
+              <button class="btn {c.active ? 'btn-ghost' : 'btn-second'} sm full" disabled={c.active} onclick={() => setAxo('custom', c.id)}>{c.active ? t('skins.active') : t('skins.use')}</button>
             {:else if c.status === 'pending'}
               <button class="btn btn-ghost sm full" onclick={() => withdraw(c)}>{t('capes.withdraw')}</button>
             {:else}

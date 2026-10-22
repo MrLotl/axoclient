@@ -96,7 +96,7 @@
           <span class="meta truncate">{s.address}{st?.online ? ` · ${t('servers.players', { online: st.players.toLocaleString('de-DE'), max: st.maxPlayers.toLocaleString('de-DE') })}` : ''}</span>
         </div>
         <PingBars ms={st?.latencyMs ?? null} offline={st !== undefined && st !== null && !st.online} />
-        <button class="icon-btn green" aria-label={t('servers.joinNamed', { name: s.name })} title={t('common.join')} onclick={() => instanceId && app.launch(instanceId, { server: s.address })}>
+        <button class="icon-btn" aria-label={t('servers.joinNamed', { name: s.name })} title={t('common.join')} onclick={() => instanceId && app.launch(instanceId, { server: s.address })}>
           <Icon name="play" size={14} />
         </button>
       </div>

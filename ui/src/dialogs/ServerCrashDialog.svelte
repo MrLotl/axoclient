@@ -29,6 +29,6 @@
   </div>
   {#snippet footer()}
     <button class="btn btn-ghost" onclick={() => { onclose(); app.navigate({ page: 'console', id: `server:${crash.serverId}` }); }}>{t('localServers.openLogs')}</button>
-    <button class="btn btn-grad" onclick={onclose}>{t('common.close')}</button>
+    <button class="btn btn-second" onclick={onclose}>{t('common.close')}</button>
   {/snippet}
 </Dialog>

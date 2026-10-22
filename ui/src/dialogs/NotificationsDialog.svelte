@@ -138,7 +138,7 @@
             {#if done[item.id] !== undefined}
               <div class="row">
                 {#if item.kind === 'instance' && done[item.id]}
-                  <button class="btn btn-green sm" onclick={() => { onclose(); app.navigate({ page: 'instance', id: done[item.id]! }); }}>
+                  <button class="btn btn-second sm" onclick={() => { onclose(); app.navigate({ page: 'instance', id: done[item.id]! }); }}>
                     <Icon name="check" size={13} />{t('inbox.openInstance')}
                   </button>
                   {@const received = app.instances.find((i) => i.id === done[item.id])}
@@ -158,11 +158,11 @@
               {/if}
               <div class="row">
                 {#if item.kind === 'invite'}
-                  <button class="btn btn-green sm" onclick={() => { onclose(); app.joinAddress(item.title); discard(item); }}>
+                  <button class="btn btn-second sm" onclick={() => { onclose(); app.joinAddress(item.title); discard(item); }}>
                     <Icon name="play" size={13} />{t('common.join')}
                   </button>
                 {:else}
-                  <button class="btn btn-grad sm" disabled={busy[item.id]} onclick={() => accept(item)}>
+                  <button class="btn btn-second sm" disabled={busy[item.id]} onclick={() => accept(item)}>
                     {#if busy[item.id]}<span class="spinner"></span>{:else}<Icon name="download" size={13} stroke={1.8} />{/if}
                     {t(item.kind === 'instance' ? 'inbox.install' : 'inbox.accept')}
                   </button>
@@ -188,7 +188,7 @@
           <button class="title-btn" onclick={() => openNotification(n)}>{tr(n.text)}</button>
           {#if n.type === 'friendRequest'}
             <div class="row">
-              <button class="btn btn-grad sm" onclick={() => friendAction('social.accept', n)}>{t('friends.acceptShort')}</button>
+              <button class="btn btn-second sm" onclick={() => friendAction('social.accept', n)}>{t('friends.acceptShort')}</button>
               <button class="btn btn-flat sm" onclick={() => friendAction('social.decline', n)}>{t('friends.declineShort')}</button>
             </div>
           {/if}

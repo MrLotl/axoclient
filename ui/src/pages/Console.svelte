@@ -167,7 +167,7 @@
       <div class="command field" class:disabled={!current?.running}>
         <span class="prompt">&gt;</span>
         <input bind:value={command} onkeydown={onkey} disabled={!current?.running} placeholder={current?.running ? t('console.commandPlaceholder') : t('servers.notRunning')} spellcheck="false" aria-label={t('console.command')} />
-        <button class="btn btn-grad sm" disabled={!current?.running || !command.trim()} onclick={send}>{t('common.send')}</button>
+        <button class="btn btn-second sm" disabled={!current?.running || !command.trim()} onclick={send}>{t('common.send')}</button>
       </div>
     {/if}
   {/if}

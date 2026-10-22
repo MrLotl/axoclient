@@ -465,7 +465,7 @@
         <h2>{t('settings.sections.diagnostics')}</h2>
         <p class="intro">{t('settings.diagnostics.hint')}</p>
         <div class="row">
-          <button class="btn btn-grad" disabled={diagnosing} onclick={runDiagnostics}>
+          <button class="btn btn-second" disabled={diagnosing} onclick={runDiagnostics}>
             {#if diagnosing}<span class="spinner"></span>{:else}<Icon name="wrench" size={14} />{/if}{t('settings.diagnostics.run')}
           </button>
           {#if diagnostics}<button class="btn btn-second" onclick={copyReport}><Icon name="copy" size={14} />{t('settings.diagnostics.copy')}</button>{/if}
