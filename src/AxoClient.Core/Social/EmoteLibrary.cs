@@ -39,9 +39,9 @@ public sealed class EmoteLibrary(AppPaths paths, EventHub events)
     public const int SlotCount = 8;
 
     /// <summary>Höchstgröße der Animation (kompaktes JSON) – so viel darf der Live-Raum weiterreichen.</summary>
-    public const int MaxAnimationChars = 48_000;
+    public const int MaxAnimationChars = 200_000;
 
-    private const int MaxFileBytes = 512 * 1024;
+    private const int MaxFileBytes = 2 * 1024 * 1024;
     private const int MaxEmotes = 60;
 
     /// <summary>Eingebaute Emotes der AxoMod (ID, Name) in der Reihenfolge der Mod.</summary>

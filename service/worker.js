@@ -1449,7 +1449,7 @@ const CUSTOM_EMOTE_ID = /^c_[0-9a-f]{12}$/;
 const ANIMATION_KEY = /^[\w .:-]{1,64}$/;
 const EMOTE_INTERVAL = 800;      // höchstens so oft je Spieler
 const CUSTOM_INTERVAL = 3000;    // Emotes mit mitgeschickter Animation seltener
-const MAX_ANIM = 48000;          // Zeichen der mitgeschickten Animation (JSON-Text)
+const MAX_ANIM = 200000;         // Zeichen der mitgeschickten Animation (JSON-Text), wie EmoteLibrary.MaxAnimationChars
 const MAX_WORLD = 16000;         // Zeichen der Welt-Infos (Version, Loader, Mods)
 
 /**

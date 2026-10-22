@@ -37,6 +37,8 @@ public final class AxoLink {
 	private static final Pattern INSTANCE = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 	/** Der Launcher liest höchstens 64 KB je Nachricht. */
 	private static final int MAX_MESSAGE = 60_000;
+	/** Vom Launcher kommen auch große Emote-Animationen (bis 200 000 Zeichen, escaped deutlich mehr). */
+	private static final int MAX_INCOMING = 1024 * 1024;
 	private static final long MIN_RETRY_MS = 2_000;
 	private static final long MAX_RETRY_MS = 30_000;
 
@@ -239,7 +241,7 @@ public final class AxoLink {
 
 		@Override
 		public CompletionStage<?> onText(WebSocket ws, CharSequence data, boolean last) {
-			if (buffer.length() + data.length() <= 256 * 1024)
+			if (buffer.length() + data.length() <= MAX_INCOMING)
 				buffer.append(data);
 			if (last) {
 				String text = buffer.toString();

@@ -190,7 +190,10 @@ public sealed partial class LiveChannel(OnlineClient client) : IAsyncDisposable
         }
     }
 
-    /// <summary>Eine ganze Textnachricht (auch über mehrere Rahmen, höchstens 64 KB); <c>null</c> = Verbindung zu.</summary>
+    /// <summary>Eine ganze Textnachricht (auch über mehrere Rahmen, höchstens <see cref="MaxMessageBytes"/>); <c>null</c> = Verbindung zu.</summary>
+    /// <summary>Platz für eine Emote-Animation samt JSON-Escaping (Anführungszeichen werden zu \").</summary>
+    private const int MaxMessageBytes = 1024 * 1024;
+
     private static async Task<string?> ReceiveTextAsync(ClientWebSocket socket, CancellationToken ct)
     {
         var buffer = new byte[8192];
@@ -200,11 +203,11 @@ public sealed partial class LiveChannel(OnlineClient client) : IAsyncDisposable
             var result = await socket.ReceiveAsync(buffer, ct);
             if (result.MessageType == WebSocketMessageType.Close)
                 return null;
-            if (message.Length + result.Count <= 64 * 1024)
+            if (message.Length + result.Count <= MaxMessageBytes)
                 await message.WriteAsync(buffer.AsMemory(0, result.Count), ct);
             if (!result.EndOfMessage)
                 continue;
-            if (result.MessageType != WebSocketMessageType.Text || message.Length >= 64 * 1024)
+            if (result.MessageType != WebSocketMessageType.Text || message.Length >= MaxMessageBytes)
             {
                 message.SetLength(0);
                 continue;

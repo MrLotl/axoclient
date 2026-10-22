@@ -693,7 +693,7 @@
     "deleteNamed": "{name} löschen",
     "deleteTitle": "„{name}“ löschen?",
     "deleteText": "Das Emote verschwindet auch aus deinem Emote-Rad.",
-    "tooLarge": "Die Animation ist zu groß (höchstens 48 000 Zeichen).",
+    "tooLarge": "Die Animation ist zu groß (höchstens 200 000 Zeichen).",
     "invalidFile": "Das ist keine Animation im Bedrock-, GeckoLib- oder Emotecraft-Format.",
     "tooMany": "Es sind höchstens 60 eigene Emotes möglich.",
     "nameRequired": "Bitte gib einen Namen ein."
