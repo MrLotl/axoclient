@@ -1,0 +1,10 @@
+{
+	"required": true,
+	"package": "de.axoclient.mod.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": ["EntityRendererMixin", "HudMixin", "GameRendererMixin", "LightmapMixin", "MinecraftMixin", "PauseScreenMixin", "PlayerInfoMixin", "PlayerTabOverlayMixin"],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
+

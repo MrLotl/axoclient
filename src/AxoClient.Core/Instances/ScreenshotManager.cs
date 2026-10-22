@@ -32,7 +32,7 @@ public sealed class ScreenshotManager(AppPaths paths)
                 {
                 }
                 return new ScreenshotInfo(f.Name, f.LastWriteTime, f.Length,
-                    $"axo://screenshot/{instanceId}/{Uri.EscapeDataString(f.Name)}?v={f.LastWriteTimeUtc.Ticks % 1_000_000_007}",
+                    $"/axo/screenshot/{instanceId}/{Uri.EscapeDataString(f.Name)}?v={f.LastWriteTimeUtc.Ticks % 1_000_000_007}",
                     size?.Item1, size?.Item2);
             })
             .ToList();

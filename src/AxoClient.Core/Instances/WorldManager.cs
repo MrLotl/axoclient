@@ -64,7 +64,7 @@ public sealed class WorldManager(AppPaths paths)
         }
         var hasIcon = File.Exists(Path.Combine(dir, "icon.png"));
         return new WorldInfo(folder, name, mode, hardcore, cheats, version, lastPlayed, DirectorySize(dir),
-            hasIcon ? $"axo://world-icon/{instanceId}/{Uri.EscapeDataString(folder)}" : null);
+            hasIcon ? $"/axo/world-icon/{instanceId}/{Uri.EscapeDataString(folder)}" : null);
     }
 
     public string? IconPath(string instanceId, string folder)
@@ -149,6 +149,62 @@ public sealed class WorldManager(AppPaths paths)
                 await source.CopyToAsync(file, job.Token);
             }
             job.Report((double)++done / count);
+        }
+        return target;
+    }
+
+    /// <summary>
+    /// Welt aus einer ZIP übernehmen (Download oder Export). Die Welt ist der Ordner mit der obersten
+    /// <c>level.dat</c>; gibt es den Namen schon, landet sie unter neuem Namen daneben.
+    /// </summary>
+    public async Task<string> ImportAsync(string instanceId, string zipPath, JobContext job)
+    {
+        var saves = SavesDir(instanceId);
+        Directory.CreateDirectory(saves);
+        using var zip = ZipFile.OpenRead(zipPath);
+        var levelDat = zip.Entries.Where(e => e.FullName.Replace('\\', '/').Split('/')[^1] == "level.dat")
+            .MinBy(e => e.FullName.Count(c => c == '/')) ?? throw new AxoException("worlds.importNoWorld");
+        var prefix = levelDat.FullName.Replace('\\', '/')[..^"level.dat".Length];
+        var name = prefix.TrimEnd('/').Split('/')[^1] is { Length: > 0 } folder ? folder : Path.GetFileNameWithoutExtension(zipPath);
+        name = string.Concat(name.Split(Path.GetInvalidFileNameChars())).Trim().TrimEnd('.') is { Length: > 0 } clean ? clean : "Welt";
+        var target = name;
+        for (var i = 2; Directory.Exists(Path.Combine(saves, target)); i++)
+            target = $"{name} ({i})";
+
+        var entries = zip.Entries.Where(e => e.FullName.Replace('\\', '/').StartsWith(prefix, StringComparison.Ordinal)).ToList();
+        var done = 0;
+        try
+        {
+            foreach (var entry in entries)
+            {
+                job.Token.ThrowIfCancellationRequested();
+                var relative = entry.FullName.Replace('\\', '/')[prefix.Length..];
+                if (relative.Length == 0)
+                    continue;
+                var path = PathGuard.Combine(saves, target + "/" + relative.TrimEnd('/'));
+                if (relative.EndsWith('/'))
+                    Directory.CreateDirectory(path);
+                else
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    await using var source = entry.Open();
+                    await using var file = File.Create(path);
+                    await source.CopyToAsync(file, job.Token);
+                }
+                job.Report((double)++done / entries.Count);
+            }
+        }
+        catch
+        {
+            // Halbe Welt nicht liegen lassen
+            try
+            {
+                Directory.Delete(Path.Combine(saves, target), recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+            throw;
         }
         return target;
     }

@@ -6,8 +6,15 @@
     <RootNamespace>AxoClient.App</RootNamespace>
     <ApplicationIcon>Assets\axoclient.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <UiDir>$(MSBuildProjectDirectory)\..\..\ui</UiDir>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Photino.NET" Version="4.0.16" />
@@ -18,15 +25,27 @@
   </ItemGroup>
 
   <!-- Die Svelte-Oberfläche wird von Vite nach wwwroot gebaut und als Ressource eingebettet.
-       So liefert das Fenster nur mitgelieferte Dateien aus (Sicherheit: keine fremden Seiten). -->
-  <Target Name="BuildUi" BeforeTargets="BeforeBuild" Condition="'$(SkipUi)' != 'true' And ('$(Configuration)' == 'Release' Or !Exists('wwwroot\index.html'))">
+       So liefert das Fenster nur mitgelieferte Dateien aus (Sicherheit: keine fremden Seiten).
+       Inkrementell: Vite läuft nur, wenn sich etwas unter ui/ geändert hat. -->
+  <ItemGroup>
+    <UiSource Include="$(UiDir)\src\**\*;$(UiDir)\public\**\*;$(UiDir)\index.html;$(UiDir)\package.json;$(UiDir)\vite.config.ts" />
+    <!-- Damit Visual Studio/Rider den Build nicht als "aktuell" überspringen, wenn sich nur die Oberfläche geändert hat -->
+    <UpToDateCheckInput Include="@(UiSource)" />
+    <UpToDateCheckInput Include="wwwroot\**\*" />
+  </ItemGroup>
+
+  <Target Name="BuildUi" BeforeTargets="BeforeBuild" Condition="'$(SkipUi)' != 'true'"
+          Inputs="@(UiSource)" Outputs="wwwroot\index.html">
     <Exec Command="npm ci" WorkingDirectory="$(UiDir)" Condition="!Exists('$(UiDir)\node_modules')" />
     <Exec Command="npm run build" WorkingDirectory="$(UiDir)" />
+    <!-- Vite schreibt index.html evtl. mit gleichem Inhalt; Zeitstempel setzen, damit Inputs/Outputs stimmen -->
+    <Touch Files="wwwroot\index.html" />
   </Target>
 
   <Target Name="EmbedUi" BeforeTargets="PrepareForBuild" AfterTargets="BuildUi">
     <ItemGroup>
-      <EmbeddedResource Include="wwwroot\**\*" LogicalName="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" />
+      <_UiFile Include="wwwroot\**\*" />
+      <EmbeddedResource Include="@(_UiFile)" LogicalName="$([System.String]::Copy('wwwroot/%(_UiFile.RecursiveDir)%(_UiFile.Filename)%(_UiFile.Extension)').Replace('\', '/'))" />
     </ItemGroup>
   </Target>
 

@@ -19,6 +19,12 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
 
     public static string ProcessKey(string id) => "instance:" + id;
 
+    public IReadOnlyList<string> Ids() =>
+        Directory.Exists(paths.Instances)
+            ? Directory.EnumerateDirectories(paths.Instances).Select(Path.GetFileName).OfType<string>()
+                .Where(id => Text.IsValidId(id) && File.Exists(paths.InstanceJson(id))).ToList()
+            : [];
+
     public async Task<IReadOnlyList<Instance>> LoadAllAsync(CancellationToken ct = default)
     {
         if (!Directory.Exists(paths.Instances))
@@ -76,10 +82,10 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
         var hasBanner = instance.Images.Banner != null && File.Exists(Path.Combine(paths.Instance(instance.Id), instance.Images.Banner));
         var version = ImageVersion(instance.Id);
         return new InstanceSummary(instance.Id, instance.Name, instance.Minecraft.Version, instance.Loader.Type,
-            instance.Loader.Version, $"axo://instance-icon/{instance.Id}?v={version}",
-            hasBanner && !instance.Images.BannerAuto ? $"axo://instance-banner/{instance.Id}?v={version}" : null,
+            instance.Loader.Version, $"/axo/instance-icon/{instance.Id}?v={version}",
+            hasBanner && !instance.Images.BannerAuto ? $"/axo/instance-banner/{instance.Id}?v={version}" : null,
             hasIcon, playtime.LastPlayed, playtime.TotalSeconds, processes.Get(ProcessKey(instance.Id)) != null, modCount,
-            instance.CreatedAt);
+            instance.CreatedAt, instance.ModLock.Level);
     }
 
     private long ImageVersion(string id)
@@ -145,6 +151,7 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
         copy.JavaArgs = source.JavaArgs;
         copy.Minecraft = source.Minecraft;
         copy.AxoMod = source.AxoMod;
+        copy.ModLock = new ModLock { Level = source.ModLock.Level, PackMods = [.. source.ModLock.PackMods] };
         copy.Origin.CopiedFrom = sourceId;
 
         var from = paths.GameDir(sourceId);

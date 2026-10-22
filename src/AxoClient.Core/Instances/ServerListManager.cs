@@ -25,7 +25,7 @@ public sealed class ServerListManager(AppPaths paths)
     {
         var icon = c.Get<string>("icon");
         return new ServerEntry(index, Text.Clean(c.Get<string>("name"), 80), Text.Clean(c.Get<string>("ip"), 255),
-            icon is { Length: > 0 } ? $"axo://server-icon/{instanceId}/{index}" : null,
+            icon is { Length: > 0 } ? $"/axo/server-icon/{instanceId}/{index}" : null,
             c.TryGetValue("acceptTextures", out var t) && t is sbyte b && b != 0);
     }
 

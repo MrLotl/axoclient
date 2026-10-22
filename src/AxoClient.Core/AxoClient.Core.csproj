@@ -16,7 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\**\*" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- Ressourcennamen immer mit "/" (RecursiveDir liefert unter Windows "\", z. B. "axomod\…") -->
+    <EmbeddedResource Include="Resources\**\*"
+                      LogicalName="$([System.String]::Copy('%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
     <InternalsVisibleTo Include="AxoClient.Tests" />
   </ItemGroup>
 

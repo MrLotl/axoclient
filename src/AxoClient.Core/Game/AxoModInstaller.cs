@@ -20,6 +20,9 @@ public sealed class AxoModEntry
 
     /// <summary><c>full</c> oder <c>reduced</c> (1.8.9: ohne Axo-Menü).</summary>
     public string Level { get; set; } = "full";
+
+    /// <summary>SHA-256 der Jar (klein, hex); schreibt <c>mod/build-all.ps1</c>.</summary>
+    public string? Sha256 { get; set; }
 }
 
 /// <summary>
@@ -71,7 +74,11 @@ public sealed class AxoModInstaller
                                  ?? throw new AxoException("axomod.missing");
         using var buffer = new MemoryStream();
         await stream.CopyToAsync(buffer, ct);
-        return buffer.ToArray();
+        var bytes = buffer.ToArray();
+        if (entry.Sha256 is { Length: > 0 } expected
+            && !Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).Equals(expected, StringComparison.OrdinalIgnoreCase))
+            throw new AxoException("axomod.missing");
+        return bytes;
     }
 
     /// <summary>Legt die richtige Jar in <c>mods/</c> und entfernt alte AxoMod-Jars.</summary>

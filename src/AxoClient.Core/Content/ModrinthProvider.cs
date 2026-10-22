@@ -95,6 +95,24 @@ public sealed class ModrinthProvider(ApiClient api) : IContentProvider
         return result;
     }
 
+    /// <summary>
+    /// <c>server_side</c> je Projekt (<c>required</c>, <c>optional</c>, <c>unsupported</c>, <c>unknown</c>): beim Nachjoinen in eine
+    /// offene Welt zählen reine Client-Mods des Gastgebers nicht als „fehlt“.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, string>> ServerSidesAsync(IEnumerable<string> ids, CancellationToken ct)
+    {
+        var result = new Dictionary<string, string>();
+        foreach (var chunk in ids.Distinct().Chunk(IdsPerRequest))
+        {
+            using var json = JsonDocument.Parse(await api.GetStringAsync(
+                $"{Api}/projects?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}", VersionCache, ct));
+            foreach (var p in json.RootElement.EnumerateArray())
+                if (p.TryGetProperty("id", out var id) && id.GetString() is { } key)
+                    result[key] = Str(p, "server_side") ?? "unknown";
+        }
+        return result;
+    }
+
     private ContentProject ParseProject(JsonElement p)
     {
         var type = Str(p, "project_type") ?? "mod";

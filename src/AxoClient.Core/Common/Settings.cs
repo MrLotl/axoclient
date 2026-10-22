@@ -67,6 +67,9 @@ public sealed class AppearanceSettings
     /// <summary><c>axo</c>, <c>mint</c>, <c>sunset</c>, <c>midnight</c> oder <c>custom</c>.</summary>
     public string Preset { get; set; } = "axo";
     public AccentGradient Accent { get; set; } = new("#db2777", "#7c3aed", 135);
+
+    /// <summary>Skin auf der Startseite winkt einmal nach dem Start des Launchers.</summary>
+    public bool WaveOnStart { get; set; } = true;
 }
 
 public sealed class NotificationTypes

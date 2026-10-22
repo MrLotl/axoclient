@@ -1,4 +1,96 @@
 {
-  "formatVersion": 1,
-  "entries": []
+    "formatVersion":  1,
+    "entries":  [
+                    {
+                        "minecraft":  [
+                                          "1.21",
+                                          "1.21.1"
+                                      ],
+                        "loaders":  [
+                                        "fabric"
+                                    ],
+                        "file":  "axoclient-1.21.1.jar",
+                        "level":  "full",
+                        "sha256":  "65e47670ebe91363c4171bcd89f4a0df516a4aa08298071684c106339fa15879"
+                    },
+                    {
+                        "minecraft":  [
+                                          "1.21.2",
+                                          "1.21.3",
+                                          "1.21.4",
+                                          "1.21.5"
+                                      ],
+                        "loaders":  [
+                                        "fabric"
+                                    ],
+                        "file":  "axoclient-1.21.4.jar",
+                        "level":  "full",
+                        "sha256":  "fb442413410fbb71536749db5cb3a109180f01862a8c4fcae99cf2392ded601c"
+                    },
+                    {
+                        "minecraft":  [
+                                          "1.21.6",
+                                          "1.21.7",
+                                          "1.21.8"
+                                      ],
+                        "loaders":  [
+                                        "fabric"
+                                    ],
+                        "file":  "axoclient-1.21.8.jar",
+                        "level":  "full",
+                        "sha256":  "f3e1e4939bd7db62c317ee48cc1f3e16029efd81d00389654bf7c4ff2b1c9de8"
+                    },
+                    {
+                        "minecraft":  [
+                                          "1.21.9",
+                                          "1.21.10",
+                                          "1.21.11"
+                                      ],
+                        "loaders":  [
+                                        "fabric"
+                                    ],
+                        "file":  "axoclient-1.21.11.jar",
+                        "level":  "full",
+                        "sha256":  "4ccef9bc2e5f261a9f0469112b34bb257bcd2ef7e478e314732dabb779d589db"
+                    },
+                    {
+                        "minecraft":  [
+                                          "26.1",
+                                          "26.1.1",
+                                          "26.1.2"
+                                      ],
+                        "loaders":  [
+                                        "fabric"
+                                    ],
+                        "file":  "axoclient-26.1.jar",
+                        "level":  "full",
+                        "sha256":  "6c28f6a486c1f6f5dcb54eb4c575239685cc1c5f0e231f3d2afedb8b83ca58f3"
+                    },
+                    {
+                        "minecraft":  [
+                                          "26.2",
+                                          "26.2.1",
+                                          "26.2.2"
+                                      ],
+                        "loaders":  [
+                                        "fabric"
+                                    ],
+                        "file":  "axoclient-26.2.jar",
+                        "level":  "full",
+                        "sha256":  "0bf73f96b062727a865c60bbbbb88280859efa44bb3e4b569a8a9f74baf4b415"
+                    },
+                    {
+                        "minecraft":  [
+                                          "26.3",
+                                          "26.3.1",
+                                          "26.3.2"
+                                      ],
+                        "loaders":  [
+                                        "fabric"
+                                    ],
+                        "file":  "axoclient-26.3.jar",
+                        "level":  "full",
+                        "sha256":  "179e38d47a0368414b8c68eef77585deb1b1c422de6a04c6dc5f03726093553d"
+                    }
+                ]
 }

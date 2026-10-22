@@ -42,7 +42,7 @@ public sealed class AccountManager
     }
 
     public IReadOnlyList<AccountView> Views() => _doc.Accounts.Select(a => new AccountView(
-        a.Uuid, a.Name, a.Type, a.Uuid == _doc.Active, $"axo://head/{a.Uuid.Replace("-", "")}",
+        a.Uuid, a.Name, a.Type, a.Uuid == _doc.Active, $"/axo/head/{a.Uuid.Replace("-", "")}",
         a.Uuid == _doc.Active ? ActiveNeedsLogin : !Provider(a.Type).HasStoredLogin(a.Uuid))).ToList();
 
     /// <summary>Neues Konto hinzufügen (oder ein bestehendes neu anmelden) und aktiv setzen.</summary>

@@ -28,6 +28,8 @@ public sealed class AppPaths
     public string SkinLibrary => Combine("skins", "library.json");
     public string Capes => Combine("capes");
     public string CapeLibrary => Combine("capes", "library.json");
+    public string Emotes => Combine("emotes");
+    public string EmoteLibrary => Combine("emotes", "library.json");
 
     public string Game => Combine("game");
     public string Versions => Combine("game", "versions");
@@ -48,6 +50,7 @@ public sealed class AppPaths
     public string InstanceJson(string id) => Combine("instances", id, "instance.json");
     public string ContentJson(string id) => Combine("instances", id, "content.json");
     public string PlaytimeJson(string id) => Combine("instances", id, "playtime.json");
+    public string PlacesJson(string id) => Combine("instances", id, "places.json");
     public string InstanceBackups(string id) => Combine("instances", id, "backups");
     public string GameDir(string id) => Combine("instances", id, "minecraft");
 
@@ -61,7 +64,7 @@ public sealed class AppPaths
     {
         foreach (var dir in new[]
                  {
-                     Root, Instances, Servers, Skins, Capes, Versions, Libraries, Assets, Java, ApiCache,
+                     Root, Instances, Servers, Skins, Capes, Emotes, Versions, Libraries, Assets, Java, ApiCache,
                      DownloadCache, Heads, ServerIcons, Updates, Logs, Tmp
                  })
             Fs.Directory.CreateDirectory(dir);

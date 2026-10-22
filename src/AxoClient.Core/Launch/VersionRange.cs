@@ -9,7 +9,8 @@ namespace AxoClient.Core.Launch;
 /// </summary>
 public static partial class VersionRange
 {
-    public static bool Satisfies(string version, string? range)
+    /// <param name="unknown">Ergebnis für Schreibweisen, die nicht verstanden werden.</param>
+    public static bool Satisfies(string version, string? range, bool unknown = true)
     {
         if (string.IsNullOrWhiteSpace(range))
             return true;
@@ -19,21 +20,21 @@ public static partial class VersionRange
             if (range[0] is '[' or '(')
                 return MavenSatisfies(version, range);
             return range.Split("||").Any(alternative => alternative.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .All(predicate => PredicateSatisfies(version, predicate.Trim())));
+                .All(predicate => PredicateSatisfies(version, predicate.Trim(), unknown)));
         }
         catch (FormatException)
         {
-            return true;
+            return unknown;
         }
     }
 
-    private static bool PredicateSatisfies(string version, string predicate)
+    private static bool PredicateSatisfies(string version, string predicate, bool unknown)
     {
         if (predicate is "*" or "" or "x" or "X")
             return true;
         var match = Predicate().Match(predicate);
         if (!match.Success)
-            return true;
+            return unknown;
         var op = match.Groups[1].Value;
         var target = match.Groups[2].Value;
 
@@ -54,7 +55,7 @@ public static partial class VersionRange
             "=" or "" => cmp == 0 || (op == "" && IsPrefix(target, version)),
             "~" => cmp >= 0 && SameMinor(version, target),
             "^" => cmp >= 0 && Parts(version)[0] == Parts(target)[0],
-            _ => true
+            _ => unknown
         };
     }
 
@@ -99,9 +100,9 @@ public static partial class VersionRange
         for (var i = 0; i < 3; i++)
             if (pa[i] != pb[i])
                 return pa[i].CompareTo(pb[i]);
-        // Vorabversionen (-beta, -rc) sind kleiner als die fertige Version
-        var preA = a.Contains('-');
-        var preB = b.Contains('-');
+        // Vorabversionen (-beta, -rc) sind kleiner als die fertige Version; nach "+" folgen nur Build-Angaben
+        var preA = a.Split('+')[0].Contains('-');
+        var preB = b.Split('+')[0].Contains('-');
         return preA == preB ? 0 : preA ? -1 : 1;
     }
 

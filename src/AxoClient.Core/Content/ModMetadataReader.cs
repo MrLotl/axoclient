@@ -46,6 +46,8 @@ public static class ModMetadataReader
 
         if (result == null)
             return null;
+        result.Meta.Format = ModMetadata.CurrentFormat;
+        result.Meta.ModVersion = result.Version;
         result.Meta.Packages = Packages(zip);
         result.Meta.Provides.AddRange(NestedIds(zip));
         if (result.Meta.Mixins.Count == 0)
@@ -83,6 +85,8 @@ public static class ModMetadataReader
             meta.MinecraftRange = RangeText(depends, "minecraft");
             meta.LoaderRange = RangeText(depends, "fabricloader");
         }
+        meta.BreakRanges = Ranges(root, "breaks");
+        meta.ConflictRanges = Ranges(root, "conflicts");
         if (root.TryGetProperty("mixins", out var mixins) && mixins.ValueKind == JsonValueKind.Array)
             meta.Mixins = mixins.EnumerateArray()
                 .Select(m => m.ValueKind == JsonValueKind.String ? m.GetString() : Str(m, "config"))
@@ -133,9 +137,17 @@ public static class ModMetadataReader
             else if (id is "forge" or "neoforge")
                 meta.LoaderRange = dep.Get("versionRange");
             else if (type == "incompatible")
+            {
                 meta.Breaks.Add(id);
+                if (dep.Get("versionRange") is { Length: > 0 } range)
+                    meta.BreakRanges[id] = range;
+            }
             else if (type == "discouraged")
+            {
                 meta.Conflicts.Add(id);
+                if (dep.Get("versionRange") is { Length: > 0 } range)
+                    meta.ConflictRanges[id] = range;
+            }
             else if (mandatory && !IgnoredDependencies.Contains(id))
                 meta.Depends.Add(id);
         }
@@ -205,10 +217,17 @@ public static class ModMetadataReader
             ? obj.EnumerateObject().Select(p => p.Name).Where(n => !IgnoredDependencies.Contains(n)).ToList()
             : [];
 
+    private static Dictionary<string, string> Ranges(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var obj) && obj.ValueKind == JsonValueKind.Object
+            ? obj.EnumerateObject().Select(p => (p.Name, Range: RangeText(obj, p.Name)))
+                .Where(p => p.Range is { Length: > 0 })
+                .ToDictionary(p => p.Name, p => p.Range!, StringComparer.OrdinalIgnoreCase)
+            : [];
+
     private static string? RangeText(JsonElement depends, string key) =>
         depends.TryGetProperty(key, out var v)
             ? v.ValueKind == JsonValueKind.String ? v.GetString()
-            : v.ValueKind == JsonValueKind.Array ? string.Join(" || ", v.EnumerateArray().Select(x => x.GetString()))
+            : v.ValueKind == JsonValueKind.Array ? string.Join(" || ", v.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()))
             : null
             : null;
 

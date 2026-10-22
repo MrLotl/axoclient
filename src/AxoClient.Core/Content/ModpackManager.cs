@@ -185,6 +185,14 @@ public sealed class ModpackManager(
         var file = version.Files.FirstOrDefault(f => f.FileName.EndsWith(".mrpack")) ?? throw new AxoException("content.noFile");
         var packPath = Path.Combine(paths.Tmp, $"{Guid.NewGuid():N}.mrpack");
         await downloads.DownloadAsync(new DownloadRequest(file.Url, packPath, file.Sha1, file.Sha512), job.Range(0, 0.1), job.Token);
+        // Mod-Schutz gilt für Nutzer, nicht für das Pack-Update selbst: kurz lösen, danach mit den neuen Pack-Mods wieder setzen
+        var lockLevel = instance.ModLock.Level;
+        var ownMods = (await content.SyncAsync(instanceId, job.Token)).Mods.Where(m => !instance.ModLock.IsLocked(m)).Select(ModLocks.KeyOf).ToHashSet();
+        if (lockLevel != ModLockLevel.Off)
+        {
+            instance.ModLock = new ModLock();
+            await instances.SaveAsync(instance, job.Token);
+        }
         try
         {
             using var zip = ZipFile.OpenRead(packPath);
@@ -208,6 +216,16 @@ public sealed class ModpackManager(
         finally
         {
             File.Delete(packPath);
+            if (lockLevel != ModLockLevel.Off)
+            {
+                var locked = await content.SetModLockAsync(instanceId, lockLevel, adoptCurrent: true, CancellationToken.None);
+                if (lockLevel == ModLockLevel.Pack)
+                {
+                    var current = await instances.GetAsync(instanceId, CancellationToken.None);
+                    current.ModLock.PackMods = locked.PackMods.Where(k => !ownMods.Contains(k)).ToList();
+                    await instances.SaveAsync(current, CancellationToken.None);
+                }
+            }
         }
     }
 

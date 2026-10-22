@@ -18,6 +18,8 @@ public sealed class UpdateScanner(InstanceManager instances, ContentManager cont
         {
             var entries = doc.ListOf(type)
                 .Where(e => e.Source == ContentSource.Modrinth && e.Hashes.Sha1 != null)
+                // Gesperrte Mods (Mod-Schutz) bekommen keine Updates angeboten
+                .Where(e => type != ContentType.Mod || !instance.ModLock.IsLocked(e))
                 .ToList();
             if (entries.Count == 0)
                 continue;

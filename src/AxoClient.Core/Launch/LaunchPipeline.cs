@@ -79,6 +79,38 @@ public sealed class LaunchPipeline(
         return results;
     }
 
+    /// <summary>"Alles reparieren" im Mods-Tab: für jedes gefundene Problem die erste (empfohlene) Maßnahme ausführen.</summary>
+    public async Task<int> RepairAllAsync(string instanceId, JobContext job)
+    {
+        var instance = await instances.GetAsync(instanceId, job.Token);
+        var gameDir = instances.GameDir(instanceId);
+        var ctx = new LaunchContext
+        {
+            LaunchId = "repair",
+            Instance = instance,
+            Content = await instances.ContentOf(instanceId).LoadAsync(job.Token),
+            Settings = settings.Current,
+            GamePath = installer.PathFor(gameDir),
+            GameDir = gameDir
+        };
+        var fixedCount = 0;
+        foreach (var phase in new[] { LaunchPhase.Content, LaunchPhase.Compatibility, LaunchPhase.Resources })
+        {
+            var results = await RunPhaseAsync(ctx, phase, job.Token);
+            foreach (var result in results.Where(r => r.Severity != Severity.Ok && r.Actions.Count > 0))
+            {
+                var action = result.Actions.FirstOrDefault(a => a.Primary) ?? result.Actions[0];
+                if (action.Id is "switch" or "retry" or "login")
+                    continue;
+                await action.Run(ctx, job.Sub(0, 1));
+                fixedCount++;
+            }
+            ctx.Content = await instances.ContentOf(instanceId).LoadAsync(job.Token);
+            ctx.Instance = await instances.GetAsync(instanceId, job.Token);
+        }
+        return fixedCount;
+    }
+
     private async Task RunChecksAsync(LaunchContext ctx, JobContext job, LaunchPhase startPhase, LaunchPhase endPhase, bool interactive)
     {
         var phases = Enum.GetValues<LaunchPhase>().Where(p => p >= startPhase && p <= endPhase).ToList();
@@ -102,6 +134,11 @@ public sealed class LaunchPipeline(
                         job.Report(progressFrom, fix.Message);
                         var sub = new JobContextScope(job, progressFrom, progressTo);
                         await fix.AutoFix!.Run(ctx, sub.Context);
+                    }
+                    catch (AxoException ex) when (ex.Code.StartsWith("content.modLock.", StringComparison.Ordinal))
+                    {
+                        // Mod-Schutz: nicht automatisch an gesperrten Mods drehen, Spiel trotzdem starten
+                        ctx.Hints.Add(TextRef.Of("pipeline.modLockSkipped", ("what", fix.Message.Code)));
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException and not LaunchAbortedException)
                     {

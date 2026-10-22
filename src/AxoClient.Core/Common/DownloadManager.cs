@@ -4,9 +4,10 @@ using System.Security.Cryptography;
 namespace AxoClient.Core.Common;
 
 /// <summary>Eine Datei, die geladen werden soll. Ohne Hash wird sie nur bei HTTPS akzeptiert und nie aus dem Cache gezogen.</summary>
-public sealed record DownloadRequest(string Url, string TargetPath, string? Sha1 = null, string? Sha512 = null, long? Size = null)
+public sealed record DownloadRequest(string Url, string TargetPath, string? Sha1 = null, string? Sha512 = null, long? Size = null,
+    string? Sha256 = null)
 {
-    public string? ExpectedHash => Sha512 ?? Sha1;
+    public string? ExpectedHash => Sha512 ?? Sha256 ?? Sha1;
 }
 
 /// <summary>
@@ -121,6 +122,8 @@ public sealed class DownloadManager(ApiClient api, IFileSystem fs, int parallel 
         using var stream = fs.File.OpenRead(path);
         if (request.Sha512 != null)
             return string.Equals(Convert.ToHexString(SHA512.HashData(stream)), request.Sha512, StringComparison.OrdinalIgnoreCase);
+        if (request.Sha256 != null)
+            return string.Equals(Convert.ToHexString(SHA256.HashData(stream)), request.Sha256, StringComparison.OrdinalIgnoreCase);
         if (request.Sha1 != null)
             return string.Equals(Convert.ToHexString(SHA1.HashData(stream)), request.Sha1, StringComparison.OrdinalIgnoreCase);
         return true;

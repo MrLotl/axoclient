@@ -74,11 +74,11 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
                     [new CheckAction("updateLoader", new TextRef("pipeline.action.updateLoader"), UpdateLoaderAsync, true)],
                     Key: $"loader-old:{key}"));
 
-            // Unverträglich (breaks) und Konflikte
-            foreach (var other in meta?.Breaks.Where(provided.Contains) ?? [])
+            // Unverträglich (breaks) und Konflikte – nur, wenn die installierte Version unter die Bedingung fällt
+            foreach (var other in meta?.Breaks.Where(id => Hits(mods, provided, id, meta.BreakRanges, meta.Format)) ?? [])
                 results.Add(new CheckResult(Id, Severity.Blocker, TextRef.Of("pipeline.compat.breaks", ("name", mod.Name), ("other", NameOf(mods, other))),
                     [ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File)], CanSilence: false));
-            foreach (var other in meta?.Conflicts.Where(provided.Contains) ?? [])
+            foreach (var other in meta?.Conflicts.Where(id => Hits(mods, provided, id, meta.ConflictRanges, meta.Format)) ?? [])
                 results.Add(new CheckResult(Id, Severity.Warning, TextRef.Of("pipeline.compat.conflicts", ("name", mod.Name), ("other", NameOf(mods, other))),
                     [ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File)], Key: $"conflict:{key}:{other}"));
 
@@ -166,6 +166,22 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
         "quilt" => "Quilt",
         _ => id
     };
+
+    /// <summary>
+    /// Ob eine breaks/conflicts-Angabe auf eine installierte Mod zutrifft. Ohne Bedingung zählt jede Version; mit
+    /// Bedingung nur eine bekannte Version, die sie erfüllt. Ältere Metadaten ohne Bedingungen zählen nie, sonst
+    /// würde z. B. „Sodium bricht Iris &lt; 1.8“ jede Iris-Version sperren.
+    /// </summary>
+    private static bool Hits(List<ContentEntry> mods, HashSet<string> provided, string modId, Dictionary<string, string> ranges, int format)
+    {
+        if (format < ModMetadata.CurrentFormat || !provided.Contains(modId))
+            return false;
+        if (!ranges.TryGetValue(modId, out var range) || range.Trim() is "*" or "")
+            return true;
+        var versions = mods.Where(m => string.Equals(m.Meta?.ModId, modId, StringComparison.OrdinalIgnoreCase))
+            .Select(m => m.Meta!.ModVersion).OfType<string>().ToList();
+        return versions.Any(v => VersionRange.Satisfies(v, range, unknown: false));
+    }
 
     private static string NameOf(List<ContentEntry> mods, string modId) =>
         mods.FirstOrDefault(m => string.Equals(m.Meta?.ModId, modId, StringComparison.OrdinalIgnoreCase))?.Name ?? modId;

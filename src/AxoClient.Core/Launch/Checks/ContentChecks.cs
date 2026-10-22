@@ -154,12 +154,36 @@ public sealed class AxoModCheck(AxoModInstaller axoMod, ContentManager content) 
         var upToDate = wanted == null
             ? current == null
             : current?.File == wanted.File && current.Version == AppInfo.Version && File.Exists(currentFile);
-        IReadOnlyList<CheckResult> results = upToDate
-            ? [CheckResult.Ok(Id)]
-            : [new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.axomod.sync"),
-                [new CheckAction("sync", new TextRef("pipeline.action.install"), (c, job) => SyncAsync(c, job), true)])];
-        return Task.FromResult(results);
+        var results = new List<CheckResult>();
+        if (!upToDate)
+            results.Add(new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.axomod.sync"),
+                [new CheckAction("sync", new TextRef("pipeline.action.install"), (c, job) => SyncAsync(c, job), true)]));
+        // Die Badge-Mod des alten Launchers (aus importierten Instanzen) würde neben der AxoMod doppelt laufen
+        var legacy = wanted == null ? [] : ctx.Content.Mods.Where(m => m.Enabled && IsLegacyBadgeMod(m)).Select(m => m.File).ToList();
+        if (legacy.Count > 0)
+            results.Add(new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.axomod.legacy"),
+                [new CheckAction("disableLegacy", new TextRef("pipeline.action.disableMod"), (c, job) => DisableAsync(c, legacy, job), true)]));
+        return Task.FromResult<IReadOnlyList<CheckResult>>(results.Count == 0 ? [CheckResult.Ok(Id)] : results);
     }
+
+    private static bool IsLegacyBadgeMod(ContentEntry mod) =>
+        mod.Source != ContentSource.AxoClient
+        && (mod.File.StartsWith("mclauncher-badge", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(mod.Meta?.ModId, "mclauncher_badge", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Deaktiviert statt löscht (umkehrbar); am Mod-Schutz vorbei, weil die Datei nie zum Pack gehört.</summary>
+    private Task DisableAsync(LaunchContext ctx, IReadOnlyList<string> files, JobContext job) =>
+        content.ChangeAsync(ctx.Instance.Id, doc =>
+        {
+            var dir = Path.Combine(ctx.GameDir, "mods");
+            foreach (var mod in doc.Mods.Where(m => m.Enabled && files.Contains(m.File, StringComparer.OrdinalIgnoreCase)))
+            {
+                var from = Path.Combine(dir, mod.DiskName);
+                mod.Enabled = false;
+                if (File.Exists(from))
+                    File.Move(from, Path.Combine(dir, mod.DiskName), overwrite: true);
+            }
+        }, job.Token);
 
     private async Task SyncAsync(LaunchContext ctx, JobContext job)
     {
@@ -171,5 +195,45 @@ public sealed class AxoModCheck(AxoModInstaller axoMod, ContentManager content) 
             if (entry != null)
                 doc.Mods.Add(entry);
         }, job.Token);
+    }
+}
+
+/// <summary>
+/// „Freunde in Einzelspieler-Welten nachjoinen lassen“: legt e4mc (Modrinth) in Fabric- und Quilt-Instanzen.
+/// Ist e4mc schon eingetragen – auch deaktiviert –, bleibt die Entscheidung beim Nutzer.
+/// </summary>
+public sealed class JoinRelayCheck(ContentManager content) : ILaunchCheck
+{
+    internal const string E4mcProject = "qANg5Jrr";
+
+    public string Id => "joinRelay";
+    public LaunchPhase Phase => LaunchPhase.Content;
+
+    public Task<IReadOnlyList<CheckResult>> RunAsync(LaunchContext ctx, CancellationToken ct)
+    {
+        var wanted = ctx.Settings.Integrations.FriendJoinRelay
+                     && ctx.Instance.Loader.Type is LoaderType.Fabric or LoaderType.Quilt
+                     && !ctx.Content.Mods.Any(m => m.ProjectId == E4mcProject);
+        IReadOnlyList<CheckResult> results = wanted
+            ? [new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.relay.install"),
+                [new CheckAction("install", new TextRef("pipeline.action.install"), InstallAsync, true)])]
+            : [CheckResult.Ok(Id)];
+        return Task.FromResult(results);
+    }
+
+    private async Task InstallAsync(LaunchContext ctx, JobContext job)
+    {
+        try
+        {
+            // e4mc gehört zur Launcher-Funktion "Nachjoinen" und ist vom Mod-Schutz ausgenommen
+            await content.InstallAsync(ctx.Instance.Id, ContentType.Mod, new InstallRequest("modrinth", E4mcProject), job, ignoreModLock: true);
+            ctx.Content = await content.SyncAsync(ctx.Instance.Id, job.Token);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Ohne e4mc startet das Spiel trotzdem – nur das Nachjoinen in Einzelspieler-Welten fehlt.
+            AppLog.Warn($"e4mc konnte nicht installiert werden: {e.Message}");
+            ctx.Hints.Add(new TextRef("pipeline.relay.unavailable"));
+        }
     }
 }

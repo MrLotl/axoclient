@@ -17,7 +17,8 @@ public sealed record ContentItem(
     string? Author,
     long Size,
     DateTimeOffset AddedAt,
-    bool Locked);
+    bool Locked,
+    bool ModLocked);
 
 /// <summary>Was installiert werden soll: eine Version aus einer Quelle.</summary>
 public sealed record InstallRequest(string Source, string ProjectId, string? VersionId = null);
@@ -50,11 +51,12 @@ public sealed class ContentManager(
     public async Task<IReadOnlyList<ContentItem>> ListAsync(string instanceId, ContentType type, CancellationToken ct = default)
     {
         var doc = await SyncAsync(instanceId, ct);
+        var modLock = (await instances.GetAsync(instanceId, ct)).ModLock;
         return doc.ListOf(type)
             .OrderBy(e => e.Source == ContentSource.AxoClient ? 0 : 1)
             .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
             .Select(e => new ContentItem(e.File, e.Name, e.Version, e.Enabled, e.Source, e.ProjectId, e.VersionId, e.IconUrl,
-                e.Author, e.Size, e.AddedAt, e.Source == ContentSource.AxoClient))
+                e.Author, e.Size, e.AddedAt, e.Source == ContentSource.AxoClient, type == ContentType.Mod && modLock.IsLocked(e)))
             .ToList();
     }
 
@@ -111,7 +113,9 @@ public sealed class ContentManager(
                     entry.Enabled = enabled;
                     changed = true;
                 }
-                if (entry.Size != file.Length || entry.Modified != file.LastWriteTimeUtc)
+                // Metadaten eines älteren Lesers (ohne Versionsbedingungen) einmal neu lesen
+                if (entry.Size != file.Length || entry.Modified != file.LastWriteTimeUtc
+                    || type == ContentType.Mod && entry.Meta is { Format: < ModMetadata.CurrentFormat })
                 {
                     RefreshFileInfo(entry, file, type);
                     changed = true;
@@ -158,16 +162,16 @@ public sealed class ContentManager(
         entry.Modified = file.LastWriteTimeUtc;
         using (var stream = file.OpenRead())
             entry.Hashes = new ContentHashes(Text.Sha1Hex(stream), null);
-        if (type == ContentType.Mod && ModMetadataReader.Read(file.FullName) is { } meta)
+        if (type != ContentType.Mod)
+            return;
+        var meta = ModMetadataReader.Read(file.FullName);
+        entry.Meta = meta?.Meta;
+        if (meta != null && entry.Source == ContentSource.Local)
         {
-            entry.Meta = meta.Meta;
-            if (entry.Source == ContentSource.Local)
-            {
-                if (!string.IsNullOrWhiteSpace(meta.Name))
-                    entry.Name = Text.Clean(meta.Name, 100);
-                entry.Version ??= Text.Clean(meta.Version, 60) is { Length: > 0 } v ? v : null;
-                entry.Author ??= Text.Clean(meta.Author, 60) is { Length: > 0 } a ? a : null;
-            }
+            if (!string.IsNullOrWhiteSpace(meta.Name))
+                entry.Name = Text.Clean(meta.Name, 100);
+            entry.Version ??= Text.Clean(meta.Version, 60) is { Length: > 0 } v ? v : null;
+            entry.Author ??= Text.Clean(meta.Author, 60) is { Length: > 0 } a ? a : null;
         }
     }
 
@@ -217,9 +221,17 @@ public sealed class ContentManager(
 
     /// <summary>Installiert eine Version samt Pflicht-Abhängigkeiten. Gibt die installierten Dateinamen zurück.</summary>
     public async Task<IReadOnlyList<string>> InstallAsync(string instanceId, ContentType type, InstallRequest request,
-        JobContext job)
+        JobContext job, bool ignoreModLock = false)
     {
         var instance = await instances.GetAsync(instanceId, job.Token);
+        if (type == ContentType.Mod && !ignoreModLock)
+        {
+            instance.ModLock.ThrowIfCannotAdd();
+            // Pack-Mods nicht durch eine andere Version ersetzen
+            var existing = (await SyncAsync(instanceId, job.Token)).Mods.FirstOrDefault(m => m.ProjectId == request.ProjectId);
+            if (existing != null)
+                instance.ModLock.ThrowIfLocked(existing);
+        }
         var provider = providers.Get(request.Source);
         var kind = ToKind(type);
         var mc = instance.Minecraft.Version;
@@ -319,6 +331,13 @@ public sealed class ContentManager(
         var name = Path.GetFileName(sourcePath);
         if (!PathGuard.IsSafeFileName(name) || !IsContentFile(type, name))
             throw new AxoException("content.wrongFileType");
+        if (type == ContentType.Mod)
+        {
+            var modLock = (await instances.GetAsync(instanceId, ct)).ModLock;
+            modLock.ThrowIfCannotAdd();
+            if ((await SyncAsync(instanceId, ct)).Mods.FirstOrDefault(m => m.File.Equals(BaseName(name), StringComparison.OrdinalIgnoreCase)) is { } existing)
+                modLock.ThrowIfLocked(existing);
+        }
         var target = PathGuard.Combine(Folder(instanceId, type), name);
         await using (var source = File.OpenRead(sourcePath))
         await using (var dest = File.Create(target))
@@ -329,11 +348,14 @@ public sealed class ContentManager(
 
     public async Task SetEnabledAsync(string instanceId, ContentType type, string file, bool enabled, CancellationToken ct = default)
     {
+        var modLock = (await instances.GetAsync(instanceId, ct)).ModLock;
         await ChangeAsync(instanceId, doc =>
         {
             var entry = Find(doc, type, file);
             if (entry.Source == ContentSource.AxoClient)
                 throw new AxoException("content.locked");
+            if (type == ContentType.Mod)
+                modLock.ThrowIfLocked(entry);
             if (entry.Enabled == enabled)
                 return;
             var dir = Folder(instanceId, type);
@@ -347,14 +369,22 @@ public sealed class ContentManager(
 
     public async Task RemoveAsync(string instanceId, ContentType type, IReadOnlyCollection<string> files, CancellationToken ct = default)
     {
+        var modLock = (await instances.GetAsync(instanceId, ct)).ModLock;
         await ChangeAsync(instanceId, doc =>
         {
             var list = doc.ListOf(type);
+            // Erst alles prüfen, dann löschen: bei gemischter Auswahl nichts halb erledigen
             foreach (var file in files)
             {
                 var entry = Find(doc, type, file);
                 if (entry.Source == ContentSource.AxoClient)
                     throw new AxoException("content.locked");
+                if (type == ContentType.Mod)
+                    modLock.ThrowIfLocked(entry);
+            }
+            foreach (var file in files)
+            {
+                var entry = Find(doc, type, file);
                 var path = Path.Combine(Folder(instanceId, type), entry.DiskName);
                 if (File.Exists(path))
                     Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(path, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
@@ -365,6 +395,17 @@ public sealed class ContentManager(
                 list.Remove(entry);
             }
         }, ct);
+    }
+
+    /// <summary>Mod-Schutz umstellen. <paramref name="adoptCurrent"/>: alle jetzigen Mods zählen ab sofort zum Pack.</summary>
+    public async Task<ModLock> SetModLockAsync(string instanceId, ModLockLevel level, bool adoptCurrent, CancellationToken ct = default)
+    {
+        var doc = await SyncAsync(instanceId, ct);
+        var instance = await instances.GetAsync(instanceId, ct);
+        instance.ModLock.SetLevel(level, doc.Mods, adoptCurrent);
+        await instances.SaveAsync(instance, ct);
+        events.Publish("content.changed", new { instanceId });
+        return instance.ModLock;
     }
 
     /// <summary>Verfügbare Versionen für "Version ändern".</summary>

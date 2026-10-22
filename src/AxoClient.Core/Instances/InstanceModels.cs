@@ -52,6 +52,9 @@ public sealed class Instance : IVersionedDocument
 
     /// <summary>AxoClient-Mod in dieser Instanz verwenden (pro Instanz abschaltbar).</summary>
     public bool AxoMod { get; set; } = true;
+
+    /// <summary>Mod-Schutz (frei, Pack geschützt, komplett gesperrt).</summary>
+    public ModLock ModLock { get; set; } = new();
 }
 
 /// <summary>Was die Instanzliste der UI braucht.</summary>
@@ -68,7 +71,8 @@ public sealed record InstanceSummary(
     long TotalSeconds,
     bool Running,
     int ModCount,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    ModLockLevel ModLock);
 
 public sealed record CreateInstanceRequest(
     string Name,

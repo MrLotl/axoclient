@@ -1,0 +1,449 @@
+package de.axoclient.mod;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import de.axoclient.mod.hud.HudConfig;
+import de.axoclient.mod.hud.HudInput;
+import de.axoclient.mod.hud.HudKeys;
+import de.axoclient.mod.hud.HudModule;
+import de.axoclient.mod.hud.HudOverlay;
+import de.axoclient.mod.hud.HudPainter;
+import de.axoclient.mod.hud.HudText;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.Options;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix3x2fStack;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
+/** Die eigenen Anzeigen im Bild (FPS, Ping, ...) und das Auswahlmenü dazu. */
+public final class AxoHud {
+	/** So weit wird die Helligkeit aufgedreht (der Regler in den Optionen endet bei 1). */
+	public static final float FULLBRIGHT_GAMMA = 16.0F;
+
+	/** Ausrüstungsplätze in der Reihenfolge von HudSlot. */
+	private static final EquipmentSlot[] SLOTS = {
+		EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET,
+		EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND
+	};
+
+	private static HudConfig config;
+	private static boolean keyWasDown;
+	private static boolean fullbrightWasDown;
+	private static final Map<String, Integer> KEY_CODES = new HashMap<>();
+
+	private AxoHud() {}
+
+	public static HudConfig config() {
+		if (config == null)
+			config = HudConfig.load(Minecraft.getInstance().gameDirectory.toPath());
+		return config;
+	}
+
+	/** Jeden Tick: öffnet das Auswahlmenü, wenn die Taste neu gedrückt wurde. */
+	public static void tick() {
+		Minecraft client = Minecraft.getInstance();
+		EmoteHooks.tick();
+		if (!MenuHooks.ownKeys) {
+			boolean down = HudKeys.pressed(config().menuKey, 0, name -> keyDown(client, name));
+			if (down && !keyWasDown && HudPlatform.noScreenOpen(client) && client.player != null)
+				HudPlatform.openScreen(client, new HudScreen());
+			keyWasDown = down;
+		}
+		boolean fullbrightDown = HudKeys.pressed(config().fullbrightKey, config().fullbrightModifier,
+			name -> keyDown(client, name));
+		if (fullbrightDown && !fullbrightWasDown && HudPlatform.noScreenOpen(client) && client.player != null) {
+			config().fullbright = !config().fullbright;
+			config().save();
+			client.player.sendOverlayMessage(Component.literal("Fullbright " + (config().fullbright ? "an" : "aus")));
+		}
+		fullbrightWasDown = fullbrightDown;
+	}
+
+	/** Ob die Taste mit diesem Minecraft-Namen gedrückt ist (der Name gilt in allen Versionen, die Nummer nicht). */
+	public static boolean keyDown(Minecraft client, String name) {
+		int code = KEY_CODES.computeIfAbsent(name, AxoHud::codeOf);
+		return code >= 0 && HudPlatform.isKeyDown(client, code);
+	}
+
+	private static int codeOf(String name) {
+		try {
+			return InputConstants.getKey(name).getValue();
+		} catch (RuntimeException e) {
+			return -1;
+		}
+	}
+
+	/** Ob Fullbright gerade an ist (fragt die Lichtberechnung jedes Mal). */
+	public static boolean fullbright() {
+		return config().fullbright;
+	}
+
+	/** Ob die Effekte als Text statt als Symbole erscheinen sollen. */
+	public static boolean effectsAsText() {
+		return config().get(HudModule.EFFECTS).variant == 1;
+	}
+
+	/** {Breite, Höhe} der Effekt-Symbole, wie Minecraft sie zeichnet (oben rechts); null ohne Effekte. */
+	public static int[] effectsSize() {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null)
+			return null;
+		int good = 0;
+		int bad = 0;
+		for (MobEffectInstance effect : player.getActiveEffects()) {
+			if (!effect.isVisible())
+				continue;
+			if (effect.getEffect().value().isBeneficial())
+				good++;
+			else
+				bad++;
+		}
+		if (good + bad == 0)
+			return null;
+		return new int[] { 25 * Math.max(good, bad) - 1, bad > 0 ? 50 : 24 };
+	}
+
+	private static Painter effectsPainter;
+
+	/** Verschiebt das Zeichnen der Effekt-Symbole von Minecraft an die Stelle der Anzeige (bis endEffects). */
+	public static void beginEffects(GuiGraphicsExtractor context) {
+		effectsPainter = null;
+		int[] size = effectsSize();
+		if (size == null || Minecraft.getInstance().player == null)
+			return;
+		int width = context.guiWidth();
+		float s = hudScale();
+		Painter painter = new Painter(context);
+		painter.uiFont(MenuHooks.fineHud);
+		int[] box = HudOverlay.box(config(), de.axoclient.mod.hud.HudElement.of(HudModule.EFFECTS), painter, Map.of(),
+			Math.round(width / s), Math.round(context.guiHeight() / s));
+		// Minecraft zeichnet die Symbole rechtsbündig ab y = 1; die Anzeige steht im (evtl. feineren) Raster der Anzeigen
+		float bx = box[0] * s, by = box[1] * s;
+		painter.pushMoved(Math.round(bx - (width - 1 - size[0])), Math.round(by - 1), Math.round(bx), Math.round(by),
+			config().get(HudModule.EFFECTS).factor() * s);
+		effectsPainter = painter;
+	}
+
+	public static void endEffects() {
+		if (effectsPainter != null) {
+			effectsPainter.pop();
+			effectsPainter = null;
+		}
+	}
+
+	/** Ob wir das Scoreboard übernehmen (dann zeichnet Minecraft es nicht mehr). */
+	public static boolean takesScoreboard() {
+		return config().isEnabled(HudModule.SCOREBOARD);
+	}
+
+	/** Ob wir die Effekte übernehmen (dann zeichnet Minecraft sie nicht mehr). */
+	public static boolean takesEffects() {
+		return config().isEnabled(HudModule.EFFECTS);
+	}
+
+	/** Zeichnet die eingeschalteten Anzeigen (am Ende der normalen Anzeige). */
+	public static void render(GuiGraphicsExtractor graphics) {
+		Minecraft client = Minecraft.getInstance();
+		// Nur ausblenden, solange der F3-Text im Bild steht. showDebugScreen() taugt dafür nicht mehr:
+		// seit 26.1 meldet es auch "true", wenn bloß eine Debug-Anzeige wie die Chunk-Grenzen (F3+G)
+		// eingeschaltet ist - dann wäre das Overlay dauerhaft weg, ohne dass man den Grund sieht.
+		if (client.player == null || client.debugEntries.isOverlayVisible())
+			return;
+		if (!MenuHooks.hideHud) {
+			float s = hudScale();
+			Painter painter = hudPainter(graphics);
+			graphics.pose().pushMatrix();
+			graphics.pose().scale(s, s);
+			HudOverlay.draw(config(), painter, texts(), Math.round(graphics.guiWidth() / s), Math.round(graphics.guiHeight() / s));
+			graphics.pose().popMatrix();
+		}
+		java.util.function.Consumer<Object> overlay = MenuHooks.overlay;
+		if (overlay != null)
+			overlay.accept(graphics);
+	}
+
+	/**
+	 * GUI-Einheiten je Einheit der Anzeigen: 1, oder mit {@link MenuHooks#fineHud} so fein wie das Menü (eine ganze Zahl
+	 * Bildschirmpunkte je Einheit, 2 bei 1080p, 3 bei 1440p, 4 bei 4K).
+	 */
+	public static float hudScale() {
+		if (!MenuHooks.fineHud)
+			return 1.0F;
+		com.mojang.blaze3d.platform.Window window = Minecraft.getInstance().getWindow();
+		int guiScale = Math.max(1, (int) Math.round(window.getGuiScale()));
+		int target = Math.max(2, (int) Math.round(window.getHeight() / 540.0));
+		return Math.min(guiScale, target) / (float) guiScale;
+	}
+
+	/** Zeichner für die Anzeigen: mit fineHud in Inter samt Schatten. */
+	public static Painter hudPainter(GuiGraphicsExtractor graphics) {
+		Painter painter = new Painter(graphics);
+		if (MenuHooks.fineHud) {
+			painter.uiFont(true);
+			painter.uiShadow = true;
+		}
+		return painter;
+	}
+
+	/** Aktuelle Werte der Anzeigen; fehlende Werte (z.B. Ping im Einzelspieler) bleiben leer. */
+	public static Map<HudModule, String> texts() {
+		Minecraft client = Minecraft.getInstance();
+		Map<HudModule, String> texts = new EnumMap<>(HudModule.class);
+		texts.put(HudModule.FPS, HudText.fps(client.getFps()));
+		texts.put(HudModule.TIME, HudText.clock());
+		texts.put(HudModule.MEMORY, HudText.memory());
+		if (config().isEnabled(HudModule.CPU))
+			texts.put(HudModule.CPU, HudText.cpu());
+		if (config().isEnabled(HudModule.GPU))
+			texts.put(HudModule.GPU, HudText.gpu());
+
+		LocalPlayer player = client.player;
+		if (player == null)
+			return texts;
+		sampleInput(client);
+		HudConfig settings = config();
+		if (settings.isEnabled(HudModule.CPS))
+			texts.put(HudModule.CPS, HudText.cps());
+		if (settings.isEnabled(HudModule.EFFECTS) && settings.get(HudModule.EFFECTS).variant == 1)
+			texts.put(HudModule.EFFECTS, HudText.effects(effects(player)));
+		if (settings.isEnabled(HudModule.LIGHT) && client.level != null) {
+			BlockPos feet = player.blockPosition();
+			texts.put(HudModule.LIGHT, HudText.light(client.level.getBrightness(LightLayer.BLOCK, feet),
+				client.level.getBrightness(LightLayer.SKY, feet)));
+		}
+		texts.put(HudModule.COORDS, HudText.coords(player.getX(), player.getY(), player.getZ()));
+		texts.put(HudModule.CHUNK, HudText.chunk(player.getX(), player.getZ()));
+		texts.put(HudModule.DIRECTION, HudText.direction(player.getYRot()));
+		texts.put(HudModule.SPEED, HudText.speed(player.getX(), player.getZ()));
+
+		if (client.level != null) {
+			texts.put(HudModule.WORLD_TIME, HudText.worldTime(client.level.getOverworldClockTime()));
+			texts.put(HudModule.BIOME, HudText.biome(biome(client.level, player.blockPosition())));
+		}
+		if (client.getConnection() != null) {
+			PlayerInfo info = client.getConnection().getPlayerInfo(player.getUUID());
+			if (info != null)
+				texts.put(HudModule.PING, HudText.ping(info.getLatency()));
+		}
+		return texts;
+	}
+
+	/** Meldet der Tasten- und Klickanzeige, was gerade gedrückt ist. */
+	private static void sampleInput(Minecraft client) {
+		Options options = client.options;
+		HudInput.sample(options.keyUp.isDown(), options.keyLeft.isDown(), options.keyDown.isDown(),
+			options.keyRight.isDown(), options.keyJump.isDown(), options.keyAttack.isDown(),
+			options.keyUse.isDown());
+	}
+
+	/** Aktive Effekte mit Stufe und Restdauer. */
+	private static List<HudText.EffectLine> effects(LocalPlayer player) {
+		List<HudText.EffectLine> lines = new ArrayList<>();
+		for (MobEffectInstance effect : player.getActiveEffects())
+			lines.add(new HudText.EffectLine(effect.getEffect().value().getDisplayName().getString(),
+				effect.getAmplifier() + 1, effect.getDuration()));
+		return lines;
+	}
+
+	/** Name des Bioms in der Sprache des Spielers; null, wenn er sich nicht ermitteln lässt. */
+	private static String biome(ClientLevel level, BlockPos pos) {
+		return level.getBiome(pos).unwrapKey()
+			.map(key -> Component.translatable("biome." + key.identifier().getNamespace() + "."
+				+ key.identifier().getPath()).getString())
+			.orElse(null);
+	}
+
+	/** Zeichnet über Minecraft; ohne Zeichenfläche (nur zum Messen) wird nichts gezeichnet. */
+	public static final class Painter implements HudPainter {
+		private final GuiGraphicsExtractor graphics;
+
+		public Painter(GuiGraphicsExtractor graphics) {
+			this.graphics = graphics;
+		}
+
+		private static Font font() {
+			return Minecraft.getInstance().font;
+		}
+
+		/** Was auf dem Ausrüstungsplatz liegt; nie null. */
+		private static ItemStack equipped(int slot) {
+			LocalPlayer player = Minecraft.getInstance().player;
+			if (player == null || slot < 0 || slot >= SLOTS.length)
+				return ItemStack.EMPTY;
+			return player.getItemBySlot(SLOTS[slot]);
+		}
+
+		/**
+		 * Menüschrift Inter (assets/axoclient/font/inter_N.json bzw. inter_title_N.json), fehlende Zeichen kommen
+		 * aus der Minecraft-Schrift. Es gibt sie in mehreren Auflösungen (N = Bildschirmpixel je Menüpixel), damit jede
+		 * Glyphe genau so groß gerastert wird, wie sie auf dem Bildschirm erscheint – sonst wird sie hochgezogen und pixelig.
+		 */
+		private static final int MAX_OVERSAMPLE = 5;
+		private static final net.minecraft.network.chat.FontDescription[] UI_FONTS = fonts("inter_");
+		private static final net.minecraft.network.chat.FontDescription[] TITLE_FONTS = fonts("inter_title_");
+
+		private static net.minecraft.network.chat.FontDescription[] fonts(String prefix) {
+			net.minecraft.network.chat.FontDescription[] fonts = new net.minecraft.network.chat.FontDescription[MAX_OVERSAMPLE];
+			for (int i = 0; i < fonts.length; i++)
+				fonts[i] = new net.minecraft.network.chat.FontDescription.Resource(
+					Identifier.fromNamespaceAndPath("axoclient", prefix + (i + 1)));
+			return fonts;
+		}
+
+		private boolean ui;
+		private boolean title;
+		/** Ob Text in der Menüschrift einen Schatten bekommen darf (Anzeigen im Bild ja, Menüs nein). */
+		public boolean uiShadow;
+
+		private Component styled(String text) {
+			float pixels = graphics != null ? pixelScale() : (float) (menuScale() * Minecraft.getInstance().getWindow().getGuiScale());
+			int index = Math.max(1, Math.min(MAX_OVERSAMPLE, Math.round(pixels))) - 1;
+			net.minecraft.network.chat.FontDescription font = (title ? TITLE_FONTS : UI_FONTS)[index];
+			return Component.literal(text).withStyle(style -> style.withFont(font));
+		}
+
+		@Override
+		public void uiFont(boolean on) {
+			ui = on;
+		}
+
+		@Override
+		public boolean titleFont(boolean on) {
+			title = on;
+			return ui;
+		}
+
+		/**
+		 * Ziel: eine ganze Zahl Bildschirmpixel je Menüpixel (2 bei 1080p, 3 bei 1440p, 4 bei 4K). Nur so liegen Kanten,
+		 * Linien und Schrift genau auf dem Pixelraster und bleiben scharf.
+		 */
+		@Override
+		public float menuScale() {
+			com.mojang.blaze3d.platform.Window window = Minecraft.getInstance().getWindow();
+			int guiScale = Math.max(1, (int) Math.round(window.getGuiScale()));
+			int target = Math.max(2, (int) Math.round(window.getHeight() / 500.0));
+			return Math.min(guiScale, target) / (float) guiScale;
+		}
+
+		@Override
+		public float pixelScale() {
+			if (graphics == null)
+				return 1.0F;
+			return (float) (Minecraft.getInstance().getWindow().getGuiScale() * Math.abs(graphics.pose().m00()));
+		}
+
+		@Override
+		public int textWidth(String text) {
+			return ui ? font().width(styled(text)) : font().width(text);
+		}
+
+		@Override
+		public void text(String text, int x, int y, int argb, boolean shadow) {
+			if (graphics == null)
+				return;
+			if (ui)
+				graphics.text(font(), styled(text), x, y, argb, shadow && uiShadow);
+			else
+				graphics.text(font(), text, x, y, argb, shadow);
+		}
+
+		@Override
+		public void image(Object texture, int x, int y, int width, int height, float u, float v, int regionWidth,
+						  int regionHeight, int textureWidth, int textureHeight) {
+			if (graphics != null && texture instanceof Identifier id)
+				graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, id, x, y, u, v, width, height,
+					regionWidth, regionHeight, textureWidth, textureHeight);
+		}
+
+		@Override
+		public void fill(int x, int y, int width, int height, int argb) {
+			if (graphics != null)
+				graphics.fill(x, y, x + width, y + height, argb);
+		}
+
+		@Override
+		public void push(int x, int y, float scale) {
+			if (graphics == null)
+				return;
+			// Um (x, y) herum vergrößern, damit die Anzeige an ihrer Ecke stehen bleibt
+			Matrix3x2fStack pose = graphics.pose();
+			pose.pushMatrix();
+			pose.translate(x, y);
+			pose.scale(scale, scale);
+			pose.translate(-x, -y);
+		}
+
+		@Override
+		public int[] effectsSize() {
+			return AxoHud.effectsSize();
+		}
+
+		@Override
+		public void pushMoved(int dx, int dy, int ax, int ay, float scale) {
+			if (graphics == null)
+				return;
+			Matrix3x2fStack pose = graphics.pose();
+			pose.pushMatrix();
+			pose.translate(ax, ay);
+			pose.scale(scale, scale);
+			pose.translate(dx - ax, dy - ay);
+		}
+
+		@Override
+		public void pop() {
+			if (graphics != null)
+				graphics.pose().popMatrix();
+		}
+
+		@Override
+		public boolean hasEquipment(int slot) {
+			return !equipped(slot).isEmpty();
+		}
+
+		@Override
+		public void equipment(int slot, int x, int y) {
+			ItemStack stack = equipped(slot);
+			if (graphics == null || stack.isEmpty())
+				return;
+			graphics.item(stack, x, y);
+			graphics.itemDecorations(font(), stack, x, y);
+		}
+
+		@Override
+		public int[] scoreboardSize() {
+			return AxoBoard.size();
+		}
+
+		@Override
+		public void scoreboard(int x, int y) {
+			if (graphics != null)
+				AxoBoard.draw(graphics, x, y);
+		}
+
+		@Override
+		public String durability(int slot) {
+			ItemStack stack = equipped(slot);
+			if (stack.isEmpty() || !stack.isDamageableItem())
+				return null;
+			return Math.round((1.0F - (float) stack.getDamageValue() / stack.getMaxDamage()) * 100) + "%";
+		}
+	}
+}

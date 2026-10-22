@@ -64,6 +64,21 @@ public sealed class ModMetadata
     public List<string> Breaks { get; set; } = [];
     public List<string> Conflicts { get; set; } = [];
 
+    /// <summary>
+    /// Versionsbedingung je Mod-ID aus <see cref="Breaks"/>/<see cref="Conflicts"/> (fehlt = jede Version). Nur ab
+    /// <see cref="Format"/> 2 vorhanden; ältere Einträge kennen die Bedingung nicht.
+    /// </summary>
+    public Dictionary<string, string> BreakRanges { get; set; } = [];
+    public Dictionary<string, string> ConflictRanges { get; set; } = [];
+
+    /// <summary>Version laut Metadaten der Jar (nicht der Name der Modrinth-Version).</summary>
+    public string? ModVersion { get; set; }
+
+    /// <summary>Stand des Lesers; ältere Einträge werden beim nächsten Abgleich neu gelesen.</summary>
+    public int Format { get; set; }
+
+    public const int CurrentFormat = 2;
+
     /// <summary>IDs, die diese Jar zusätzlich bereitstellt (<c>provides</c> und mitgelieferte Jars).</summary>
     public List<string> Provides { get; set; } = [];
 

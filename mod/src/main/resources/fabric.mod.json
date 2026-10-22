@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "axoclient",
+	"version": "${version}",
+	"name": "AxoClient",
+	"description": "AxoClient im Spiel: Axolotl-Symbol in der Tabliste, Axo-Capes und Overlay.",
+	"authors": ["AxoClient"],
+	"license": "CC0-1.0",
+	"icon": "assets/axoclient/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["de.axoclient.mod.BadgeClient"]
+	},
+	"mixins": ["axoclient.mixins.json"],
+	"depends": {
+		"fabricloader": ">=0.15.0",
+		"minecraft": "${range}",
+		"java": ">=${java}"
+	}
+}

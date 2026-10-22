@@ -1,0 +1,26 @@
+# AxoClient-Dienst – Konfiguration für "npx wrangler deploy"
+# Name und D1-ID an deinen bestehenden Worker anpassen (Cloudflare-Dashboard → Workers & Pages / D1).
+name = "mclauncher-badge"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "axoclient"
+database_id = "67cff225-0352-4608-a538-6d045ede1d2a"
+
+# Echtzeit-Kanal für Emotes: ein Durable Object je Minecraft-Server
+[[durable_objects.bindings]]
+name = "LIVE"
+class_name = "LiveRoom"
+
+# Beim ersten Deploy wird die Klasse angelegt (SQLite-Speicher, im Free-Plan enthalten)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveRoom"]
+
+[vars]
+# Minecraft-UUID(s) des Besitzers, ohne Bindestriche, mehrere mit Komma
+OWNER_UUID = "0ec0c29dbbf8410088bfac9b1fed9e69"
+# Optional: kleinste Launcher-Version für v2
+# MIN_LAUNCHER = "1.0.0"

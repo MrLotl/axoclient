@@ -71,6 +71,8 @@ public sealed class GameLauncher(
             lock (_contexts)
                 _contexts[instanceId] = ctx;
             var running = processes.Start(InstanceManager.ProcessKey(instanceId), process.StartInfo);
+            var key = running.Key;
+            running.LineReceived += line => events.Publish("console.line", new { key, line });
             foreach (var hint in ctx.Hints)
                 events.Publish("notify", new { type = "hint", text = hint, instanceId });
             foreach (var hook in _hooks)
