@@ -3,6 +3,7 @@
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
   import { t } from '../../lib/i18n';
+  import DropOverlay from '../../lib/components/DropOverlay.svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
   import { ago, bytes } from '../../lib/util/format';
@@ -86,12 +87,7 @@
     }
   }
 
-  let dragging = $state(false);
-  async function ondrop(e: DragEvent) {
-    e.preventDefault();
-    dragging = false;
-    const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => /\.zip$/i.test(f.name));
-    if (files.length === 0) return;
+  async function ondrop(files: File[]) {
     try {
       const refs = [];
       for (const f of files) refs.push((await upload(f)).id);
@@ -114,15 +110,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="tab"
-  ondragover={(e) => {
-    e.preventDefault();
-    dragging = true;
-  }}
-  ondragleave={() => (dragging = false)}
-  {ondrop}>
+<div class="tab">
   <div class="toolbar">
     <label class="field search">
       <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
@@ -177,9 +165,7 @@
     </div>
   {/if}
 
-  {#if dragging}
-    <div class="drop"><Icon name="import" size={28} /><span>{t('worlds.dropHint')}</span></div>
-  {/if}
+  <DropOverlay icon="import" hint={t('worlds.dropHint')} inset={0} accept={(f) => /\.zip$/i.test(f.name)} {ondrop} />
 </div>
 
 <style>
@@ -357,21 +343,6 @@
   }
   .tab {
     position: relative;
-  }
-  .drop {
-    position: absolute;
-    inset: 0;
-    border-radius: 16px;
-    border: 2px dashed var(--accent-text);
-    background: rgba(20, 20, 20, 0.88);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: var(--accent-text);
-    font-weight: 600;
-    pointer-events: none;
   }
   .empty {
     flex-grow: 1;

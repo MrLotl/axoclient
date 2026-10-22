@@ -2,6 +2,7 @@
   import { app } from '../lib/stores/app.svelte';
   import { call } from '../lib/bridge/bridge';
   import { t } from '../lib/i18n';
+  import DropZone from '../lib/components/DropZone.svelte';
   import Icon from '../lib/components/Icon.svelte';
   import FormSection from '../lib/components/FormSection.svelte';
   import VersionPicker from '../lib/components/VersionPicker.svelte';
@@ -28,7 +29,6 @@
   let icon = $state<{ base64: string; url: string } | null>(null);
   let busy = $state(false);
   let created = $state<Instance | null>(null);
-  let dragging = $state(false);
 
   const copyJob = $derived(app.jobFor('instance.copy'));
   const importJob = $derived(app.jobFor('instance.import'));
@@ -55,11 +55,8 @@
     }
   }
 
-  async function ondrop(e: DragEvent) {
-    e.preventDefault();
-    dragging = false;
-    const file = e.dataTransfer?.files[0];
-    if (!file || !/\.(mrpack|zip)$/i.test(file.name)) return;
+  async function ondrop(files: File[]) {
+    const file = files[0]!;
     try {
       importRef = await upload(file);
     } catch (err) {
@@ -158,16 +155,7 @@
       <div class="cols" class:single={start !== 'empty'}>
           {#if start === 'import'}
             <FormSection title={t('create.importTitle')}>
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <div
-                class="dropzone"
-                class:dragging
-                ondragover={(e) => {
-                  e.preventDefault();
-                  dragging = true;
-                }}
-                ondragleave={() => (dragging = false)}
-                {ondrop}>
+              <DropZone accept={(f) => /\.(mrpack|zip)$/i.test(f.name)} padding={28} ondrop={ondrop}>
                 <Icon name="import" size={24} />
                 {#if importRef}
                   <span class="file">{importRef.name}</span>
@@ -175,7 +163,7 @@
                   <span><button class="link" onclick={chooseFile}>{t('create.chooseFile')}</button> {t('create.orDrop')}</span>
                 {/if}
                 <span class="hint">{t('create.importFormats')}</span>
-              </div>
+              </DropZone>
               {#if importJob}<p class="hint">{t('instances.importing', { file: importRef?.name ?? '' })}</p>{/if}
               <button class="other-launcher" onclick={() => (app.dialog = { kind: 'import' })}>
                 <span class="s-icon"><Icon name="search" size={16} /></span>
@@ -351,22 +339,6 @@
   }
   .other-launcher:hover {
     box-shadow: inset 0 0 0 1px var(--accent-ring);
-  }
-  .dropzone {
-    padding: 28px;
-    border-radius: 12px;
-    border: 1.5px dashed #444;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    color: var(--muted);
-    font-size: 13px;
-    text-align: center;
-  }
-  .dropzone.dragging {
-    border-color: var(--accent-text);
-    background: var(--accent-soft);
   }
   .file {
     font-weight: 600;

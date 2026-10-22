@@ -3,6 +3,7 @@
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
   import { t } from '../../lib/i18n';
+  import DropOverlay from '../../lib/components/DropOverlay.svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
   import Toggle from '../../lib/components/Toggle.svelte';
@@ -23,7 +24,6 @@
   let updates = $state<ContentUpdate[]>([]);
   let issues = $state<IssueView[]>([]);
   let dialog = $state<null | 'add' | 'updates' | 'repair' | { version: ContentItem }>(null);
-  let dragging = $state(false);
 
   // Größe der Kacheln bzw. Zeilen (0 = klein, 1 = groß), je Ansicht gemerkt
   function storedSize(v: 'grid' | 'list') {
@@ -137,15 +137,11 @@
     };
   }
 
-  async function ondrop(e: DragEvent) {
-    e.preventDefault();
-    dragging = false;
+  async function ondrop(files: File[]) {
     if (addBlocked) {
       app.toast(t('content.modLock.full'), 'error');
       return;
     }
-    const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => (type === 'mod' ? /\.jar$/i : /\.zip$/i).test(f.name));
-    if (files.length === 0) return;
     try {
       const refs = [];
       for (const f of files) refs.push((await upload(f)).id);
@@ -160,15 +156,7 @@
     i.source === 'axoclient' ? 'AxoClient' : i.source === 'local' ? t('content.localOwn') : i.source === 'modrinth' ? 'Modrinth' : i.source === 'curseforge' ? 'CurseForge' : t('content.fromFriend');
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="tab"
-  ondragover={(e) => {
-    e.preventDefault();
-    dragging = true;
-  }}
-  ondragleave={() => (dragging = false)}
-  {ondrop}>
+<div class="tab">
   <div class="toolbar">
     <label class="field search">
       <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
@@ -290,9 +278,7 @@
     </div>
   {/if}
 
-  {#if dragging}
-    <div class="drop"><Icon name="upload" size={28} /><span>{t(`content.${key}.dropHint`)}</span></div>
-  {/if}
+  <DropOverlay hint={t(`content.${key}.dropHint`)} inset={0} accept={(f) => (type === 'mod' ? /\.jar$/i : /\.zip$/i).test(f.name)} {ondrop} />
 </div>
 
 {#if dialog === 'add'}
@@ -629,20 +615,5 @@
     font-size: 13px;
     color: var(--muted);
     line-height: 1.5;
-  }
-  .drop {
-    position: absolute;
-    inset: 0;
-    border-radius: 16px;
-    border: 2px dashed var(--accent-text);
-    background: rgba(20, 20, 20, 0.88);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: var(--accent-text);
-    font-weight: 600;
-    pointer-events: none;
   }
 </style>

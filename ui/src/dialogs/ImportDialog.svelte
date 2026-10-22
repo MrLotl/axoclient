@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Dialog from '../lib/components/Dialog.svelte';
+  import DropZone from '../lib/components/DropZone.svelte';
   import Icon from '../lib/components/Icon.svelte';
   import Checkbox from '../lib/components/Checkbox.svelte';
   import Select from '../lib/components/Select.svelte';
@@ -41,7 +42,6 @@
   let running = $state(false);
   let results = $state<ForeignImportResult[] | null>(null);
   let fileBusy = $state(false);
-  let dragging = $state(false);
 
   const loaders: LoaderType[] = ['vanilla', 'fabric', 'forge', 'neoforge', 'quilt'];
   const found = $derived((launchers ?? []).filter((l) => l.installed));
@@ -132,12 +132,8 @@
     }
   }
 
-  async function ondrop(e: DragEvent) {
-    e.preventDefault();
-    dragging = false;
-    const dropped = e.dataTransfer?.files[0];
-    if (!dropped || !/\.(mrpack|zip)$/i.test(dropped.name)) return;
-    await importFile(await upload(dropped));
+  async function ondrop(files: File[]) {
+    await importFile(await upload(files[0]!));
   }
 
   async function run() {
@@ -212,28 +208,19 @@
 
       <section class="main">
         {#if active === 'file'}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div
-            class="drop"
-            class:dragging
-            ondragover={(e) => {
-              e.preventDefault();
-              dragging = true;
-            }}
-            ondragleave={() => (dragging = false)}
-            {ondrop}>
+          <DropZone accept={(f) => /\.(mrpack|zip)$/i.test(f.name)} padding={34} ondrop={ondrop}>
             {#if fileBusy}
               <span class="spinner dark"></span>
             {:else}
               <Icon name="import" size={24} />
             {/if}
-            <strong>{t('import.fileTitle')}</strong>
+            <strong class="drop-title">{t('import.fileTitle')}</strong>
             <span class="hint">{t('import.fileText')}</span>
             <div class="row" style="gap: 8px">
               <button class="btn btn-second sm" disabled={fileBusy} onclick={chooseFile}><Icon name="upload" size={13} />{t('import.chooseFile')}</button>
               <button class="btn btn-second sm" disabled={fileBusy} onclick={chooseFolder}><Icon name="folder" size={13} />{t('import.chooseFolder')}</button>
             </div>
-          </div>
+          </DropZone>
         {:else if current}
           <div class="main-head">
             <h3>{current.name}</h3>
@@ -462,24 +449,7 @@
   .field.small {
     height: 38px;
   }
-  .drop {
-    padding: 34px 20px;
-    border-radius: 14px;
-    box-shadow: inset 0 0 0 1.5px #3a3a3a;
-    background: var(--panel-2);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    text-align: center;
-    color: var(--muted);
-    transition: box-shadow 0.15s ease, background-color 0.15s ease;
-  }
-  .drop.dragging {
-    background: var(--accent-soft);
-    box-shadow: inset 0 0 0 2px var(--accent-ring);
-  }
-  .drop strong {
+  .drop-title {
     color: var(--text);
     font-size: 14px;
   }

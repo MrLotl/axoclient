@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte';
   import { t } from '../lib/i18n';
+  import DropOverlay from '../lib/components/DropOverlay.svelte';
   import Icon from '../lib/components/Icon.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import ImageBox from '../lib/components/ImageBox.svelte';
@@ -10,7 +11,6 @@
 
   let view = $state<'grid' | 'list'>(app.ui?.views.instances ?? 'grid');
   let query = $state('');
-  let dragging = $state(false);
 
   const list = $derived(
     app.instances.filter((i) => !query.trim() || i.name.toLowerCase().includes(query.trim().toLowerCase()))
@@ -22,24 +22,12 @@
   }
 
   // .mrpack oder Backup per Drag & Drop
-  async function ondrop(e: DragEvent) {
-    e.preventDefault();
-    dragging = false;
-    const file = e.dataTransfer?.files[0];
-    if (!file || !/\.(mrpack|zip)$/i.test(file.name)) return;
-    app.dialog = { kind: 'import', data: { file: await upload(file) } };
+  async function ondrop(files: File[]) {
+    app.dialog = { kind: 'import', data: { file: await upload(files[0]!) } };
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="page"
-  ondragover={(e) => {
-    e.preventDefault();
-    dragging = true;
-  }}
-  ondragleave={() => (dragging = false)}
-  {ondrop}>
+<div class="page">
   <div class="toolbar">
     <h1>{t('instances.title')}</h1>
     <span class="count-pill">{app.instances.length}</span>
@@ -108,9 +96,7 @@
     </div>
   {/if}
 
-  {#if dragging}
-    <div class="drop"><Icon name="import" size={28} /><span>{t('instances.dropHint')}</span></div>
-  {/if}
+  <DropOverlay icon="import" hint={t('instances.dropHint')} accept={(f) => /\.(mrpack|zip)$/i.test(f.name)} {ondrop} />
 </div>
 
 <style>
@@ -288,20 +274,5 @@
     max-width: 420px;
     color: var(--muted);
     line-height: 1.5;
-  }
-  .drop {
-    position: absolute;
-    inset: 12px;
-    border-radius: 16px;
-    border: 2px dashed var(--accent-text);
-    background: rgba(20, 20, 20, 0.85);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: var(--accent-text);
-    font-weight: 600;
-    pointer-events: none;
   }
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Dialog from '../../lib/components/Dialog.svelte';
+  import DropZone from '../../lib/components/DropZone.svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import SkinViewer from '../../lib/components/SkinViewer.svelte';
   import Segmented from '../../lib/components/Segmented.svelte';
@@ -16,7 +17,6 @@
   let model = $state<SkinModel>(skin?.model ?? 'classic');
   let file = $state<{ base64: string; url: string; name: string } | null>(null);
   let problem = $state<string | null>(null);
-  let dragging = $state(false);
   let busy = $state(false);
   let input: HTMLInputElement | undefined = $state();
 
@@ -72,25 +72,12 @@
       {/if}
     </div>
     <div class="form">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="drop"
-        class:dragging
-        ondragover={(e) => {
-          e.preventDefault();
-          dragging = true;
-        }}
-        ondragleave={() => (dragging = false)}
-        ondrop={(e) => {
-          e.preventDefault();
-          dragging = false;
-          take(e.dataTransfer?.files[0]);
-        }}>
+      <DropZone padding={20} ondrop={(f) => take(f[0])}>
         <Icon name="upload" size={20} />
         <button class="link" onclick={() => input?.click()}>{file ? t('skins.otherFile') : t('skins.chooseFile')}</button>
         <span class="hint">{file?.name ?? t('skins.fileFormat')}</span>
         <input bind:this={input} type="file" accept="image/png" hidden onchange={(e) => take((e.currentTarget as HTMLInputElement).files?.[0])} />
-      </div>
+      </DropZone>
       {#if problem}<p class="error-text">{problem}</p>{/if}
       <label class="label">
         <span>{t('skins.name')}</span>
@@ -129,20 +116,6 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-  }
-  .drop {
-    padding: 20px;
-    border-radius: 12px;
-    border: 1.5px dashed #444;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    color: var(--muted);
-  }
-  .drop.dragging {
-    border-color: var(--accent-text);
-    background: var(--accent-soft);
   }
   .link {
     padding: 0;

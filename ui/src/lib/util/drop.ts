@@ -7,6 +7,10 @@ export type DropOptions = {
   ondrop: (files: File[]) => void;
   accept?: (file: File) => boolean;
   disabled?: boolean;
+  /** Ohne gestrichelten Rahmen (z. B. wenn ein eigenes Overlay den Zustand zeigt). */
+  unmarked?: boolean;
+  /** Meldet, ob gerade Dateien über dem Element schweben. */
+  onactive?: (active: boolean) => void;
 };
 
 export const isImage = (f: File) => /^image\/(png|jpeg)$/.test(f.type) || /\.(png|jpe?g)$/i.test(f.name);
@@ -17,19 +21,21 @@ const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files');
 export function dropFiles(node: HTMLElement, options: DropOptions) {
   let opts = options;
   let depth = 0;
-  node.classList.toggle('drop-target', !opts.disabled);
+  const mark = () => node.classList.toggle('drop-target', !opts.disabled && !opts.unmarked);
+  mark();
 
   const reset = () => {
     depth = 0;
     node.classList.remove('drag-over');
+    opts.onactive?.(false);
   };
   const enter = (e: DragEvent) => {
     if (opts.disabled || !hasFiles(e)) return;
     e.preventDefault();
     // Verschachtelte Ablageflächen (Icon im Banner) sollen nur selbst leuchten
     e.stopPropagation();
-    depth++;
-    node.classList.add('drag-over');
+    if (depth++ === 0) opts.onactive?.(true);
+    if (!opts.unmarked) node.classList.add('drag-over');
   };
   const over = (e: DragEvent) => {
     if (opts.disabled || !hasFiles(e)) return;
@@ -57,7 +63,7 @@ export function dropFiles(node: HTMLElement, options: DropOptions) {
   return {
     update(next: DropOptions) {
       opts = next;
-      node.classList.toggle('drop-target', !opts.disabled);
+      mark();
       if (opts.disabled) reset();
     },
     destroy() {
