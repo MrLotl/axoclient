@@ -10,6 +10,8 @@ public static partial class Handlers
 
     private sealed record EmoteSlotsData(List<string?> Slots);
 
+    private sealed record EmoteOptionsData(string Id, bool Loop, bool Moving);
+
     private sealed record MissingModData(string Source, string ProjectId, string? VersionId);
 
     private sealed record InstallMissingData(string InstanceId, string Address, List<MissingModData> Mods);
@@ -36,6 +38,11 @@ public static partial class Handlers
         r.On<EmoteRenameData>("emotes.rename", async (d, ct) =>
         {
             await host.Emotes.RenameAsync(d.Id, d.Name, ct);
+            return await host.Emotes.ListAsync(ct);
+        });
+        r.On<EmoteOptionsData>("emotes.setOptions", async (d, ct) =>
+        {
+            await host.Emotes.SetOptionsAsync(d.Id, d.Loop, d.Moving, ct);
             return await host.Emotes.ListAsync(ct);
         });
         r.On<IdData>("emotes.remove", async (d, ct) =>

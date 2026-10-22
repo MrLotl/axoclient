@@ -685,7 +685,7 @@ public sealed partial class IngameLink(
     {
         var slots = await emotes.SlotsAsync();
         var all = await emotes.AllWithAnimationsAsync();
-        var list = all.Select(e => new { id = e.Item.Id, name = e.Item.Name, source = "imported" }).ToList();
+        var list = all.Select(e => new { id = e.Item.Id, name = e.Item.Name, source = "imported", loop = e.Item.Loop, moving = e.Item.Moving }).ToList();
         foreach (var instance in Targets(onlyInstance))
         {
             await bridge.SendAsync(instance, "emotes", new { slots, list });

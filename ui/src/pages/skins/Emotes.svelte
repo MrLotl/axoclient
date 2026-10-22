@@ -6,7 +6,7 @@
   import Icon from '../../lib/components/Icon.svelte';
   import Select from '../../lib/components/Select.svelte';
 
-  type EmoteInfo = { id: string; name: string; source: string; createdAt?: string };
+  type EmoteInfo = { id: string; name: string; source: string; createdAt?: string; loop?: boolean; moving?: boolean };
   type EmoteList = { builtin: EmoteInfo[]; imported: EmoteInfo[]; slots: (string | null)[] };
 
   let builtin = $state<EmoteInfo[]>([]);
@@ -79,6 +79,16 @@
       slots = await call<(string | null)[]>('emotes.setSlots', { slots: next });
     } catch (e) {
       app.error(e);
+    }
+  }
+
+  // Dauerhaft / beim Laufen: beim Import erkannt, hier umstellbar
+  async function setOption(e: EmoteInfo, field: 'loop' | 'moving') {
+    const next = { loop: !!e.loop, moving: !!e.moving, [field]: !e[field] };
+    try {
+      imported = await call<EmoteInfo[]>('emotes.setOptions', { id: e.id, ...next });
+    } catch (err) {
+      app.error(err);
     }
   }
 
@@ -186,7 +196,14 @@
             {:else}
               <span class="name truncate">{e.name}</span>
             {/if}
-            <span class="sub">{t('emotes.imported')}</span>
+            <div class="options">
+              <button class="opt" class:on={e.loop} aria-pressed={!!e.loop} title={t('emotes.loopHint')} onclick={() => setOption(e, 'loop')}>
+                <Icon name="refresh" size={12} />{t('emotes.loop')}
+              </button>
+              <button class="opt" class:on={e.moving} aria-pressed={!!e.moving} title={t('emotes.movingHint')} onclick={() => setOption(e, 'moving')}>
+                <Icon name="play" size={11} />{t('emotes.moving')}
+              </button>
+            </div>
             <div class="actions">
               <button class="icon-btn small" aria-label={t('emotes.renameNamed', { name: e.name })} title={t('emotes.rename')} onclick={() => startRename(e)}><Icon name="edit" size={14} /></button>
               <button class="icon-btn small danger" aria-label={t('emotes.deleteNamed', { name: e.name })} title={t('common.delete')} onclick={() => remove(e)}><Icon name="trash" size={14} /></button>
@@ -327,7 +344,7 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 12px;
   }
   .card {
@@ -369,13 +386,41 @@
     font-size: 13px;
     font-weight: 600;
   }
-  .sub {
-    font-size: 11px;
-    color: var(--muted-2);
-  }
   .actions {
     display: flex;
     gap: 6px;
+  }
+  .options {
+    display: flex;
+    gap: 4px;
+  }
+  .opt {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--panel-3);
+    color: var(--muted-2);
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+  .opt:hover {
+    background: var(--panel-4);
+    color: var(--text-2);
+  }
+  .opt.on {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    box-shadow: inset 0 0 0 1px var(--accent-ring);
   }
   .icon-btn.small {
     width: 30px;

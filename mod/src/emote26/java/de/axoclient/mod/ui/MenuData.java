@@ -60,7 +60,8 @@ public final class MenuData {
 
 	public record Cape(String key, String name, String kind) {}
 
-	public record CustomEmote(String id, String name) {}
+	/** Eigenes Emote; {@code moving} = man darf dabei laufen (nur Schleichen beendet es). */
+	public record CustomEmote(String id, String name, boolean moving) {}
 
 	public static boolean available;
 	public static String meUuid;
@@ -238,7 +239,7 @@ public final class MenuData {
 				continue;
 			JsonObject c = e.getAsJsonObject();
 			if (str(c, "id") != null)
-				CUSTOM.add(new CustomEmote(str(c, "id"), str(c, "name")));
+				CUSTOM.add(new CustomEmote(str(c, "id"), str(c, "name"), c.has("moving") && c.get("moving").isJsonPrimitive() && c.get("moving").getAsBoolean()));
 		}
 	}
 

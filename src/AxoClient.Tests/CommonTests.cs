@@ -197,3 +197,44 @@ public class AppearanceTests
         Assert.Equal(Appearance.Presets["axo"], a.Accent);
     }
 }
+
+public class EmoteOptionTests
+{
+    private static System.Text.Json.Nodes.JsonObject Parse(string json) =>
+        (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(json)!;
+
+    [Fact]
+    public void BedrockArmsOnlyWithLoop()
+    {
+        var anim = Parse("""{"animations":{"a":{"loop":true,"bones":{"right_arm":{},"head":{}}}}}""");
+        Assert.Equal((true, true), AxoClient.Core.Social.EmoteLibrary.Detect(anim));
+    }
+
+    [Fact]
+    public void BedrockWithLegsIsNotMoving()
+    {
+        var anim = Parse("""{"animations":{"a":{"loop":"hold_on_last_frame","bones":{"leftLeg":{}}}}}""");
+        Assert.Equal((true, false), AxoClient.Core.Social.EmoteLibrary.Detect(anim));
+    }
+
+    [Fact]
+    public void EmotecraftLoopAsString()
+    {
+        var anim = Parse("""{"emote":{"isLoop":"true","moves":[{"tick":0,"rightArm":{"pitch":1}}]}}""");
+        Assert.Equal((true, true), AxoClient.Core.Social.EmoteLibrary.Detect(anim));
+    }
+
+    [Fact]
+    public void ApplyLoopKeepsHoldAndRemovesWhenOff()
+    {
+        var hold = Parse("""{"animations":{"a":{"loop":"hold_on_last_frame"}}}""");
+        AxoClient.Core.Social.EmoteLibrary.ApplyLoop(hold, true);
+        Assert.Equal("hold_on_last_frame", hold["animations"]!["a"]!["loop"]!.GetValue<string>());
+
+        var plain = Parse("""{"animations":{"a":{}}}""");
+        AxoClient.Core.Social.EmoteLibrary.ApplyLoop(plain, true);
+        Assert.True(plain["animations"]!["a"]!["loop"]!.GetValue<bool>());
+        AxoClient.Core.Social.EmoteLibrary.ApplyLoop(plain, false);
+        Assert.Null(plain["animations"]!["a"]!["loop"]);
+    }
+}

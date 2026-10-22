@@ -16,6 +16,12 @@ public sealed class EmoteItem
     /// <summary>Name der Animation in der Datei (Bedrock/GeckoLib); <c>null</c> = die erste (PlayerAnimator/Emotecraft).</summary>
     public string? Animation { get; set; }
 
+    /// <summary>Läuft dauerhaft (Schleife oder letzte Pose halten), bis man schleicht oder sich bewegt.</summary>
+    public bool Loop { get; set; }
+
+    /// <summary>Man darf dabei laufen; nur Schleichen beendet es.</summary>
+    public bool Moving { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
@@ -28,7 +34,7 @@ public sealed class EmoteLibraryDocument : IVersionedDocument
     public List<string?>? Slots { get; set; }
 }
 
-public sealed record EmoteView(string Id, string Name, string Source, DateTimeOffset CreatedAt);
+public sealed record EmoteView(string Id, string Name, string Source, DateTimeOffset CreatedAt, bool Loop, bool Moving);
 
 /// <summary>
 /// Eigene Emotes (importierte Animationen) und die Belegung des Emote-Rads. Die eingebauten Emotes liefert die AxoMod
@@ -59,7 +65,7 @@ public sealed class EmoteLibrary(AppPaths paths, EventHub events)
     {
         var doc = await _store.LoadAsync(ct);
         return doc.Emotes.Where(e => System.IO.File.Exists(FilePath(e)))
-            .Select(e => new EmoteView(e.Id, e.Name, "imported", e.CreatedAt)).ToList();
+            .Select(View).ToList();
     }
 
     public async Task<IReadOnlyList<string?>> SlotsAsync(CancellationToken ct = default)
@@ -126,7 +132,8 @@ public sealed class EmoteLibrary(AppPaths paths, EventHub events)
                 throw new AxoException("emotes.tooLarge");
             var id = "c_" + Text.Sha256Hex(Encoding.UTF8.GetBytes(compact))[..12];
             await System.IO.File.WriteAllTextAsync(Path.Combine(paths.Emotes, id + ".json"), compact, ct);
-            added.Add(new EmoteItem { Id = id, Name = name is { Length: > 0 } ? name : "Emote", File = id + ".json", Animation = key });
+            var (loop, moving) = Detect(animation);
+            added.Add(new EmoteItem { Id = id, Name = name is { Length: > 0 } ? name : "Emote", File = id + ".json", Animation = key, Loop = loop, Moving = moving });
         }
 
         await _store.UpdateAsync(doc =>
@@ -140,7 +147,7 @@ public sealed class EmoteLibrary(AppPaths paths, EventHub events)
                 throw new AxoException("emotes.tooMany");
         }, ct);
         events.Publish("emotes.changed");
-        return added.Select(e => new EmoteView(e.Id, e.Name, "imported", e.CreatedAt)).ToList();
+        return added.Select(View).ToList();
     }
 
     public async Task RenameAsync(string id, string name, CancellationToken ct = default)
@@ -152,6 +159,29 @@ public sealed class EmoteLibrary(AppPaths paths, EventHub events)
         {
             var item = doc.Emotes.FirstOrDefault(e => e.Id == id) ?? throw new AxoException("errors.notFound");
             item.Name = clean;
+        }, ct);
+        events.Publish("emotes.changed");
+    }
+
+    /// <summary>
+    /// Stellt ein, ob das Emote dauerhaft läuft und ob man dabei laufen darf. "Dauerhaft" steht auch in der Animation selbst,
+    /// damit andere Spieler es genauso sehen.
+    /// </summary>
+    public async Task SetOptionsAsync(string id, bool loop, bool moving, CancellationToken ct = default)
+    {
+        var doc = await _store.LoadAsync(ct);
+        var item = doc.Emotes.FirstOrDefault(e => e.Id == id) ?? throw new AxoException("errors.notFound");
+        var path = FilePath(item);
+        if (System.IO.File.Exists(path) && JsonNode.Parse(await System.IO.File.ReadAllTextAsync(path, ct)) is JsonObject root)
+        {
+            ApplyLoop(root, loop);
+            await System.IO.File.WriteAllTextAsync(path, root.ToJsonString(Json.Compact), ct);
+        }
+        await _store.UpdateAsync(d =>
+        {
+            var stored = d.Emotes.FirstOrDefault(e => e.Id == id) ?? throw new AxoException("errors.notFound");
+            stored.Loop = loop;
+            stored.Moving = moving;
         }, ct);
         events.Publish("emotes.changed");
     }
@@ -191,6 +221,55 @@ public sealed class EmoteLibrary(AppPaths paths, EventHub events)
         foreach (var item in doc.Emotes.Where(e => System.IO.File.Exists(FilePath(e))))
             result.Add((item, await System.IO.File.ReadAllTextAsync(FilePath(item), ct)));
         return result;
+    }
+
+    private static EmoteView View(EmoteItem e) => new(e.Id, e.Name, "imported", e.CreatedAt, e.Loop, e.Moving);
+
+    /// <summary>
+    /// Liest aus der Animation, ob sie dauerhaft läuft (Bedrock <c>loop</c>, Emotecraft <c>isLoop</c>) und ob man dabei
+    /// laufen kann (keine Bein-Bewegung). Die Datei enthält genau eine Animation.
+    /// </summary>
+    internal static (bool Loop, bool Moving) Detect(JsonObject animation)
+    {
+        static bool Truthy(JsonNode? node) => node is JsonValue v && (
+            v.TryGetValue<bool>(out var b) && b
+            || v.TryGetValue<string>(out var s) && (s.Equals("true", StringComparison.OrdinalIgnoreCase) || s == "hold_on_last_frame"));
+        static bool IsLeg(string bone) => bone.Contains("leg", StringComparison.OrdinalIgnoreCase);
+
+        if (animation["animations"] is JsonObject animations)
+        {
+            var anims = animations.Select(a => a.Value).OfType<JsonObject>().ToList();
+            var loop = anims.Any(a => Truthy(a["loop"]));
+            var legs = anims.Any(a => a["bones"] is JsonObject bones && bones.Any(b => IsLeg(b.Key)));
+            return (loop, !legs);
+        }
+        if (animation["emote"] is JsonObject emote)
+        {
+            var loop = Truthy(emote["isLoop"]);
+            var legs = emote["moves"] is JsonArray moves && moves.OfType<JsonObject>().Any(m => m.Any(p => IsLeg(p.Key)));
+            return (loop, !legs);
+        }
+        return (false, false);
+    }
+
+    /// <summary>Schreibt "dauerhaft" in die Animation. Eine gehaltene letzte Pose (<c>hold_on_last_frame</c>) bleibt erhalten.</summary>
+    internal static void ApplyLoop(JsonObject animation, bool loop)
+    {
+        if (animation["animations"] is JsonObject animations)
+        {
+            foreach (var anim in animations.Select(a => a.Value).OfType<JsonObject>())
+            {
+                var hold = anim["loop"] is JsonValue v && v.TryGetValue<string>(out var s) && s == "hold_on_last_frame";
+                if (!loop)
+                    anim.Remove("loop");
+                else if (!hold)
+                    anim["loop"] = true;
+            }
+        }
+        else if (animation["emote"] is JsonObject emote)
+        {
+            emote["isLoop"] = loop;
+        }
     }
 
     private string FilePath(EmoteItem item) => PathGuard.Combine(paths.Emotes, item.File);

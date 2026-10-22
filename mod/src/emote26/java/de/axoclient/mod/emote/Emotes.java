@@ -41,20 +41,24 @@ public final class Emotes {
 	/** Eigene Animationsebene für Emotes (Priorität 1000 = kosmetisch, über Laufen und Stehen). */
 	private static final Identifier LAYER = Identifier.fromNamespaceAndPath("axoclient", "emote");
 
-	public record Emote(String id, String label, boolean imported) {}
+	/**
+	 * Ein Emote. {@code moving}: man darf dabei laufen, nur Schleichen beendet es. Sonst beenden Schleichen, WASD und
+	 * Springen es. Ob es dauerhaft läuft (Schleife oder gehaltene Pose), steht in der Animation selbst.
+	 */
+	public record Emote(String id, String label, boolean imported, boolean moving) {}
 
-	/** Eingebaute Emotes in der Reihenfolge des Menüs (Namen wie im Launcher). */
+	/** Eingebaute Emotes in der Reihenfolge des Menüs (Namen wie im Launcher). Tanzen und Hinsetzen laufen dauerhaft. */
 	public static final List<Emote> ALL = List.of(
-		new Emote("wave", "Winken", false),
-		new Emote("bow", "Verbeugen", false),
-		new Emote("clap", "Klatschen", false),
-		new Emote("cheer", "Jubeln", false),
-		new Emote("dance", "Tanzen", false),
-		new Emote("sit", "Hinsetzen", false),
-		new Emote("point", "Zeigen", false),
-		new Emote("salute", "Salutieren", false),
-		new Emote("facepalm", "Facepalm", false),
-		new Emote("nod", "Nicken", false));
+		new Emote("wave", "Winken", false, true),
+		new Emote("bow", "Verbeugen", false, false),
+		new Emote("clap", "Klatschen", false, true),
+		new Emote("cheer", "Jubeln", false, true),
+		new Emote("dance", "Tanzen", false, false),
+		new Emote("sit", "Hinsetzen", false, false),
+		new Emote("point", "Zeigen", false, true),
+		new Emote("salute", "Salutieren", false, true),
+		new Emote("facepalm", "Facepalm", false, true),
+		new Emote("nod", "Nicken", false, true));
 
 	/** Geladene eigene Animationen (eigene und die anderer Spieler), nach Emote-ID. */
 	private static final Map<String, Animation> CUSTOM = new LinkedHashMap<>(16, 0.75F, true) {
@@ -64,11 +68,15 @@ public final class Emotes {
 		}
 	};
 
+	/** Quelle der geladenen eigenen Animationen: ändert sie sich (z. B. "dauerhaft" umgestellt), wird neu geladen. */
+	private static final Map<String, Integer> CUSTOM_SOURCE = new java.util.concurrent.ConcurrentHashMap<>();
+
 	/** Spieler (Entity-ID), die gerade ein Emote spielen (für Entity Model Features: so lange das normale Modell). */
 	private static final Map<Integer, AbstractClientPlayer> ACTIVE = new java.util.concurrent.ConcurrentHashMap<>();
 
-	/** Eigenes laufendes Emote (oder null) und wo man dabei stand: Bewegung bricht es ab. */
+	/** Eigenes laufendes Emote (oder null) und wo man dabei stand: Bewegung bricht es ab (außer bei Lauf-Emotes). */
 	private static String playing;
+	private static boolean playingMoving;
 	private static double startX;
 	private static double startZ;
 	/** Kameraperspektive vor dem Emote; währenddessen sieht man sich von hinten. */
@@ -99,7 +107,7 @@ public final class Emotes {
 	public static List<Emote> available() {
 		List<Emote> list = new ArrayList<>(ALL);
 		for (MenuData.CustomEmote e : MenuData.CUSTOM)
-			list.add(new Emote(e.id(), e.name() == null ? "Emote" : e.name(), true));
+			list.add(new Emote(e.id(), e.name() == null ? "Emote" : e.name(), true, e.moving()));
 		return list;
 	}
 
@@ -116,10 +124,13 @@ public final class Emotes {
 		LocalPlayer player = client.player;
 		if (player == null || !play(player, id))
 			return false;
+		Emote emote = find(id);
 		playing = id;
+		playingMoving = emote != null && emote.moving();
 		startX = player.getX();
 		startZ = player.getZ();
-		if (cameraBefore == null && client.options.getCameraType() == CameraType.FIRST_PERSON) {
+		// Wer dabei laufen darf, behält seine Perspektive
+		if (!playingMoving && cameraBefore == null && client.options.getCameraType() == CameraType.FIRST_PERSON) {
 			cameraBefore = CameraType.FIRST_PERSON;
 			client.options.setCameraType(CameraType.THIRD_PERSON_BACK);
 		}
@@ -142,6 +153,7 @@ public final class Emotes {
 
 	private static void finishLocal(Minecraft client) {
 		playing = null;
+		playingMoving = false;
 		if (cameraBefore != null) {
 			client.options.setCameraType(cameraBefore);
 			cameraBefore = null;
@@ -190,7 +202,10 @@ public final class Emotes {
 
 	/** Eine eigene Animation laden (JSON im Bedrock-/GeckoLib- oder PlayerAnimator-Format). */
 	private static void load(String id, String json, String animation) {
-		if (id == null || json == null || CUSTOM.containsKey(id))
+		if (id == null || json == null)
+			return;
+		Integer source = json.hashCode() * 31 + (animation == null ? 0 : animation.hashCode());
+		if (CUSTOM.containsKey(id) && source.equals(CUSTOM_SOURCE.get(id)))
 			return;
 		try {
 			JsonObject root = JsonParser.parseString(json).getAsJsonObject();
@@ -198,8 +213,10 @@ public final class Emotes {
 			Animation picked = animation != null ? animations.get(animation) : null;
 			if (picked == null && !animations.isEmpty())
 				picked = animations.values().iterator().next();
-			if (picked != null)
+			if (picked != null) {
 				CUSTOM.put(id, picked);
+				CUSTOM_SOURCE.put(id, source);
+			}
 		} catch (RuntimeException e) {
 			System.err.println("[AxoClient] Eigenes Emote " + id + " nicht lesbar: " + e);
 		}
@@ -227,7 +244,10 @@ public final class Emotes {
 		ACTIVE.remove(player.getId());
 	}
 
-	/** Jeden Tick: eigenes Emote bei Bewegung abbrechen, Ende erkennen. */
+	/**
+	 * Jeden Tick: eigenes Emote beenden, wenn man schleicht oder (bei Emotes ohne Laufen) WASD/Springen drückt oder
+	 * weggeschoben wird; Ende der Animation erkennen.
+	 */
 	public static void tick() {
 		Minecraft client = Minecraft.getInstance();
 		// Beendete Emotes (auch die anderer Spieler): Elytra wieder zeigen
@@ -242,11 +262,15 @@ public final class Emotes {
 			finishLocal(client);
 			return;
 		}
+		var options = client.options;
+		boolean sneak = options.keyShift.isDown();
+		boolean keys = options.keyUp.isDown() || options.keyDown.isDown() || options.keyLeft.isDown() || options.keyRight.isDown()
+			|| options.keyJump.isDown();
 		double dx = player.getX() - startX;
 		double dz = player.getZ() - startZ;
-		boolean moved = dx * dx + dz * dz > 0.04 || client.options.keyJump.isDown();
+		boolean pushed = dx * dx + dz * dz > 1.0;
 		AnimationController controller = controller(player);
-		if (moved)
+		if (sneak || !playingMoving && (keys || pushed))
 			stopLocal();
 		else if (controller == null || !controller.isActive())
 			finishLocal(client);
