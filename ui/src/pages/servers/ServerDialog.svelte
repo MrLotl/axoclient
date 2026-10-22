@@ -115,6 +115,7 @@
 <Dialog
   title={server ? t('localServers.editTitle') : draft ? t('localServers.import.dialogTitle') : t('localServers.createTitle')}
   subtitle={server ? t('localServers.editHint') : draft ? t('localServers.import.dialogHint') : ''} icon="servers" width={860} {onclose}>
+  <div class="form">
   {#if seed}
     <p class="import-note">
       <Icon name="import" size={14} />
@@ -200,6 +201,7 @@
       <button class="link" onclick={() => call('shell.openUrl', { url: 'https://aka.ms/MinecraftEULA' })}>{t('localServers.eulaRead')}</button>
     </div>
   {/if}
+  </div>
   {#snippet footer()}
     <button class="btn btn-ghost" onclick={onclose}>{t('common.cancel')}</button>
     <button class="btn btn-grad" disabled={!valid || busy} onclick={save}>{server ? t('common.save') : t('localServers.create')}</button>
@@ -221,9 +223,19 @@
 {/if}
 
 <style>
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  /* Feste Höhen, damit Icon und Banner unten bündig abschließen:
+     Label (16 + 7) + Icon 144 = Label + Name 42 + Abstand 16 + Label + Banner 63 */
   .head {
     display: flex;
-    gap: 16px;
+    gap: 20px;
+  }
+  .head .label > span:first-child {
+    line-height: 16px;
   }
   .import-note {
     padding: 10px 12px;
@@ -243,7 +255,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
   }
   .img-wrap {
     position: relative;
@@ -273,8 +285,8 @@
     object-fit: cover;
   }
   .icon-pick {
-    width: 148px;
-    height: 148px;
+    width: 144px;
+    height: 144px;
     border-radius: 22px;
   }
   .icon-pick img {
@@ -282,7 +294,7 @@
   }
   .banner-pick {
     width: 100%;
-    height: 78px;
+    height: 63px;
     border-radius: 12px;
   }
   .banner-pick .hint {
