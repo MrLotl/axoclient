@@ -676,8 +676,7 @@
   },
   "emotes": {
     "wheel": "Dein Emote-Rad",
-    "wheelKey": "B halten öffnet das Rad im Spiel",
-    "wheelHint": "Die Belegung gilt in allen Instanzen. Im Spiel änderst du sie im Axo-Menü unter „Emotes“.",
+    "wheelHint": "Im Spiel änderst du die Belegung im Axo-Menü unter „Emotes“.",
     "slotLabel": "Platz {n}",
     "empty": "Leer",
     "library": "Emotes",
@@ -689,7 +688,6 @@
     "importedMany": "{count} Emotes importiert",
     "emptyTitle": "Noch keine eigenen Emotes",
     "emptyText": "Importiere Animationen als .json – aus Blockbench (Bedrock/GeckoLib) oder Emotecraft/PlayerAnimator. Eine Datei mit mehreren Animationen wird zu mehreren Emotes.",
-    "shareHint": "Spielst du ein eigenes Emote, sehen es andere AxoClient-Spieler auf demselben Server, auch ohne es selbst zu haben.",
     "rename": "Umbenennen",
     "renameNamed": "{name} umbenennen",
     "deleteNamed": "{name} löschen",

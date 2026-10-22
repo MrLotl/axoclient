@@ -140,7 +140,7 @@
           {/if}
         </span>
       {/each}
-      <span class="center">{t('emotes.wheelKey')}</span>
+      <span class="center"></span>
     </div>
     <div class="slots">
       {#each slots as id, i}
@@ -206,7 +206,6 @@
         </span>
       {/each}
     </div>
-    <p class="hint">{t('emotes.shareHint')}</p>
   </section>
 </div>
 
