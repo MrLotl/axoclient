@@ -126,6 +126,13 @@ input[type="range"]:focus-visible { outline: 2px solid var(--focus) !important; 
 .row { display: flex; align-items: center; gap: 8px; }
 .col { display: flex; flex-direction: column; }
 
+/* Ablageflächen (siehe lib/util/drop.ts): gestrichelt, damit Drag & Drop sofort erkennbar ist */
+.drop-target { transition: outline-color .12s ease, box-shadow .12s ease; }
+.drop-target.dashed { outline: 1.5px dashed #4a4a4a; outline-offset: -1.5px; }
+.drop-target.dashed:hover { outline-color: #5a5a5a; }
+body.files-dragging .drop-target { outline: 1.5px dashed color-mix(in srgb, var(--accent-text) 55%, transparent); outline-offset: -2px; }
+.drop-target.drag-over { outline: 2px dashed var(--accent-text) !important; outline-offset: -2px; box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--accent-from) 12%, transparent) !important; }
+
 /* Menüs */
 .menu { padding: 6px; border-radius: 12px; background: #2c2c2c; box-shadow: 0 16px 40px rgba(0,0,0,0.5), inset 0 0 0 1px #363636; display: flex; flex-direction: column; gap: 2px; }
 .menu-item { min-height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; cursor: pointer; text-align: left; transition: background-color .12s ease; }

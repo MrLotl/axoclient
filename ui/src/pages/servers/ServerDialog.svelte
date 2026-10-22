@@ -11,6 +11,7 @@
   import { t } from '../../lib/i18n';
   import ImageCropDialog from '../../lib/components/ImageCropDialog.svelte';
   import { pickImage } from '../../lib/util/files';
+  import { dropFiles, isImage } from '../../lib/util/drop';
   import type { ServerImportDraft, ServerSoftware, ServerView } from '../../lib/types';
 
   let {
@@ -48,6 +49,11 @@
   async function chooseImage(isBanner: boolean) {
     const image = await pickImage();
     if (image) cropping = { banner: isBanner, url: image.url };
+  }
+
+  function dropped(isBanner: boolean, files: File[]) {
+    if (cropping) URL.revokeObjectURL(cropping.url);
+    cropping = { banner: isBanner, url: URL.createObjectURL(files[0]!) };
   }
 
   function cropped(base64: string) {
@@ -122,7 +128,7 @@
     <div class="label icon-col">
       <span>{t('localServers.icon')}</span>
       <div class="img-wrap">
-        <button class="img-pick icon-pick" aria-label={t('localServers.chooseIcon')} title={t('localServers.iconHint')} onclick={() => chooseImage(false)}>
+        <button class="img-pick icon-pick dashed" use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(false, f) }} aria-label={t('localServers.chooseIcon')} title={t('localServers.iconHint')} onclick={() => chooseImage(false)}>
           {#if iconSrc}
             <img src={iconSrc} alt="" onerror={() => (iconBroken = true)} />
           {:else}
@@ -140,7 +146,7 @@
       <div class="label">
         <span>{t('localServers.banner')}</span>
         <div class="img-wrap">
-          <button class="img-pick banner-pick" aria-label={t('localServers.chooseBanner')} onclick={() => chooseImage(true)}>
+          <button class="img-pick banner-pick dashed" use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(true, f) }} aria-label={t('localServers.chooseBanner')} onclick={() => chooseImage(true)}>
             {#if bannerSrc && !bannerBroken}
               <img src={bannerSrc} alt="" onerror={() => (bannerBroken = true)} />
             {:else}
@@ -247,7 +253,6 @@
     border: 0;
     overflow: hidden;
     background: var(--panel-2);
-    box-shadow: inset 0 0 0 1px var(--line-2);
     color: var(--muted-2);
     display: flex;
     align-items: center;
@@ -257,7 +262,10 @@
   }
   .img-pick:hover {
     filter: brightness(1.1);
-    box-shadow: inset 0 0 0 1px var(--accent-ring);
+  }
+  /* Mit Bild nur beim Darüberfahren oder Ziehen gestrichelt */
+  :global(body:not(.files-dragging)) .img-pick.dashed:has(img):not(:hover) {
+    outline-color: transparent;
   }
   .img-pick img {
     width: 100%;

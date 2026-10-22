@@ -5,6 +5,8 @@
   import { t, tr } from '../lib/i18n';
   import Icon from '../lib/components/Icon.svelte';
   import ServerDialog from './servers/ServerDialog.svelte';
+  import ImageCropDialog from '../lib/components/ImageCropDialog.svelte';
+  import { dropFiles, isImage } from '../lib/util/drop';
   import { duration, megabytes } from '../lib/util/format';
   import { copyText } from '../lib/util/clipboard';
   import type { ServerImportDraft, ServerView } from '../lib/types';
@@ -16,6 +18,8 @@
   let brokenIcons = $state<Record<string, boolean>>({});
   let copied = $state<string | null>(null);
   let tick = $state(0);
+  // Bild direkt auf Icon oder Banner einer Karte gezogen: erst zuschneiden, dann speichern
+  let cropping = $state<{ id: string; banner: boolean; url: string } | null>(null);
 
   async function load() {
     try {
@@ -66,6 +70,24 @@
         importDraft = draft;
         editing = 'new';
       }
+    } catch (e) {
+      app.error(e);
+    }
+  }
+
+  function dropped(s: ServerView, banner: boolean, files: File[]) {
+    if (cropping) URL.revokeObjectURL(cropping.url);
+    cropping = { id: s.id, banner, url: URL.createObjectURL(files[0]!) };
+  }
+
+  async function cropped(base64: string) {
+    if (!cropping) return;
+    const { id, banner, url } = cropping;
+    URL.revokeObjectURL(url);
+    cropping = null;
+    try {
+      await call('localServers.setImage', { id, banner, base64 });
+      await load();
     } catch (e) {
       app.error(e);
     }
@@ -133,9 +155,9 @@
       {@const st = statusOf(s)}
       {@const job = startJob(s.id)}
       <article class="server" class:running={s.running}>
-        <div class="cover" class:has-banner={!!s.bannerUrl}>
+        <div class="cover" class:has-banner={!!s.bannerUrl} use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(s, true, f) }}>
           {#if s.bannerUrl}<img class="cover-img" src={s.bannerUrl} alt="" />{/if}
-          <span class="icon">
+          <span class="icon" use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(s, false, f) }}>
             {#if brokenIcons[s.id]}
               <Icon name="servers" size={22} />
             {:else}
@@ -220,6 +242,20 @@
       importDraft = null;
     }}
     onsaved={load} />
+{/if}
+
+{#if cropping}
+  <ImageCropDialog
+    src={cropping.url}
+    aspect={cropping.banner ? 4 : 1}
+    outputWidth={cropping.banner ? 1200 : 64}
+    round={!cropping.banner}
+    title={cropping.banner ? t('localServers.banner') : t('localServers.icon')}
+    onconfirm={cropped}
+    oncancel={() => {
+      URL.revokeObjectURL(cropping!.url);
+      cropping = null;
+    }} />
 {/if}
 
 <style>

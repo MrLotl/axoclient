@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Dialog from '../../lib/components/Dialog.svelte';
   import Icon from '../../lib/components/Icon.svelte';
   import SkinViewer from '../../lib/components/SkinViewer.svelte';
@@ -9,7 +10,7 @@
   import { toBase64 } from '../../lib/util/files';
   import type { SkinModel, SkinView } from '../../lib/types';
 
-  let { skin = null, onclose, onsaved }: { skin?: SkinView | null; onclose: () => void; onsaved: () => void } = $props();
+  let { skin = null, initialFile = null, onclose, onsaved }: { skin?: SkinView | null; initialFile?: File | null; onclose: () => void; onsaved: () => void } = $props();
 
   let name = $state(skin?.name ?? '');
   let model = $state<SkinModel>(skin?.model ?? 'classic');
@@ -38,6 +39,11 @@
     };
     img.src = url;
   }
+
+  // Auf der Skin-Seite abgelegte Datei direkt übernehmen
+  onMount(() => {
+    if (initialFile) take(initialFile);
+  });
 
   async function save() {
     busy = true;

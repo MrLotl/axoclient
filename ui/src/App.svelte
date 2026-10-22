@@ -19,6 +19,7 @@
   import Welcome from './pages/Welcome.svelte';
   import WelcomeBack from './pages/WelcomeBack.svelte';
   import GlobalDialogs from './dialogs/GlobalDialogs.svelte';
+  import { trackFileDrag } from './lib/util/drop';
 
   let failed = $state(false);
 
@@ -29,6 +30,7 @@
     });
     // Rechtsklick-Menü des Browsers aus, Drag & Drop von Dateien nur dort, wo eine Seite es erlaubt
     const prevent = (e: Event) => e.preventDefault();
+    const stopTracking = trackFileDrag();
     document.addEventListener('contextmenu', prevent);
     document.addEventListener('dragover', prevent);
     document.addEventListener('drop', prevent);
@@ -36,6 +38,7 @@
       document.removeEventListener('contextmenu', prevent);
       document.removeEventListener('dragover', prevent);
       document.removeEventListener('drop', prevent);
+      stopTracking();
     };
   });
 

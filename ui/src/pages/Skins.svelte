@@ -11,13 +11,15 @@
   import AdoptDialog from './skins/AdoptDialog.svelte';
   import Capes from './skins/Capes.svelte';
   import Emotes from './skins/Emotes.svelte';
+  import { dropFiles, isPng } from '../lib/util/drop';
   import type { MojangProfile, SkinView } from '../lib/types';
 
   let tab = $state<'skins' | 'capes' | 'emotes'>(app.route.tab === 'capes' ? 'capes' : app.route.tab === 'emotes' ? 'emotes' : 'skins');
   let skins = $state<SkinView[]>([]);
   let profile = $state<MojangProfile | null>(null);
   let preview = $state<SkinView | null>(null);
-  let dialog = $state<null | 'upload' | 'adopt' | { edit: SkinView }>(null);
+  let dialog = $state<null | 'upload' | 'adopt' | { edit: SkinView } | { file: File }>(null);
+  const dropSkin = { accept: isPng, ondrop: (files: File[]) => (dialog = { file: files[0]! }) };
   let applying = $state<string | null>(null);
 
   async function load() {
@@ -100,7 +102,7 @@
           </div>
         {/if}
       </div>
-      <div class="library">
+      <div class="library" use:dropFiles={dropSkin}>
         <span class="section-label">{t('skins.library', { count: skins.length })}</span>
         <div class="grid">
           {#each skins as s (s.id)}
@@ -122,9 +124,10 @@
               </div>
             </article>
           {/each}
-          <button class="card add" onclick={() => (dialog = 'upload')}>
+          <button class="card add dashed" use:dropFiles={dropSkin} onclick={() => (dialog = 'upload')}>
             <span class="plus"><Icon name="plus" size={20} /></span>
             <span>{t('skins.upload')}</span>
+            <span class="add-hint">{t('skins.dropHint')}</span>
           </button>
         </div>
       </div>
@@ -140,6 +143,8 @@
   <SkinDialog onclose={() => (dialog = null)} onsaved={load} />
 {:else if dialog === 'adopt'}
   <AdoptDialog onclose={() => (dialog = null)} onsaved={load} />
+{:else if dialog && typeof dialog === 'object' && 'file' in dialog}
+  <SkinDialog initialFile={dialog.file} onclose={() => (dialog = null)} onsaved={load} />
 {:else if dialog && typeof dialog === 'object'}
   <SkinDialog skin={dialog.edit} onclose={() => (dialog = null)} onsaved={load} />
 {/if}
@@ -185,6 +190,7 @@
   .library {
     flex-grow: 1;
     min-width: 0;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -306,14 +312,17 @@
     min-height: 280px;
     color: var(--muted);
     cursor: pointer;
-    box-shadow: inset 0 0 0 1.5px #3a3a3a;
     background: transparent;
     font-size: 13px;
     font-weight: 600;
   }
   .add:hover {
     color: var(--accent-text);
-    box-shadow: inset 0 0 0 1.5px var(--accent-ring);
+  }
+  .add-hint {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--muted-2);
   }
   .plus {
     width: 44px;
