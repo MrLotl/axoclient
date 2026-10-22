@@ -14,7 +14,54 @@ public static partial class Appearance
         ["midnight"] = new("#4f46e5", "#1e3a8a", 135)
     };
 
+    public const int MaxCustomGradients = 12;
+    public const string CustomPrefix = "custom:";
+
     public static bool IsColor(string? value) => value != null && HexColor().IsMatch(value);
+
+    /// <summary>
+    /// Bereinigt die Darstellungs-Einstellungen: ungültige eigene Verläufe fliegen raus, der aktive Verlauf
+    /// passt immer zur gewählten Vorlage. Das alte Format (<c>custom</c> ohne Id) wird zu einem eigenen Verlauf.
+    /// </summary>
+    public static void Validate(AppearanceSettings a)
+    {
+        a.CustomGradients = (a.CustomGradients ?? [])
+            .Where(c => c != null && !string.IsNullOrWhiteSpace(c.Id) && c.Id.Length <= 40 && IsColor(c.From) && IsColor(c.To))
+            .DistinctBy(c => c.Id)
+            .Take(MaxCustomGradients)
+            .Select(c => c with { Angle = Math.Clamp(c.Angle, 0, 360) })
+            .ToList();
+
+        var accent = a.Accent;
+        if (accent == null || !IsColor(accent.From) || !IsColor(accent.To))
+            accent = Presets["axo"];
+        accent = accent with { Angle = Math.Clamp(accent.Angle, 0, 360) };
+
+        if (a.Preset == "custom" && a.CustomGradients.Count < MaxCustomGradients)
+        {
+            var id = Guid.NewGuid().ToString("N")[..8];
+            a.CustomGradients.Add(new CustomGradient(id, accent.From, accent.To, accent.Angle));
+            a.Preset = CustomPrefix + id;
+        }
+
+        if (a.Preset?.StartsWith(CustomPrefix, StringComparison.Ordinal) == true)
+        {
+            var custom = a.CustomGradients.FirstOrDefault(c => CustomPrefix + c.Id == a.Preset);
+            if (custom != null)
+            {
+                a.Accent = new AccentGradient(custom.From, custom.To, custom.Angle);
+                return;
+            }
+        }
+        else if (a.Preset != null && Presets.TryGetValue(a.Preset, out var preset))
+        {
+            a.Accent = preset;
+            return;
+        }
+
+        a.Preset = "axo";
+        a.Accent = Presets["axo"];
+    }
 
     /// <summary>Kleinster Kontrast zwischen weißem Button-Text und den beiden Verlaufsfarben (WCAG).</summary>
     public static double MinContrastWithWhite(AccentGradient accent) =>

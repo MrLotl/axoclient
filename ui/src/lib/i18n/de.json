@@ -1288,9 +1288,11 @@
       "axo": "Axo",
       "mint": "Mint",
       "sunset": "Sunset",
-      "midnight": "Midnight",
-      "custom": "Eigener Verlauf"
+      "midnight": "Midnight"
     },
+    "customNamed": "Eigener Verlauf {n}",
+    "customAdd": "Eigenen Verlauf hinzufügen",
+    "customRemove": "Eigenen Verlauf {n} entfernen",
     "colors": "Farben",
     "colorFrom": "Startfarbe",
     "colorTo": "Endfarbe",

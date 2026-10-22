@@ -10,7 +10,7 @@
   import MemorySlider from '../lib/components/MemorySlider.svelte';
   import { bytes } from '../lib/util/format';
   import { copyText } from '../lib/util/clipboard';
-  import type { DiagnosticItem, FileRef, LauncherSettings, StorageOverview } from '../lib/types';
+  import type { DiagnosticItem, CustomGradient, FileRef, LauncherSettings, StorageOverview } from '../lib/types';
 
   const s = $derived(app.settings!);
   let section = $state('general');
@@ -67,13 +67,50 @@
     contrast = null;
   }
 
-  function setCustom(field: 'from' | 'to' | 'angle', value: string | number) {
-    const accent = { ...s.appearance.accent, [field]: value };
-    checkContrast(accent.from, accent.to, accent.angle);
+  // Eigene Verläufe: Vorlage heißt "custom:<id>", der Verlauf selbst liegt in customGradients
+  const MAX_CUSTOM = 12;
+  const customs = $derived(s.appearance.customGradients ?? []);
+  const selectedCustom = $derived(customs.find((c) => `custom:${c.id}` === s.appearance.preset) ?? null);
+
+  function selectCustom(c: CustomGradient) {
+    checkContrast(c.from, c.to, c.angle);
     set((x) => {
-      x.appearance.preset = 'custom';
-      x.appearance.accent = accent;
+      x.appearance.preset = `custom:${c.id}`;
+      x.appearance.accent = { from: c.from, to: c.to, angle: c.angle };
     });
+  }
+
+  function addCustom() {
+    if (customs.length >= MAX_CUSTOM) return;
+    const c: CustomGradient = { id: Math.random().toString(36).slice(2, 10), ...s.appearance.accent };
+    checkContrast(c.from, c.to, c.angle);
+    set((x) => {
+      x.appearance.customGradients = [...(x.appearance.customGradients ?? []), c];
+      x.appearance.preset = `custom:${c.id}`;
+      x.appearance.accent = { from: c.from, to: c.to, angle: c.angle };
+    });
+  }
+
+  function setCustom(field: 'from' | 'to' | 'angle', value: string | number) {
+    if (!selectedCustom) return;
+    const c = { ...selectedCustom, [field]: value };
+    checkContrast(c.from, c.to, c.angle);
+    set((x) => {
+      x.appearance.customGradients = x.appearance.customGradients.map((g) => (g.id === c.id ? c : g));
+      x.appearance.accent = { from: c.from, to: c.to, angle: c.angle };
+    });
+  }
+
+  function removeCustom(c: CustomGradient) {
+    const wasSelected = selectedCustom?.id === c.id;
+    set((x) => {
+      x.appearance.customGradients = x.appearance.customGradients.filter((g) => g.id !== c.id);
+      if (wasSelected) {
+        x.appearance.preset = 'axo';
+        x.appearance.accent = { ...app.presets.axo! };
+      }
+    });
+    if (wasSelected) contrast = null;
   }
 
   async function chooseJava() {
@@ -168,7 +205,7 @@
   }
 
   onMount(() => {
-    if (s.appearance.preset === 'custom') checkContrast(s.appearance.accent.from, s.appearance.accent.to, s.appearance.accent.angle);
+    if (selectedCustom) checkContrast(selectedCustom.from, selectedCustom.to, selectedCustom.angle);
   });
 
   $effect(() => {
@@ -288,26 +325,37 @@
               <span>{t(`settings.presets.${id}`)}</span>
             </button>
           {/each}
-          <button class="preset" class:on={s.appearance.preset === 'custom'} aria-pressed={s.appearance.preset === 'custom'} onclick={() => setCustom('from', s.appearance.accent.from)}>
-            <span class="swatch custom" style="background: conic-gradient(from 0deg, #db2777, #ea580c, #facc15, #16a34a, #2563eb, #7c3aed, #db2777)"></span>
-            <span>{t('settings.presets.custom')}</span>
-          </button>
+          {#each customs as c, i (c.id)}
+            <div class="preset-wrap">
+              <button class="preset" class:on={selectedCustom?.id === c.id} aria-pressed={selectedCustom?.id === c.id} onclick={() => selectCustom(c)}>
+                <span class="swatch" style="background: linear-gradient({c.angle}deg, {c.from}, {c.to})"></span>
+                <span>{t('settings.customNamed', { n: i + 1 })}</span>
+              </button>
+              <button class="preset-remove" aria-label={t('settings.customRemove', { n: i + 1 })} title={t('common.remove')} onclick={() => removeCustom(c)}><Icon name="x" size={11} /></button>
+            </div>
+          {/each}
+          {#if customs.length < MAX_CUSTOM}
+            <button class="preset add" onclick={addCustom}>
+              <span class="swatch add-swatch"><Icon name="plus" size={18} /></span>
+              <span>{t('settings.customAdd')}</span>
+            </button>
+          {/if}
         </div>
-        {#if s.appearance.preset === 'custom'}
+        {#if selectedCustom}
           <div class="card">
             <div class="item">
               <div class="text"><span class="name">{t('settings.colors')}</span></div>
               <div class="row">
-                <label class="color"><input type="color" value={s.appearance.accent.from} onchange={(e) => setCustom('from', (e.currentTarget as HTMLInputElement).value)} aria-label={t('settings.colorFrom')} /></label>
+                <label class="color"><input type="color" value={selectedCustom.from} onchange={(e) => setCustom('from', (e.currentTarget as HTMLInputElement).value)} aria-label={t('settings.colorFrom')} /></label>
                 <Icon name="arrowRight" />
-                <label class="color"><input type="color" value={s.appearance.accent.to} onchange={(e) => setCustom('to', (e.currentTarget as HTMLInputElement).value)} aria-label={t('settings.colorTo')} /></label>
+                <label class="color"><input type="color" value={selectedCustom.to} onchange={(e) => setCustom('to', (e.currentTarget as HTMLInputElement).value)} aria-label={t('settings.colorTo')} /></label>
               </div>
             </div>
             <div class="item">
               <div class="text"><span class="name">{t('settings.angle')}</span></div>
               <div class="row" style="width: 260px">
-                <input type="range" min="0" max="360" step="5" value={s.appearance.accent.angle} onchange={(e) => setCustom('angle', +(e.currentTarget as HTMLInputElement).value)} aria-label={t('settings.angle')} style="flex-grow: 1" />
-                <span class="hint" style="width: 40px">{s.appearance.accent.angle}°</span>
+                <input type="range" min="0" max="360" step="5" value={selectedCustom.angle} onchange={(e) => setCustom('angle', +(e.currentTarget as HTMLInputElement).value)} aria-label={t('settings.angle')} style="flex-grow: 1" />
+                <span class="hint" style="width: 40px">{selectedCustom.angle}°</span>
               </div>
             </div>
             {#if contrast && !contrast.ok}
@@ -676,6 +724,52 @@
   .swatch {
     aspect-ratio: 16 / 7;
     border-radius: 8px;
+  }
+  .preset-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .preset-wrap .preset {
+    flex-grow: 1;
+  }
+  .preset-remove {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .preset-wrap:hover .preset-remove,
+  .preset-remove:focus-visible {
+    opacity: 1;
+  }
+  .preset.add {
+    background: transparent;
+    outline: 1.5px dashed #444;
+    outline-offset: -1.5px;
+    color: var(--muted);
+  }
+  .preset.add:hover {
+    color: var(--text);
+    background: transparent;
+  }
+  .add-swatch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--panel);
   }
   .color input {
     width: 52px;

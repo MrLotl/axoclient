@@ -62,11 +62,17 @@ public sealed class SocialSettings
 
 public sealed record AccentGradient(string From, string To, int Angle);
 
+/// <summary>Vom Nutzer angelegter Verlauf, auswählbar wie eine Vorlage.</summary>
+public sealed record CustomGradient(string Id, string From, string To, int Angle);
+
 public sealed class AppearanceSettings
 {
-    /// <summary><c>axo</c>, <c>mint</c>, <c>sunset</c>, <c>midnight</c> oder <c>custom</c>.</summary>
+    /// <summary><c>axo</c>, <c>mint</c>, <c>sunset</c>, <c>midnight</c> oder <c>custom:&lt;id&gt;</c> für einen eigenen Verlauf.</summary>
     public string Preset { get; set; } = "axo";
     public AccentGradient Accent { get; set; } = new("#db2777", "#7c3aed", 135);
+
+    /// <summary>Eigene Verläufe, höchstens <see cref="Appearance.MaxCustomGradients"/>.</summary>
+    public List<CustomGradient> CustomGradients { get; set; } = [];
 
     /// <summary>Skin auf der Startseite winkt einmal nach dem Start des Launchers.</summary>
     public bool WaveOnStart { get; set; } = true;
@@ -192,6 +198,7 @@ public sealed class SettingsService(AppPaths paths, EventHub events)
     public async Task LoadAsync()
     {
         Current = await _launcher.LoadAsync();
+        Validate(Current);
         State = await _state.LoadAsync();
     }
 
@@ -223,8 +230,6 @@ public sealed class SettingsService(AppPaths paths, EventHub events)
         if (s.Defaults.Java != "auto" && !(s.Defaults.Java.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase)
                                           || s.Defaults.Java.EndsWith("java.exe", StringComparison.OrdinalIgnoreCase)))
             s.Defaults.Java = "auto";
-        if (!Appearance.IsColor(s.Appearance.Accent.From) || !Appearance.IsColor(s.Appearance.Accent.To))
-            s.Appearance = new AppearanceSettings();
-        s.Appearance.Accent = s.Appearance.Accent with { Angle = Math.Clamp(s.Appearance.Accent.Angle, 0, 360) };
+        Appearance.Validate(s.Appearance);
     }
 }

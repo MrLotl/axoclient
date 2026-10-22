@@ -161,3 +161,39 @@ public class TextTests
         Assert.Equal(3, Text.Clean("abcdef", 3).Length);
     }
 }
+
+public class AppearanceTests
+{
+    [Fact]
+    public void OldCustomBecomesSavedGradient()
+    {
+        var a = new AppearanceSettings { Preset = "custom", Accent = new AccentGradient("#112233", "#445566", 90) };
+        Appearance.Validate(a);
+        var saved = Assert.Single(a.CustomGradients);
+        Assert.Equal(Appearance.CustomPrefix + saved.Id, a.Preset);
+        Assert.Equal(new AccentGradient("#112233", "#445566", 90), a.Accent);
+    }
+
+    [Fact]
+    public void AccentFollowsSelectedCustomGradient()
+    {
+        var a = new AppearanceSettings
+        {
+            Preset = "custom:abc",
+            Accent = new AccentGradient("#000000", "#000000", 0),
+            CustomGradients = [new CustomGradient("abc", "#ff0000", "#00ff00", 400), new CustomGradient("bad", "red", "#00ff00", 0)]
+        };
+        Appearance.Validate(a);
+        Assert.Single(a.CustomGradients);
+        Assert.Equal(new AccentGradient("#ff0000", "#00ff00", 360), a.Accent);
+    }
+
+    [Fact]
+    public void MissingCustomGradientFallsBackToAxo()
+    {
+        var a = new AppearanceSettings { Preset = "custom:gone" };
+        Appearance.Validate(a);
+        Assert.Equal("axo", a.Preset);
+        Assert.Equal(Appearance.Presets["axo"], a.Accent);
+    }
+}

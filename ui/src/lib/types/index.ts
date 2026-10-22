@@ -22,6 +22,10 @@ export interface AccentGradient {
   angle: number;
 }
 
+export interface CustomGradient extends AccentGradient {
+  id: string;
+}
+
 export interface LauncherSettings {
   formatVersion: number;
   autostart: boolean;
@@ -30,7 +34,7 @@ export interface LauncherSettings {
   defaults: { memoryMb: number; java: string };
   integrations: { discordRpc: boolean; friendJoinRelay: boolean; tablistIcon: boolean; streamerMode: boolean };
   social: { showOnline: boolean; allowJoin: boolean };
-  appearance: { preset: string; accent: AccentGradient; waveOnStart: boolean };
+  appearance: { preset: string; accent: AccentGradient; customGradients: CustomGradient[]; waveOnStart: boolean };
   notifications: {
     windowsToasts: boolean;
     quietWhilePlaying: boolean;
