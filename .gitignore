@@ -8,3 +8,4 @@ src/AxoClient.App/wwwroot/
 .idea/
 Releases/
 TestResults/
+.claude/
