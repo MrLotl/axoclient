@@ -3,7 +3,7 @@
   import { t } from '../lib/i18n';
   import Icon from '../lib/components/Icon.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
-  import InstanceImage from '../lib/components/InstanceImage.svelte';
+  import ImageBox from '../lib/components/ImageBox.svelte';
   import PlayButton from '../lib/components/PlayButton.svelte';
   import { versionLabel } from '../lib/util/format';
   import { upload } from '../lib/util/files';
@@ -81,7 +81,7 @@
               <img class="cover" src={i.iconUrl} alt="" />
             {:else}
               <span class="blur-fallback"></span>
-              <span class="cover-fallback"><InstanceImage name={i.name} has={false} size={96} radius={18} /></span>
+              <span class="cover-fallback"><ImageBox name={i.name} width={96} radius={18} /></span>
             {/if}
             <span class="version">{versionLabel(i.minecraftVersion, i.loader)}</span>
             {#if i.running}<span class="live">{t('common.running')}</span>{/if}
@@ -96,7 +96,7 @@
       {#each list as i (i.id)}
         <article class="row-card">
           <button class="row-open" onclick={() => app.navigate({ page: 'instance', id: i.id })} aria-label={t('instances.open', { name: i.name })}>
-            <InstanceImage url={i.iconUrl} has={i.hasIcon} name={i.name} size={54} />
+            <ImageBox url={i.hasIcon ? i.iconUrl : null} name={i.name} width={54} />
             <span class="row-text">
               <span class="row-name truncate">{i.name}</span>
               <span class="row-ver">{versionLabel(i.minecraftVersion, i.loader)}{i.modCount ? ` · ${t('instances.mods', { count: i.modCount })}` : ''}</span>

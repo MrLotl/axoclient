@@ -5,8 +5,7 @@
   import { t, tr } from '../lib/i18n';
   import Icon from '../lib/components/Icon.svelte';
   import ServerDialog from './servers/ServerDialog.svelte';
-  import ImageCropDialog from '../lib/components/ImageCropDialog.svelte';
-  import { dropFiles, isImage } from '../lib/util/drop';
+  import ImageBox from '../lib/components/ImageBox.svelte';
   import { duration, megabytes } from '../lib/util/format';
   import { copyText } from '../lib/util/clipboard';
   import type { ServerImportDraft, ServerView } from '../lib/types';
@@ -14,17 +13,12 @@
   let servers = $state<ServerView[]>([]);
   let editing = $state<ServerView | null | 'new'>(null);
   let importDraft = $state<ServerImportDraft | null>(null);
-  // Server ohne eigenes Icon: Platzhalter statt leerer Fläche
-  let brokenIcons = $state<Record<string, boolean>>({});
   let copied = $state<string | null>(null);
   let tick = $state(0);
-  // Bild direkt auf Icon oder Banner einer Karte gezogen: erst zuschneiden, dann speichern
-  let cropping = $state<{ id: string; banner: boolean; url: string } | null>(null);
 
   async function load() {
     try {
       servers = await call<ServerView[]>('localServers.list');
-      brokenIcons = {};
     } catch (e) {
       app.error(e);
     }
@@ -75,16 +69,8 @@
     }
   }
 
-  function dropped(s: ServerView, banner: boolean, files: File[]) {
-    if (cropping) URL.revokeObjectURL(cropping.url);
-    cropping = { id: s.id, banner, url: URL.createObjectURL(files[0]!) };
-  }
-
-  async function cropped(base64: string) {
-    if (!cropping) return;
-    const { id, banner, url } = cropping;
-    URL.revokeObjectURL(url);
-    cropping = null;
+  // Bild direkt auf Icon oder Banner einer Karte ziehen; ImageBox schneidet zu
+  async function setImage(id: string, banner: boolean, base64: string | null) {
     try {
       await call('localServers.setImage', { id, banner, base64 });
       await load();
@@ -155,14 +141,14 @@
       {@const st = statusOf(s)}
       {@const job = startJob(s.id)}
       <article class="server" class:running={s.running}>
-        <div class="cover" class:has-banner={!!s.bannerUrl} use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(s, true, f) }}>
-          {#if s.bannerUrl}<img class="cover-img" src={s.bannerUrl} alt="" />{/if}
-          <span class="icon" use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(s, false, f) }}>
-            {#if brokenIcons[s.id]}
-              <Icon name="servers" size={22} />
-            {:else}
-              <img src={s.iconUrl} alt="" onerror={() => (brokenIcons[s.id] = true)} />
-            {/if}
+        <div class="cover">
+          <span class="cover-img">
+            <ImageBox url={s.bannerUrl} width="100%" height="100%" radius={0} droppable aspect={4} outputWidth={1200}
+              cropTitle={t('localServers.banner')} onchange={(b64) => setImage(s.id, true, b64)} />
+          </span>
+          <span class="icon">
+            <ImageBox url={s.iconUrl} fallbackIcon="servers" width={64} radius={14} pixelated droppable outputWidth={64}
+              cropTitle={t('localServers.icon')} onchange={(b64) => setImage(s.id, false, b64)} />
           </span>
         </div>
 
@@ -244,19 +230,6 @@
     onsaved={load} />
 {/if}
 
-{#if cropping}
-  <ImageCropDialog
-    src={cropping.url}
-    aspect={cropping.banner ? 4 : 1}
-    outputWidth={cropping.banner ? 1200 : 64}
-    round={!cropping.banner}
-    title={cropping.banner ? t('localServers.banner') : t('localServers.icon')}
-    onconfirm={cropped}
-    oncancel={() => {
-      URL.revokeObjectURL(cropping!.url);
-      cropping = null;
-    }} />
-{/if}
 
 <style>
   .page {
@@ -332,7 +305,6 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
   }
   .icon {
     position: absolute;
@@ -348,11 +320,6 @@
     align-items: center;
     justify-content: center;
     box-shadow: 0 0 0 4px var(--panel), 0 8px 18px rgba(0, 0, 0, 0.35);
-  }
-  .icon img {
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
   }
 
   .body {

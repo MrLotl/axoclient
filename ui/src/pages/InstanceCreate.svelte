@@ -7,10 +7,10 @@
   import VersionPicker from '../lib/components/VersionPicker.svelte';
   import MemorySlider from '../lib/components/MemorySlider.svelte';
   import Toggle from '../lib/components/Toggle.svelte';
-  import InstanceImage from '../lib/components/InstanceImage.svelte';
-  import ImageCropDialog from '../lib/components/ImageCropDialog.svelte';
+  import ImageBox from '../lib/components/ImageBox.svelte';
+  import InstanceHero from '../lib/components/InstanceHero.svelte';
   import Select from '../lib/components/Select.svelte';
-  import { pickImage, upload } from '../lib/util/files';
+  import { upload } from '../lib/util/files';
   import { versionLabel } from '../lib/util/format';
   import type { FileRef, ForeignInstanceView, Instance, LoaderType } from '../lib/types';
 
@@ -45,24 +45,6 @@
   ];
 
   let banner = $state<{ base64: string; url: string } | null>(null);
-  let crop = $state<{ url: string; banner: boolean } | null>(null);
-
-  async function chooseImage(isBanner: boolean) {
-    const image = await pickImage();
-    if (image) crop = { url: image.url, banner: isBanner };
-  }
-
-  function cropped(base64: string) {
-    const isBanner = crop?.banner ?? false;
-    if (crop) URL.revokeObjectURL(crop.url);
-    crop = null;
-    const image = { base64, url: `data:image/png;base64,${base64}` };
-    if (isBanner) banner = image;
-    else icon = image;
-  }
-
-  // Wie der Kopf der Instanz später aussieht: eigener Banner, sonst das Instanzbild verschwommen
-  const heroImage = $derived(banner?.url ?? icon?.url ?? null);
 
   async function chooseFile() {
     try {
@@ -130,7 +112,7 @@
 
   {#if created}
     <div class="done">
-      <InstanceImage url={`/axo/instance-icon/${created.id}`} has={!!icon} name={created.name} size={72} radius={16} />
+      <ImageBox url={icon ? `/axo/instance-icon/${created.id}` : null} name={created.name} width={72} radius={16} />
       <h2>{t('create.created', { name: created.name })}</h2>
       <p>{t('create.createdText')}</p>
       <div class="row">
@@ -141,31 +123,20 @@
   {:else}
     <div class="body">
       {#if start === 'empty'}
-        <section class="hero" aria-label={t('create.preview')}>
-          {#if heroImage}
-            <img class="bg" class:blurred={!banner} src={heroImage} alt="" />
-          {:else}
-            <span class="bg fallback"></span>
-          {/if}
-          <div class="shade"></div>
-          <div class="hero-content">
-            <div class="hero-icon">
-              {#if icon}<img class="preview" src={icon.url} alt="" />{:else}<InstanceImage name={name || '?'} has={false} size={72} radius={16} />{/if}
-              <button class="hero-mini" aria-label={t('create.chooseIcon')} title={t('create.chooseIcon')} onclick={() => chooseImage(false)}><Icon name="image" size={13} /></button>
-              {#if icon}<button class="hero-x" aria-label={t('common.remove')} title={t('common.remove')} onclick={() => (icon = null)}><Icon name="x" size={11} /></button>{/if}
-            </div>
-            <div class="titles">
-              <h2 class="truncate" class:placeholder={!name.trim()}>{name.trim() || t('create.previewName')}</h2>
-              {#if minecraft}<span class="glass">{versionLabel(minecraft, loader)}</span>{/if}
-            </div>
-            <div class="hero-actions">
-              {#if banner}
-                <button class="glass-btn" onclick={() => (banner = null)}><Icon name="x" size={12} />{t('create.bannerRemove')}</button>
-              {/if}
-              <button class="glass-btn" onclick={() => chooseImage(true)}><Icon name="image" size={13} />{banner ? t('create.bannerChange') : t('create.bannerChoose')}</button>
-            </div>
+        <InstanceHero
+          name={name || '?'}
+          iconUrl={icon?.url ?? null}
+          bannerUrl={banner?.url ?? null}
+          height={170}
+          iconSize={72}
+          label={t('create.preview')}
+          onicon={(base64, url) => (icon = base64 && url ? { base64, url } : null)}
+          onbanner={(base64, url) => (banner = base64 && url ? { base64, url } : null)}>
+          <div class="titles">
+            <h2 class="truncate" class:placeholder={!name.trim()}>{name.trim() || t('create.previewName')}</h2>
+            {#if minecraft}<span class="glass">{versionLabel(minecraft, loader)}</span>{/if}
           </div>
-        </section>
+        </InstanceHero>
       {/if}
 
       <FormSection title={t('create.start')} subtitle={t('create.startHint')}>
@@ -257,20 +228,6 @@
   {/if}
 </div>
 
-{#if crop}
-  {@const isBanner = crop.banner}
-  <ImageCropDialog
-    src={crop.url}
-    aspect={isBanner ? 5 : 1}
-    outputWidth={isBanner ? 1500 : 256}
-    round={!isBanner}
-    title={isBanner ? t('instance.settings.banner') : t('instance.settings.icon')}
-    onconfirm={cropped}
-    oncancel={() => {
-      URL.revokeObjectURL(crop!.url);
-      crop = null;
-    }} />
-{/if}
 
 <style>
   .page {
@@ -318,80 +275,6 @@
     }
   }
   /* Vorschau des Instanz-Kopfs */
-  .hero {
-    position: relative;
-    height: 170px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    overflow: hidden;
-    background: #1a1a1a;
-  }
-  .bg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 50% 60%;
-  }
-  .bg.blurred {
-    inset: -40px;
-    width: calc(100% + 80px);
-    height: calc(100% + 80px);
-    filter: blur(30px) saturate(1.2);
-    opacity: 0.8;
-  }
-  .bg.fallback {
-    background: var(--accent-soft-strong);
-  }
-  .shade {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(24, 24, 24, 0.94) 0%, rgba(24, 24, 24, 0.72) 45%, rgba(24, 24, 24, 0.35) 100%);
-  }
-  .hero-content {
-    position: absolute;
-    inset: 0;
-    padding: 20px 22px;
-    display: flex;
-    align-items: flex-end;
-    gap: 18px;
-  }
-  .hero-icon {
-    position: relative;
-    flex-shrink: 0;
-  }
-  .hero-mini,
-  .hero-x {
-    position: absolute;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-  }
-  .hero-mini {
-    right: -6px;
-    bottom: -6px;
-    width: 28px;
-    height: 28px;
-    background: #fff;
-    color: #1a1a1a;
-  }
-  .hero-x {
-    top: -6px;
-    right: -6px;
-    width: 22px;
-    height: 22px;
-    background: #3a3a3a;
-    color: #fff;
-  }
-  .hero-x:hover {
-    background: var(--red);
-  }
   .titles {
     flex-grow: 1;
     min-width: 0;
@@ -409,40 +292,6 @@
   }
   .titles h2.placeholder {
     color: rgba(255, 255, 255, 0.45);
-  }
-  .glass {
-    height: 24px;
-    padding: 0 9px;
-    border-radius: 6px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(6px);
-    color: #f2f2f2;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 24px;
-  }
-  .hero-actions {
-    flex-shrink: 0;
-    display: flex;
-    gap: 8px;
-  }
-  .glass-btn {
-    height: 34px;
-    padding: 0 12px;
-    border: 0;
-    border-radius: 9px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    color: #f2f2f2;
-    font-size: 12.5px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    cursor: pointer;
-  }
-  .glass-btn:hover {
-    background: rgba(255, 255, 255, 0.18);
   }
   .start {
     padding: 14px;
@@ -530,12 +379,6 @@
     color: var(--accent-text);
     font-weight: 600;
     cursor: pointer;
-  }
-  .preview {
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
-    object-fit: cover;
   }
   .footer {
     flex-shrink: 0;

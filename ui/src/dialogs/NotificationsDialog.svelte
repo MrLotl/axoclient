@@ -3,7 +3,7 @@
   import Dialog from '../lib/components/Dialog.svelte';
   import Icon from '../lib/components/Icon.svelte';
   import Head from '../lib/components/Head.svelte';
-  import InstanceImage from '../lib/components/InstanceImage.svelte';
+  import ImageBox from '../lib/components/ImageBox.svelte';
   import { app } from '../lib/stores/app.svelte';
   import { call } from '../lib/bridge/bridge';
   import { t, tr } from '../lib/i18n';
@@ -125,7 +125,7 @@
           <div class="share">
             <div class="share-head">
               {#if item.kind === 'instance'}
-                <InstanceImage name={item.title} size={32} radius={6} />
+                <ImageBox name={item.title} width={32} radius={6} />
               {:else}
                 <span class="kind-icon"><Icon name={item.kind === 'mod' ? 'puzzle' : item.kind === 'server' ? 'servers' : 'send'} /></span>
               {/if}

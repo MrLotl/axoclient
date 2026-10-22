@@ -11,7 +11,7 @@
   import Icon from '../lib/components/Icon.svelte';
   import SkinViewer from '../lib/components/SkinViewer.svelte';
   import PlayButton from '../lib/components/PlayButton.svelte';
-  import InstanceImage from '../lib/components/InstanceImage.svelte';
+  import ImageBox from '../lib/components/ImageBox.svelte';
   import FriendsPanel from './home/FriendsPanel.svelte';
   import ServerPanel from './home/ServerPanel.svelte';
   import { versionLabel } from '../lib/util/format';
@@ -116,7 +116,7 @@
           <div class="picker-list">
             {#each app.instances as inst (inst.id)}
               <button class="menu-item pick" class:active={inst.id === selectedId} role="option" aria-selected={inst.id === selectedId} onclick={() => pick(inst.id)}>
-                <InstanceImage url={inst.iconUrl} has={inst.hasIcon} name={inst.name} size={32} radius={7} />
+                <ImageBox url={inst.hasIcon ? inst.iconUrl : null} name={inst.name} width={32} radius={7} />
                 <span class="pick-name truncate">{inst.name}</span>
                 <span class="pick-ver">{versionLabel(inst.minecraftVersion, inst.loader)}</span>
               </button>
@@ -131,7 +131,7 @@
 
       {#if current}
         <button class="current" aria-haspopup="listbox" aria-expanded={pickerOpen} aria-label={t('home.chooseInstance')} onclick={() => (pickerOpen = !pickerOpen)}>
-          <InstanceImage url={current.iconUrl} has={current.hasIcon} name={current.name} size={36} />
+          <ImageBox url={current.hasIcon ? current.iconUrl : null} name={current.name} width={36} />
           <span class="current-text">
             <span class="current-label">{t('home.instance')}</span>
             <span class="current-name truncate">{current.name} <span class="current-ver">· {versionLabel(current.minecraftVersion, current.loader)}</span></span>

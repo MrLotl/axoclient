@@ -6,9 +6,7 @@
   import Icon from '../../lib/components/Icon.svelte';
   import PlayButton from '../../lib/components/PlayButton.svelte';
   import { versionLabel } from '../../lib/util/format';
-  import { pickImage } from '../../lib/util/files';
-  import InstanceImage from '../../lib/components/InstanceImage.svelte';
-  import ImageCropDialog from '../../lib/components/ImageCropDialog.svelte';
+  import InstanceHero from '../../lib/components/InstanceHero.svelte';
   import Overview from './Overview.svelte';
   import ContentTab from './ContentTab.svelte';
   import WorldsTab from './WorldsTab.svelte';
@@ -53,18 +51,10 @@
     count('shots', 'screenshots.list', { id });
   }
 
-  // Instanzbild und Banner direkt im Kopf bearbeiten
-  let cropping = $state<{ banner: boolean; url: string } | null>(null);
+  // Instanzbild und Banner direkt im Kopf bearbeiten (Zuschneiden übernimmt ImageBox)
   let imageVersion = $state(0);
 
-  async function chooseImage(banner: boolean) {
-    const image = await pickImage();
-    if (image) cropping = { banner, url: image.url };
-  }
-
   async function saveImage(banner: boolean, base64: string | null) {
-    if (cropping) URL.revokeObjectURL(cropping.url);
-    cropping = null;
     try {
       await call('instances.setImage', { id, banner, base64, fileRef: null });
       imageVersion++;
@@ -116,76 +106,50 @@
   });
 
   const s = $derived(details?.summary);
-  const banner = $derived(s?.bannerUrl ?? (s?.hasIcon ? s.iconUrl : null));
 </script>
 
 <div class="page">
   {#if details && s}
-    <section class="hero" aria-label={t('instance.label')}>
-      {#if banner}
-        <img class="bg" class:blurred={!s.bannerUrl} src={`${banner}&r=${imageVersion}`} alt="" />
-      {:else}
-        <span class="bg fallback"></span>
-      {/if}
-      <div class="shade"></div>
-      <!-- Banner bearbeiten: Stift oben rechts beim Hovern -->
-      <div class="banner-edit">
-        {#if s.bannerUrl}
-          <button class="hero-mini" aria-label={t('instance.settings.bannerAuto')} title={t('instance.settings.bannerAuto')} onclick={() => saveImage(true, null)}>
-            <Icon name="x" size={13} />
-          </button>
-        {/if}
-        <button class="hero-mini" aria-label={t('instance.editBanner')} title={t('instance.editBanner')} onclick={() => chooseImage(true)}>
-          <Icon name="pencil" size={14} />
-        </button>
-      </div>
-      <div class="hero-content">
+    <InstanceHero
+      name={details.instance.name}
+      iconUrl={s.hasIcon ? `${s.iconUrl}&r=${imageVersion}` : null}
+      bannerUrl={s.bannerUrl ? `${s.bannerUrl}&r=${imageVersion}` : null}
+      label={t('instance.label')}
+      onicon={(b64) => saveImage(false, b64)}
+      onbanner={(b64) => saveImage(true, b64)}>
+      {#snippet top()}
         <button class="back" onclick={() => app.back()}><Icon name="chevronLeft" />{t('common.back')}</button>
-        <div class="hero-row">
-          <!-- Instanzbild: beim Hovern bearbeiten -->
-          <div class="hero-icon">
-            <button class="icon-pick" aria-label={t('instance.editIcon')} title={t('instance.editIcon')} onclick={() => chooseImage(false)}>
-              {#key imageVersion}
-                <InstanceImage url={`${s.iconUrl}&r=${imageVersion}`} has={s.hasIcon} name={details.instance.name} size={84} radius={18} />
-              {/key}
-              <span class="icon-overlay"><Icon name="pencil" size={18} /></span>
-            </button>
-            {#if s.hasIcon}
-              <button class="icon-x" aria-label={t('instance.removeIcon')} title={t('instance.removeIcon')} onclick={() => saveImage(false, null)}><Icon name="x" size={11} /></button>
-            {/if}
-          </div>
-          <div class="titles">
-            <h1 class="truncate">{details.instance.name}</h1>
-            <div class="chips">
-              <span class="glass">{versionLabel(details.instance.minecraft.version, details.instance.loader.type)}</span>
-              {#if s.modCount > 0}<span class="glass">{t('instances.mods', { count: s.modCount })}</span>{/if}
-              {#if details.instance.origin.type === 'modpack' && details.instance.origin.versionName}
-                <span class="glass">{t('instance.modpackVersion', { version: details.instance.origin.versionName })}</span>
-              {/if}
-              {#if details.instance.modLock?.level && details.instance.modLock.level !== 'off'}
-                <span class="glass lock" title={t(`modLock.levels.${details.instance.modLock.level}.text`)}>
-                  <Icon name="lock" size={11} />{t(`modLock.levels.${details.instance.modLock.level}.name`)}
-                </span>
-              {/if}
-            </div>
-          </div>
-          <button class="hero-btn" aria-label={t('instance.share')} title={t('instance.share')} onclick={() => (app.dialog = { kind: 'share', data: { mode: 'instance', instanceId: id } })}>
-            <Icon name="send" size={18} stroke={1.6} />
-          </button>
-          <button
-            class="hero-btn"
-            aria-label={t('transfer.button')}
-            title={t('transfer.button')}
-            onclick={() => (app.dialog = { kind: 'import', data: { target: { id, name: details!.instance.name, loader: details!.instance.loader.type, minecraftVersion: details!.instance.minecraft.version } } })}>
-            <Icon name="import" size={18} stroke={1.6} />
-          </button>
-          <button class="hero-btn" aria-label={t('instance.openFolder')} title={t('instance.openFolder')} onclick={() => call('shell.openFolder', { kind: 'instance', id })}>
-            <Icon name="folder" size={18} stroke={1.6} />
-          </button>
-          <div style="width: 170px"><PlayButton instanceId={id} height={44} compact /></div>
+      {/snippet}
+      <div class="titles">
+        <h1 class="truncate">{details.instance.name}</h1>
+        <div class="chips">
+          <span class="glass">{versionLabel(details.instance.minecraft.version, details.instance.loader.type)}</span>
+          {#if s.modCount > 0}<span class="glass">{t('instances.mods', { count: s.modCount })}</span>{/if}
+          {#if details.instance.origin.type === 'modpack' && details.instance.origin.versionName}
+            <span class="glass">{t('instance.modpackVersion', { version: details.instance.origin.versionName })}</span>
+          {/if}
+          {#if details.instance.modLock?.level && details.instance.modLock.level !== 'off'}
+            <span class="glass lock" title={t(`modLock.levels.${details.instance.modLock.level}.text`)}>
+              <Icon name="lock" size={11} />{t(`modLock.levels.${details.instance.modLock.level}.name`)}
+            </span>
+          {/if}
         </div>
       </div>
-    </section>
+      <button class="hero-btn" aria-label={t('instance.share')} title={t('instance.share')} onclick={() => (app.dialog = { kind: 'share', data: { mode: 'instance', instanceId: id } })}>
+        <Icon name="send" size={18} stroke={1.6} />
+      </button>
+      <button
+        class="hero-btn"
+        aria-label={t('transfer.button')}
+        title={t('transfer.button')}
+        onclick={() => (app.dialog = { kind: 'import', data: { target: { id, name: details!.instance.name, loader: details!.instance.loader.type, minecraftVersion: details!.instance.minecraft.version } } })}>
+        <Icon name="import" size={18} stroke={1.6} />
+      </button>
+      <button class="hero-btn" aria-label={t('instance.openFolder')} title={t('instance.openFolder')} onclick={() => call('shell.openFolder', { kind: 'instance', id })}>
+        <Icon name="folder" size={18} stroke={1.6} />
+      </button>
+      <div style="width: 170px"><PlayButton instanceId={id} height={44} compact /></div>
+    </InstanceHero>
 
     <nav class="tabs" aria-label={t('instance.areas')} bind:this={tabsNav}>
       {#if indicator}
@@ -233,20 +197,6 @@
   {/if}
 </div>
 
-{#if cropping}
-  {@const isBanner = cropping.banner}
-  <ImageCropDialog
-    src={cropping.url}
-    aspect={isBanner ? 5 : 1}
-    outputWidth={isBanner ? 1500 : 256}
-    round={!isBanner}
-    title={isBanner ? t('instance.settings.banner') : t('instance.settings.icon')}
-    onconfirm={(b64) => saveImage(isBanner, b64)}
-    oncancel={() => {
-      URL.revokeObjectURL(cropping!.url);
-      cropping = null;
-    }} />
-{/if}
 
 <style>
   .page {
@@ -256,45 +206,6 @@
     flex-direction: column;
     gap: 16px;
     min-height: 0;
-  }
-  .hero {
-    position: relative;
-    height: 200px;
-    flex-shrink: 0;
-    border-radius: 14px;
-    overflow: hidden;
-    background: #1a1a1a;
-  }
-  .bg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 50% 60%;
-  }
-  .bg.blurred {
-    inset: -40px;
-    width: calc(100% + 80px);
-    height: calc(100% + 80px);
-    filter: blur(30px) saturate(1.2);
-    opacity: 0.8;
-  }
-  .bg.fallback {
-    background: var(--accent-soft-strong);
-  }
-  .shade {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(24, 24, 24, 0.94) 0%, rgba(24, 24, 24, 0.72) 45%, rgba(24, 24, 24, 0.35) 100%);
-  }
-  .hero-content {
-    position: absolute;
-    inset: 0;
-    padding: 16px 20px 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
   }
   .back {
     align-self: flex-start;
@@ -315,11 +226,6 @@
   .back:hover {
     background: rgba(0, 0, 0, 0.55);
   }
-  .hero-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 16px;
-  }
   .titles {
     flex-grow: 1;
     min-width: 0;
@@ -336,17 +242,6 @@
   .chips {
     display: flex;
     gap: 8px;
-  }
-  .glass {
-    height: 24px;
-    padding: 0 9px;
-    border-radius: 6px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(6px);
-    color: #f2f2f2;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 24px;
   }
   .glass.lock {
     display: flex;
@@ -402,93 +297,6 @@
   }
   .tab {
     transition: color 0.2s ease;
-  }
-  .hero-icon {
-    position: relative;
-    flex-shrink: 0;
-  }
-  .icon-pick {
-    position: relative;
-    display: block;
-    padding: 0;
-    border: 0;
-    border-radius: 18px;
-    background: none;
-    cursor: pointer;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  }
-  .icon-overlay {
-    position: absolute;
-    inset: 0;
-    border-radius: 18px;
-    background: rgba(0, 0, 0, 0.5);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  .icon-pick:hover .icon-overlay,
-  .icon-pick:focus-visible .icon-overlay {
-    opacity: 1;
-  }
-  .icon-x {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 0;
-    border-radius: 11px;
-    background: #3a3a3a;
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s ease, background-color 0.12s ease;
-  }
-  .hero-icon:hover .icon-x,
-  .icon-x:focus-visible {
-    opacity: 1;
-  }
-  .icon-x:hover {
-    background: var(--red);
-  }
-  .banner-edit {
-    position: absolute;
-    z-index: 2;
-    top: 14px;
-    right: 14px;
-    display: flex;
-    gap: 6px;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  .hero:hover .banner-edit,
-  .banner-edit:focus-within {
-    opacity: 1;
-  }
-  .hero-mini {
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border: 0;
-    border-radius: 9px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(8px);
-    color: #f2f2f2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-  .hero-mini:hover {
-    background: rgba(0, 0, 0, 0.65);
   }
   .indicator {
     position: absolute;

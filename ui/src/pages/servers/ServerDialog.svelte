@@ -9,9 +9,7 @@
   import { app } from '../../lib/stores/app.svelte';
   import { call } from '../../lib/bridge/bridge';
   import { t } from '../../lib/i18n';
-  import ImageCropDialog from '../../lib/components/ImageCropDialog.svelte';
-  import { pickImage } from '../../lib/util/files';
-  import { dropFiles, isImage } from '../../lib/util/drop';
+  import ImageBox from '../../lib/components/ImageBox.svelte';
   import type { ServerImportDraft, ServerSoftware, ServerView } from '../../lib/types';
 
   let {
@@ -40,31 +38,9 @@
   type PendingImage = { base64: string | null; url: string | null };
   let icon = $state<PendingImage | undefined>(undefined);
   let banner = $state<PendingImage | undefined>(undefined);
-  let cropping = $state<{ banner: boolean; url: string } | null>(null);
-  let iconBroken = $state(false);
-  let bannerBroken = $state(false);
-  const iconSrc = $derived(icon ? icon.url : !iconBroken ? (server?.iconUrl ?? null) : null);
+  const iconSrc = $derived(icon ? icon.url : (server?.iconUrl ?? null));
   const bannerSrc = $derived(banner ? banner.url : (server?.bannerUrl ?? null));
-
-  async function chooseImage(isBanner: boolean) {
-    const image = await pickImage();
-    if (image) cropping = { banner: isBanner, url: image.url };
-  }
-
-  function dropped(isBanner: boolean, files: File[]) {
-    if (cropping) URL.revokeObjectURL(cropping.url);
-    cropping = { banner: isBanner, url: URL.createObjectURL(files[0]!) };
-  }
-
-  function cropped(base64: string) {
-    if (!cropping) return;
-    const mime = cropping.banner ? 'image/jpeg' : 'image/png';
-    const value = { base64, url: `data:${mime};base64,${base64}` };
-    if (cropping.banner) banner = value;
-    else icon = value;
-    URL.revokeObjectURL(cropping.url);
-    cropping = null;
-  }
+  const pending = (base64: string | null, url: string | null): PendingImage => ({ base64, url });
 
   const softwares: { id: ServerSoftware; name: string; text: string }[] = [
     { id: 'vanilla', name: 'Vanilla', text: 'localServers.software.vanilla' },
@@ -128,15 +104,10 @@
   <div class="head">
     <div class="label icon-col">
       <span>{t('localServers.icon')}</span>
-      <div class="img-wrap">
-        <button class="img-pick icon-pick dashed" use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(false, f) }} aria-label={t('localServers.chooseIcon')} title={t('localServers.iconHint')} onclick={() => chooseImage(false)}>
-          {#if iconSrc}
-            <img src={iconSrc} alt="" onerror={() => (iconBroken = true)} />
-          {:else}
-            <Icon name="image" size={22} />
-          {/if}
-        </button>
-        {#if iconSrc}<button class="img-clear" aria-label={t('common.remove')} onclick={() => (icon = { base64: null, url: null })}><Icon name="x" size={11} /></button>{/if}
+      <div title={t('localServers.iconHint')}>
+        <ImageBox url={iconSrc} fallbackIcon="image" width={144} radius={22} pixelated dashed editable removable
+          outputWidth={64} cropTitle={t('localServers.icon')} editLabel={t('localServers.chooseIcon')}
+          onchange={(b64, url) => (icon = pending(b64, url))} />
       </div>
     </div>
     <div class="head-main">
@@ -146,16 +117,9 @@
       </label>
       <div class="label">
         <span>{t('localServers.banner')}</span>
-        <div class="img-wrap">
-          <button class="img-pick banner-pick dashed" use:dropFiles={{ accept: isImage, ondrop: (f) => dropped(true, f) }} aria-label={t('localServers.chooseBanner')} onclick={() => chooseImage(true)}>
-            {#if bannerSrc && !bannerBroken}
-              <img src={bannerSrc} alt="" onerror={() => (bannerBroken = true)} />
-            {:else}
-              <span class="hint"><Icon name="image" size={14} />{t('localServers.bannerHint')}</span>
-            {/if}
-          </button>
-          {#if bannerSrc && !bannerBroken}<button class="img-clear" aria-label={t('common.remove')} onclick={() => (banner = { base64: null, url: null })}><Icon name="x" size={11} /></button>{/if}
-        </div>
+        <ImageBox url={bannerSrc} placeholder={t('localServers.bannerHint')} width="100%" height={63} radius={12} dashed editable removable
+          aspect={4} outputWidth={1200} cropTitle={t('localServers.banner')} editLabel={t('localServers.chooseBanner')}
+          onchange={(b64, url) => (banner = pending(b64, url))} />
       </div>
     </div>
   </div>
@@ -208,19 +172,6 @@
   {/snippet}
 </Dialog>
 
-{#if cropping}
-  <ImageCropDialog
-    src={cropping.url}
-    aspect={cropping.banner ? 4 : 1}
-    outputWidth={cropping.banner ? 1200 : 64}
-    round={!cropping.banner}
-    title={cropping.banner ? t('localServers.banner') : t('localServers.icon')}
-    onconfirm={cropped}
-    oncancel={() => {
-      URL.revokeObjectURL(cropping!.url);
-      cropping = null;
-    }} />
-{/if}
 
 <style>
   .form {
@@ -256,73 +207,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-  }
-  .img-wrap {
-    position: relative;
-  }
-  .img-pick {
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    background: var(--panel-2);
-    color: var(--muted-2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: filter 0.15s ease, box-shadow 0.15s ease;
-  }
-  .img-pick:hover {
-    filter: brightness(1.1);
-  }
-  /* Mit Bild nur beim Darüberfahren oder Ziehen gestrichelt */
-  :global(body:not(.files-dragging)) .img-pick.dashed:has(img):not(:hover) {
-    outline-color: transparent;
-  }
-  .img-pick img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .icon-pick {
-    width: 144px;
-    height: 144px;
-    border-radius: 22px;
-  }
-  .icon-pick img {
-    image-rendering: pixelated;
-  }
-  .banner-pick {
-    width: 100%;
-    height: 63px;
-    border-radius: 12px;
-  }
-  .banner-pick .hint {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .img-clear {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 0;
-    border-radius: 11px;
-    background: rgba(0, 0, 0, 0.6);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  .img-wrap:hover .img-clear,
-  .img-clear:focus-visible {
-    opacity: 1;
   }
   .softwares {
     display: grid;

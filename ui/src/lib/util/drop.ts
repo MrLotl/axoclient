@@ -17,7 +17,7 @@ const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files');
 export function dropFiles(node: HTMLElement, options: DropOptions) {
   let opts = options;
   let depth = 0;
-  node.classList.add('drop-target');
+  node.classList.toggle('drop-target', !opts.disabled);
 
   const reset = () => {
     depth = 0;
@@ -57,6 +57,7 @@ export function dropFiles(node: HTMLElement, options: DropOptions) {
   return {
     update(next: DropOptions) {
       opts = next;
+      node.classList.toggle('drop-target', !opts.disabled);
       if (opts.disabled) reset();
     },
     destroy() {
