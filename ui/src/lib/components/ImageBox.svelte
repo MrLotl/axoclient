@@ -106,7 +106,7 @@
   {#if shown}
     <img src={url} alt="" class:pixelated class:blur onerror={() => (failedUrl = url)} />
   {:else if name}
-    <span class="initials" style="font-size: {Math.round(px * 0.38)}px">{initials}</span>
+    <span class="initials">{initials}</span>
   {:else if fallbackIcon}
     <span class="fallback"><Icon name={fallbackIcon} size={Math.max(14, Math.round(px * 0.18))} /></span>
   {:else if placeholder}
@@ -125,10 +125,10 @@
       {/if}
     {:else}
       <div class="corner">
+        <button class="mini" aria-label={editLabel} title={editLabel} onclick={choose}><Icon name="pencil" size={14} /></button>
         {#if removable && shown}
           <button class="mini" aria-label={removeLabel} title={removeLabel} onclick={() => onchange?.(null, null)}><Icon name="x" size={13} /></button>
         {/if}
-        <button class="mini" aria-label={editLabel} title={editLabel} onclick={choose}><Icon name="pencil" size={14} /></button>
       </div>
     {/if}
   {/if}
@@ -154,6 +154,7 @@
     flex-shrink: 0;
     overflow: hidden;
     isolation: isolate;
+    container-type: size;
   }
   img {
     display: block;
@@ -174,6 +175,7 @@
     opacity: 0.8;
   }
   .initials {
+    font-size: 38cqmin;
     width: 100%;
     height: 100%;
     display: flex;

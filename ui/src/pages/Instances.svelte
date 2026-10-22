@@ -69,7 +69,7 @@
               <img class="cover" src={i.iconUrl} alt="" />
             {:else}
               <span class="blur-fallback"></span>
-              <span class="cover-fallback"><ImageBox name={i.name} width={96} radius={18} /></span>
+              <span class="cover-fallback"><ImageBox name={i.name} width="100%" height="100%" radius={16} /></span>
             {/if}
             <span class="version">{versionLabel(i.minecraftVersion, i.loader)}</span>
             {#if i.running}<span class="live">{t('common.running')}</span>{/if}
@@ -183,10 +183,6 @@
     object-fit: cover;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
     display: flex;
-  }
-  .cover-fallback :global(span) {
-    width: 100% !important;
-    height: 100% !important;
   }
   .version,
   .live {
