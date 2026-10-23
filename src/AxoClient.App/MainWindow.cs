@@ -72,7 +72,12 @@ public sealed class MainWindow
             if (type == "app.focus")
                 Invoke(BringToFront);
         };
-        host.Games.GameStarted += _ => Invoke(OnGameStarted);
+        host.Games.GameStarted += game =>
+        {
+            if (host.Settings.Current.Game.WindowMode == AxoClient.Core.Common.WindowMode.Maximized)
+                GameWindow.MaximizeWhenShown(game.Pid);
+            Invoke(OnGameStarted);
+        };
         host.Games.GameExited += _ => Invoke(AfterGameExit);
         host.Notifications.IsInBackground = () => WindowChrome.IsHiddenOrMinimized(_window.WindowHandle);
         host.Notifications.IsPlaying = () => host.Games.AnyRunning;
