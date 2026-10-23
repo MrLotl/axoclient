@@ -39,6 +39,8 @@ public final class Gfx {
 	/** Sichtbare Fläche in Design-Pixeln. */
 	public final int width;
 	public final int height;
+	/** Deckkraft für alles, was über diesen Gfx gezeichnet wird (1 = normal). */
+	private float fade = 1;
 
 	private Gfx(GuiGraphicsExtractor g, float scale, float px, float ox, float oy, int width, int height) {
 		this.g = g;
@@ -77,7 +79,30 @@ public final class Gfx {
 
 	/** Dasselbe Zeichnen, aber ab (x, y) und um zoom vergrößert (z. B. Einblendungen in ihrer eingestellten Größe). */
 	public Gfx at(float x, float y, float zoom) {
-		return new Gfx(g, scale * zoom, px * zoom, X(x), Y(y), width, height);
+		Gfx copy = new Gfx(g, scale * zoom, px * zoom, X(x), Y(y), width, height);
+		copy.fade = fade;
+		return copy;
+	}
+
+	/** Derselbe Zeichner, aber alles nur mit dieser Deckkraft (z. B. Leiste, unter die man gerade ein Widget zieht). */
+	public Gfx faded(float alpha) {
+		Gfx copy = new Gfx(g, scale, px, ox, oy, width, height);
+		copy.fade = Math.max(0.2F, Math.min(1, alpha)) * fade;
+		return copy;
+	}
+
+	private int faded(int argb) {
+		if (fade >= 1)
+			return argb;
+		return (Math.round((argb >>> 24) * fade) << 24) | (argb & 0xFFFFFF);
+	}
+
+	private void fillPx(int x0, int y0, int x1, int y1, int argb) {
+		g.fill(x0, y0, x1, y1, faded(argb));
+	}
+
+	private void blitPx(Identifier id, int x, int y, float u, float v, int w, int h, int rw, int rh, int texW, int texH, int argb) {
+		g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, w, h, rw, rh, texW, texH, faded(argb));
 	}
 
 	public void end() {
@@ -111,7 +136,7 @@ public final class Gfx {
 
 	/** Bild 1:1 (Bildschirmpunkte). */
 	private void blit(Identifier id, int x, int y, int w, int h, int texW, int texH, int argb) {
-		g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, 0, 0, w, h, texW, texH, texW, texH, argb);
+		blitPx(id, x, y, 0, 0, w, h, texW, texH, texW, texH, argb);
 	}
 
 	/**
@@ -122,13 +147,13 @@ public final class Gfx {
 		if (w <= 0 || h <= 0)
 			return;
 		if (w == rw && h == rh) {
-			g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, rw, rh, rw, rh, tex, tex, argb);
+			blitPx(id, x, y, u, v, rw, rh, rw, rh, tex, tex, argb);
 			return;
 		}
 		pose().pushMatrix();
 		pose().translate(x, y);
 		pose().scale(w / (float) rw, h / (float) rh);
-		g.blit(RenderPipelines.GUI_TEXTURED, id, 0, 0, u, v, rw, rh, rw, rh, tex, tex, argb);
+		blitPx(id, 0, 0, u, v, rw, rh, rw, rh, tex, tex, argb);
 		pose().popMatrix();
 	}
 
@@ -159,7 +184,7 @@ public final class Gfx {
 
 	public void fill(int x, int y, int w, int h, int argb) {
 		if (g != null && w > 0 && h > 0)
-			g.fill(X(x), Y(y), X(x + w), Y(y + h), argb);
+			fillPx(X(x), Y(y), X(x + w), Y(y + h), argb);
 	}
 
 	/** Eckenradius in Punkten, höchstens halb so groß wie die kürzere Seite. */
@@ -176,7 +201,7 @@ public final class Gfx {
 			return;
 		int r = radiusPx(radius, wp, hp);
 		if (r == 0)
-			g.fill(x0, y0, x1, y1, argb);
+			fillPx(x0, y0, x1, y1, argb);
 		else
 			nine(Shapes.slice(Shapes.Kind.FILL, r), r, x0, y0, wp, hp, argb, true, true);
 	}
@@ -191,10 +216,10 @@ public final class Gfx {
 			return;
 		int r = radiusPx(radius, wp, hp);
 		if (r == 0) {
-			g.fill(x0, y0, x1, y0 + 1, argb);
-			g.fill(x0, y1 - 1, x1, y1, argb);
-			g.fill(x0, y0 + 1, x0 + 1, y1 - 1, argb);
-			g.fill(x1 - 1, y0 + 1, x1, y1 - 1, argb);
+			fillPx(x0, y0, x1, y0 + 1, argb);
+			fillPx(x0, y1 - 1, x1, y1, argb);
+			fillPx(x0, y0 + 1, x0 + 1, y1 - 1, argb);
+			fillPx(x1 - 1, y0 + 1, x1, y1 - 1, argb);
 		} else
 			nine(Shapes.slice(Shapes.Kind.RING, r), r, x0, y0, wp, hp, argb, true, false);
 	}
@@ -229,7 +254,7 @@ public final class Gfx {
 		if (r == 0) {
 			for (int a = x0; a < x1; a += step) {
 				int b = Math.min(x1, a + step);
-				g.fill(a, y0, b, y1, Theme.mix(from, to, ((a + b) / 2.0F - x0 + hp / 2.0F) / span));
+				fillPx(a, y0, b, y1, Theme.mix(from, to, ((a + b) / 2.0F - x0 + hp / 2.0F) / span));
 			}
 			return;
 		}
@@ -279,12 +304,12 @@ public final class Gfx {
 	/** Waagerechte Linie, genau einen Bildschirmpunkt dick. */
 	public void hline(int x, int y, int w, int argb) {
 		if (g != null)
-			g.fill(X(x), Y(y), X(x + w), Y(y) + 1, argb);
+			fillPx(X(x), Y(y), X(x + w), Y(y) + 1, argb);
 	}
 
 	public void vline(int x, int y, int h, int argb) {
 		if (g != null)
-			g.fill(X(x), Y(y), X(x) + 1, Y(y + h), argb);
+			fillPx(X(x), Y(y), X(x) + 1, Y(y + h), argb);
 	}
 
 	/** Runder Punkt (Status). */
@@ -361,7 +386,7 @@ public final class Gfx {
 		pose().pushMatrix();
 		pose().translate(left, top);
 		pose().scale(k, k);
-		g.text(font(), text, 0, 0, argb, true);
+		g.text(font(), text, 0, 0, faded(argb), true);
 		pose().popMatrix();
 	}
 
@@ -416,7 +441,7 @@ public final class Gfx {
 		// Mittig an die gewünschte Stelle, auf ganze Punkte
 		int x0 = Math.round(ox + (x + size / 2) * px - pixels / 2.0F);
 		int y0 = Math.round(oy + (y + size / 2) * px - pixels / 2.0F);
-		g.blit(RenderPipelines.GUI_TEXTURED, id, x0, y0, 0, 0, pixels, pixels, pixels, pixels, pixels, pixels, argb);
+		blitPx(id, x0, y0, 0, 0, pixels, pixels, pixels, pixels, pixels, pixels, argb);
 	}
 
 	/**
@@ -448,7 +473,7 @@ public final class Gfx {
 		pose().pushMatrix();
 		pose().translate(x0, y0);
 		pose().scale((x1 - x0) / (float) regionW, (y1 - y0) / (float) regionH);
-		g.blit(RenderPipelines.GUI_TEXTURED, id, 0, 0, u, v, regionW, regionH, regionW, regionH, texW, texH, argb);
+		blitPx(id, 0, 0, u, v, regionW, regionH, regionW, regionH, texW, texH, argb);
 		pose().popMatrix();
 	}
 

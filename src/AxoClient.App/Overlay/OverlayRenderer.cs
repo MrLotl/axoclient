@@ -60,11 +60,14 @@ internal static class OverlayRenderer
             var x = Num(cmd, "x");
             var y = Num(cmd, "y");
             var s = Num(cmd, "s", 1);
-            var color = (uint)Num(cmd, "c");
+            var color = Color(cmd);
             if (type == "r")
                 Fill(canvas, x * k, y * k, (x + Num(cmd, "w") * s) * k, (y + Num(cmd, "h") * s) * k, color);
             else if (type == "t" && Str(cmd, "v") is { Length: > 0 } text)
             {
+                // Wie Minecraft: Textfarben ohne Deckkraft-Anteil gelten als voll deckend
+                if ((color & 0xFC000000) == 0)
+                    color |= 0xFF000000;
                 if (cmd.TryGetProperty("sh", out var sh) && sh.ValueKind == JsonValueKind.True)
                 {
                     // Schatten wie Minecraft: ein Schrift-Pixel versetzt, Farbe auf ein Viertel abgedunkelt
@@ -79,6 +82,10 @@ internal static class OverlayRenderer
 
     private static string? Str(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    /// <summary>Farbe als ganze Zahl lesen (als Kommazahl gingen die unteren Bits verloren).</summary>
+    private static uint Color(JsonElement e) =>
+        e.TryGetProperty("c", out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var c) ? (uint)(c & 0xFFFFFFFF) : 0;
 
     private static float Num(JsonElement e, string name, float fallback = 0) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? (float)v.GetDouble() : fallback;

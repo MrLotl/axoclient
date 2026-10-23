@@ -190,6 +190,20 @@ public final class OverlayEditScreen extends Screen {
 		}
 	}
 
+	/** Ob gerade ein gezogenes Widget unter dem Bereich (Design-Pixel) liegt. */
+	private boolean draggedOver(Gfx g, int x, int y, int w, int h) {
+		if (dragging == null)
+			return false;
+		float k = hs / g.scale;
+		for (Piece p : selectedPieces()) {
+			int[] o = outer(p);
+			float x0 = o[0] * k - 4, y0 = o[1] * k - 4, x1 = (o[0] + o[2]) * k + 4, y1 = (o[1] + o[3]) * k + 4;
+			if (x0 < x + w && x1 > x && y0 < y + h && y1 > y)
+				return true;
+		}
+		return false;
+	}
+
 	private static String key(Piece p) {
 		return p.toasts() ? "toasts" : p.element().module().name() + "#" + p.element().slot();
 	}
@@ -262,6 +276,9 @@ public final class OverlayEditScreen extends Screen {
 		int x = (g.width - w) / 2, y = 14;
 		toolbarX = x;
 		toolbarY = y;
+		// Zieht man ein Widget unter die Leiste, wird sie so lange durchsichtig
+		if (draggedOver(g, x, y, w, 48))
+			g = g.faded(0.22F);
 		g.shadow(x, y, w, 48, 12, 18, 14, 0.5F);
 		g.box(x, y, w, 48, 12, Theme.alpha(0xFF242424, 0.96F), Theme.WINDOW_LINE);
 		ui.block(x, y, w, 48);
@@ -521,6 +538,8 @@ public final class OverlayEditScreen extends Screen {
 			w += g.width(p, 12, Gfx.REGULAR) + 28;
 		w += g.width("Esc", 12, Gfx.BOLD) + g.width(" beendet", 12, Gfx.REGULAR) + 14;
 		int x = Math.round((g.width - w) / 2), y = g.height - 112 - 34;
+		if (draggedOver(g, x, y, Math.round(w), 34))
+			g = g.faded(0.22F);
 		g.rect(x, y, Math.round(w), 34, 17, Theme.alpha(0xFF141414, 0.82F));
 		g.outline(x, y, Math.round(w), 34, 17, 0xFF333333);
 		float at = x + 14;
