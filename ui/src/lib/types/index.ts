@@ -340,6 +340,13 @@ export interface InboxItem {
   expires: number;
 }
 
+/** Eintrag der eigenen Blockliste; created in Unix-Millisekunden. */
+export interface BlockedPlayer {
+  uuid: string;
+  name: string;
+  created: number;
+}
+
 export interface SocialState {
   friends: Friend[];
   inbox: InboxItem[];

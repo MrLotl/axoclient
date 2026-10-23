@@ -20,6 +20,11 @@ public sealed record Friend(string Uuid, string Name, Relation Relation, Presenc
 
 public sealed record Me(string Uuid, string Name, string Role);
 
+/// <summary>Ein Spieler auf der eigenen Blockliste (<c>GET /v2/blocks</c>), <c>Created</c> in Unix-Millisekunden.</summary>
+public sealed record BlockedPlayer(string Uuid, string Name, long Created);
+
+public sealed record BlocksResponse(List<BlockedPlayer> Blocks);
+
 public sealed record ServiceNotification(string Id, string Kind, Dictionary<string, object?>? Data, long Created, bool Read);
 
 public sealed record InboxSender(string Uuid, string Name);

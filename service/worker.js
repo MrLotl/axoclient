@@ -840,6 +840,7 @@ const V2_ROUTES = [
   ["DELETE", /^\/v2\/friends\/requests\/([0-9a-f]{32})$/, "user", v2Decline],
   ["POST", /^\/v2\/friends\/([0-9a-f]{32})$/, "user", v2Accept],
   ["DELETE", /^\/v2\/friends\/([0-9a-f]{32})$/, "user", v2Unfriend],
+  ["GET", /^\/v2\/blocks$/, "user", v2Blocks],
   ["POST", /^\/v2\/blocks\/([0-9a-f]{32})$/, "user", v2Block],
   ["DELETE", /^\/v2\/blocks\/([0-9a-f]{32})$/, "user", v2Unblock],
   ["POST", /^\/v2\/notifications\/read$/, "user", v2ReadNotifications],
@@ -1161,6 +1162,15 @@ async function v2Decline({ db, me }, uuid) {
 async function v2Unfriend({ db, me }, uuid) {
   await db.batch(unfriendStatements(db, me, uuid));
   return json({ ok: true });
+}
+
+/** Eigene Blockliste, neueste zuerst. Der Name kommt aus users (fehlt er, ist der Spieler unbekannt). */
+async function v2Blocks({ db, me }) {
+  const { results } = await db.prepare(
+    "SELECT b.blocked AS uuid, u.name, b.created FROM blocks b LEFT JOIN users u ON u.uuid = b.blocked " +
+    "WHERE b.owner = ?1 ORDER BY b.created DESC LIMIT 500"
+  ).bind(me).all();
+  return json({ blocks: results.map(r => ({ uuid: r.uuid, name: r.name ?? "?", created: r.created })) });
 }
 
 /** Blockieren beendet die Freundschaft und räumt Anfragen und Pakete zwischen beiden weg. */

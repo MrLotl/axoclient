@@ -54,6 +54,7 @@ public static partial class Handlers
             await social.BlockAsync(d.Uuid, d.Block, ct);
             return social.Friends;
         });
+        r.On("social.blocked", async ct => await social.LoadBlockedAsync(ct));
         r.On("social.deleteAccount", async ct =>
         {
             await social.DeleteAccountAsync(ct);

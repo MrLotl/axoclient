@@ -34,6 +34,7 @@
   },
   "common": {
     "cancel": "Abbrechen",
+    "undo": "Rückgängig",
     "close": "Schließen",
     "save": "Speichern",
     "add": "Hinzufügen",
@@ -906,6 +907,8 @@
     "remove": "Freund entfernen",
     "removeConfirm": "{name} wirklich entfernen?",
     "block": "Blockieren",
+    "blockedToast": "{name} ist blockiert",
+    "showBlocked": "Blockliste",
     "playingOn": "Spielt gerade auf",
     "privacyNote": "Freunde sehen nur, ob du online bist, ob du spielst und seit wann. Instanzen, Mods und Spielzeit bleiben privat.",
     "skinOf": "3D-Modell des Skins von {name}"
@@ -1348,7 +1351,15 @@
       "deleteHint": "Freunde, Pakete und Capes werden beim Service gelöscht",
       "deleteText": "Alle deine Daten beim Online-Service werden endgültig gelöscht. Lokale Instanzen bleiben erhalten.",
       "deleteConfirm": "Endgültig löschen",
-      "deleted": "Dein Online-Konto wurde gelöscht"
+      "deleted": "Dein Online-Konto wurde gelöscht",
+      "blockedTitle": "Blockierte Spieler",
+      "blockedHint": "Blockierte Spieler können dir keine Anfragen, Einladungen oder Pakete schicken. Nach dem Entblockieren seid ihr nicht automatisch wieder befreundet.",
+      "blockedLoading": "Lade Blockliste …",
+      "blockedEmpty": "Du hast niemanden blockiert.",
+      "blockedSince": "Blockiert · {when}",
+      "unblock": "Entblockieren",
+      "unblockLabel": "{name} entblockieren",
+      "unblocked": "{name} ist nicht mehr blockiert"
     },
     "discord": "In Discord anzeigen",
     "discordHint": "Zeigt in deinem Discord-Profil „Spielt AxoClient“ mit Instanz und Server",

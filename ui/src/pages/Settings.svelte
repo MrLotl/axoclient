@@ -8,13 +8,19 @@
   import Select from '../lib/components/Select.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import MemorySlider from '../lib/components/MemorySlider.svelte';
-  import { bytes } from '../lib/util/format';
+  import Head from '../lib/components/Head.svelte';
+  import { ago, bytes } from '../lib/util/format';
   import { copyText } from '../lib/util/clipboard';
   import { fadeSlide, expand, DUR } from '../lib/util/motion';
-  import type { DiagnosticItem, CustomGradient, FileRef, LauncherSettings, StorageOverview } from '../lib/types';
+  import type { BlockedPlayer, DiagnosticItem, CustomGradient, FileRef, LauncherSettings, StorageOverview } from '../lib/types';
 
   const s = $derived(app.settings!);
   let section = $state('general');
+  // Direkt zu einem Bereich springen, z. B. { page: 'settings', tab: 'privacy' }
+  $effect(() => {
+    const tab = app.route.tab;
+    if (tab && sections.some((x) => x.id === tab)) section = tab;
+  });
   let storage = $state<StorageOverview | null>(null);
   let diagnostics = $state<DiagnosticItem[] | null>(null);
   let diagnosing = $state(false);
@@ -181,6 +187,29 @@
       else app.dialog = { kind: 'update' };
     } catch (e) {
       app.error(e);
+    }
+  }
+
+  // ---- Blockierte Spieler ----
+  let unblocking = $state<string[]>([]);
+
+  $effect(() => {
+    if (section === 'privacy' && app.social.available && app.blocked === null) app.refreshBlocked();
+  });
+
+  async function setBlocked(player: BlockedPlayer, block: boolean) {
+    unblocking = [...unblocking, player.uuid];
+    try {
+      await call('social.block', { uuid: player.uuid, block });
+      if (!block)
+        app.toast(t('settings.privacy.unblocked', { name: player.name }), 'success', {
+          label: t('common.undo'),
+          run: () => setBlocked(player, true)
+        });
+    } catch (e) {
+      app.error(e);
+    } finally {
+      unblocking = unblocking.filter((u) => u !== player.uuid);
     }
   }
 
@@ -454,6 +483,30 @@
             <Toggle checked={s.integrations.streamerMode} label={t('settings.streamerMode')} onchange={(v) => set((x) => (x.integrations.streamerMode = v))} />
           </div>
         </div>
+        <h3>{t('settings.privacy.blockedTitle')}</h3>
+        <div class="card">
+          {#if !app.social.available}
+            <p class="desc blocked-empty">{app.activeAccount?.type === 'microsoft' ? t('friends.unavailable') : t('service.notSignedIn')}</p>
+          {:else if app.blocked === null}
+            <p class="desc blocked-empty">{t('settings.privacy.blockedLoading')}</p>
+          {:else if app.blocked.length === 0}
+            <p class="desc blocked-empty">{t('settings.privacy.blockedEmpty')}</p>
+          {:else}
+            {#each app.blocked as player (player.uuid)}
+              <div class="item" in:fadeSlide={{ y: -4 }}>
+                <Head uuid={player.uuid} size={36} radius={6} dim />
+                <div class="text">
+                  <span class="name truncate">{player.name}</span>
+                  <span class="desc">{t('settings.privacy.blockedSince', { when: ago(player.created) })}</span>
+                </div>
+                <button class="btn btn-second sm" disabled={unblocking.includes(player.uuid)} aria-label={t('settings.privacy.unblockLabel', { name: player.name })} onclick={() => setBlocked(player, false)}>
+                  {t('settings.privacy.unblock')}
+                </button>
+              </div>
+            {/each}
+          {/if}
+        </div>
+        <p class="desc blocked-hint">{t('settings.privacy.blockedHint')}</p>
         <h3>{t('settings.privacy.service')}</h3>
         <div class="card">
           <p class="desc" style="line-height: 1.55">{t('settings.privacy.serviceText')}</p>
@@ -733,6 +786,13 @@
     font-size: 12.5px;
     color: var(--muted-2);
     line-height: 1.45;
+  }
+  .blocked-empty {
+    padding: 14px 0;
+  }
+  .blocked-hint {
+    margin-top: -6px;
+    padding: 0 4px;
   }
   .field.small {
     width: 90px;

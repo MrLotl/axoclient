@@ -18,7 +18,7 @@ namespace AxoClient.Core.Integrations;
 public sealed class AxoModBridge : IGameLaunchHook, IAsyncDisposable
 {
     /// <summary>Funktionen, die der Launcher der Mod per "welcome" anbietet.</summary>
-    private static readonly string[] BaseFeatures = ["emotes", "menu", "social", "capes", "customEmotes", "join", "toasts"];
+    private static readonly string[] BaseFeatures = ["emotes", "menu", "social", "capes", "customEmotes", "join", "toasts", "blocks"];
 
     /// <summary>
     /// Ob es ein Overlay-Fenster gibt, das die "hud"-Nachrichten der Mod (private Widgets) zeichnet. Setzt die App beim

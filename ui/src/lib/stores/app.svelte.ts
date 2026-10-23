@@ -10,6 +10,7 @@ import type {
   LauncherSettings,
   NotificationItem,
   SocialState,
+  BlockedPlayer,
   TextRef,
   UiState,
   UpdateView
@@ -55,6 +56,8 @@ class AppState {
   unread = $state(0);
   notifications = $state<NotificationItem[]>([]);
   social = $state<SocialState>({ friends: [], inbox: [], me: null, available: false });
+  /** Eigene Blockliste; null, solange sie nicht geladen wurde. */
+  blocked = $state<BlockedPlayer[] | null>(null);
   update = $state<UpdateView | null>(null);
   running = $state<string[]>([]);
   route = $state<Route>({ page: 'home' });
@@ -137,6 +140,7 @@ class AppState {
       this.refreshNotifications();
     });
     on<SocialState>('social.changed', (s) => (this.social = s));
+    on<BlockedPlayer[]>('social.blocked', (b) => (this.blocked = b));
     on<UpdateView>('update.available', (u) => (this.update = u));
     on<{ instanceId: string }>('game.started', (d) => {
       if (!this.running.includes(d.instanceId)) this.running = [...this.running, d.instanceId];
@@ -167,6 +171,14 @@ class AppState {
       this.social = await call<SocialState>('social.state');
     } catch {
       /* Online-Service optional */
+    }
+  }
+
+  async refreshBlocked() {
+    try {
+      this.blocked = await call<BlockedPlayer[]>('social.blocked');
+    } catch (e) {
+      this.error(e);
     }
   }
 

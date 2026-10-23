@@ -45,6 +45,9 @@ public final class MenuData {
 
 	public record Invite(String id, String uuid, String name, String address, long created) {}
 
+	/** Ein Spieler auf der eigenen Blockliste. */
+	public record Blocked(String uuid, String name) {}
+
 	public record Here(String address, String kind, String name, byte[] icon) {
 		public boolean world() {
 			return "world".equals(kind);
@@ -70,6 +73,7 @@ public final class MenuData {
 	public static final List<Friend> FRIENDS = new ArrayList<>();
 	public static final List<Invite> INVITES = new ArrayList<>();
 	public static final Set<String> INVITED = new HashSet<>();
+	public static final List<Blocked> BLOCKED = new ArrayList<>();
 	/** Ob der Launcher schon einmal Freunde geschickt hat (sonst "lädt …"). */
 	public static boolean socialLoaded;
 
@@ -206,6 +210,14 @@ public final class MenuData {
 			if (str(i, "id") != null)
 				INVITES.add(new Invite(str(i, "id"), str(i, "uuid"), str(i, "name"), str(i, "address"),
 					i.has("created") ? i.get("created").getAsLong() : 0));
+		}
+		BLOCKED.clear();
+		for (JsonElement e : arr(d, "blocked")) {
+			if (!e.isJsonObject())
+				continue;
+			JsonObject b = e.getAsJsonObject();
+			if (str(b, "uuid") != null)
+				BLOCKED.add(new Blocked(str(b, "uuid"), str(b, "name") == null ? "?" : str(b, "name")));
 		}
 		INVITED.clear();
 		for (JsonElement e : arr(d, "invited"))

@@ -77,12 +77,20 @@ public sealed partial class IngameLink(
                     await PushSocialAsync(instance);
                     await PushEmotesAsync(instance);
                     await PushCapesAsync(instance);
+                    _ = RefreshBlockedAsync();
                     break;
                 case "friendAccept":
                     await social.AcceptAsync(Uuid(data), CancellationToken.None);
                     break;
                 case "friendDecline":
                     await social.DeclineAsync(Uuid(data), CancellationToken.None);
+                    break;
+                case "unblock":
+                    await social.BlockAsync(Uuid(data), false, CancellationToken.None);
+                    break;
+                case "block":
+                    // Nur als "Rückgängig" nach dem Entblockieren im Menü
+                    await social.BlockAsync(Uuid(data), true, CancellationToken.None);
                     break;
                 case "invite":
                     await InviteAsync(instance, Uuid(data));
@@ -132,6 +140,7 @@ public sealed partial class IngameLink(
         switch (type)
         {
             case "social.changed":
+            case "social.blocked":
                 _ = PushSocialAsync(null);
                 break;
             case "emotes.changed":
@@ -149,11 +158,27 @@ public sealed partial class IngameLink(
 
     // ---------- Freunde ----------
 
+    /// <summary>Blockliste für das Menü nachladen; ohne Anmeldung oder Service bleibt sie still leer.</summary>
+    private async Task RefreshBlockedAsync()
+    {
+        if (!social.Available)
+            return;
+        try
+        {
+            await social.LoadBlockedAsync(CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is AxoException or HttpRequestException or IOException or JsonException or TaskCanceledException)
+        {
+            AppLog.Info($"Ingame-Menü: Blockliste nicht geladen: {ex.Message}");
+        }
+    }
+
     private async Task PushSocialAsync(string? onlyInstance)
     {
         foreach (var instance in Targets(onlyInstance))
         {
             var friends = social.Friends;
+            var blocked = social.Blocked;
             var invites = social.Inbox.Where(i => i.Kind == "invite" && i.Expires > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 .Select(i => new { id = i.Id, uuid = i.Sender.Uuid, name = i.Sender.Name, address = i.Title, created = i.Created })
                 .ToList();
@@ -164,6 +189,7 @@ public sealed partial class IngameLink(
                 here = await HereAsync(instance),
                 invited = _invited.Keys.ToList(),
                 invites,
+                blocked = blocked.Select(b => new { uuid = b.Uuid, name = b.Name }).ToList(),
                 friends = friends.Select(f => new
                 {
                     uuid = f.Uuid,
@@ -177,7 +203,7 @@ public sealed partial class IngameLink(
             });
             // Auch der eigene Skin: das Menü zeigt damit die Cape-Vorschau
             var own = accounts.Active?.Uuid.Replace("-", "").ToLowerInvariant();
-            _ = SendSkinsAsync(instance, friends.Select(f => f.Uuid).Concat(invites.Select(i => i.uuid))
+            _ = SendSkinsAsync(instance, friends.Select(f => f.Uuid).Concat(invites.Select(i => i.uuid)).Concat(blocked.Select(b => b.Uuid))
                 .Concat(own is { Length: 32 } ? [own] : []));
         }
     }

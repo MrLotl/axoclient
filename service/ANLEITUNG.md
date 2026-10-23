@@ -40,7 +40,8 @@ mit „error code: 1042“.
 | `GET /v2/sync` | Freunde, Benachrichtigungen, Postfach in einem Aufruf |
 | `PUT /v2/status` | Status `offline` / `launcher` / `ingame` mit Join-Adresse |
 | `POST /v2/friends/requests`, `POST|DELETE /v2/friends/{uuid}`, `DELETE /v2/friends/requests/{uuid}` | Freunde |
-| `POST|DELETE /v2/blocks/{uuid}` | blockieren |
+| `GET /v2/blocks` | eigene Blockliste (`{ blocks: [{ uuid, name, created }] }`) |
+| `POST|DELETE /v2/blocks/{uuid}` | blockieren / entblockieren |
 | `POST /v2/inbox`, `GET|DELETE /v2/inbox/{id}` | Pakete und Einladungen |
 | `GET /v2/capes`, `GET /v2/capes/{id}.png`, `PUT /v2/capes/active` | Umhänge |
 | `POST|DELETE /v2/capes/submissions` | eigenes Cape einreichen / zurückziehen |

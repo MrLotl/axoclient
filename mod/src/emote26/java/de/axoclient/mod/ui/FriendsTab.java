@@ -94,7 +94,43 @@ final class FriendsTab {
 			friendRow(g, x, at, w, f);
 			at += 60 + 8;
 		}
+
+		// Blockierte Spieler, mit Entblockieren (nur wenn der Launcher es kann)
+		if (!MenuData.BLOCKED.isEmpty() && MenuData.can("blocks")) {
+			at += 18 - 8;
+			MenuScreen.heading(g, "Blockiert", x, at + 7);
+			at += 14 + 8;
+			for (MenuData.Blocked b : new ArrayList<>(MenuData.BLOCKED)) {
+				blockedRow(g, x, at, w, b);
+				at += 60 + 8;
+			}
+		}
 		return at - y;
+	}
+
+	private void blockedRow(Gfx g, int x, int y, int w, MenuData.Blocked b) {
+		g.rect(x, y, w, 60, 10, Theme.ROW);
+		g.head(MenuData.skin(b.uuid()), x + 10, y + 10, 40, 7, Theme.ROW, true);
+		int bx = x + w - 10;
+		bx -= buttonWidth(g, "Entblockieren", 12);
+		m.ghost(g, "Entblockieren", null, bx, y + 13, 34, 12, 9, 12.5F, Theme.BUTTON, Theme.TEXT_SOFT, Gfx.MEDIUM, () -> unblock(b));
+		int textX = x + 62;
+		float maxText = bx - textX - 6;
+		g.textMid(g.ellipsize(b.name(), 14, Gfx.MEDIUM, maxText), textX, y + 21, 14, Gfx.MEDIUM, 0xFF9A9A9A);
+		g.textMid(g.ellipsize("Kann dir keine Anfragen oder Pakete schicken", 12, Gfx.REGULAR, maxText), textX, y + 40, 12, Gfx.REGULAR, Theme.MUTED);
+	}
+
+	private void unblock(MenuData.Blocked b) {
+		if (!AxoLink.send("unblock", uuid(b.uuid()))) {
+			m.notice(MenuData.errorText("ingame.offline"), null, null);
+			return;
+		}
+		MenuData.BLOCKED.remove(b);
+		m.notice(b.name() + " entblockiert", "Rückgängig", () -> {
+			if (!MenuData.BLOCKED.contains(b))
+				MenuData.BLOCKED.add(b);
+			AxoLink.send("block", uuid(b.uuid()));
+		});
 	}
 
 	private static int rank(MenuData.Friend f) {

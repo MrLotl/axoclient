@@ -35,6 +35,9 @@ public sealed class SocialService(
     public IReadOnlyList<Friend> Friends => _friends.Values.OrderBy(f => f.Relation).ThenByDescending(f => f.State)
         .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
     public IReadOnlyList<InboxItem> Inbox { get; private set; } = [];
+
+    /// <summary>Zuletzt geladene Blockliste (leer, bis <see cref="LoadBlockedAsync"/> lief).</summary>
+    public IReadOnlyList<BlockedPlayer> Blocked { get; private set; } = [];
     public bool Available => client.Available && client.CanUse;
 
     public void Start()
@@ -224,7 +227,25 @@ public sealed class SocialService(
     public async Task BlockAsync(string uuid, bool block, CancellationToken ct)
     {
         await client.SendAsync(block ? HttpMethod.Post : HttpMethod.Delete, $"/blocks/{RequireUuid(uuid)}", ct: ct);
+        try
+        {
+            await LoadBlockedAsync(ct);
+        }
+        catch (Exception ex) when (ex is AxoException or HttpRequestException or IOException)
+        {
+            // Blockieren hat geklappt; die Liste kommt beim nächsten Öffnen
+            AppLog.Info($"Blockliste nicht geladen: {ex.Message}");
+        }
         await SyncNowAsync(ct);
+    }
+
+    /// <summary>Eigene Blockliste vom Service holen; meldet sie als <c>social.blocked</c>.</summary>
+    public async Task<IReadOnlyList<BlockedPlayer>> LoadBlockedAsync(CancellationToken ct)
+    {
+        var response = await client.SendAsync<BlocksResponse>(HttpMethod.Get, "/blocks", ct: ct);
+        Blocked = response?.Blocks ?? [];
+        events.Publish("social.blocked", Blocked);
+        return Blocked;
     }
 
     public async Task MarkNotificationsReadAsync(CancellationToken ct)
@@ -239,6 +260,7 @@ public sealed class SocialService(
         await client.SendAsync(HttpMethod.Delete, "/me", ct: ct);
         _friends = new();
         Inbox = [];
+        Blocked = [];
         Me = null;
     }
 

@@ -23,10 +23,15 @@
   }
 
   async function block() {
+    const name = friend?.name ?? '';
     try {
       await call('social.block', { uuid, block: true });
       await app.refreshSocial();
       onclose();
+      app.toast(t('friends.blockedToast', { name }), 'info', {
+        label: t('friends.showBlocked'),
+        run: () => app.navigate({ page: 'settings', tab: 'privacy' })
+      });
     } catch (e) {
       app.error(e);
     }
