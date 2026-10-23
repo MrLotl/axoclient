@@ -212,7 +212,7 @@
   {:else if view === 'grid'}
     <div class="grid" style="--k: {size}">
       {#each shown as m, i (m.file)}
-        <article class="card" class:off={!m.enabled} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 10 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
+        <article class="card" class:off={!m.enabled} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
           {#if !m.locked && !m.modLocked}
             <button class="remove" aria-label={t('content.removeNamed', { name: m.name })} title={t('common.remove')} onclick={() => remove(m)}><Icon name="x" size={12} /></button>
           {/if}
@@ -251,7 +251,7 @@
   {:else}
     <div class="list" style="--k: {size}">
       {#each shown as m, i (m.file)}
-        <div class="row" class:off={!m.enabled} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 6 }} out:fadeOut={{ duration: DUR.med }}>
+        <div class="row" class:off={!m.enabled} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:fadeOut={{ duration: DUR.med }}>
           {#if m.iconUrl}<img class="row-icon" src={m.iconUrl} alt="" use:fadeLoad={m.iconUrl} />{:else}<span class="row-icon no-icon"><Icon name={m.locked ? 'sparkle' : type === 'mod' ? 'puzzle' : 'image'} size={18} /></span>{/if}
           <div class="row-text">
             <span class="row-title">

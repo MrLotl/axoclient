@@ -156,7 +156,7 @@
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="row"
-        in:fadeSlide|global={{ delay: delay(i), y: 8 }}
+        in:fadeSlide|global={{ delay: delay(i), y: -6 }}
         out:fadeOut={{ duration: DUR.med }}
         class:lifted={drag?.active && drag.from === i}
         class:sortable={!query}

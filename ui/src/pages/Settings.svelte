@@ -259,7 +259,7 @@
     <div class="content">
       <!-- Mittig mit fester Breite statt oben links zu kleben -->
       {#key section}
-      <div class="inner" in:fadeSlide={{ y: 8, duration: DUR.med + 20 }}>
+      <div class="inner" in:fadeSlide={{ y: -6, duration: DUR.med + 20 }}>
       {#if section === 'general'}
         <h2>{t('settings.sections.general')}</h2>
         <div class="card">

@@ -145,7 +145,7 @@
     {#each servers as s, i (s.id)}
       {@const st = statusOf(s)}
       {@const job = startJob(s.id)}
-      <article class="server" class:running={s.running} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 10 }} out:pop={{ scale: 0.95, duration: DUR.med }}>
+      <article class="server" class:running={s.running} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:pop={{ scale: 0.95, duration: DUR.med }}>
         <div class="cover">
           <span class="cover-img">
             <ImageBox url={s.bannerUrl} width="100%" height="100%" radius={0} droppable aspect={4} outputWidth={1200}

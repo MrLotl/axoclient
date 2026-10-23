@@ -68,7 +68,7 @@
   {:else if view === 'grid'}
     <div class="grid">
       {#each list as i, n (i.id)}
-        <article class="card" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(n), y: 12 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
+        <article class="card" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(n), y: -6 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
           <button class="thumb" aria-label={t('instances.open', { name: i.name })} onclick={() => app.navigate({ page: 'instance', id: i.id })}>
             {#if i.hasIcon}
               <img class="blur" src={i.iconUrl} alt="" aria-hidden="true" use:fadeLoad={i.iconUrl} />
@@ -88,7 +88,7 @@
   {:else}
     <div class="list">
       {#each list as i, n (i.id)}
-        <article class="row-card" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(n), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
+        <article class="row-card" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(n), y: -6 }} out:fadeOut={{ duration: DUR.med }}>
           <button class="row-open" onclick={() => app.navigate({ page: 'instance', id: i.id })} aria-label={t('instances.open', { name: i.name })}>
             <ImageBox url={i.hasIcon ? i.iconUrl : null} name={i.name} width={54} />
             <span class="row-text">

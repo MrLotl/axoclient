@@ -179,7 +179,7 @@
       </div>
       <div class="own">
         {#each own as c, i (c.id)}
-          <div animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:pop={{ scale: 0.94, duration: DUR.med }} class="own-card" class:on={c.active} onmouseenter={() => (previewCape = c.url)} onmouseleave={() => (previewCape = null)} role="group" aria-label={c.name}>
+          <div animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:pop={{ scale: 0.94, duration: DUR.med }} class="own-card" class:on={c.active} onmouseenter={() => (previewCape = c.url)} onmouseleave={() => (previewCape = null)} role="group" aria-label={c.name}>
             <div class="own-tools">
               {#if c.hasEditState}<button class="tool" aria-label={t('common.edit')} title={t('common.edit')} onclick={() => (editor = { cape: c })}><Icon name="edit" size={12} /></button>{/if}
               <button class="tool trash" aria-label={t('capes.deleteNamed', { name: c.name })} title={t('common.delete')} onclick={() => remove(c)}><Icon name="trash" size={12} /></button>

@@ -113,7 +113,7 @@
         <span class="section-label">{t('skins.library', { count: skins.length })}</span>
         <div class="grid">
           {#each skins as s, i (s.id)}
-            <article class="card" class:active={s.active} class:selected={preview?.id === s.id} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 10 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
+            <article class="card" class:active={s.active} class:selected={preview?.id === s.id} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
               <button class="remove" aria-label={t('skins.deleteNamed', { name: s.name })} title={t('common.delete')} onclick={() => remove(s)}><Icon name="x" size={12} /></button>
               <button class="figure" aria-label={t('skins.preview', { name: s.name })} onclick={() => (preview = s)}>
                 <SkinFront src={s.url} slim={s.model === 'slim'} scale={7} />

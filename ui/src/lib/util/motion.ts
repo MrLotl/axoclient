@@ -18,7 +18,9 @@ function baseTransform(node: Element) {
 
 type Opts = { delay?: number; duration?: number; x?: number; y?: number; scale?: number; origin?: string };
 
-/** Einblenden mit leichtem Versatz – für Seiten, Tabs und Listeneinträge */
+/** Einblenden mit leichtem Versatz – für Seiten, Tabs und Listeneinträge.
+ *  In scrollbaren Listen nur negative y-Werte (von oben herein): ein Versatz nach unten ragt kurz
+ *  über den Rand, Windows blendet dann einen Scrollbalken ein und alle Karten ändern kurz ihre Breite. */
 export function fadeSlide(node: Element, { delay = 0, duration = DUR.med, x = 0, y = 8 }: Opts = {}): TransitionConfig {
   if (reducedMotion()) return { duration: 0 };
   const base = baseTransform(node);

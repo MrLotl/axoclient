@@ -38,7 +38,7 @@
       <p class="empty">{app.activeAccount?.type === 'microsoft' ? t('friends.unavailable') : t('service.notSignedIn')}</p>
     {:else}
       {#each incoming as f, i (f.uuid)}
-        <div class="row incoming" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
+        <div class="row incoming" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:fadeOut={{ duration: DUR.med }}>
           <Head uuid={f.uuid} size={40} radius={6} />
           <div class="text">
             <span class="name truncate">{f.name}</span>
@@ -53,7 +53,7 @@
         </div>
       {/each}
       {#each pending as f, i (f.uuid)}
-        <div class="row pending" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
+        <div class="row pending" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:fadeOut={{ duration: DUR.med }}>
           <Head uuid={f.uuid} size={40} radius={6} dim />
           <div class="text">
             <span class="name muted truncate">{f.name}</span>
@@ -65,7 +65,7 @@
         </div>
       {/each}
       {#each friends as f, i (f.uuid)}
-        <div class="row" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
+        <div class="row" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: -6 }} out:fadeOut={{ duration: DUR.med }}>
           <button class="open" aria-label={t('friends.openProfile', { name: f.name })} aria-haspopup="dialog" onclick={() => (app.dialog = { kind: 'friendProfile', data: f.uuid })}>
             <Head uuid={f.uuid} size={40} radius={6} />
             <span class="text">
@@ -81,7 +81,7 @@
         </div>
       {/each}
       {#if friends.length + pending.length + incoming.length === 0}
-        <p class="empty" in:fadeSlide={{ y: 6 }}>{t('friends.empty')}</p>
+        <p class="empty" in:fadeSlide={{ y: -6 }}>{t('friends.empty')}</p>
       {/if}
     {/if}
   </div>

@@ -146,7 +146,7 @@
   <div class={view === 'grid' ? 'grid' : 'list'} class:loading>
     {#if result}
       {#each result.items as p, i (p.id)}
-        <article class={view === 'grid' ? 'card' : 'row-card'} in:fadeSlide|global={{ delay: delay(i), y: 10 }}>
+        <article class={view === 'grid' ? 'card' : 'row-card'} in:fadeSlide|global={{ delay: delay(i), y: -6 }}>
           <div class="thumb">
             {#if p.imageUrl}<img class="banner" src={p.imageUrl} alt="" loading="lazy" use:fadeLoad={p.imageUrl} />{:else if p.iconUrl}<img class="banner blur" src={p.iconUrl} alt="" loading="lazy" use:fadeLoad={p.iconUrl} />{/if}
             {#if p.iconUrl}<img class="icon" src={p.iconUrl} alt="" loading="lazy" use:fadeLoad={p.iconUrl} />{/if}

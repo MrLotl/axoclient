@@ -97,7 +97,7 @@
   {:else}
     <div class="grid">
       {#each shown as s, i (s.file)}
-        <button class="shot" onclick={() => (preview = s)} aria-label={t('screenshots.open', { name: s.file })} in:fadeSlide|global={{ delay: delay(i), y: 10 }}>
+        <button class="shot" onclick={() => (preview = s)} aria-label={t('screenshots.open', { name: s.file })} in:fadeSlide|global={{ delay: delay(i), y: -6 }}>
           <img src={s.url} alt="" loading="lazy" use:fadeLoad={s.url} />
           <span class="date">{new Date(s.takenAt).toLocaleDateString('de-DE')}</span>
         </button>
