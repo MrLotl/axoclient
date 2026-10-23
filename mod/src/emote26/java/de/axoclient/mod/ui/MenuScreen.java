@@ -366,6 +366,10 @@ public final class MenuScreen extends Screen {
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
 		if (join.open())
 			return true;
+		if (tab == Tab.CAPE) {
+			cape.scroll(vertical);
+			return true;
+		}
 		scroll[tab.ordinal()] -= (int) Math.round(vertical * 40);
 		clampScroll();
 		return true;

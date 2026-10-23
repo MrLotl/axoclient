@@ -8,6 +8,8 @@ final class CapeTab {
 	private final MenuScreen m;
 	private String selected;
 	private boolean front;
+	private int scroll;
+	private int maxScroll;
 
 	CapeTab(MenuScreen m) {
 		this.m = m;
@@ -17,6 +19,8 @@ final class CapeTab {
 		Ui ui = m.ui;
 		if (selected == null || MenuData.CAPES.stream().noneMatch(c -> c.key().equals(selected)))
 			selected = MenuData.capeWorn;
+
+		sort();
 
 		// Vorschau
 		int pw = 230;
@@ -49,34 +53,7 @@ final class CapeTab {
 				MenuScreen.paragraph(g, "Capes wechseln geht nur mit dem Launcher. Dein aktuelles Cape siehst du trotzdem.", rx, gy + 10, rw, 13,
 					Gfx.REGULAR, Theme.MUTED, 19.5F, false);
 		}
-		int i = 0;
-		for (MenuData.Cape cape : MenuData.CAPES) {
-			int bx = rx + (i % 4) * (cw + gap);
-			int by = gy + (i / 4) * (ch + gap);
-			boolean on = cape.key().equals(selected);
-			boolean hover = ui.hover(bx, by, cw, ch);
-			if (on) {
-				g.gradient(bx, by, cw, ch, 12, Theme.tint(Theme.CARD, 0.10F, 0), Theme.tint(Theme.CARD, 0.10F, 1));
-				g.outline(bx, by, cw, ch, 12, Theme.alpha(0xFFD68CE6, 0.5F));
-			} else
-				g.rect(bx, by, cw, ch, 12, hover ? 0xFF323232 : Theme.CARD);
-			g.rect(bx + 8, by + 8, cw - 16, 82, 8, Theme.WELL);
-			if ("none".equals(cape.kind()))
-				g.icon(Icons.NO_CAPE, bx + cw / 2.0F - 13, by + 8 + 28, 26, Theme.FAINT);
-			else
-				capeFront(g, cape.key(), bx + cw / 2, by + 8 + 6, 70);
-			if (cape.key().equals(MenuData.capeWorn)) {
-				g.accent(bx + cw - 8 - 5 - 18, by + 8 + 5, 18, 18, 9);
-				g.icon(Icons.CHECK_BOLD, bx + cw - 8 - 5 - 14, by + 8 + 9, 10, Theme.WHITE);
-			}
-			g.textMid(g.ellipsize(cape.name(), 12.5F, Gfx.MEDIUM, cw - 16), bx + 8, by + 8 + 82 + 8 + 8, 12.5F, Gfx.MEDIUM, Theme.TEXT);
-			ui.hit(bx, by, cw, ch, () -> selected = cape.key());
-			i++;
-		}
-		int rows = (MenuData.CAPES.size() + 3) / 4;
-		int listBottom = gy + rows * (ch + gap);
-
-		// Unten: Hinweis und Anlegen (der Hinweis darf mehrzeilig werden)
+		// Unten: Hinweis und Anlegen (fest; der Hinweis darf mehrzeilig werden)
 		boolean same = selected == null || selected.equals(MenuData.capeWorn);
 		String label = same ? "Angelegt" : "Anlegen";
 		int bw = Math.round(g.width(label, 13, Gfx.SEMIBOLD)) + 40;
@@ -87,7 +64,39 @@ final class CapeTab {
 		int hintW = rw - bw - 12;
 		int hintH = Math.round(MenuScreen.wrap(g, hint, 12, Gfx.REGULAR, hintW).size() * 17.4F);
 		int blockH = Math.max(40, hintH);
-		int by = Math.max(listBottom + 8, y + h - blockH);
+		int by = y + h - blockH;
+
+		// Liste nach Gruppen: nur sie scrollt, Überschrift, Vorschau und Anlegen bleiben stehen
+		int listTop = gy - 4, listH = Math.max(1, by - 12 - listTop);
+		int content = 4;
+		for (Group group : GROUPS) {
+			int n = group.capes().size();
+			if (n > 0)
+				content += GROUP_HEAD + ((n + 3) / 4) * (ch + gap);
+		}
+		maxScroll = Math.max(0, content - listH);
+		scroll = Math.max(0, Math.min(maxScroll, scroll));
+		ui.pushClip(rx - 4, listTop, rw + 8, listH);
+		int at = listTop + 4 - scroll;
+		for (Group group : GROUPS) {
+			if (group.capes().isEmpty())
+				continue;
+			g.textMid(group.name(), rx, at + 9, 12.5F, Gfx.SEMIBOLD, Theme.MUTED);
+			at += GROUP_HEAD;
+			int i = 0;
+			for (MenuData.Cape cape : group.capes()) {
+				card(g, cape, rx + (i % 4) * (cw + gap), at + (i / 4) * (ch + gap), cw, ch);
+				i++;
+			}
+			at += ((i + 3) / 4) * (ch + gap);
+		}
+		ui.popClip();
+		if (maxScroll > 0) {
+			int thumb = Math.max(24, listH * listH / content);
+			int pos = (listH - thumb) * scroll / maxScroll;
+			g.rect(rx + rw + 4, listTop + pos, 3, thumb, 2, 0x803A3A3A);
+		}
+
 		m.primary(g, label, null, rx + rw - bw, by + (blockH - 40) / 2, 40, 20, 10, 13, !same && MenuData.connected(), () -> {
 			MenuData.send("capeWear", "key", selected);
 			MenuData.capeWorn = selected;
@@ -95,7 +104,56 @@ final class CapeTab {
 			m.notice((c == null ? "Cape" : c.name()) + " angelegt", null, null);
 		});
 		MenuScreen.paragraph(g, hint, rx, by + (blockH - hintH) / 2, hintW, 12, Gfx.REGULAR, Theme.MUTED_2, 17.4F, false);
-		return Math.max(h, by + blockH - y);
+		return h;
+	}
+
+	/** Mausrad: nur die Liste der Capes scrollt. */
+	void scroll(double vertical) {
+		scroll = Math.max(0, Math.min(maxScroll, scroll - (int) Math.round(vertical * 40)));
+	}
+
+	private void card(Gfx g, MenuData.Cape cape, int bx, int by, int cw, int ch) {
+		Ui ui = m.ui;
+		boolean on = cape.key().equals(selected);
+		boolean hover = ui.hover(bx, by, cw, ch);
+		if (on) {
+			g.gradient(bx, by, cw, ch, 12, Theme.tint(Theme.CARD, 0.10F, 0), Theme.tint(Theme.CARD, 0.10F, 1));
+			g.outline(bx, by, cw, ch, 12, Theme.alpha(0xFFD68CE6, 0.5F));
+		} else
+			g.rect(bx, by, cw, ch, 12, hover ? 0xFF323232 : Theme.CARD);
+		g.rect(bx + 8, by + 8, cw - 16, 82, 8, Theme.WELL);
+		if ("none".equals(cape.kind()))
+			g.icon(Icons.NO_CAPE, bx + cw / 2.0F - 13, by + 8 + 28, 26, Theme.FAINT);
+		else
+			capeFront(g, cape.key(), bx + cw / 2, by + 8 + 6, 70);
+		if (cape.key().equals(MenuData.capeWorn)) {
+			g.accent(bx + cw - 8 - 5 - 18, by + 8 + 5, 18, 18, 9);
+			g.icon(Icons.CHECK_BOLD, bx + cw - 8 - 5 - 14, by + 8 + 9, 10, Theme.WHITE);
+		}
+		g.textMid(g.ellipsize(cape.name(), 12.5F, Gfx.MEDIUM, cw - 16), bx + 8, by + 8 + 82 + 8 + 8, 12.5F, Gfx.MEDIUM, Theme.TEXT);
+		ui.hit(bx, by, cw, ch, () -> selected = cape.key());
+	}
+
+	private record Group(String name, java.util.List<MenuData.Cape> capes) {}
+
+	private static final int GROUP_HEAD = 26;
+	/** Wie im Launcher: Minecraft-Capes (samt "Kein Cape"), AxoClient-Capes, eigene. */
+	private static final java.util.List<Group> GROUPS = new java.util.ArrayList<>();
+
+	private static void sort() {
+		GROUPS.clear();
+		Group mojang = new Group("Minecraft-Capes", new java.util.ArrayList<>());
+		Group axo = new Group("AxoClient-Capes", new java.util.ArrayList<>());
+		Group own = new Group("Eigene Capes", new java.util.ArrayList<>());
+		for (MenuData.Cape cape : MenuData.CAPES)
+			switch (cape.kind() == null ? "" : cape.kind()) {
+				case "none", "mojang" -> mojang.capes().add(cape);
+				case "custom" -> own.capes().add(cape);
+				default -> axo.capes().add(cape);
+			}
+		GROUPS.add(mojang);
+		GROUPS.add(axo);
+		GROUPS.add(own);
 	}
 
 	private void arrow(Gfx g, int bx, int by, Icons.Icon icon) {
