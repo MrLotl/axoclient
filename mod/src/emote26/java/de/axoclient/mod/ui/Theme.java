@@ -23,7 +23,7 @@ public final class Theme {
 	public static final int WHITE = 0xFFFFFFFF;
 
 	/** Fenster und Flächen. */
-	public static final int WINDOW = 0xF7262626;
+	public static final int WINDOW = 0xFF262626;
 	public static final int WINDOW_LINE = 0xFF3A3A3A;
 	public static final int DIVIDER = 0xFF333333;
 	public static final int ROW = 0xFF303030;
@@ -48,8 +48,8 @@ public final class Theme {
 	public static final int YELLOW_TEXT = 0xFFF0C860;
 	public static final int OFFLINE = 0xFF6B6B6B;
 
-	/** Schleier hinter dem Menü (rgba(10,10,14,0.55)). */
-	public static final int SCRIM = 0x8C0A0A0E;
+	/** Schleier hinter dem Menü (rgba(10,10,14,0.62)); ohne Weichzeichner etwas dichter, damit das Spiel ruhig bleibt. */
+	public static final int SCRIM = 0x9E0A0A0E;
 
 	private Theme() {}
 

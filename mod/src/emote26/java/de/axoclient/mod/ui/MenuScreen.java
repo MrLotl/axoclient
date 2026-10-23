@@ -72,6 +72,12 @@ public final class MenuScreen extends Screen {
 	}
 
 	@Override
+	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+		// Kein Weichzeichner von Minecraft: der kostet in jedem Bild viel Grafikleistung und lässt das halbdurchsichtige
+		// Fenster milchig wirken. Den Schleier zeichnet draw() selbst.
+	}
+
+	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(graphics, mouseX, mouseY, delta);
 		Gfx g = Gfx.begin(graphics, width, height);
@@ -375,13 +381,7 @@ public final class MenuScreen extends Screen {
 
 	/** Abschnittsüberschrift: 11 px, Großbuchstaben, gesperrt. */
 	static void heading(Gfx g, String text, int x, float cy) {
-		String upper = text.toUpperCase(java.util.Locale.GERMAN);
-		float at = x;
-		for (int i = 0; i < upper.length(); i++) {
-			String c = String.valueOf(upper.charAt(i));
-			g.textMid(c, at, cy, 11, Gfx.SEMIBOLD, Theme.MUTED_3);
-			at += g.width(c, 11, Gfx.SEMIBOLD) + 0.7F;
-		}
+		g.textMid(text.toUpperCase(java.util.Locale.GERMAN), x, cy, 11, Gfx.SEMIBOLD, Theme.MUTED_3, 0.7F);
 	}
 
 	/** Hauptknopf mit Verlauf; gibt die Breite zurück. */
