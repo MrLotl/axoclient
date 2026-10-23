@@ -105,6 +105,45 @@ public final class Gfx {
 		g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, w, h, rw, rh, texW, texH, faded(argb));
 	}
 
+	private static java.lang.reflect.Method stratum;
+	private static boolean stratumLooked;
+
+	/**
+	 * Neue Zeichenebene: Was danach kommt, liegt ganz über allem davor – auch über Text. (Minecraft zeichnet Text
+	 * einer Ebene erst nach allen Flächen, sonst scheint er durch spätere Menüs.) false, wenn es das nicht gibt.
+	 */
+	public static boolean nextLayer(GuiGraphicsExtractor g) {
+		if (!hasLayers(g))
+			return false;
+		try {
+			stratum.invoke(g);
+			return true;
+		} catch (Throwable t) {
+			stratum = null;
+			return false;
+		}
+	}
+
+	/** Ob es eigene Zeichenebenen gibt (siehe {@link #nextLayer(GuiGraphicsExtractor)}). */
+	public static boolean hasLayers(GuiGraphicsExtractor g) {
+		if (g == null)
+			return false;
+		if (!stratumLooked) {
+			stratumLooked = true;
+			try {
+				stratum = g.getClass().getMethod("nextStratum");
+			} catch (Throwable t) {
+				stratum = null;
+			}
+		}
+		return stratum != null;
+	}
+
+	/** Neue Zeichenebene für alles Folgende (siehe {@link #nextLayer(GuiGraphicsExtractor)}). */
+	public boolean layer() {
+		return nextLayer(g);
+	}
+
 	public void end() {
 		if (g != null)
 			g.pose().popMatrix();

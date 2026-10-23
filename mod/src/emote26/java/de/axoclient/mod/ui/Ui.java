@@ -9,7 +9,7 @@ import java.util.function.IntConsumer;
  * Fläche unter der Maus aus. So stimmen Bild und Bedienung immer überein, ohne das Layout doppelt zu rechnen.
  */
 public final class Ui {
-	private record Hit(int x, int y, int w, int h, Runnable action, IntConsumer drag, int[] clip) {}
+	private record Hit(int x, int y, int w, int h, Runnable action, IntConsumer drag, int[] clip, boolean silent) {}
 
 	public Gfx g;
 	public int mx;
@@ -46,19 +46,27 @@ public final class Ui {
 
 	/** Klickfläche anmelden. */
 	public void hit(int x, int y, int w, int h, Runnable action) {
+		add(x, y, w, h, action, null, false);
+	}
+
+	/** Klickfläche ohne Klick-Klang (z. B. wenn die Aktion selbst etwas Passenderes abspielt). */
+	public void quiet(int x, int y, int w, int h, Runnable action) {
+		add(x, y, w, h, action, null, true);
+	}
+
+	private void add(int x, int y, int w, int h, Runnable action, IntConsumer drag, boolean silent) {
 		if (!inert)
-			building.add(new Hit(x, y, w, h, action, null, clips.isEmpty() ? null : clips.get(clips.size() - 1)));
+			building.add(new Hit(x, y, w, h, action, drag, clips.isEmpty() ? null : clips.get(clips.size() - 1), silent));
 	}
 
 	/** Fläche zum Ziehen (Regler): bekommt bei Klick und beim Ziehen die Maus-x in Design-Pixeln. */
 	public void drag(int x, int y, int w, int h, IntConsumer onX) {
-		if (!inert)
-			building.add(new Hit(x, y, w, h, null, onX, clips.isEmpty() ? null : clips.get(clips.size() - 1)));
+		add(x, y, w, h, null, onX, false);
 	}
 
 	/** Eine Fläche, die Klicks schluckt (z. B. das Fenster selbst, damit ein Klick daneben schließt). */
 	public void block(int x, int y, int w, int h) {
-		hit(x, y, w, h, () -> {});
+		quiet(x, y, w, h, () -> {});
 	}
 
 	public void pushClip(int x, int y, int w, int h) {
@@ -79,6 +87,8 @@ public final class Ui {
 				continue;
 			if (hit.clip() != null && !Gfx.inside(x, y, hit.clip()[0], hit.clip()[1], hit.clip()[2], hit.clip()[3]))
 				continue;
+			if (!hit.silent())
+				Sounds.click();
 			if (hit.drag() != null) {
 				dragging = hit.drag();
 				dragging.accept(x);

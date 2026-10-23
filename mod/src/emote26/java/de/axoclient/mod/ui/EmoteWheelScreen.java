@@ -147,8 +147,10 @@ public final class EmoteWheelScreen extends Screen {
 		done = true;
 		String id = hovered >= 0 ? MenuData.SLOTS.get(hovered) : null;
 		onClose();
-		if (id != null)
+		if (id != null) {
+			Sounds.click();
 			Emotes.playLocal(id);
+		}
 	}
 
 	@Override

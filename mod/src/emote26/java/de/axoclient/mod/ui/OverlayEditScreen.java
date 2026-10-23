@@ -138,7 +138,9 @@ public final class OverlayEditScreen extends Screen {
 		try {
 			if (MenuConfig.toastsOn) {
 				List<Toasts.Toast> samples = Toasts.samples();
-				Toasts.draw(g, samples, System.currentTimeMillis());
+				// Ohne eigene Ebenen schiene ihr Text durch ein offenes Menü: dann so lange weglassen
+				if (Gfx.hasLayers(graphics) || !menuOpen())
+					Toasts.draw(g, samples, System.currentTimeMillis());
 				int[] o = Toasts.origin(g, Toasts.WIDTH, Toasts.stackHeight(samples));
 				float k = g.scale / hs;
 				found.add(new Piece(null, Math.round(o[0] * k), Math.round(o[1] * k), Math.round(o[2] * k), Math.round(o[3] * k)));
@@ -149,6 +151,7 @@ public final class OverlayEditScreen extends Screen {
 		pieces = found;
 
 		// Rahmen um die Stücke, Hilfslinien
+		Gfx.nextLayer(graphics);
 		graphics.pose().pushMatrix();
 		graphics.pose().scale(hs, hs);
 		for (Piece p : pieces) {
@@ -176,13 +179,16 @@ public final class OverlayEditScreen extends Screen {
 		}
 		graphics.pose().popMatrix();
 
-		// Leiste, Einstellungen, Hinweis (Design-Pixel)
+		// Leiste, Einstellungen, Hinweis (Design-Pixel) – je auf eigener Ebene, damit kein Text darunter durchscheint
+		Gfx.nextLayer(graphics);
 		g = Gfx.begin(graphics, width, height);
 		try {
 			ui.begin(g, g.mx(mouseX), g.my(mouseY));
 			toolbar(g);
 			gear(g, mouseX, mouseY);
 			hint(g);
+			if (menuOpen())
+				g.layer();
 			menus(g);
 			ui.finish();
 		} finally {
@@ -363,11 +369,15 @@ public final class OverlayEditScreen extends Screen {
 		ui.hit(bx, y + 6, doneW, 36, this::onClose);
 	}
 
+	private boolean menuOpen() {
+		return gridMenu || profileMenu || addMenu;
+	}
+
 	/** Aufklappmenüs der Leiste (über allem). */
 	private void menus(Gfx g) {
 		if (gridMenu) {
 			int w = 250;
-			int x = gridX, y = toolbarY + 48 + 6;
+			int x = Math.max(8, Math.min(gridX, g.width - w - 8)), y = toolbarY + 48 + 6;
 			int h = 16 + 20 + 16 + 38 + 16 + 20 + 16;
 			g.shadow(x, y, w, h, 10, 14, 10, 0.5F);
 			g.box(x, y, w, h, 10, Theme.alpha(0xFF242424, 0.98F), Theme.WINDOW_LINE);
@@ -391,9 +401,13 @@ public final class OverlayEditScreen extends Screen {
 		}
 		if (profileMenu) {
 			List<String> names = HudProfiles.list(config);
-			int w = 200, rowH = 32;
+			int rowH = 32;
+			float widest = g.width("Als neues Profil speichern", 12.5F, Gfx.MEDIUM);
+			for (String name : names)
+				widest = Math.max(widest, g.width(name, 12.5F, Gfx.SEMIBOLD));
+			int w = Math.max(200, (int) Math.ceil(32 + widest + 16));
 			int h = 8 + (names.size() + 1) * rowH;
-			int x = profileX, y = toolbarY + 48 + 6;
+			int x = Math.max(8, Math.min(profileX, g.width - w - 8)), y = toolbarY + 48 + 6;
 			g.shadow(x, y, w, h, 10, 14, 10, 0.5F);
 			g.box(x, y, w, h, 10, Theme.alpha(0xFF242424, 0.98F), Theme.WINDOW_LINE);
 			ui.block(x, y, w, h);
@@ -425,10 +439,14 @@ public final class OverlayEditScreen extends Screen {
 			for (HudModule module : HudModule.values())
 				if (!config.isEnabled(module))
 					off.add(module);
-			int w = 220, rowH = 30;
+			int rowH = 30;
 			int count = off.size() + (MenuConfig.toastsOn ? 0 : 1);
+			float widest = g.width(count == 0 ? "Alle Widgets sind schon im Bild" : "Einblendungen", 12.5F, Gfx.MEDIUM);
+			for (HudModule module : off)
+				widest = Math.max(widest, g.width(module.label, 12.5F, Gfx.MEDIUM));
+			int w = Math.max(220, (int) Math.ceil(12 + widest + 16));
 			int h = 8 + Math.max(1, count) * rowH;
-			int x = addX, y = toolbarY + 48 + 6;
+			int x = Math.max(8, Math.min(addX, g.width - w - 8)), y = toolbarY + 48 + 6;
 			g.shadow(x, y, w, h, 10, 14, 10, 0.5F);
 			g.box(x, y, w, h, 10, Theme.alpha(0xFF242424, 0.98F), Theme.WINDOW_LINE);
 			ui.block(x, y, w, h);
