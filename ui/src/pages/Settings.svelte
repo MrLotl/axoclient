@@ -10,6 +10,7 @@
   import MemorySlider from '../lib/components/MemorySlider.svelte';
   import { bytes } from '../lib/util/format';
   import { copyText } from '../lib/util/clipboard';
+  import { fadeSlide, DUR } from '../lib/util/motion';
   import type { DiagnosticItem, FileRef, LauncherSettings, StorageOverview } from '../lib/types';
 
   const s = $derived(app.settings!);
@@ -188,11 +189,24 @@
         ]
       : []
   );
+
+  // Markierung in der Navigation gleitet zum gewählten Bereich
+  let side: HTMLElement | undefined = $state();
+  let marker = $state<{ top: number; height: number } | null>(null);
+  let markerReady = $state(false);
+  $effect(() => {
+    void section;
+    const el = side?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!el) return;
+    marker = { top: el.offsetTop, height: el.offsetHeight };
+    if (!markerReady) requestAnimationFrame(() => (markerReady = true));
+  });
 </script>
 
 {#if s}
   <div class="page">
-    <nav class="side" aria-label={t('settings.title')}>
+    <nav class="side" aria-label={t('settings.title')} bind:this={side}>
+      {#if marker}<span class="marker" class:ready={markerReady} style="transform: translateY({marker.top}px); height: {marker.height}px" aria-hidden="true"></span>{/if}
       <h1>{t('settings.title')}</h1>
       {#each sections as sec (sec.id)}
         <button class="nav" aria-current={section === sec.id ? 'page' : undefined} onclick={() => (section = sec.id)}>
@@ -207,7 +221,8 @@
 
     <div class="content">
       <!-- Mittig mit fester Breite statt oben links zu kleben -->
-      <div class="inner">
+      {#key section}
+      <div class="inner" in:fadeSlide={{ y: 8, duration: DUR.med + 20 }}>
       {#if section === 'general'}
         <h2>{t('settings.sections.general')}</h2>
         <div class="card">
@@ -492,6 +507,7 @@
         {/if}
       {/if}
       </div>
+      {/key}
     </div>
   </div>
 {/if}
@@ -502,6 +518,7 @@
     display: flex;
   }
   .side {
+    position: relative;
     width: 230px;
     flex-shrink: 0;
     padding: 24px 12px 20px 20px;
@@ -535,9 +552,24 @@
     color: var(--text);
   }
   .nav[aria-current='page'] {
-    background: var(--accent-soft);
+    background: transparent;
     color: var(--accent-text);
+  }
+  .nav {
+    position: relative;
+  }
+  .marker {
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 12px;
+    border-radius: 9px;
+    background: var(--accent-soft);
     box-shadow: inset 0 0 0 1px var(--accent-ring);
+    pointer-events: none;
+  }
+  .marker.ready {
+    transition: transform var(--dur-slow) var(--ease-out), height var(--dur-slow) var(--ease-out);
   }
   .about {
     padding: 0 10px;

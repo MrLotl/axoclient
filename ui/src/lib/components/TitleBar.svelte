@@ -4,6 +4,7 @@
   import { t } from '../i18n';
   import Icon from './Icon.svelte';
   import Head from './Head.svelte';
+  import { pop, bounce, DUR } from '../util/motion';
 
   let { minimal = false }: { minimal?: boolean } = $props();
   let accountOpen = $state(false);
@@ -72,7 +73,7 @@
   <div class="actions">
     {#if !minimal}
       {#if app.update}
-        <button class="update-pill" aria-haspopup="dialog" onclick={() => (app.dialog = { kind: 'update' })}>
+        <button class="update-pill" aria-haspopup="dialog" in:pop={{ scale: 0.85, duration: DUR.slow }} onclick={() => (app.dialog = { kind: 'update' })}>
           <Icon name="download" size={15} stroke={1.6} />{t('app.updateAvailable')}
         </button>
       {/if}
@@ -82,7 +83,7 @@
         aria-haspopup="dialog"
         onclick={() => (app.dialog = { kind: 'notifications' })}>
         <Icon name="bell" />
-        {#if app.unread > 0}<span class="badge">{app.unread > 9 ? '9+' : app.unread}</span>{/if}
+        {#if app.unread > 0}<span class="badge" in:bounce out:pop={{ scale: 0.5 }}>{app.unread > 9 ? '9+' : app.unread}</span>{/if}
       </button>
       {#if account}
         <div class="account-area">
@@ -98,7 +99,12 @@
             <span class="chev" class:up={accountOpen}><Icon name="chevronDown" /></span>
           </button>
           {#if accountOpen}
-            <div class="menu account-menu" role="menu" aria-label={t('accounts.title')}>
+            <div
+              class="menu account-menu"
+              role="menu"
+              aria-label={t('accounts.title')}
+              in:pop={{ origin: 'top right', scale: 0.94, y: -6, duration: DUR.med }}
+              out:pop={{ origin: 'top right', scale: 0.96, y: -4, duration: DUR.fast }}>
               <span class="section-label" style="padding: 8px 10px 6px">{t('accounts.title')}</span>
               {#each app.accounts as a (a.uuid)}
                 <button class="menu-item acc" class:active={a.active} role="menuitemradio" aria-checked={a.active} onclick={() => switchTo(a.uuid)}>

@@ -19,6 +19,7 @@
   import Welcome from './pages/Welcome.svelte';
   import WelcomeBack from './pages/WelcomeBack.svelte';
   import GlobalDialogs from './dialogs/GlobalDialogs.svelte';
+  import { fadeSlide, fadeOut, DUR } from './lib/util/motion';
 
   let failed = $state(false);
 
@@ -56,18 +57,24 @@
     </div>
   </div>
 {:else if fullscreenPage}
-  <div class="shell">
+  <div class="shell" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
     <TitleBar minimal />
-    {#if app.route.page === 'welcome'}<Welcome />{:else}<WelcomeBack />{/if}
+    {#key app.route.page}
+      <div class="full-slot" in:fadeSlide={{ y: 10, duration: DUR.slow }}>
+        {#if app.route.page === 'welcome'}<Welcome />{:else}<WelcomeBack />{/if}
+      </div>
+    {/key}
   </div>
   <GlobalDialogs />
 {:else}
-  <div class="shell">
+  <div class="shell" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
     <TitleBar />
     <div class="frame">
       <Sidebar />
       <main class="content">
         {#key app.route.page + (app.route.id ?? '')}
+          <!-- Alte und neue Seite liegen kurz übereinander: die alte blendet aus, die neue gleitet herein -->
+          <div class="page-slot" in:fadeSlide={{ y: 8, duration: DUR.med + 20 }} out:fadeOut={{ duration: DUR.fast }}>
           {#if app.route.page === 'home'}
             <Home />
           {:else if app.route.page === 'instances'}
@@ -87,6 +94,7 @@
           {:else if app.route.page === 'settings'}
             <Settings />
           {/if}
+          </div>
         {/key}
         <JobBar />
       </main>
@@ -124,6 +132,16 @@
     background: var(--surface);
     border-top-left-radius: 18px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .page-slot {
+    position: absolute;
+    inset: 0;
+  }
+  .full-slot {
+    flex-grow: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
   }

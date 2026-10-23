@@ -15,9 +15,17 @@
   function isCurrent(item: (typeof items)[number]) {
     return app.route.page === item.page || (item.also?.includes(app.route.page) ?? false);
   }
+
+  // Die Markierung gleitet zum aktiven Eintrag (44px Knopf + 8px Abstand); beim ersten Zeichnen ohne Übergang
+  const index = $derived(items.findIndex(isCurrent));
+  let ready = $state(false);
+  $effect(() => {
+    requestAnimationFrame(() => (ready = true));
+  });
 </script>
 
 <nav aria-label={t('app.nav.main')}>
+  {#if index >= 0}<span class="marker" class:ready style="transform: translateY({index * 52}px)" aria-hidden="true"></span>{/if}
   {#each items as item (item.page)}
     <button
       class="nav-btn"
@@ -33,6 +41,7 @@
 
 <style>
   nav {
+    position: relative;
     width: 66px;
     flex-shrink: 0;
     display: flex;
@@ -54,7 +63,10 @@
     color: #8a8a8a;
     background: transparent;
     cursor: pointer;
-    transition: background-color 0.12s ease, color 0.12s ease;
+    transition: background-color 0.12s ease, color 0.2s ease, transform 0.12s ease;
+  }
+  .nav-btn:active {
+    transform: scale(0.94);
   }
   .nav-btn:not([aria-current='page']):hover {
     background: #2a2a2a;
@@ -62,8 +74,20 @@
   }
   .nav-btn[aria-current='page'] {
     color: var(--accent-text);
+  }
+  .marker {
+    position: absolute;
+    top: 4px;
+    left: 11px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     background: var(--accent-soft);
     box-shadow: inset 0 0 0 1px var(--accent-ring);
+    pointer-events: none;
+  }
+  .marker.ready {
+    transition: transform var(--dur-slow) var(--ease-out);
   }
   .live {
     position: absolute;
@@ -74,5 +98,11 @@
     border-radius: 4px;
     background: var(--green);
     box-shadow: 0 0 0 2px var(--bg);
+    animation: live-pop 0.3s var(--ease-spring);
+  }
+  @keyframes live-pop {
+    from {
+      transform: scale(0);
+    }
   }
 </style>

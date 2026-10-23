@@ -3,11 +3,15 @@
   import { call } from '../bridge/bridge';
   import { t, tr } from '../i18n';
   import Icon from './Icon.svelte';
+  import TweenNumber from './TweenNumber.svelte';
+  import { fadeSlide, DUR } from '../util/motion';
 
   let { instanceId, height = 56, compact = false }: { instanceId: string | null; height?: number; compact?: boolean } = $props();
 
   const job = $derived(instanceId ? app.jobFor('launch', instanceId) : undefined);
   const running = $derived(instanceId ? app.running.includes(instanceId) : false);
+  // Wechsel zwischen Spielen / Startet / Stoppen blendet über statt zu springen
+  const mode = $derived(job ? 'busy' : running ? 'running' : 'idle');
   const pct = $derived(job?.progress !== null && job?.progress !== undefined ? Math.round(job.progress * 100) : null);
 
   async function onclick() {
@@ -42,16 +46,18 @@
     <span class="fill" style="width: {pct ?? 0}%"></span>
     <span class="shine"></span>
   {/if}
-  <span class="play-label">
-    {#if job}
-      <span class="stage truncate">{job.status ? tr(job.status) : t('launch.starting')}</span>
-      {#if pct !== null}<span class="pct">{pct} %</span>{/if}
-    {:else if running}
-      <Icon name="stop" size={16} />{t('home.stopGame')}
-    {:else}
-      <Icon name="play" size={18} />{t('common.play')}
-    {/if}
-  </span>
+  {#key mode}
+    <span class="play-label" in:fadeSlide={{ y: 8, duration: DUR.med }}>
+      {#if job}
+        <span class="stage truncate">{job.status ? tr(job.status) : t('launch.starting')}</span>
+        {#if pct !== null}<span class="pct"><TweenNumber value={pct} /> %</span>{/if}
+      {:else if running}
+        <Icon name="stop" size={16} />{t('home.stopGame')}
+      {:else}
+        <Icon name="play" size={18} />{t('common.play')}
+      {/if}
+    </span>
+  {/key}
 </button>
 
 <style>
@@ -67,7 +73,7 @@
     cursor: pointer;
     overflow: hidden;
     box-shadow: 0 8px 24px color-mix(in srgb, color-mix(in srgb, var(--accent-from) 50%, var(--accent-to)) 30%, transparent);
-    transition: filter 0.12s ease, transform 0.12s ease;
+    transition: filter 0.12s ease, transform 0.12s ease, color 0.2s ease;
   }
   .play.compact {
     font-size: 14px;
@@ -91,6 +97,8 @@
     background: var(--green-bg);
     color: var(--green);
     box-shadow: none;
+    /* Dezentes Glühen, solange das Spiel läuft */
+    animation: axo-glow 2.4s ease-in-out infinite;
   }
   .fill {
     position: absolute;
@@ -98,7 +106,7 @@
     top: 0;
     bottom: 0;
     background: var(--accent);
-    transition: width 0.25s ease;
+    transition: width 0.4s var(--ease-out);
   }
   .shine {
     position: absolute;

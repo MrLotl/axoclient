@@ -2,6 +2,7 @@
   import Dialog from '../lib/components/Dialog.svelte';
   import Icon from '../lib/components/Icon.svelte';
   import Checkbox from '../lib/components/Checkbox.svelte';
+  import TweenNumber from '../lib/components/TweenNumber.svelte';
   import { app } from '../lib/stores/app.svelte';
   import { call } from '../lib/bridge/bridge';
   import { t, tr } from '../lib/i18n';
@@ -64,7 +65,7 @@
       <button class="link" onclick={() => call('shell.openUrl', { url: 'https://github.com/MrLotl/AxoClient/releases' })}>{t('updates.allChanges')}</button>
       {#if job}
         <div class="progress">
-          <div class="row"><span class="grow">{job.status ? tr(job.status) : t('updates.installing')}</span><span>{Math.round((job.progress ?? 0) * 100)} %</span></div>
+          <div class="row"><span class="grow">{job.status ? tr(job.status) : t('updates.installing')}</span><span><TweenNumber value={Math.round((job.progress ?? 0) * 100)} /> %</span></div>
           <div class="bar"><span style="width: {(job.progress ?? 0) * 100}%"></span></div>
         </div>
       {/if}
@@ -178,6 +179,6 @@
     display: block;
     height: 100%;
     background: var(--accent);
-    transition: width 0.2s ease;
+    transition: width 0.4s var(--ease-out);
   }
 </style>

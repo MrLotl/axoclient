@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeLoad } from '../util/motion';
   // Instanzbild; ohne eigenes Bild ein Verlauf mit Anfangsbuchstaben.
   let { url = null, name = '', size = 36, radius = 8, has = true }: { url?: string | null; name?: string; size?: number; radius?: number; has?: boolean } = $props();
   let failed = $state(false);
@@ -13,7 +14,7 @@
 </script>
 
 {#if url && has && !failed}
-  <img src={url} alt="" style="width: {size}px; height: {size}px; border-radius: {radius}px" onerror={() => (failed = true)} />
+  <img src={url} alt="" style="width: {size}px; height: {size}px; border-radius: {radius}px" onerror={() => (failed = true)} use:fadeLoad={url} />
 {:else}
   <span class="fallback" style="width: {size}px; height: {size}px; border-radius: {radius}px; font-size: {Math.round(size * 0.38)}px">{initials}</span>
 {/if}

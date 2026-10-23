@@ -15,6 +15,7 @@
   import FriendsPanel from './home/FriendsPanel.svelte';
   import ServerPanel from './home/ServerPanel.svelte';
   import { versionLabel } from '../lib/util/format';
+  import { pop, fadeSlide, DUR } from '../lib/util/motion';
   import type { MojangProfile } from '../lib/types';
 
   let skinAnimation = $state<'idle' | 'wave'>('idle');
@@ -109,9 +110,14 @@
         label={t('home.skinModel')} />
     {/key}
 
-    <div class="launch-card" bind:this={card}>
+    <div class="launch-card" bind:this={card} in:fadeSlide|global={{ y: 14, delay: 40, duration: DUR.slow }}>
       {#if pickerOpen}
-        <div class="picker menu" role="listbox" aria-label={t('home.chooseInstance')}>
+        <div
+          class="picker menu"
+          role="listbox"
+          aria-label={t('home.chooseInstance')}
+          in:pop={{ origin: 'bottom center', scale: 0.96, y: 8, duration: DUR.med }}
+          out:pop={{ origin: 'bottom center', scale: 0.98, y: 6, duration: DUR.fast }}>
           <span class="section-label" style="padding: 6px 8px 4px">{t('home.chooseInstance')}</span>
           <div class="picker-list">
             {#each app.instances as inst (inst.id)}
@@ -131,11 +137,15 @@
 
       {#if current}
         <button class="current" aria-haspopup="listbox" aria-expanded={pickerOpen} aria-label={t('home.chooseInstance')} onclick={() => (pickerOpen = !pickerOpen)}>
-          <InstanceImage url={current.iconUrl} has={current.hasIcon} name={current.name} size={36} />
-          <span class="current-text">
-            <span class="current-label">{t('home.instance')}</span>
-            <span class="current-name truncate">{current.name} <span class="current-ver">· {versionLabel(current.minecraftVersion, current.loader)}</span></span>
-          </span>
+          {#key current.id}
+            <span class="current-swap" in:fadeSlide={{ y: 6, duration: DUR.med }}>
+              <InstanceImage url={current.iconUrl} has={current.hasIcon} name={current.name} size={36} />
+              <span class="current-text">
+                <span class="current-label">{t('home.instance')}</span>
+                <span class="current-name truncate">{current.name} <span class="current-ver">· {versionLabel(current.minecraftVersion, current.loader)}</span></span>
+              </span>
+            </span>
+          {/key}
           <span class="chev" class:down={!pickerOpen}><Icon name="chevronUp" /></span>
         </button>
       {:else}
@@ -152,7 +162,7 @@
     </div>
   </div>
 
-  <aside class="side">
+  <aside class="side" in:fadeSlide|global={{ x: 16, y: 0, delay: 80, duration: DUR.slow }}>
     <FriendsPanel />
     <ServerPanel instanceId={current?.id ?? null} />
   </aside>
@@ -184,6 +194,13 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+  .current-swap {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: inherit;
   }
   .picker {
     position: absolute;

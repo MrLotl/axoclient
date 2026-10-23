@@ -3,6 +3,11 @@
   import { app } from '../lib/stores/app.svelte';
   import { call, on } from '../lib/bridge/bridge';
   import { t } from '../lib/i18n';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, pop, stagger, reducedMotion, DUR } from '../lib/util/motion';
+
+  const delay = stagger(30, 12, 700);
+  const flipMs = reducedMotion() ? 0 : DUR.slow;
   import Icon from '../lib/components/Icon.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import SkinViewer from '../lib/components/SkinViewer.svelte';
@@ -88,13 +93,15 @@
     {/if}
   </div>
 
+  {#key tab}
+  <div class="tab-pane" in:fadeSlide={{ y: 8, duration: DUR.med + 20 }}>
   {#if tab === 'skins'}
     <div class="body">
       <div class="stage panel">
         <SkinViewer skin={shownSkin} cape={preview ? null : activeCape} model={shownModel === 'slim' ? 'slim' : 'default'} width={300} height={440} label={t('home.skinModel')} />
         <span class="stage-label">{preview ? t('skins.previewOf', { name: preview.name }) : t('skins.current')}</span>
         {#if preview}
-          <div class="row">
+          <div class="row" in:fadeSlide={{ y: 6 }}>
             <button class="btn btn-ghost sm" onclick={() => (preview = null)}>{t('skins.backToCurrent')}</button>
             <button class="btn btn-grad sm" disabled={applying !== null} onclick={() => apply(preview!)}>{t('skins.use')}</button>
           </div>
@@ -103,12 +110,12 @@
       <div class="library">
         <span class="section-label">{t('skins.library', { count: skins.length })}</span>
         <div class="grid">
-          {#each skins as s (s.id)}
-            <article class="card" class:active={s.active} class:selected={preview?.id === s.id}>
+          {#each skins as s, i (s.id)}
+            <article class="card" class:active={s.active} class:selected={preview?.id === s.id} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 10 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
               <button class="remove" aria-label={t('skins.deleteNamed', { name: s.name })} title={t('common.delete')} onclick={() => remove(s)}><Icon name="x" size={12} /></button>
               <button class="figure" aria-label={t('skins.preview', { name: s.name })} onclick={() => (preview = s)}>
                 <SkinFront src={s.url} slim={s.model === 'slim'} scale={7} />
-                {#if s.active}<span class="badge">{t('skins.active')}</span>{/if}
+                {#if s.active}<span class="badge" in:pop={{ scale: 0.8 }}>{t('skins.active')}</span>{/if}
               </button>
               <div class="meta">
                 <span class="name truncate">{s.name}</span>
@@ -134,6 +141,8 @@
   {:else}
     <Emotes />
   {/if}
+  </div>
+  {/key}
 </div>
 
 {#if dialog === 'upload'}
@@ -160,6 +169,13 @@
   h1 {
     font-size: 20px;
     font-weight: 600;
+  }
+  .tab-pane {
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
   .body {
     flex-grow: 1;

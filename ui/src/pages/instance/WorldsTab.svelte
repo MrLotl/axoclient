@@ -1,5 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, fadeOut, pop, fadeLoad, stagger, reducedMotion, DUR } from '../../lib/util/motion';
+
+  const delay = stagger(30, 12, 700);
+  const flipMs = reducedMotion() ? 0 : DUR.slow;
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
   import { t } from '../../lib/i18n';
@@ -137,7 +142,7 @@
   </div>
 
   {#if showBackups}
-    <div class="backups panel">
+    <div class="backups panel" in:fadeSlide={{ y: -6 }} out:fadeOut>
       {#each backups as b (b.file)}
         <div class="b-row">
           <Icon name="archive" size={14} />
@@ -152,13 +157,13 @@
   {/if}
 
   {#if loaded && worlds.length === 0}
-    <div class="empty"><Icon name="world" size={24} /><span>{t('worlds.empty')}</span></div>
+    <div class="empty" in:fadeSlide={{ y: 10, duration: DUR.slow }}><Icon name="world" size={24} /><span>{t('worlds.empty')}</span></div>
   {:else}
     <div class={view === 'grid' ? 'grid' : 'list'}>
-      {#each shown as w (w.folder)}
-        <article class={view === 'grid' ? 'card' : 'row-card'}>
+      {#each shown as w, i (w.folder)}
+        <article class={view === 'grid' ? 'card' : 'row-card'} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 10 }} out:fadeOut={{ duration: DUR.med }}>
           <div class="shot">
-            {#if w.iconUrl}<img src={w.iconUrl} alt="" />{:else}<Icon name="map" size={view === 'grid' ? 22 : 18} />{/if}
+            {#if w.iconUrl}<img src={w.iconUrl} alt="" use:fadeLoad={w.iconUrl} />{:else}<Icon name="map" size={view === 'grid' ? 22 : 18} />{/if}
             {#if view === 'grid'}<span class="mode" class:hardcore={w.hardcore}>{modeLabel(w)}</span>{/if}
           </div>
           <div class="w-text">

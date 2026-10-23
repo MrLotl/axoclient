@@ -1,5 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, fadeOut, pop, fadeLoad, stagger, reducedMotion, DUR } from '../../lib/util/motion';
+
+  const delay = stagger(30, 12, 700);
+  const flipMs = reducedMotion() ? 0 : DUR.slow;
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
   import { t } from '../../lib/i18n';
@@ -173,8 +178,8 @@
         <button class="btn btn-second sm" onclick={() => (editor = 'upload')}><Icon name="upload" size={13} />{t('capes.uploadFile')}</button>
       </div>
       <div class="own">
-        {#each own as c (c.id)}
-          <div class="own-card" class:on={c.active} onmouseenter={() => (previewCape = c.url)} onmouseleave={() => (previewCape = null)} role="group" aria-label={c.name}>
+        {#each own as c, i (c.id)}
+          <div animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:pop={{ scale: 0.94, duration: DUR.med }} class="own-card" class:on={c.active} onmouseenter={() => (previewCape = c.url)} onmouseleave={() => (previewCape = null)} role="group" aria-label={c.name}>
             <div class="own-tools">
               {#if c.hasEditState}<button class="tool" aria-label={t('common.edit')} title={t('common.edit')} onclick={() => (editor = { cape: c })}><Icon name="edit" size={12} /></button>{/if}
               <button class="tool trash" aria-label={t('capes.deleteNamed', { name: c.name })} title={t('common.delete')} onclick={() => remove(c)}><Icon name="trash" size={12} /></button>

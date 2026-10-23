@@ -16,12 +16,21 @@
   import ScreenshotsTab from './ScreenshotsTab.svelte';
   import SettingsTab from './SettingsTab.svelte';
   import type { InstanceDetails } from '../../lib/types';
+  import { fadeSlide, fadeLoad, bounce, DUR } from '../../lib/util/motion';
 
   let { id }: { id: string } = $props();
 
   let details = $state<InstanceDetails | null>(null);
   let counts = $state<Record<string, number | null>>({});
   let tab = $state(app.route.tab ?? 'overview');
+  // Richtung des Tabwechsels: der neue Inhalt rutscht von der Seite herein, auf der der Tab liegt
+  let dir = $state(0);
+  function selectTab(next: string) {
+    if (next === tab) return;
+    const ids = tabs.map((x) => x.id);
+    dir = Math.sign(ids.indexOf(next) - ids.indexOf(tab));
+    tab = next;
+  }
 
   // Nie endlos drehen: nach 15 s ohne Antwort eine Meldung mit Zurück/Erneut versuchen zeigen
   let slow = $state(false);
@@ -123,7 +132,7 @@
   {#if details && s}
     <section class="hero" aria-label={t('instance.label')}>
       {#if banner}
-        <img class="bg" class:blurred={!s.bannerUrl} src={`${banner}&r=${imageVersion}`} alt="" />
+        <img class="bg" class:blurred={!s.bannerUrl} src={`${banner}&r=${imageVersion}`} alt="" use:fadeLoad={`${banner}&r=${imageVersion}`} />
       {:else}
         <span class="bg fallback"></span>
       {/if}
@@ -192,14 +201,15 @@
         <span class="indicator" class:ready={indicatorReady} style="transform: translateX({indicator.left}px); width: {indicator.width}px"></span>
       {/if}
       {#each tabs as tb (tb.id)}
-        <button class="tab" aria-current={tab === tb.id ? 'page' : undefined} onclick={() => (tab = tb.id)}>
+        <button class="tab" aria-current={tab === tb.id ? 'page' : undefined} onclick={() => selectTab(tb.id)}>
           {tb.label}
-          {#if tb.count !== null}<span class="count">{tb.count}</span>{/if}
+          {#if tb.count !== null}<span class="count" in:bounce>{tb.count}</span>{/if}
         </button>
       {/each}
     </nav>
 
-    <div class="tab-body">
+    {#key tab}
+    <div class="tab-body" in:fadeSlide={{ x: dir * 14, y: dir === 0 ? 6 : 0, duration: DUR.med + 20 }}>
       {#if tab === 'overview'}
         <Overview {details} />
       {:else if tab === 'mods'}
@@ -218,17 +228,26 @@
         {#key details.instance}<SettingsTab {details} onsaved={load} />{/key}
       {/if}
     </div>
-  {:else}
+    {/key}
+  {:else if slow}
     <div class="loading">
-      {#if slow}
-        <p class="slow">{t('instance.loadingSlow')}</p>
-        <div class="row" style="gap: 8px">
-          <button class="btn btn-ghost" onclick={() => app.back()}>{t('common.back')}</button>
-          <button class="btn btn-second" onclick={() => { slow = false; load(); }}>{t('pipeline.action.retry')}</button>
-        </div>
-      {:else}
-        <span class="spinner dark"></span>
-      {/if}
+      <p class="slow">{t('instance.loadingSlow')}</p>
+      <div class="row" style="gap: 8px">
+        <button class="btn btn-ghost" onclick={() => app.back()}>{t('common.back')}</button>
+        <button class="btn btn-second" onclick={() => { slow = false; load(); }}>{t('pipeline.action.retry')}</button>
+      </div>
+    </div>
+  {:else}
+    <!-- Platzhalter in der Form der Seite, damit beim Laden nichts springt -->
+    <div class="skel" aria-busy="true" aria-label={t('common.loading')}>
+      <div class="skeleton" style="height: 200px; border-radius: 14px"></div>
+      <div class="skel-tabs">
+        {#each [70, 56, 92, 64, 58, 62, 84, 78] as w, i (i)}<div class="skeleton" style="width: {w}px; height: 18px; border-radius: 6px"></div>{/each}
+      </div>
+      <div class="skel-body">
+        <div class="skeleton" style="flex: 2"></div>
+        <div class="skeleton" style="flex: 1"></div>
+      </div>
     </div>
   {/if}
 </div>
@@ -530,6 +549,27 @@
     align-items: center;
     justify-content: center;
     gap: 14px;
+  }
+  .skel {
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .skel-tabs {
+    height: 38px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    border-bottom: 1px solid #2f2f2f;
+  }
+  .skel-body {
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    gap: 16px;
   }
   .slow {
     max-width: 360px;

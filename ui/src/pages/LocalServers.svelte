@@ -1,5 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, fadeOut, pop, fadeLoad, stagger, reducedMotion, DUR } from '../lib/util/motion';
+
+  const delay = stagger(30, 12, 700);
+  const flipMs = reducedMotion() ? 0 : DUR.slow;
   import { app } from '../lib/stores/app.svelte';
   import { call, on } from '../lib/bridge/bridge';
   import { t, tr } from '../lib/i18n';
@@ -129,10 +134,10 @@
   </div>
 
   <div class="grid scroll">
-    {#each servers as s (s.id)}
+    {#each servers as s, i (s.id)}
       {@const st = statusOf(s)}
       {@const job = startJob(s.id)}
-      <article class="server" class:running={s.running}>
+      <article class="server" class:running={s.running} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 10 }} out:pop={{ scale: 0.95, duration: DUR.med }}>
         <div class="cover" class:has-banner={!!s.bannerUrl}>
           {#if s.bannerUrl}<img class="cover-img" src={s.bannerUrl} alt="" />{/if}
           <span class="icon">

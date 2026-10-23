@@ -3,6 +3,9 @@
   import { call } from '../bridge/bridge';
   import { tr, t } from '../i18n';
   import Icon from './Icon.svelte';
+  import TweenNumber from './TweenNumber.svelte';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, DUR, reducedMotion } from '../util/motion';
 
   // Start-Jobs zeigt der Spielen-Knopf selbst; hier alle anderen langen Vorgänge
   const jobs = $derived(app.activeJobs.filter((j) => j.kind !== 'launch'));
@@ -14,13 +17,17 @@
   });
 </script>
 
-{#if jobs.length > 0}
-  <div class="jobs" aria-live="polite" bind:clientHeight={height}>
+<!-- Immer da (leer ohne Jobs), damit auch der letzte Job noch ausblenden kann -->
+<div class="jobs" aria-live="polite" bind:clientHeight={height}>
     {#each jobs.slice(0, 3) as job (job.id)}
-      <div class="job">
+      <div
+        class="job"
+        animate:flip={{ duration: reducedMotion() ? 0 : DUR.slow }}
+        in:fadeSlide={{ y: 16, duration: DUR.slow }}
+        out:fadeSlide={{ x: 40, y: 0, duration: DUR.med }}>
         <div class="top">
           <span class="title truncate">{job.status ? tr(job.status) : tr(job.title)}</span>
-          {#if job.progress !== null}<span class="pct">{Math.round(job.progress * 100)} %</span>{/if}
+          {#if job.progress !== null}<span class="pct"><TweenNumber value={Math.round(job.progress * 100)} /> %</span>{/if}
           <button class="icon-btn flat" style="width: 24px; height: 24px" aria-label={t('common.cancel')} onclick={() => call('jobs.cancel', { id: job.id })}>
             <Icon name="x" size={11} />
           </button>
@@ -30,8 +37,7 @@
         </div>
       </div>
     {/each}
-  </div>
-{/if}
+</div>
 
 <style>
   .jobs {
@@ -44,8 +50,10 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    pointer-events: none;
   }
   .job {
+    pointer-events: auto;
     padding: 10px 10px 12px 14px;
     border-radius: 12px;
     background: var(--panel-2);
@@ -53,7 +61,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    animation: toast-in 0.2s ease-out;
   }
   .top {
     display: flex;
@@ -85,7 +92,7 @@
     height: 100%;
     border-radius: 3px;
     background: var(--accent);
-    transition: width 0.2s ease;
+    transition: width 0.4s var(--ease-out);
   }
   .bar span.indeterminate {
     animation: axo-shine 1.2s ease-in-out infinite;
