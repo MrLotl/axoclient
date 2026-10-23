@@ -275,6 +275,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     align-content: start;
   }
   .grid {

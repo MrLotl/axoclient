@@ -234,6 +234,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     /* Karten haben overflow: hidden – ohne max-content würden die Zeilen bei vielen Treffern zusammengedrückt */
@@ -246,6 +247,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -384,6 +386,7 @@
   .versions {
     max-height: 380px;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 4px;

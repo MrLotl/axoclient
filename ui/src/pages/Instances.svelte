@@ -136,6 +136,7 @@
     gap: 16px;
     align-content: start;
     overflow-y: auto;
+    overflow-x: hidden;
     min-height: 0;
     /* Luft, damit angehobene Karten und Schatten nicht abgeschnitten werden */
     padding: 6px 6px 8px;
@@ -233,6 +234,7 @@
     flex-direction: column;
     gap: 8px;
     overflow-y: auto;
+    overflow-x: hidden;
     min-height: 0;
   }
   .row-card {
@@ -242,11 +244,10 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    transition: background-color 0.12s ease, transform var(--dur-med) var(--ease-out);
+    transition: background-color 0.12s ease;
   }
   .row-card:hover {
     background: #2f2f2f;
-    transform: translateX(2px);
   }
   .row-open {
     flex-grow: 1;

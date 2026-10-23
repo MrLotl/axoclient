@@ -220,6 +220,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     /* Platz für den Schatten der gezogenen Zeile, sonst schneidet der Scrollbereich ihn ab */
     margin: -8px -10px;
     padding: 8px 10px;

@@ -340,6 +340,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     margin-right: -8px;
     padding-right: 8px;
     display: grid;
@@ -487,6 +488,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     /* Platz für das X, das beim Hovern über die Ecke der Zeile ragt */
     margin: -8px -10px 0 0;
     padding: 8px 10px 0 0;

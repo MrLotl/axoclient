@@ -139,88 +139,82 @@
 
 <div class="settings">
   <div class="scroll">
-  <!-- Zwei unabhängige Spalten: jeder Bereich so hoch wie sein Inhalt, ohne Lücken zwischen den Bereichen -->
+  <!-- Zwei Zeilen mit je zwei Bereichen; nebeneinanderliegende Bereiche sind gleich hoch -->
   <div class="cols">
-    <div class="stack">
-        <FormSection title={t('instance.settings.general')} subtitle={t('instance.settings.generalHint')}>
-          <label class="label">
-            <span>{t('instance.settings.name')}</span>
-            <span class="field"><input bind:value={name} maxlength="60" /></span>
-          </label>
-          <VersionPicker bind:loader bind:minecraft bind:loaderVersion />
-          <div class="axo-check" title={axoSupported ? t('instance.settings.axoHint') : t('versions.axoUnsupported')}>
-            <Checkbox bind:checked={axoMod} label={t('instance.settings.axoMod')} disabled={!axoSupported} />
-            <span class="hint">{axoSupported ? t('instance.settings.axoHint') : t('versions.axoUnsupported')}</span>
-          </div>
-          {#if minecraft !== original.minecraft.version || loader !== original.loader.type}
-            <p class="note"><Icon name="warning" size={14} />{t('instance.settings.versionChangeNote')}</p>
-          {/if}
-        </FormSection>
+      <FormSection title={t('instance.settings.general')} subtitle={t('instance.settings.generalHint')}>
+        <label class="label">
+          <span>{t('instance.settings.name')}</span>
+          <span class="field"><input bind:value={name} maxlength="60" /></span>
+        </label>
+        <VersionPicker bind:loader bind:minecraft bind:loaderVersion />
+        <div class="axo-check" title={axoSupported ? t('instance.settings.axoHint') : t('versions.axoUnsupported')}>
+          <Checkbox bind:checked={axoMod} label={t('instance.settings.axoMod')} disabled={!axoSupported} />
+          <span class="hint">{axoSupported ? t('instance.settings.axoHint') : t('versions.axoUnsupported')}</span>
+        </div>
+        {#if minecraft !== original.minecraft.version || loader !== original.loader.type}
+          <p class="note"><Icon name="warning" size={14} />{t('instance.settings.versionChangeNote')}</p>
+        {/if}
+      </FormSection>
 
-        <FormSection title={t('modLock.title')} subtitle={t('modLock.subtitle')}>
-          <div class="locks" role="radiogroup" aria-label={t('modLock.title')}>
-            {#each lockLevels as level (level)}
-              <button class="lock-opt" class:on={lockLevel === level} role="radio" aria-checked={lockLevel === level} disabled={lockBusy} onclick={() => level !== lockLevel && setLock(level)}>
-                <span class="lock-icon"><Icon name={level === 'off' ? 'puzzle' : level === 'pack' ? 'shield' : 'lock'} size={15} /></span>
-                <span class="col grow" style="gap: 2px; text-align: left; min-width: 0">
-                  <strong>{t(`modLock.levels.${level}.name`)}</strong>
-                  <span class="hint">{t(`modLock.levels.${level}.text`)}</span>
-                </span>
-              </button>
-            {/each}
-          </div>
-          {#if lockLevel === 'pack'}
-            <div class="row between">
-              <span class="hint">{t('modLock.packCount', { count: original.modLock?.packMods.length ?? 0 })}</span>
-              <button class="btn btn-flat sm" disabled={lockBusy} onclick={() => setLock('pack', true)}>{t('modLock.adopt')}</button>
-            </div>
-          {/if}
-          {#if lockLevel !== 'off'}<p class="hint">{t('modLock.shareNote')}</p>{/if}
-        </FormSection>
-    </div>
-    <div class="stack">
-        <FormSection title={t('instance.settings.performance')} subtitle={t('instance.settings.performanceHint')}>
+      <FormSection title={t('instance.settings.performance')} subtitle={t('instance.settings.performanceHint')}>
+        <div class="row between">
+          <span class="text">{t('instance.settings.ownMemory')}</span>
+          <Toggle bind:checked={ownMemory} label={t('instance.settings.ownMemory')} />
+        </div>
+        {#if ownMemory}
+          <MemorySlider bind:value={memory} mods={details.summary.modCount} />
+        {:else}
+          <p class="hint">{t('instance.settings.memoryDefault', { gb: (details.effectiveMemoryMb / 1024).toLocaleString('de-DE') })}</p>
+        {/if}
+        <label class="label">
+          <span>{t('instance.settings.javaArgs')}</span>
+          <span class="field mono"><input bind:value={javaArgs} placeholder="-XX:+UseG1GC" spellcheck="false" /></span>
+          <span class="hint">{t('instance.settings.javaArgsHint')}</span>
+        </label>
+      </FormSection>
+
+      <FormSection title={t('modLock.title')} subtitle={t('modLock.subtitle')}>
+        <div class="locks" role="radiogroup" aria-label={t('modLock.title')}>
+          {#each lockLevels as level (level)}
+            <button class="lock-opt" class:on={lockLevel === level} role="radio" aria-checked={lockLevel === level} disabled={lockBusy} onclick={() => level !== lockLevel && setLock(level)}>
+              <span class="lock-icon"><Icon name={level === 'off' ? 'puzzle' : level === 'pack' ? 'shield' : 'lock'} size={15} /></span>
+              <span class="col grow" style="gap: 2px; text-align: left; min-width: 0">
+                <strong>{t(`modLock.levels.${level}.name`)}</strong>
+                <span class="hint">{t(`modLock.levels.${level}.text`)}</span>
+              </span>
+            </button>
+          {/each}
+        </div>
+        {#if lockLevel === 'pack'}
           <div class="row between">
-            <span class="text">{t('instance.settings.ownMemory')}</span>
-            <Toggle bind:checked={ownMemory} label={t('instance.settings.ownMemory')} />
+            <span class="hint">{t('modLock.packCount', { count: original.modLock?.packMods.length ?? 0 })}</span>
+            <button class="btn btn-flat sm" disabled={lockBusy} onclick={() => setLock('pack', true)}>{t('modLock.adopt')}</button>
           </div>
-          {#if ownMemory}
-            <MemorySlider bind:value={memory} mods={details.summary.modCount} />
-          {:else}
-            <p class="hint">{t('instance.settings.memoryDefault', { gb: (details.effectiveMemoryMb / 1024).toLocaleString('de-DE') })}</p>
-          {/if}
-          <label class="label">
-            <span>{t('instance.settings.javaArgs')}</span>
-            <span class="field mono"><input bind:value={javaArgs} placeholder="-XX:+UseG1GC" spellcheck="false" /></span>
-            <span class="hint">{t('instance.settings.javaArgsHint')}</span>
-          </label>
-        </FormSection>
+        {/if}
+        {#if lockLevel !== 'off'}<p class="hint">{t('modLock.shareNote')}</p>{/if}
+      </FormSection>
 
-        <FormSection title={t('instance.settings.manage')} subtitle={t('instance.settings.manageHint')}>
-          <div class="manage">
-            <div class="group">
-              <span class="sub">{t('instance.settings.manageExport')}</span>
-              <button class="btn btn-second" onclick={() => exportAs('mrpack')}><Icon name="download" />{t('instance.settings.exportMrpack')}</button>
-              <button class="btn btn-second" onclick={() => exportAs('backup')}><Icon name="archive" />{t('instance.settings.exportBackup')}</button>
-            </div>
-            <div class="group">
-              <span class="sub">{t('instance.settings.manageInstance')}</span>
-              <button class="btn btn-second" onclick={() => (app.dialog = { kind: 'import', data: { target: { id: original.id, name: original.name, loader: original.loader.type, minecraftVersion: original.minecraft.version } } })}>
-                <Icon name="import" />{t('transfer.button')}
-              </button>
-              <button class="btn btn-second" onclick={copy}><Icon name="copy" />{t('instance.settings.copy')}</button>
-            </div>
-            <div class="group danger">
-              <span class="sub">{t('instance.settings.manageDanger')}</span>
-              <button class="btn btn-danger" onclick={remove}><Icon name="trash" />{t('instance.settings.delete')}</button>
-              <span class="hint">{t('instance.settings.deleteHint')}</span>
-            </div>
+      <FormSection title={t('instance.settings.manage')} subtitle={t('instance.settings.manageHint')}>
+        <div class="manage">
+          <div class="group">
+            <span class="sub">{t('instance.settings.manageExport')}</span>
+            <button class="btn btn-second" onclick={() => exportAs('mrpack')}><Icon name="download" />{t('instance.settings.exportMrpack')}</button>
+            <button class="btn btn-second" onclick={() => exportAs('backup')}><Icon name="archive" />{t('instance.settings.exportBackup')}</button>
           </div>
-        </FormSection>
-    </div>
-
-
-
+          <div class="group">
+            <span class="sub">{t('instance.settings.manageInstance')}</span>
+            <button class="btn btn-second" onclick={() => (app.dialog = { kind: 'import', data: { target: { id: original.id, name: original.name, loader: original.loader.type, minecraftVersion: original.minecraft.version } } })}>
+              <Icon name="import" />{t('transfer.button')}
+            </button>
+            <button class="btn btn-second" onclick={copy}><Icon name="copy" />{t('instance.settings.copy')}</button>
+          </div>
+          <div class="group danger">
+            <span class="sub">{t('instance.settings.manageDanger')}</span>
+            <button class="btn btn-danger" onclick={remove}><Icon name="trash" />{t('instance.settings.delete')}</button>
+            <span class="hint">{t('instance.settings.deleteHint')}</span>
+          </div>
+        </div>
+      </FormSection>
   </div>
   </div>
 
@@ -250,13 +244,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 16px;
-    align-items: start;
-  }
-  .stack {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    /* Bereiche einer Zeile werden auf die gleiche Höhe gezogen */
+    align-items: stretch;
   }
   .axo-check {
     display: flex;

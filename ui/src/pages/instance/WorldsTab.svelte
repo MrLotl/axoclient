@@ -204,6 +204,7 @@
     gap: 6px;
     max-height: 200px;
     overflow-y: auto;
+    overflow-x: hidden;
   }
   .b-row {
     display: flex;
@@ -216,6 +217,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     grid-auto-rows: max-content;
@@ -226,6 +228,7 @@
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 8px;
