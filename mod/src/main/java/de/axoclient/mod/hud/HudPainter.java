@@ -54,20 +54,6 @@ public interface HudPainter {
 	String durability(int slot);
 
 	/**
-	 * Schaltet für alles folgende Text die Menüschrift (Inter) ein oder aus. Die Anzeigen im Bild bleiben in der
-	 * Minecraft-Schrift; Versionen ohne eigene Schrift ignorieren das.
-	 */
-	default void uiFont(boolean on) {}
-
-	/**
-	 * Schaltet die größere Menüschrift für Überschriften ein oder aus. Gibt false zurück, wenn die Version keine hat –
-	 * dann vergrößert der Aufrufer selbst.
-	 */
-	default boolean titleFont(boolean on) {
-		return false;
-	}
-
-	/**
 	 * Wie stark das AxoClient-Fenster gegenüber der Minecraft-GUI verkleinert wird (1 = gar nicht). Damit wirkt es auch
 	 * bei großer GUI-Skalierung fein wie der Launcher statt grob gepixelt.
 	 */

@@ -245,18 +245,16 @@ public final class HudEditor {
 				painter.fill(x, y, w, h, HudSkin.ACCENT_FAINT);
 				HudSkin.outline(painter, x, y, Math.max(1, w), Math.max(1, h), 0, HudSkin.ACCENT);
 			}
-			painter.uiFont(true);
 			renderGroupPanel(painter, bar(width, height), mouseX, mouseY);
 			renderBar(painter, bar(width, height), mouseX, mouseY);
 			if (picker == Colour.GROUP && (currentGroup() == null || currentGroup() != groupToEdit))
 				picker = Colour.NONE;
 			if (picker == Colour.GROUP)
 				renderPicker(painter, groupPick(), mouseX, mouseY);
-			painter.uiFont(false);
 			return;
 		}
 
-		// Das Fenster in feinerer Auflösung als die Minecraft-GUI zeichnen (wie im Launcher, nicht grob gepixelt)
+		// Das Fenster in einem Raster mit ganzen Bildschirmpunkten je Pixel zeichnen: Pixelschrift und Ecken bleiben scharf
 		menuScale = painter.menuScale();
 		int menuMouseX = Math.round(mouseX / menuScale);
 		int menuMouseY = Math.round(mouseY / menuScale);
@@ -264,11 +262,9 @@ public final class HudEditor {
 		clampScroll(frame);
 		closePickerIfGone(frame);
 		painter.push(0, 0, menuScale);
-		painter.uiFont(true);
 		renderWindow(painter, frame, shown, menuMouseX, menuMouseY);
 		if (picker != Colour.NONE)
 			renderPicker(painter, pick(frame), menuMouseX, menuMouseY);
-		painter.uiFont(false);
 		painter.pop();
 	}
 
@@ -467,20 +463,10 @@ public final class HudEditor {
 		return bottom - NAV_HEIGHT;
 	}
 
-	/** Titel etwas größer; gibt das rechte Ende zurück. */
+	/** Titel in der Minecraft-Schrift (unvergrößert, damit die Pixel scharf bleiben); gibt das rechte Ende zurück. */
 	private static int title(HudPainter painter, String text, int x, int y) {
-		if (painter.titleFont(true)) {
-			// eigene, größere Schrift statt Vergrößern: bleibt so scharf wie der übrige Text
-			painter.text(text, x, y - 1, HudSkin.TEXT, false);
-			int end = x + painter.textWidth(text);
-			painter.titleFont(false);
-			return end;
-		}
-		float scale = 1.2F;
-		painter.push(x, y - 1, scale);
-		painter.text(text, x, y - 1, HudSkin.TEXT, false);
-		painter.pop();
-		return x + Math.round(painter.textWidth(text) * scale);
+		painter.text(text, x, y - 1, HudSkin.TEXT, true);
+		return x + painter.textWidth(text);
 	}
 
 	private static void pill(HudPainter painter, String text, int x, int y) {
@@ -533,10 +519,8 @@ public final class HudEditor {
 		HudElement element = HudElement.of(selected);
 		HudConfig.Entry entry = config.get(selected);
 		float factor = entry.factor();
-		painter.uiFont(false); // die Anzeige selbst misst und zeichnet in der Minecraft-Schrift
 		int boxWidth = Math.round(HudOverlay.width(config, element, painter, shown) * factor);
 		int boxHeight = Math.round(HudOverlay.height(config, element, painter, shown) * factor);
-		painter.uiFont(true);
 		int pad = entry.background ? HudOverlay.pad(entry) : 0;
 		if (boxWidth <= 0 || boxHeight <= 0) {
 			HudSkin.centered(painter, "Wird im Bild angezeigt", x + width / 2, y + (PREVIEW_HEIGHT - 8) / 2,
@@ -550,11 +534,9 @@ public final class HudEditor {
 			roomHeight / (float) (boxHeight + 2 * pad)));
 		int left = x + 60 + (roomWidth - Math.round((boxWidth + 2 * pad) * fit)) / 2;
 		int top = y + 4 + (roomHeight - Math.round((boxHeight + 2 * pad) * fit)) / 2;
-		painter.uiFont(false);
 		painter.push(left, top, fit);
 		HudOverlay.draw(config, element, painter, shown, new int[] { left + pad, top + pad, boxWidth, boxHeight });
 		painter.pop();
-		painter.uiFont(true);
 		if (!config.isEnabled(selected))
 			HudSkin.right(painter, "ausgeschaltet", x + width - 6, y + 5, HudSkin.MUTED);
 	}
@@ -845,7 +827,6 @@ public final class HudEditor {
 			return false;
 		}
 
-		painter.uiFont(true); // Breiten wie beim Zeichnen messen
 		menuScale = painter.menuScale();
 		mouseX = menu(mouseX);
 		mouseY = menu(mouseY);

@@ -155,37 +155,36 @@ public final class HudSkin {
 	// ---------- Abgerundete Flächen ----------
 
 	/**
-	 * Wie weit die Fläche in dieser Zeile der Ecke eingerückt ist. Die Ecke folgt einem Kreis,
-	 * damit die Rundung bei jedem Radius sauber aussieht.
+	 * Wie viele Pixel in Zeile {@code row} (von außen gezählt) einer Ecke mit Radius {@code radius} fehlen: ein
+	 * Pixel-Kreis wie in Minecraft, ohne weiche Kante. Radius 1 schneidet genau ein Eckpixel ab, größere Radien werden
+	 * zu Treppenstufen.
 	 */
-	private static int inset(int radius, int row) {
-		double distance = radius - row - 0.5;
-		return radius - (int) Math.round(Math.sqrt(Math.max(0.0, radius * radius - distance * distance)));
+	public static int inset(int radius, int row) {
+		if (radius <= 0 || row < 0 || row >= radius)
+			return 0;
+		float limit = (radius - 0.5F) * (radius - 0.5F);
+		float dy = radius - row - 0.5F;
+		int missing = 0;
+		for (int i = 0; i < radius; i++) {
+			float dx = radius - i - 0.5F;
+			if (dx * dx + dy * dy <= limit)
+				break;
+			missing++;
+		}
+		return missing;
 	}
 
 	private static int radius(int radius, int width, int height) {
 		return Math.max(0, Math.min(radius, Math.min(width, height) / 2));
 	}
 
-	/** Gefüllte Fläche mit frei wählbarem Eckenradius. */
+	/** Gefüllte Fläche mit Pixel-Ecken (Radius in Pixeln, 0 = eckig). */
 	public static void rounded(HudPainter painter, int x, int y, int width, int height, int radius, int argb) {
 		if (width <= 0 || height <= 0)
 			return;
 		int r = radius(radius, width, height);
 		if (r == 0) {
 			painter.fill(x, y, width, height, argb);
-			return;
-		}
-		float p = painter.pixelScale();
-		if (p > 1.01F) {
-			// Fein gezeichnet: Mitte und Ränder als Flächen, die Ecken je Bildschirmpixel mit weicher Kante
-			painter.fill(x, y + r, width, height - 2 * r, argb);
-			painter.fill(x + r, y, width - 2 * r, r, argb);
-			painter.fill(x + r, y + height - r, width - 2 * r, r, argb);
-			corner(painter, x, y, r, p, argb, false, false);
-			corner(painter, x + width - r, y, r, p, argb, true, false);
-			corner(painter, x, y + height - r, r, p, argb, false, true);
-			corner(painter, x + width - r, y + height - r, r, p, argb, true, true);
 			return;
 		}
 		painter.fill(x, y + r, width, height - 2 * r, argb);
@@ -196,94 +195,38 @@ public final class HudSkin {
 		}
 	}
 
-	/**
-	 * Gefüllter Viertelkreis mit Radius r (Einheiten) im Quadrat ab (cx, cy), gezeichnet je Bildschirmpixel: Randpixel
-	 * bekommen nur so viel Deckkraft, wie der Kreis sie bedeckt.
-	 */
-	private static void corner(HudPainter painter, int cx, int cy, int r, float p, int argb, boolean right, boolean bottom) {
-		float radius = r * p;
-		int size = (int) Math.ceil(radius);
-		painter.push(cx, cy, 1.0F / p);
-		for (int j = 0; j < size; j++) {
-			float dy = Math.max(0.0F, radius - (j + 0.5F));
-			float start = radius - (float) Math.sqrt(Math.max(0.0F, radius * radius - dy * dy));
-			int solid = Math.min(size, (int) Math.ceil(start));
-			int row = cy + (bottom ? size - 1 - j : j);
-			if (solid < size)
-				painter.fill(right ? cx : cx + solid, row, size - solid, 1, argb);
-			float coverage = solid - start;
-			if (solid > 0 && coverage > 0.03F)
-				painter.fill(right ? cx + size - solid : cx + solid - 1, row, 1, 1, alpha(argb, coverage));
-		}
-		painter.pop();
-	}
-
-	/** Rahmen als feine Linie von einem Bildschirmpixel, die Ecken als geglätteter Bogen. */
-	private static void fineOutline(HudPainter painter, int x, int y, int width, int height, int r, float p, int argb) {
-		int w = Math.round(width * p);
-		int h = Math.round(height * p);
-		float radius = r * p;
-		int size = Math.min((int) Math.ceil(radius), Math.min(w, h) / 2);
-		painter.push(x, y, 1.0F / p);
-		if (w > 2 * size) {
-			painter.fill(x + size, y, w - 2 * size, 1, argb);
-			painter.fill(x + size, y + h - 1, w - 2 * size, 1, argb);
-		}
-		if (h > 2 * size) {
-			painter.fill(x, y + size, 1, h - 2 * size, argb);
-			painter.fill(x + w - 1, y + size, 1, h - 2 * size, argb);
-		}
-		for (int j = 0; j < size; j++) {
-			for (int i = 0; i < size; i++) {
-				float dx = radius - (i + 0.5F);
-				float dy = radius - (j + 0.5F);
-				float d = (float) Math.sqrt(dx * dx + dy * dy);
-				float coverage = clamp01(radius - d + 0.5F) - clamp01(radius - 1.0F - d + 0.5F);
-				if (coverage <= 0.03F)
-					continue;
-				int color = alpha(argb, coverage);
-				painter.fill(x + i, y + j, 1, 1, color);
-				painter.fill(x + w - 1 - i, y + j, 1, 1, color);
-				painter.fill(x + i, y + h - 1 - j, 1, 1, color);
-				painter.fill(x + w - 1 - i, y + h - 1 - j, 1, 1, color);
-			}
-		}
-		painter.pop();
-	}
-
-	private static float clamp01(float value) {
-		return Math.max(0.0F, Math.min(1.0F, value));
-	}
-
-	/** Farbe mit anteiliger Deckkraft. */
-	private static int alpha(int argb, float factor) {
-		int a = Math.round(((argb >>> 24) & 0xFF) * Math.max(0.0F, Math.min(1.0F, factor)));
-		return (a << 24) | (argb & 0xFFFFFF);
-	}
-
-	/** Rahmen mit frei wählbarem Eckenradius. */
+	/** Rahmen, ein Pixel dick, mit Pixel-Ecken; kein Pixel wird doppelt gezeichnet (wichtig bei durchscheinenden Farben). */
 	public static void outline(HudPainter painter, int x, int y, int width, int height, int radius, int argb) {
 		if (width <= 0 || height <= 0)
 			return;
-		float p = painter.pixelScale();
-		if (p > 1.01F) {
-			fineOutline(painter, x, y, width, height, radius(radius, width, height), p, argb);
+		int r = radius(radius, width, height);
+		if (r == 0) {
+			painter.fill(x, y, width, 1, argb);
+			if (height > 1)
+				painter.fill(x, y + height - 1, width, 1, argb);
+			if (height > 2) {
+				painter.fill(x, y + 1, 1, height - 2, argb);
+				if (width > 1)
+					painter.fill(x + width - 1, y + 1, 1, height - 2, argb);
+			}
 			return;
 		}
-		int r = radius(radius, width, height);
-		painter.fill(x + r, y, width - 2 * r, 1, argb);
-		painter.fill(x + r, y + height - 1, width - 2 * r, 1, argb);
-		painter.fill(x, y + r, 1, height - 2 * r, argb);
-		painter.fill(x + width - 1, y + r, 1, height - 2 * r, argb);
 		for (int row = 0; row < r; row++) {
-			// Von der vorigen Zeile bis zu dieser durchziehen, damit der Bogen keine Löcher hat
 			int inset = inset(r, row);
-			int run = Math.max(1, (row == 0 ? r : inset(r, row - 1)) - inset + 1);
+			if (row == 0) {
+				painter.fill(x + inset, y, width - 2 * inset, 1, argb);
+				painter.fill(x + inset, y + height - 1, width - 2 * inset, 1, argb);
+				continue;
+			}
+			// Von der Einrückung dieser Zeile bis zu der der vorigen: so bleibt die Treppe geschlossen
+			int run = Math.max(1, inset(r, row - 1) - inset);
 			painter.fill(x + inset, y + row, run, 1, argb);
 			painter.fill(x + width - inset - run, y + row, run, 1, argb);
 			painter.fill(x + inset, y + height - 1 - row, run, 1, argb);
 			painter.fill(x + width - inset - run, y + height - 1 - row, run, 1, argb);
 		}
+		painter.fill(x, y + r, 1, height - 2 * r, argb);
+		painter.fill(x + width - 1, y + r, 1, height - 2 * r, argb);
 	}
 
 	// ---------- Bausteine des Menüs ----------
@@ -300,82 +243,19 @@ public final class HudSkin {
 		hairline(painter, x, y, width, 0, LINE);
 	}
 
-	/**
-	 * Waagerechte Linie, nur einen Bildschirmpixel dick (wie im Launcher), {@code offset} Bildschirmpixel unter y. Auf
-	 * grobem Raster ein Menüpixel.
-	 */
+	/** Waagerechte Linie, ein Pixel dick, {@code offset} Pixel unter y. */
 	public static void hairline(HudPainter painter, int x, int y, int width, int offset, int argb) {
-		float p = painter.pixelScale();
-		if (p <= 1.01F) {
-			painter.fill(x, y + offset, width, 1, argb);
-			return;
-		}
-		painter.push(x, y, 1.0F / p);
-		painter.fill(x, y + offset, Math.round(width * p), 1, argb);
-		painter.pop();
+		painter.fill(x, y + offset, width, 1, argb);
 	}
 
-	/** Senkrechte Linie, einen Bildschirmpixel breit. */
+	/** Senkrechte Linie, ein Pixel breit. */
 	public static void vline(HudPainter painter, int x, int y, int height, int argb) {
-		float p = painter.pixelScale();
-		if (p <= 1.01F) {
-			painter.fill(x, y, 1, height, argb);
-			return;
-		}
-		painter.push(x, y, 1.0F / p);
-		painter.fill(x, y, 1, Math.round(height * p), argb);
-		painter.pop();
+		painter.fill(x, y, 1, height, argb);
 	}
 
-	/** Feiner Winkelpfeil wie im Launcher, mittig um (cx, cy), {@code size} hoch; zeigt nach links oder rechts. */
+	/** Winkelpfeil in der Minecraft-Schrift, mittig um (cx, cy); zeigt nach links oder rechts. */
 	public static void chevron(HudPainter painter, float cx, float cy, float size, boolean left, int argb) {
-		if (painter.pixelScale() <= 1.01F) {
-			centered(painter, left ? "<" : ">", Math.round(cx), Math.round(cy) - 4, argb);
-			return;
-		}
-		float half = size / 2.0F;
-		float depth = half * 0.55F;
-		float tip = left ? cx - depth / 2.0F : cx + depth / 2.0F;
-		float back = left ? cx + depth / 2.0F : cx - depth / 2.0F;
-		stroke(painter, Math.max(0.6F, size * 0.13F), argb, back, cy - half, tip, cy, back, cy + half);
-	}
-
-	/**
-	 * Geglätteter Linienzug durch die Punkte (Menüeinheiten, abwechselnd x und y), {@code thickness} in Menüeinheiten;
-	 * gezeichnet je Bildschirmpixel mit weicher Kante.
-	 */
-	private static void stroke(HudPainter painter, float thickness, int argb, float... points) {
-		float p = painter.pixelScale();
-		float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
-		for (int i = 0; i < points.length; i += 2) {
-			minX = Math.min(minX, points[i]);
-			maxX = Math.max(maxX, points[i]);
-			minY = Math.min(minY, points[i + 1]);
-			maxY = Math.max(maxY, points[i + 1]);
-		}
-		int bx = (int) Math.floor(minX - thickness);
-		int by = (int) Math.floor(minY - thickness);
-		int w = (int) Math.ceil((maxX + thickness - bx) * p);
-		int h = (int) Math.ceil((maxY + thickness - by) * p);
-		float half = thickness * p / 2.0F;
-		painter.push(bx, by, 1.0F / p);
-		for (int j = 0; j < h; j++) {
-			for (int i = 0; i < w; i++) {
-				float px = i + 0.5F, py = j + 0.5F;
-				float best = Float.MAX_VALUE;
-				for (int k = 0; k + 3 < points.length; k += 2) {
-					float ax = (points[k] - bx) * p, ay = (points[k + 1] - by) * p;
-					float dx = (points[k + 2] - bx) * p - ax, dy = (points[k + 3] - by) * p - ay;
-					float t = clamp01(((px - ax) * dx + (py - ay) * dy) / Math.max(1e-6F, dx * dx + dy * dy));
-					float ex = px - (ax + t * dx), ey = py - (ay + t * dy);
-					best = Math.min(best, (float) Math.sqrt(ex * ex + ey * ey));
-				}
-				float coverage = clamp01(half - best + 0.5F);
-				if (coverage > 0.03F)
-					painter.fill(bx + i, by + j, 1, 1, alpha(argb, coverage));
-			}
-		}
-		painter.pop();
+		centered(painter, left ? "<" : ">", Math.round(cx), Math.round(cy) - 4, argb);
 	}
 
 	/** Überschrift eines Abschnitts. */
@@ -397,28 +277,24 @@ public final class HudSkin {
 		centered(painter, label, x + width / 2, y + (height - 8) / 2, hovered ? TEXT : TEXT_DIM);
 	}
 
-	/** Abgerundete Fläche mit waagerechtem Farbverlauf von {@code from} nach {@code to}. */
+	/** Fläche mit Pixel-Ecken und waagerechtem Farbverlauf von {@code from} nach {@code to}. */
 	public static void gradient(HudPainter painter, int x, int y, int width, int height, int radius, int from, int to) {
 		if (width <= 0 || height <= 0)
 			return;
 		int r = radius(radius, width, height);
-		float p = painter.pixelScale();
-		if (p > 1.01F && r > 0) {
-			painter.fill(x, y + r, r, height - 2 * r, from);
-			painter.fill(x + width - r, y + r, r, height - 2 * r, to);
-			for (int column = r; column < width - r; column++)
-				painter.fill(x + column, y, 1, height, mix(from, to, column / (float) Math.max(1, width - 1)));
-			corner(painter, x, y, r, p, from, false, false);
-			corner(painter, x, y + height - r, r, p, from, false, true);
-			corner(painter, x + width - r, y, r, p, to, true, false);
-			corner(painter, x + width - r, y + height - r, r, p, to, true, true);
-			return;
-		}
 		for (int column = 0; column < width; column++) {
 			int edge = Math.min(column, width - 1 - column);
-			int inset = edge < r ? inset(r, edge) : 0;
+			int inset = edge < r ? countRows(r, edge) : 0;
 			painter.fill(x + column, y + inset, 1, height - 2 * inset, mix(from, to, width == 1 ? 0 : column / (float) (width - 1)));
 		}
+	}
+
+	/** Wie viele Zeilen oben in Spalte {@code column} (von außen gezählt) einer Ecke mit Radius r fehlen. */
+	private static int countRows(int r, int column) {
+		int rows = 0;
+		while (rows < r && inset(r, rows) > column)
+			rows++;
+		return rows;
 	}
 
 	/** Mischt zwei Farben (samt Deckkraft); {@code at} 0 = erste, 1 = zweite. */
@@ -442,12 +318,6 @@ public final class HudSkin {
 		outline(painter, x, y, size, size, 2, checked ? ACCENT : (hovered ? BORDER : LINE));
 		if (!checked)
 			return;
-		if (painter.pixelScale() > 1.01F) {
-			// Haken als geglätteter Strich
-			stroke(painter, size * 0.16F, ON_ACCENT, x + size * 0.25F, y + size * 0.52F, x + size * 0.43F,
-				y + size * 0.7F, x + size * 0.76F, y + size * 0.32F);
-			return;
-		}
 		// kleiner Haken aus zwei Strichen
 		int base = x + size / 2 - 2;
 		painter.fill(base, y + size - 5, 2, 2, ON_ACCENT);

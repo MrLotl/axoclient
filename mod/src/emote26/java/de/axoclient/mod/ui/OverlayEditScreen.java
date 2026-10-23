@@ -63,6 +63,8 @@ public final class OverlayEditScreen extends Screen {
 
 	private boolean profileMenu;
 	private boolean addMenu;
+	private boolean gridMenu;
+	private int gridX;
 	private long resetArmedUntil;
 
 	public OverlayEditScreen(MenuScreen parent) {
@@ -193,7 +195,8 @@ public final class OverlayEditScreen extends Screen {
 		String profile = config.activeProfile.isBlank() ? HudProfiles.DEFAULT : config.activeProfile;
 		float labelW = g.width("Axo", 13, Gfx.SEMIBOLD) + g.width(" Overlay", 13, Gfx.SEMIBOLD);
 		int profileW = Math.round(12 + g.width("Profil", 12.5F, Gfx.MEDIUM) + 8 + g.width(profile, 12.5F, Gfx.MEDIUM) + 8 + 14 + 10);
-		int gridW = Math.round(12 + 15 + 7 + g.width("Raster", 12.5F, Gfx.MEDIUM) + 12);
+		String gridLabel = "Raster " + (config.grid ? HudConfig.clampGrid(config.gridSize) + " px" : "aus");
+		int gridW = Math.round(12 + 15 + 7 + g.width(gridLabel, 12.5F, Gfx.MEDIUM) + 8 + 14 + 10);
 		int addW = Math.round(12 + 14 + 7 + g.width("Widget hinzufügen", 12.5F, Gfx.MEDIUM) + 12);
 		String resetLabel = System.currentTimeMillis() < resetArmedUntil ? "Wirklich zurücksetzen?" : "Zurücksetzen";
 		int resetW = Math.round(g.width(resetLabel, 12.5F, Gfx.MEDIUM) + 24);
@@ -223,19 +226,26 @@ public final class OverlayEditScreen extends Screen {
 		ui.hit(bx, y + 6, profileW, 36, () -> {
 			profileMenu = !profileMenu;
 			addMenu = false;
+			gridMenu = false;
 		});
 		bx += profileW + 4;
 
-		// Raster
+		// Raster (öffnet die Einstellungen: an/aus, Weite, Einrasten)
+		gridX = bx;
 		hover = ui.hover(bx, y + 6, gridW, 36);
 		if (config.grid) {
 			g.gradient(bx, y + 6, gridW, 36, 8, Theme.alpha(0xFFEC4899, 0.16F), Theme.alpha(0xFF8B5CF6, 0.16F));
-		} else if (hover)
+		} else if (hover || gridMenu)
 			g.rect(bx, y + 6, gridW, 36, 8, Theme.BUTTON_HOVER);
 		int gc = config.grid ? Theme.ACCENT_TEXT : Theme.TEXT_SOFT;
 		g.icon(Icons.GRID, bx + 12, cy - 7.5F, 15, gc);
-		g.textMid("Raster", bx + 12 + 15 + 7, cy, 12.5F, Gfx.MEDIUM, gc);
-		ui.hit(bx, y + 6, gridW, 36, () -> config.grid = !config.grid);
+		g.textMid(gridLabel, bx + 12 + 15 + 7, cy, 12.5F, Gfx.MEDIUM, gc);
+		g.icon(Icons.CHEVRON_DOWN, bx + gridW - 10 - 14, cy - 7, 14, Theme.TEXT_DIM);
+		ui.hit(bx, y + 6, gridW, 36, () -> {
+			gridMenu = !gridMenu;
+			profileMenu = false;
+			addMenu = false;
+		});
 		bx += gridW + 4;
 
 		// Widget hinzufügen
@@ -248,6 +258,7 @@ public final class OverlayEditScreen extends Screen {
 		ui.hit(bx, y + 6, addW, 36, () -> {
 			addMenu = !addMenu;
 			profileMenu = false;
+			gridMenu = false;
 		});
 		bx += addW + 4;
 		g.vline(bx + 4, y + 13, 22, 0xFF3C3C3C);
@@ -280,6 +291,30 @@ public final class OverlayEditScreen extends Screen {
 
 	/** Aufklappmenüs der Leiste (über allem). */
 	private void menus(Gfx g) {
+		if (gridMenu) {
+			int w = 250;
+			int x = gridX, y = toolbarY + 48 + 6;
+			int h = 16 + 20 + 16 + 38 + 16 + 20 + 16;
+			g.shadow(x, y, w, h, 10, 14, 10, 0.5F);
+			g.box(x, y, w, h, 10, Theme.alpha(0xFF242424, 0.98F), Theme.WINDOW_LINE);
+			ui.block(x, y, w, h);
+			int px = x + 16, pw = w - 32;
+			int at = y + 16;
+			g.textMid("Raster anzeigen", px, at + 10, 13, Gfx.REGULAR, Theme.TEXT_SOFT);
+			g.toggle(px + pw - 36, at, config.grid);
+			ui.hit(px, at, pw, 20, () -> config.grid = !config.grid);
+			at += 20 + 16;
+			int size = HudConfig.clampGrid(config.gridSize);
+			at = slider(g, px, at, pw, true, "Weite", size + " px",
+				(size - HudConfig.MIN_GRID) / (float) (HudConfig.MAX_GRID - HudConfig.MIN_GRID), t -> {
+					int steps = Math.round(t * (HudConfig.MAX_GRID - HudConfig.MIN_GRID) / HudConfig.GRID_STEP);
+					config.gridSize = HudConfig.clampGrid(HudConfig.MIN_GRID + steps * HudConfig.GRID_STEP);
+				});
+			at += 16;
+			g.textMid("An Widgets einrasten", px, at + 10, 13, Gfx.REGULAR, Theme.TEXT_SOFT);
+			g.toggle(px + pw - 36, at, config.snap);
+			ui.hit(px, at, pw, 20, () -> config.snap = !config.snap);
+		}
 		if (profileMenu) {
 			List<String> names = HudProfiles.list(config);
 			int w = 200, rowH = 32;
@@ -438,6 +473,15 @@ public final class OverlayEditScreen extends Screen {
 			ui.hit(px, at, pw, 20, () -> e.background = !e.background);
 		}
 		at += 20;
+
+		// Ecken der Hintergrundfläche: von eckig bis rund, in Pixelstufen wie Minecraft
+		if (e.background) {
+			at += 12;
+			int corner = HudConfig.clampCorner(e.corner);
+			at = slider(g, px, at, pw, draw, "Ecken", corner == 0 ? "Eckig" : corner + " px",
+				(corner - HudConfig.MIN_CORNER) / (float) (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER),
+				t -> e.corner = HudConfig.clampCorner(HudConfig.MIN_CORNER + Math.round(t * (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER))));
+		}
 
 		// Mehr: Format, Beschriftung, Schatten
 		if (selected.variants != null && selected.variants.length > 1) {
@@ -653,11 +697,12 @@ public final class OverlayEditScreen extends Screen {
 		if (event.button() != InputConstants.MOUSE_BUTTON_LEFT)
 			return true;
 		Gfx g = Gfx.measure(width, height);
-		boolean menuWasOpen = profileMenu || addMenu;
+		boolean menuWasOpen = profileMenu || addMenu || gridMenu;
 		if (ui.click(g.mx(event.x()), g.my(event.y())))
 			return true;
 		profileMenu = false;
 		addMenu = false;
+		gridMenu = false;
 		if (menuWasOpen)
 			return true;
 		int mx = (int) (event.x() / hs), my = (int) (event.y() / hs);

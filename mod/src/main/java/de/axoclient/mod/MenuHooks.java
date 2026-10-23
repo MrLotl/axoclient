@@ -20,8 +20,8 @@ public final class MenuHooks {
 	public static volatile Consumer<Object> overlay;
 
 	/**
-	 * Anzeigen fein zeichnen: Inter-Schrift und ein feineres Raster (wie das Axo-Menü, bei 1080p zwei Bildschirmpunkte je
-	 * Einheit statt der groben GUI-Skalierung). Positionen gelten dann in diesem feineren Raster.
+	 * Anzeigen in einem feineren Raster zeichnen (wie das Axo-Menü, bei 1080p zwei Bildschirmpunkte je Einheit statt der
+	 * groben GUI-Skalierung); die Minecraft-Schrift bleibt dabei pixelgenau scharf. Positionen gelten in diesem Raster.
 	 */
 	public static volatile boolean fineHud;
 

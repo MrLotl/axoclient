@@ -132,7 +132,6 @@ public final class AxoHud {
 		int width = context.guiWidth();
 		float s = hudScale();
 		Painter painter = new Painter(context);
-		painter.uiFont(MenuHooks.fineHud);
 		int[] box = HudOverlay.box(config(), de.axoclient.mod.hud.HudElement.of(HudModule.EFFECTS), painter, Map.of(),
 			Math.round(width / s), Math.round(context.guiHeight() / s));
 		// Minecraft zeichnet die Symbole rechtsbündig ab y = 1; die Anzeige steht im (evtl. feineren) Raster der Anzeigen
@@ -193,14 +192,9 @@ public final class AxoHud {
 		return Math.min(guiScale, target) / (float) guiScale;
 	}
 
-	/** Zeichner für die Anzeigen: mit fineHud in Inter samt Schatten. */
+	/** Zeichner für die Anzeigen (Minecraft-Schrift, auch im feinen Raster). */
 	public static Painter hudPainter(GuiGraphicsExtractor graphics) {
-		Painter painter = new Painter(graphics);
-		if (MenuHooks.fineHud) {
-			painter.uiFont(true);
-			painter.uiShadow = true;
-		}
-		return painter;
+		return new Painter(graphics);
 	}
 
 	/** Aktuelle Werte der Anzeigen; fehlende Werte (z.B. Ping im Einzelspieler) bleiben leer. */
@@ -292,46 +286,6 @@ public final class AxoHud {
 		}
 
 		/**
-		 * Menüschrift Inter (assets/axoclient/font/inter_N.json bzw. inter_title_N.json), fehlende Zeichen kommen
-		 * aus der Minecraft-Schrift. Es gibt sie in mehreren Auflösungen (N = Bildschirmpixel je Menüpixel), damit jede
-		 * Glyphe genau so groß gerastert wird, wie sie auf dem Bildschirm erscheint – sonst wird sie hochgezogen und pixelig.
-		 */
-		private static final int MAX_OVERSAMPLE = 5;
-		private static final net.minecraft.network.chat.FontDescription[] UI_FONTS = fonts("inter_");
-		private static final net.minecraft.network.chat.FontDescription[] TITLE_FONTS = fonts("inter_title_");
-
-		private static net.minecraft.network.chat.FontDescription[] fonts(String prefix) {
-			net.minecraft.network.chat.FontDescription[] fonts = new net.minecraft.network.chat.FontDescription[MAX_OVERSAMPLE];
-			for (int i = 0; i < fonts.length; i++)
-				fonts[i] = new net.minecraft.network.chat.FontDescription.Resource(
-					Identifier.fromNamespaceAndPath("axoclient", prefix + (i + 1)));
-			return fonts;
-		}
-
-		private boolean ui;
-		private boolean title;
-		/** Ob Text in der Menüschrift einen Schatten bekommen darf (Anzeigen im Bild ja, Menüs nein). */
-		public boolean uiShadow;
-
-		private Component styled(String text) {
-			float pixels = graphics != null ? pixelScale() : (float) (menuScale() * Minecraft.getInstance().getWindow().getGuiScale());
-			int index = Math.max(1, Math.min(MAX_OVERSAMPLE, Math.round(pixels))) - 1;
-			net.minecraft.network.chat.FontDescription font = (title ? TITLE_FONTS : UI_FONTS)[index];
-			return Component.literal(text).withStyle(style -> style.withFont(font));
-		}
-
-		@Override
-		public void uiFont(boolean on) {
-			ui = on;
-		}
-
-		@Override
-		public boolean titleFont(boolean on) {
-			title = on;
-			return ui;
-		}
-
-		/**
 		 * Ziel: eine ganze Zahl Bildschirmpixel je Menüpixel (2 bei 1080p, 3 bei 1440p, 4 bei 4K). Nur so liegen Kanten,
 		 * Linien und Schrift genau auf dem Pixelraster und bleiben scharf.
 		 */
@@ -352,17 +306,14 @@ public final class AxoHud {
 
 		@Override
 		public int textWidth(String text) {
-			return ui ? font().width(styled(text)) : font().width(text);
+			return font().width(text);
 		}
 
 		@Override
 		public void text(String text, int x, int y, int argb, boolean shadow) {
 			if (graphics == null)
 				return;
-			if (ui)
-				graphics.text(font(), styled(text), x, y, argb, shadow && uiShadow);
-			else
-				graphics.text(font(), text, x, y, argb, shadow);
+			graphics.text(font(), text, x, y, argb, shadow);
 		}
 
 		@Override
