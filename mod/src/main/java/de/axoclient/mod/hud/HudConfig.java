@@ -29,7 +29,7 @@ public final class HudConfig {
 	public static final int GRID_STEP = 2;
 
 	/** Ab diesem Abstand rastet eine Anzeige an einer anderen ein. */
-	public static final int SNAP_DISTANCE = 5;
+	public static final int SNAP_DISTANCE = 6;
 
 	/** Grenzen des Eckenradius der Hintergrundfläche. */
 	public static final int MIN_CORNER = 0;

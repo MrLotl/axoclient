@@ -46,33 +46,61 @@ final class WidgetDetail {
 	int render(Gfx g, int x, int y, int w, int h) {
 		Ui ui = m.ui;
 		HudConfig config = AxoHud.config();
-		// Kopf: zurück, Name, Schalter
-		int bw = Math.round(g.width("Alle Widgets", 12.5F, Gfx.MEDIUM)) + 14 + 6 + 22;
-		boolean hover = ui.hover(x, y, bw, 30);
-		g.rect(x, y, bw, 30, 8, hover ? Theme.BUTTON_HOVER : Theme.BUTTON);
-		g.icon(Icons.CHEVRON_LEFT, x + 9, y + 8, 14, Theme.TEXT_SOFT);
-		g.textMid("Alle Widgets", x + 9 + 14 + 6, y + 15, 12.5F, Gfx.MEDIUM, Theme.TEXT_SOFT);
-		ui.hit(x, y, bw, 30, this::close);
-
+		// Kopf: zurück, Name, an/aus
+		boolean hover = ui.hover(x, y, 34, 34);
+		g.rect(x, y, 34, 34, 9, hover ? Theme.BUTTON_HOVER : Theme.BUTTON);
+		g.icon(Icons.CHEVRON_LEFT, x + 10, y + 10, 14, Theme.TEXT_SOFT);
+		ui.hit(x, y, 34, 34, this::close);
 		String title = toasts ? "Einblendungen" : module.label;
 		boolean on = toasts ? MenuConfig.toastsOn : config.get(module).enabled;
-		int ty = y + 30 + 20;
-		g.textMid(g.ellipsize(title, 18, Gfx.SEMIBOLD, w - 60), x, ty + 10, 18, Gfx.SEMIBOLD, Theme.TEXT_STRONG);
-		g.toggle(x + w - 36, ty, on);
-		ui.hit(x + w - 36, ty, 36, 20, () -> {
+		g.textMid(g.ellipsize(title, 18, Gfx.SEMIBOLD, w - 34 - 14 - 140), x + 34 + 14, y + 17, 18, Gfx.SEMIBOLD, Theme.TEXT_STRONG);
+		String state = on ? "Eingeschaltet" : "Ausgeschaltet";
+		g.textRight(state, x + w - 36 - 10, y + 17, 12, Gfx.REGULAR, on ? Theme.TEXT_SOFT : Theme.MUTED_2);
+		g.toggle(x + w - 36, y + 7, on);
+		ui.hit(x + w - 36 - 10 - Math.round(g.width(state, 12, Gfx.REGULAR)), y + 2, 36 + 10 + Math.round(g.width(state, 12, Gfx.REGULAR)), 30, () -> {
 			if (toasts)
 				MenuConfig.toastsOn = !MenuConfig.toastsOn;
 			else
 				config.get(module).enabled = !config.get(module).enabled;
 			changed();
 		});
-		int top = ty + 20 + 20;
-		g.hline(x, top - 10, w, Theme.DIVIDER);
 
-		int colW = (w - 28) / 2;
-		int left = toasts ? toastsLeft(g, x, top, colW) : widgetLeft(g, config, x, top, colW);
-		int right = toasts ? toastsRight(g, x + colW + 28, top, colW) : widgetRight(g, config, x + colW + 28, top, colW);
-		return Math.max(left, right) - y + 10;
+		int top = y + 34 + 18;
+		int gap = 16;
+		int colW = (w - gap) / 2;
+		int lx = x, rx = x + colW + gap;
+		int left, right;
+		if (toasts) {
+			left = section(g, "Darstellung", lx, top, colW, this::toastsLook);
+			left = section(g, "Was erscheint", lx, left + gap, colW, this::toastsKinds);
+			right = section(g, "Sichtbarkeit", rx, top, colW, (gg, px, at, pw) -> toastsVisibility(gg, px, at, pw));
+			right = section(g, "Position", rx, right + gap, colW, this::toastsPosition);
+		} else {
+			left = section(g, "Darstellung", lx, top, colW, (gg, px, at, pw) -> look(gg, config, px, at, pw));
+			left = section(g, "Hintergrund", lx, left + gap, colW, (gg, px, at, pw) -> background(gg, config, px, at, pw));
+			right = section(g, "Sichtbarkeit", rx, top, colW, (gg, px, at, pw) -> visibilityOf(gg, config, px, at, pw));
+			right = section(g, "Position", rx, right + gap, colW, (gg, px, at, pw) -> position(gg, config, px, at, pw));
+		}
+		return Math.max(left, right) - y + 6;
+	}
+
+	private interface Body {
+		int draw(Gfx g, int px, int at, int pw);
+	}
+
+	/** Karte mit Überschrift; der Inhalt wird erst gemessen, dann auf die Karte gezeichnet. Gibt die Unterkante zurück. */
+	private int section(Gfx g, String title, int x, int y, int w, Body body) {
+		int pad = 16;
+		Ui ui = m.ui;
+		boolean inert = ui.inert;
+		ui.inert = true; // Messen: keine Klickflächen anmelden
+		int end = body.draw(Gfx.measure(m.width, m.height), x + pad, y + pad + 14 + 12, w - 2 * pad);
+		ui.inert = inert;
+		int h = end + pad - y;
+		g.rect(x, y, w, h, 12, Theme.PANEL);
+		MenuScreen.heading(g, title, x + pad, y + pad + 7);
+		body.draw(g, x + pad, y + pad + 14 + 12, w - 2 * pad);
+		return y + h;
 	}
 
 	private void changed() {
@@ -82,81 +110,39 @@ final class WidgetDetail {
 
 	// ---------- Widget ----------
 
-	private int widgetLeft(Gfx g, HudConfig config, int px, int at, int pw) {
+	/** Textfarbe, Größe, Schatten, Format. */
+	private int look(Gfx g, HudConfig config, int px, int at, int pw) {
 		HudConfig.Entry e = config.get(module);
-		String reason = HudPrivacy.reasonAgainst(config, module);
-		at = visibility(g, px, at, pw, e.privat, priv -> {
-			if (priv && reason != null) {
-				m.notice(reason, null, null);
-				return;
-			}
-			e.privat = priv;
-			changed();
-		}, reason != null ? reason + " – bleibt im Spielbild."
-			: e.privat ? "Zeichnet der Launcher in einem eigenen Fenster über dem Spiel. Nicht sichtbar in Discord, OBS und Screenshots."
-			: "Wird ins Spielbild gezeichnet und ist im Stream und auf Screenshots zu sehen.");
-		at += 18;
-
-		// Farbe
-		g.textMid("Farbe", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
+		g.textMid("Textfarbe", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
 		at += 14 + 8;
 		int sx = px;
+		int size = Math.min(30, (pw - 5 * 8) / 6);
 		for (int rgb : SWATCHES) {
 			boolean picked = (e.textRgb & 0xFFFFFF) == rgb;
 			if (picked) {
-				g.rect(sx - 3, at - 3, 36, 36, 10, Theme.ACCENT_LINE);
-				g.rect(sx - 1, at - 1, 32, 32, 9, Theme.PANEL);
+				g.rect(sx - 3, at - 3, size + 6, size + 6, 10, Theme.ACCENT_LINE);
+				g.rect(sx - 1, at - 1, size + 2, size + 2, 9, Theme.PANEL);
 			}
-			g.rect(sx, at, 30, 30, 8, 0xFF000000 | rgb);
+			g.rect(sx, at, size, size, 8, 0xFF000000 | rgb);
 			int pick = rgb;
-			m.ui.hit(sx, at, 30, 30, () -> {
+			m.ui.hit(sx, at, size, size, () -> {
 				e.textRgb = pick;
 				changed();
 			});
-			sx += 30 + 8;
+			sx += size + 8;
 		}
-		at += 30 + 18;
-
+		at += size + 18;
 		at = slider(g, px, at, pw, "Größe", e.scale + " %", (e.scale - 50) / 150.0F, t -> {
 			e.scale = HudConfig.clampScale(Math.round((50 + t * 150) / 10.0F) * 10);
 			changed();
 		});
 		at += 18;
-		return anchorRow(g, px, at, pw, Math.max(0, Math.min(8, e.anchorY * 3 + e.anchorX)), this::setAnchor);
-	}
-
-	private int widgetRight(Gfx g, HudConfig config, int px, int at, int pw) {
-		HudConfig.Entry e = config.get(module);
-		at = toggleRow(g, px, at, pw, "Hintergrund", e.background ? "Dunkel, " + e.backgroundAlpha + " %" : "Aus", e.background, () -> {
-			e.background = !e.background;
-			changed();
-		});
-		if (e.background) {
-			at += 18;
-			at = slider(g, px, at, pw, "Deckkraft", e.backgroundAlpha + " %", e.backgroundAlpha / 100.0F, t -> {
-				e.backgroundAlpha = Math.round(t * 20) * 5;
-				changed();
-			});
-			at += 18;
-			int corner = HudConfig.clampCorner(e.corner);
-			at = slider(g, px, at, pw, "Ecken", corner == 0 ? "Eckig" : corner + " px",
-				(corner - HudConfig.MIN_CORNER) / (float) (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER), t -> {
-					e.corner = HudConfig.clampCorner(HudConfig.MIN_CORNER + Math.round(t * (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER)));
-					changed();
-				});
-			at += 18;
-			at = toggleRow(g, px, at, pw, "Rahmen", null, e.border, () -> {
-				e.border = !e.border;
-				changed();
-			});
-		}
-		at += 18;
-		at = toggleRow(g, px, at, pw, "Schatten", null, e.shadow, () -> {
+		at = toggleRow(g, px, at, pw, "Schatten unter der Schrift", null, e.shadow, () -> {
 			e.shadow = !e.shadow;
 			changed();
 		});
 		if (module.variants != null && module.variants.length > 1) {
-			at += 18;
+			at += 16;
 			g.textMid("Format", px, at + 10, 13, Gfx.REGULAR, Theme.TEXT_SOFT);
 			String value = module.variants[Math.min(e.variant, module.variants.length - 1)];
 			int bw = Math.min(pw - 70, Math.round(g.width(value, 12, Gfx.MEDIUM)) + 34);
@@ -172,6 +158,73 @@ final class WidgetDetail {
 			at += 20;
 		}
 		return at;
+	}
+
+	/** Fläche hinter dem Widget: an/aus, Deckkraft, Ecken, Rahmen. */
+	private int background(Gfx g, HudConfig config, int px, int at, int pw) {
+		HudConfig.Entry e = config.get(module);
+		at = toggleRow(g, px, at, pw, "Fläche hinter dem Widget", null, e.background, () -> {
+			e.background = !e.background;
+			changed();
+		});
+		if (!e.background)
+			return at;
+		at += 18;
+		at = slider(g, px, at, pw, "Deckkraft", e.backgroundAlpha + " %", e.backgroundAlpha / 100.0F, t -> {
+			e.backgroundAlpha = Math.round(t * 20) * 5;
+			changed();
+		});
+		at += 18;
+		int corner = HudConfig.clampCorner(e.corner);
+		at = slider(g, px, at, pw, "Ecken", corner == 0 ? "Eckig" : corner + " px",
+			(corner - HudConfig.MIN_CORNER) / (float) (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER), t -> {
+				e.corner = HudConfig.clampCorner(HudConfig.MIN_CORNER + Math.round(t * (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER)));
+				changed();
+			});
+		at += 18;
+		return toggleRow(g, px, at, pw, "Rahmen in der Textfarbe", null, e.border, () -> {
+			e.border = !e.border;
+			changed();
+		});
+	}
+
+	private int visibilityOf(Gfx g, HudConfig config, int px, int at, int pw) {
+		HudConfig.Entry e = config.get(module);
+		String reason = HudPrivacy.reasonAgainst(config, module);
+		return visibility(g, px, at, pw, e.privat, priv -> {
+			if (priv && reason != null) {
+				m.notice(reason, null, null);
+				return;
+			}
+			e.privat = priv;
+			changed();
+		}, reason != null ? reason + " – bleibt im Spielbild."
+			: e.privat ? "Zeichnet der Launcher in einem eigenen Fenster über dem Spiel. Nicht sichtbar in Discord, OBS und Screenshots."
+			: "Wird ins Spielbild gezeichnet und ist im Stream und auf Screenshots zu sehen.");
+	}
+
+	/** Verankerung und der Weg in den Bearbeiten-Modus. */
+	private int position(Gfx g, HudConfig config, int px, int at, int pw) {
+		HudConfig.Entry e = config.get(module);
+		at = anchorRow(g, px, at, pw, Math.max(0, Math.min(8, e.anchorY * 3 + e.anchorX)), this::setAnchor);
+		at += 16;
+		return moveButton(g, px, at, pw, module);
+	}
+
+	/** Knopf "Im Bild verschieben": Bearbeiten-Modus mit genau diesem Widget. */
+	private int moveButton(Gfx g, int px, int at, int pw, HudModule which) {
+		boolean hover = m.ui.hover(px, at, pw, 34);
+		g.rect(px, at, pw, 34, 9, hover ? Theme.BUTTON_HOVER : Theme.BUTTON);
+		String label = "Im Bild verschieben";
+		float lw = g.width(label, 12.5F, Gfx.MEDIUM);
+		float start = px + (pw - 14 - 8 - lw) / 2;
+		g.icon(Icons.MOVE, start, at + 10, 14, Theme.TEXT_SOFT);
+		g.textMid(label, start + 22, at + 17, 12.5F, Gfx.MEDIUM, Theme.TEXT_SOFT);
+		m.ui.hit(px, at, pw, 34, () -> {
+			changed();
+			net.minecraft.client.Minecraft.getInstance().setScreenAndShow(OverlayEditScreen.selecting(m, which));
+		});
+		return at + 34;
 	}
 
 	/** Neue Verankerung, das Widget bleibt dabei an seiner Stelle. */
@@ -191,33 +244,35 @@ final class WidgetDetail {
 
 	// ---------- Einblendungen ----------
 
-	private int toastsLeft(Gfx g, int px, int at, int pw) {
-		at = visibility(g, px, at, pw, MenuConfig.toastsPrivate, priv -> {
+	private int toastsVisibility(Gfx g, int px, int at, int pw) {
+		return visibility(g, px, at, pw, MenuConfig.toastsPrivate, priv -> {
 			MenuConfig.toastsPrivate = priv;
 			changed();
 		}, MenuConfig.toastsPrivate ? "Standard. Einladungen und Namen deiner Freunde landen nicht im Stream."
 			: "Achtung: Einladungen und Namen deiner Freunde sind im Stream zu sehen.");
-		at += 18;
-		at = slider(g, px, at, pw, "Anzeigedauer", MenuConfig.toastSeconds + " s", (MenuConfig.toastSeconds - 3) / 12.0F, t -> {
-			MenuConfig.toastSeconds = Math.round(3 + t * 12);
-			changed();
-		});
-		at += 18;
+	}
+
+	private int toastsLook(Gfx g, int px, int at, int pw) {
 		at = slider(g, px, at, pw, "Größe", MenuConfig.toastScale + " %", (MenuConfig.toastScale - 50) / 150.0F, t -> {
 			MenuConfig.toastScale = Math.max(50, Math.min(200, Math.round((50 + t * 150) / 10.0F) * 10));
 			changed();
 		});
 		at += 18;
-		return anchorRow(g, px, at, pw, MenuConfig.toastAnchor, cell -> {
+		return slider(g, px, at, pw, "Anzeigedauer", MenuConfig.toastSeconds + " s", (MenuConfig.toastSeconds - 3) / 12.0F, t -> {
+			MenuConfig.toastSeconds = Math.round(3 + t * 12);
+			changed();
+		});
+	}
+
+	private int toastsPosition(Gfx g, int px, int at, int pw) {
+		at = anchorRow(g, px, at, pw, MenuConfig.toastAnchor, cell -> {
 			MenuConfig.toastAnchor = cell;
 			MenuConfig.toastX = 12;
 			MenuConfig.toastY = 12;
 			MenuConfig.toastsDown = cell / 3 != 2;
 			changed();
 		});
-	}
-
-	private int toastsRight(Gfx g, int px, int at, int pw) {
+		at += 16;
 		g.textMid("Neue Einblendungen", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
 		at += 14 + 8;
 		g.box(px, at, pw, 34, 9, Theme.WELL, 0xFF343434);
@@ -232,9 +287,11 @@ final class WidgetDetail {
 			MenuConfig.toastsDown = false;
 			changed();
 		});
-		at += 34 + 18;
-		g.textMid("Was erscheint", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
-		at += 14 + 6;
+		at += 34 + 16;
+		return moveButton(g, px, at, pw, null);
+	}
+
+	private int toastsKinds(Gfx g, int px, int at, int pw) {
 		for (String[] kind : MenuConfig.TOAST_KINDS) {
 			boolean on = MenuConfig.TOAST_KIND_ON.getOrDefault(kind[0], true);
 			if (on) {
@@ -249,7 +306,7 @@ final class WidgetDetail {
 			});
 			at += 26 + 4;
 		}
-		return at;
+		return at - 4;
 	}
 
 	// ---------- Bausteine ----------

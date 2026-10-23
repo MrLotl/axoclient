@@ -40,10 +40,15 @@ public final class OverlayEditScreen extends Screen {
 	private final Ui ui = new Ui();
 	private final HudConfig config = AxoHud.config();
 
-	/** Gewähltes Widget (null + toastsSelected = Einblendungen). */
-	private HudModule selected;
-	private boolean toastsSelected;
+	/** Ausgewählte Stücke (Schlüssel siehe {@link #key}); mehrere per Aufziehen oder Strg/Umschalt + Klick. */
+	private final java.util.Set<String> selection = new java.util.LinkedHashSet<>();
 	private List<Piece> pieces = new ArrayList<>();
+	/** Aufgezogenes Auswahlrechteck {x0, y0, x1, y1} in Einheiten der Widgets, oder null. */
+	private int[] marquee;
+	/** Auswahl beim Beginn des Aufziehens (mit Strg/Umschalt wird sie erweitert). */
+	private java.util.Set<String> marqueeBase = java.util.Set.of();
+	/** Außenkanten aller ausgewählten Stücke zu Beginn des Ziehens. */
+	private final Map<String, int[]> dragStart = new java.util.HashMap<>();
 
 	// Ziehen im Bild (GUI-Einheiten)
 	private Piece dragging;
@@ -65,12 +70,20 @@ public final class OverlayEditScreen extends Screen {
 	private int gridX;
 	private long resetArmedUntil;
 
+	/** Bearbeiten-Modus mit genau diesem Widget ausgewählt (null = Einblendungen). */
+	public static OverlayEditScreen selecting(MenuScreen parent, HudModule module) {
+		OverlayEditScreen screen = new OverlayEditScreen(parent);
+		screen.selection.clear();
+		screen.selection.add(module == null ? "toasts" : module.name() + "#" + HudElement.WHOLE);
+		return screen;
+	}
+
 	public OverlayEditScreen(MenuScreen parent) {
 		super(Component.literal("Overlay bearbeiten"));
 		this.parent = parent;
 		for (HudModule module : HudModule.values())
 			if (config.isEnabled(module)) {
-				selected = module;
+				selection.add(module.name() + "#" + HudElement.WHOLE);
 				break;
 			}
 	}
@@ -144,7 +157,7 @@ public final class OverlayEditScreen extends Screen {
 			if (on) {
 				HudSkin.outline(painter, p.x() - pad - 2, p.y() - pad - 2, p.w() + 2 * pad + 4, p.h() + 2 * pad + 4, 5, Theme.alpha(0xFFE07AD8, 0.22F));
 				HudSkin.outline(painter, p.x() - pad, p.y() - pad, p.w() + 2 * pad, p.h() + 2 * pad, 4, Theme.ACCENT_LINE);
-				if (!p.toasts())
+				if (!p.toasts() && selection.size() == 1)
 					for (int[] c : corners(p))
 						HudSkin.rounded(painter, c[0], c[1], c[2], c[2], 1, Theme.ACCENT_LINE);
 			} else
@@ -155,6 +168,12 @@ public final class OverlayEditScreen extends Screen {
 		}
 		if (dragging != null)
 			HudSnap.drawGuides(painter, guideX, guideY, vw, vh);
+		if (marquee != null) {
+			int x0 = Math.min(marquee[0], marquee[2]), y0 = Math.min(marquee[1], marquee[3]);
+			int w = Math.abs(marquee[2] - marquee[0]), h = Math.abs(marquee[3] - marquee[1]);
+			painter.fill(x0, y0, w, h, Theme.alpha(0xFFE07AD8, 0.12F));
+			HudSkin.outline(painter, x0, y0, Math.max(1, w), Math.max(1, h), 0, Theme.alpha(0xFFE07AD8, 0.8F));
+		}
 		graphics.pose().popMatrix();
 
 		// Leiste, Einstellungen, Hinweis (Design-Pixel)
@@ -171,8 +190,48 @@ public final class OverlayEditScreen extends Screen {
 		}
 	}
 
+	private static String key(Piece p) {
+		return p.toasts() ? "toasts" : p.element().module().name() + "#" + p.element().slot();
+	}
+
+	/** Außenkanten (samt Hintergrundfläche) eines Stücks: {x, y, w, h}. */
+	private int[] outer(Piece p) {
+		int pad = 0;
+		if (!p.toasts()) {
+			HudConfig.Entry e = config.get(p.element().module());
+			pad = e.background ? HudOverlay.pad(e) : 0;
+		}
+		return new int[] { p.x() - pad, p.y() - pad, p.w() + 2 * pad, p.h() + 2 * pad };
+	}
+
+	/** Stück an die Außenkante (x, y) legen. */
+	private void moveOuter(Piece p, int x, int y) {
+		if (p.toasts()) {
+			moveToasts(Gfx.measure(width, height), x, y, p.w(), p.h());
+			return;
+		}
+		HudConfig.Entry e = config.get(p.element().module());
+		int pad = e.background ? HudOverlay.pad(e) : 0;
+		HudOverlay.move(e, p.element(), x + pad, y + pad, p.w(), p.h(), vw, vh);
+	}
+
+	private List<Piece> selectedPieces() {
+		List<Piece> list = new ArrayList<>();
+		for (Piece p : pieces)
+			if (selection.contains(key(p)))
+				list.add(p);
+		return list;
+	}
+
+	/** Strg oder Umschalt gedrückt: Auswahl erweitern statt ersetzen. */
+	private static boolean adding() {
+		com.mojang.blaze3d.platform.Window window = Minecraft.getInstance().getWindow();
+		return InputConstants.isKeyDown(window, 341) || InputConstants.isKeyDown(window, 345) || InputConstants.isKeyDown(window, 340)
+			|| InputConstants.isKeyDown(window, 344);
+	}
+
 	private boolean isSelected(Piece p) {
-		return p.toasts() ? toastsSelected : !toastsSelected && p.element().module() == selected;
+		return selection.contains(key(p));
 	}
 
 	/** Griffe an den vier Ecken: {x, y, Größe}. */
@@ -365,8 +424,8 @@ public final class OverlayEditScreen extends Screen {
 				g.textMid(module.label, x + 12, at + rowH / 2.0F, 12.5F, Gfx.MEDIUM, Theme.TEXT);
 				ui.hit(x + 4, at, w - 8, rowH, () -> {
 					config.get(module).enabled = true;
-					selected = module;
-					toastsSelected = false;
+					selection.clear();
+					selection.add(module.name() + "#" + HudElement.WHOLE);
 					addMenu = false;
 				});
 				at += rowH;
@@ -377,7 +436,8 @@ public final class OverlayEditScreen extends Screen {
 				g.textMid("Einblendungen", x + 12, at + rowH / 2.0F, 12.5F, Gfx.MEDIUM, Theme.TEXT);
 				ui.hit(x + 4, at, w - 8, rowH, () -> {
 					MenuConfig.toastsOn = true;
-					toastsSelected = true;
+					selection.clear();
+					selection.add("toasts");
 					addMenu = false;
 				});
 			}
@@ -454,13 +514,6 @@ public final class OverlayEditScreen extends Screen {
 		MenuScreen.openWidget(p.toasts() ? null : p.element().module());
 	}
 
-	private Piece pieceOf(HudModule module) {
-		for (Piece p : pieces)
-			if (!p.toasts() && p.element().module() == module && !p.element().isSlot())
-				return p;
-		return null;
-	}
-
 	private void hint(Gfx g) {
 		String[] parts = { "Ziehen zum Verschieben", "Ecken zum Skalieren", "Zahnrad für Einstellungen" };
 		float w = 14;
@@ -497,32 +550,56 @@ public final class OverlayEditScreen extends Screen {
 		if (menuWasOpen)
 			return true;
 		int mx = (int) (event.x() / hs), my = (int) (event.y() / hs);
-		// Erst die Ecken des gewählten Widgets (Skalieren), dann die Widgets selbst (oberstes zuerst)
-		for (Piece p : pieces)
-			if (isSelected(p) && !p.toasts())
-				for (int[] c : corners(p))
-					if (mx >= c[0] - 2 && my >= c[1] - 2 && mx <= c[0] + c[2] + 2 && my <= c[1] + c[2] + 2) {
-						dragging = p;
-						resizing = true;
-						startScale = config.get(p.element().module()).scale;
-						startW = Math.max(1, p.w());
-						grabX = p.x();
-						grabY = p.y();
-						return true;
-					}
-		for (int i = pieces.size() - 1; i >= 0; i--) {
-			Piece p = pieces.get(i);
-			if (mx >= p.x() - 2 && my >= p.y() - 2 && mx < p.x() + p.w() + 2 && my < p.y() + p.h() + 2) {
-				toastsSelected = p.toasts();
-				if (!p.toasts())
-					selected = p.element().module();
-				dragging = p;
-				resizing = false;
-				grabX = mx - p.x();
-				grabY = my - p.y();
-				return true;
-			}
+		// Ecken des einzigen gewählten Widgets: Größe ändern
+		List<Piece> chosen = selectedPieces();
+		if (chosen.size() == 1 && !chosen.get(0).toasts()) {
+			Piece p = chosen.get(0);
+			for (int[] c : corners(p))
+				if (mx >= c[0] - 2 && my >= c[1] - 2 && mx <= c[0] + c[2] + 2 && my <= c[1] + c[2] + 2) {
+					dragging = p;
+					resizing = true;
+					startScale = config.get(p.element().module()).scale;
+					startW = Math.max(1, p.w());
+					grabX = p.x();
+					grabY = p.y();
+					return true;
+				}
 		}
+		// Widget unter der Maus (oberstes zuerst)
+		Piece hit = null;
+		for (int i = pieces.size() - 1; i >= 0 && hit == null; i--) {
+			Piece p = pieces.get(i);
+			if (mx >= p.x() - 2 && my >= p.y() - 2 && mx < p.x() + p.w() + 2 && my < p.y() + p.h() + 2)
+				hit = p;
+		}
+		boolean add = adding();
+		if (hit == null) {
+			// Freie Fläche: Auswahlrechteck aufziehen (wie im Windows-Explorer)
+			if (!add)
+				selection.clear();
+			marqueeBase = new java.util.LinkedHashSet<>(selection);
+			marquee = new int[] { mx, my, mx, my };
+			return true;
+		}
+		String k = key(hit);
+		if (add) {
+			if (!selection.remove(k))
+				selection.add(k);
+			if (!selection.contains(k))
+				return true;
+		} else if (!selection.contains(k)) {
+			selection.clear();
+			selection.add(k);
+		}
+		// Alle ausgewählten gemeinsam ziehen
+		dragging = hit;
+		resizing = false;
+		dragStart.clear();
+		for (Piece p : selectedPieces())
+			dragStart.put(key(p), outer(p));
+		int[] start = outer(hit);
+		grabX = mx - start[0];
+		grabY = my - start[1];
 		return true;
 	}
 
@@ -531,9 +608,22 @@ public final class OverlayEditScreen extends Screen {
 		Gfx g = Gfx.measure(width, height);
 		if (ui.dragTo(g.mx(event.x())))
 			return true;
+		int mx = (int) (event.x() / hs), my = (int) (event.y() / hs);
+		if (marquee != null) {
+			marquee[2] = mx;
+			marquee[3] = my;
+			int x0 = Math.min(marquee[0], mx), y0 = Math.min(marquee[1], my), x1 = Math.max(marquee[0], mx), y1 = Math.max(marquee[1], my);
+			selection.clear();
+			selection.addAll(marqueeBase);
+			for (Piece p : pieces) {
+				int[] o = outer(p);
+				if (o[0] < x1 && o[0] + o[2] > x0 && o[1] < y1 && o[1] + o[3] > y0)
+					selection.add(key(p));
+			}
+			return true;
+		}
 		if (dragging == null)
 			return true;
-		int mx = (int) (event.x() / hs), my = (int) (event.y() / hs);
 		if (resizing) {
 			HudConfig.Entry e = config.get(dragging.element().module());
 			int newW = Math.max(4, mx - grabX);
@@ -541,35 +631,42 @@ public final class OverlayEditScreen extends Screen {
 			e.scale = HudConfig.clampScale(scale);
 			return true;
 		}
-		int x = mx - grabX, y = my - grabY;
-		if (dragging.toasts()) {
-			moveToasts(g, x, y);
+		int[] start = dragStart.get(key(dragging));
+		if (start == null)
 			return true;
-		}
+		// Das gegriffene Stück rastet an den übrigen (nicht ausgewählten) ein, alle anderen gehen mit
 		List<int[]> others = new ArrayList<>();
 		for (Piece p : pieces)
-			if (p != dragging)
-				others.add(new int[] { p.x(), p.y(), p.w(), p.h() });
-		HudSnap.Result r = HudSnap.apply(config, x, y, dragging.w(), dragging.h(), others, vw, vh);
-		guideX = r.guideX;
-		guideY = r.guideY;
-		HudOverlay.move(config.get(dragging.element().module()), dragging.element(), r.x, r.y, dragging.w(), dragging.h(), vw, vh);
-		dragging = new Piece(dragging.element(), r.x, r.y, dragging.w(), dragging.h());
+			if (!dragStart.containsKey(key(p)))
+				others.add(outer(p));
+		HudSnap.Result r = HudSnap.apply(config, mx - grabX, my - grabY, start[2], start[3], others, vw, vh);
+		int moveX = r.x - start[0], moveY = r.y - start[1];
+		// Keins darf aus dem Bild geschoben werden
+		for (int[] box : dragStart.values()) {
+			moveX = Math.max(-box[0], Math.min(moveX, vw - box[2] - box[0]));
+			moveY = Math.max(-box[1], Math.min(moveY, vh - box[3] - box[1]));
+		}
+		guideX = r.x - start[0] == moveX ? r.guideX : -1;
+		guideY = r.y - start[1] == moveY ? r.guideY : -1;
+		for (Piece p : pieces) {
+			int[] box = dragStart.get(key(p));
+			if (box != null)
+				moveOuter(p, box[0] + moveX, box[1] + moveY);
+		}
 		return true;
 	}
 
-	/** Einblendungen verschieben: nächstgelegener Anker, Abstand in Design-Pixeln. */
-	private void moveToasts(Gfx g, int hudX, int hudY) {
+	/** Einblendungen an die Stelle (Einheiten der Widgets) legen: nächstgelegener Anker, Abstand in Design-Pixeln. */
+	private void moveToasts(Gfx g, int hudX, int hudY, int hudW, int hudH) {
 		float k = hs / g.scale;
 		int x = Math.round(hudX * k), y = Math.round(hudY * k);
-		int w = Math.round(dragging.w() * k), h = Math.round(dragging.h() * k);
+		int w = Math.round(hudW * k), h = Math.round(hudH * k);
 		int cx = x + w / 2, cy = y + h / 2;
 		int ax = cx < g.width / 3 ? 0 : cx > g.width * 2 / 3 ? 2 : 1;
 		int ay = cy < g.height / 3 ? 0 : cy > g.height * 2 / 3 ? 2 : 1;
 		MenuConfig.toastAnchor = ay * 3 + ax;
 		MenuConfig.toastX = ax == 0 ? x : ax == 1 ? x - (g.width - w) / 2 : g.width - w - x;
 		MenuConfig.toastY = ay == 0 ? y : ay == 1 ? y - (g.height - h) / 2 : g.height - h - y;
-		dragging = new Piece(null, hudX, hudY, dragging.w(), dragging.h());
 	}
 
 	@Override
@@ -577,6 +674,8 @@ public final class OverlayEditScreen extends Screen {
 		ui.release();
 		dragging = null;
 		resizing = false;
+		marquee = null;
+		dragStart.clear();
 		guideX = -1;
 		guideY = -1;
 		return true;
@@ -584,13 +683,14 @@ public final class OverlayEditScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-		if (toastsSelected) {
-			MenuConfig.toastScale = Math.max(50, Math.min(200, MenuConfig.toastScale + (vertical > 0 ? 10 : -10)));
-			return true;
-		}
-		if (selected != null) {
-			HudConfig.Entry e = config.get(selected);
-			e.scale = HudConfig.clampScale(e.scale + (vertical > 0 ? HudConfig.SCALE_STEP : -HudConfig.SCALE_STEP));
+		// Größe aller ausgewählten ändern
+		for (Piece p : selectedPieces()) {
+			if (p.toasts())
+				MenuConfig.toastScale = Math.max(50, Math.min(200, MenuConfig.toastScale + (vertical > 0 ? 10 : -10)));
+			else if (!p.element().isSlot()) {
+				HudConfig.Entry e = config.get(p.element().module());
+				e.scale = HudConfig.clampScale(e.scale + (vertical > 0 ? HudConfig.SCALE_STEP : -HudConfig.SCALE_STEP));
+			}
 		}
 		return true;
 	}
@@ -601,14 +701,29 @@ public final class OverlayEditScreen extends Screen {
 			onClose();
 			return true;
 		}
-		// Pfeiltasten schieben das gewählte Widget um einen Punkt (mit Umschalt um zehn)
+		// Strg+A: alle auswählen
+		com.mojang.blaze3d.platform.Window window = Minecraft.getInstance().getWindow();
+		boolean ctrl = InputConstants.isKeyDown(window, 341) || InputConstants.isKeyDown(window, 345);
+		if (ctrl && InputConstants.isKeyDown(window, 65)) {
+			for (Piece p : pieces)
+				selection.add(key(p));
+			return true;
+		}
+		// Pfeiltasten schieben alle ausgewählten um einen Punkt (mit Umschalt um zehn)
 		int step = event.hasShiftDown() ? 10 : 1;
 		int dx = event.isLeft() ? -step : event.isRight() ? step : 0;
 		int dy = event.isUp() ? -step : event.isDown() ? step : 0;
-		if ((dx != 0 || dy != 0) && selected != null && !toastsSelected) {
-			Piece p = pieceOf(selected);
-			if (p != null)
-				HudOverlay.move(config.get(selected), p.element(), p.x() + dx, p.y() + dy, p.w(), p.h(), vw, vh);
+		if (dx != 0 || dy != 0) {
+			List<Piece> chosen = selectedPieces();
+			for (Piece p : chosen) {
+				int[] o = outer(p);
+				dx = Math.max(-o[0], Math.min(dx, vw - o[2] - o[0]));
+				dy = Math.max(-o[1], Math.min(dy, vh - o[3] - o[1]));
+			}
+			for (Piece p : chosen) {
+				int[] o = outer(p);
+				moveOuter(p, o[0] + dx, o[1] + dy);
+			}
 			return true;
 		}
 		return true;
