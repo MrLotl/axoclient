@@ -16,6 +16,8 @@ public sealed class MainWindow
     private readonly Queue<string> _pending = new();
     private bool _pageReady;
     private bool _hiddenForGame;
+    /// <summary>Fenster für die privaten Widgets der Mod (nur Windows 10 2004 und neuer).</summary>
+    internal Overlay.PrivateOverlay? PrivateOverlay { get; }
 
     public MainWindow(AppHost host, SingleInstance single)
     {
@@ -50,6 +52,13 @@ public sealed class MainWindow
         if (File.Exists(icon))
         {
             _window.SetIconFile(icon);
+        }
+
+        // Privater Modus der Mod: eigenes Fenster über dem Spiel, das Windows aus Aufnahmen heraushält
+        if (Overlay.PrivateOverlay.Supported)
+        {
+            AxoClient.Core.Integrations.AxoModBridge.PrivateOverlay = true;
+            PrivateOverlay = new Overlay.PrivateOverlay(host);
         }
 
         _router = new MessageRouter(Send);

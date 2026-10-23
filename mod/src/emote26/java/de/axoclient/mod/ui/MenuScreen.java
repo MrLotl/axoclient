@@ -64,11 +64,27 @@ public final class MenuScreen extends Screen {
 		super(Component.literal("AxoClient"));
 	}
 
-	public static void open(Tab tab) {
+	public static MenuScreen open(Tab tab) {
 		MenuScreen screen = new MenuScreen();
 		if (tab != null)
 			screen.tab = tab;
 		Minecraft.getInstance().setScreenAndShow(screen);
+		return screen;
+	}
+
+	/** Öffnet den Overlay-Tab direkt mit den Einstellungen eines Widgets (null = Einblendungen). */
+	public static void openWidget(de.axoclient.mod.hud.HudModule module) {
+		MenuScreen screen = open(Tab.OVERLAY);
+		screen.select(Tab.OVERLAY);
+		if (module == null)
+			screen.overlay.detail.showToasts();
+		else
+			screen.overlay.detail.show(module);
+	}
+
+	/** Inhalt des aktuellen Tabs wieder von oben zeigen. */
+	void resetScroll() {
+		scroll[tab.ordinal()] = 0;
 	}
 
 	@Override
@@ -202,7 +218,10 @@ public final class MenuScreen extends Screen {
 			MenuData.Here here = MenuData.here;
 			boolean icon = MenuData.hereIcon() != null;
 			int fixed = 6 + (icon ? 22 + 8 : 6) + 8 + 7 + 12;
-			String text = g.ellipsize(here.world() ? "Offene Welt" : here.label(), 12.5F, Gfx.REGULAR, Math.min(170, room - fixed));
+			// Wo man spielt: der Name aus der Serverliste, beim Standardnamen lieber die Adresse
+			String place = here.world() ? "Offene Welt"
+				: here.name() == null || here.name().isBlank() || here.name().equalsIgnoreCase("Minecraft Server") ? here.address() : here.name();
+			String text = g.ellipsize(place, 12.5F, Gfx.REGULAR, Math.min(170, room - fixed));
 			int w = 6 + (icon ? 22 + 8 : 6) + Math.round(g.width(text, 12.5F, Gfx.REGULAR)) + 8 + 7 + 12;
 			int cx = chipRight - w;
 			g.rect(cx, cy - 16, w, 32, 8, Theme.CHIP);
@@ -296,6 +315,11 @@ public final class MenuScreen extends Screen {
 	}
 
 	void select(Tab t) {
+		// Nochmal auf "Overlay": zurück zur Liste
+		if (t == Tab.OVERLAY && tab == Tab.OVERLAY && overlay.detail.open()) {
+			overlay.detail.close();
+			resetScroll();
+		}
 		tab = t;
 		lastTab = t;
 	}
@@ -352,7 +376,10 @@ public final class MenuScreen extends Screen {
 		if (event.isEscape()) {
 			if (join.open())
 				join.close();
-			else
+			else if (tab == Tab.OVERLAY && overlay.detail.open()) {
+				overlay.detail.close();
+				resetScroll();
+			} else
 				onClose();
 			return true;
 		}

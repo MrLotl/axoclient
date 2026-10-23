@@ -28,8 +28,6 @@ import java.util.Map;
  * an den Ecken skalieren; rechts bzw. links die Einstellungen des gewählten Widgets.
  */
 public final class OverlayEditScreen extends Screen {
-	private static final int[] SWATCHES = { 0xF2F2F2, 0xF5C542, 0x10B981, 0xEC4899, 0xA78BFA, 0x6FA8DC };
-	private static final String[] SWATCH_NAMES = { "Weiß", "Gelb", "Mint", "Rosa", "Lila", "Blau" };
 
 	/** Ein greifbares Stück im Bild: Widget oder die Einblendungen (module == null). */
 	private record Piece(HudElement element, int x, int y, int w, int h) {
@@ -164,7 +162,7 @@ public final class OverlayEditScreen extends Screen {
 		try {
 			ui.begin(g, g.mx(mouseX), g.my(mouseY));
 			toolbar(g);
-			inspector(g);
+			gear(g, mouseX, mouseY);
 			hint(g);
 			menus(g);
 			ui.finish();
@@ -386,223 +384,6 @@ public final class OverlayEditScreen extends Screen {
 		}
 	}
 
-	// ---------- Einstellungen des gewählten Widgets ----------
-
-	private void inspector(Gfx g) {
-		if (selected == null && !toastsSelected)
-			return;
-		int anchor;
-		if (toastsSelected)
-			anchor = MenuConfig.toastAnchor;
-		else {
-			HudConfig.Entry e = config.get(selected);
-			anchor = Math.max(0, Math.min(8, e.anchorY * 3 + e.anchorX));
-		}
-		boolean rightSide = anchor % 3 == 2;
-		int w = 268;
-		int x = rightSide ? 230 : g.width - 16 - w;
-		int y = toastsSelected ? 76 : 130;
-		int h = toastsSelected ? inspectorToasts(g, x, y, w, false) : inspectorWidget(g, x, y, w, false);
-		g.shadow(x, y, w, h, 14, 18, 14, 0.55F);
-		g.box(x, y, w, h, 14, Theme.alpha(0xFF242424, 0.97F), Theme.WINDOW_LINE);
-		ui.block(x, y, w, h);
-		if (toastsSelected)
-			inspectorToasts(g, x, y, w, true);
-		else
-			inspectorWidget(g, x, y, w, true);
-	}
-
-	/** Zeichnet (draw) bzw. misst nur die Einstellungen eines Widgets; gibt die Höhe zurück. */
-	private int inspectorWidget(Gfx g, int x, int y, int w, boolean draw) {
-		HudConfig.Entry e = config.get(selected);
-		int px = x + 16, pw = w - 32;
-		int at = y + 16;
-		if (draw) {
-			MenuScreen.heading(g, "Widget", px, at + 6);
-			g.textMid(g.ellipsize(selected.label, 16, Gfx.SEMIBOLD, pw - 50), px, at + 25, 16, Gfx.SEMIBOLD, Theme.TEXT_STRONG);
-			g.toggle(px + pw - 36, at + 8, e.enabled);
-			ui.hit(px + pw - 36, at + 8, 36, 20, () -> e.enabled = !e.enabled);
-		}
-		at += 36 + 16;
-		at = visibility(g, px, at, pw, draw, e.privat, priv -> {
-			String reason = priv ? HudPrivacy.reasonAgainst(config, selected) : null;
-			if (reason == null)
-				e.privat = priv;
-		}, e.privat ? "Zeichnet der Launcher in einem eigenen Fenster. Nicht sichtbar in Discord, OBS und Screenshots."
-			: "Wird ins Spielbild gezeichnet und ist im Stream und auf Screenshots zu sehen.");
-		at += 16;
-
-		// Farbe
-		if (draw)
-			g.textMid("Farbe", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
-		at += 14 + 8;
-		if (draw) {
-			int sx = px;
-			for (int i = 0; i < SWATCHES.length; i++) {
-				int rgb = SWATCHES[i];
-				boolean on = (e.textRgb & 0xFFFFFF) == rgb;
-				if (on)
-					g.rect(sx - 3, at - 3, 36, 36, 10, Theme.ACCENT_LINE);
-				if (on)
-					g.rect(sx - 1, at - 1, 32, 32, 9, 0xFF242424);
-				g.rect(sx, at, 30, 30, 8, 0xFF000000 | rgb);
-				int pick = rgb;
-				ui.hit(sx, at, 30, 30, () -> e.textRgb = pick);
-				sx += 30 + 8;
-			}
-		}
-		at += 30 + 16;
-
-		// Größe
-		at = slider(g, px, at, pw, draw, "Größe", e.scale + " %", (e.scale - 50) / 150.0F, t -> {
-			int value = Math.round((50 + t * 150) / 10.0F) * 10;
-			e.scale = HudConfig.clampScale(value);
-		});
-		at += 16;
-
-		// Verankert
-		at = anchorRow(g, px, at, pw, draw, Math.max(0, Math.min(8, e.anchorY * 3 + e.anchorX)), cell -> setAnchor(selected, cell));
-		at += 16;
-
-		// Hintergrund
-		if (draw) {
-			g.textMid("Hintergrund", px, at + 10, 13, Gfx.REGULAR, Theme.TEXT_SOFT);
-			String value = e.background ? "Dunkel, " + e.backgroundAlpha + " %" : "Aus";
-			g.textRight(value, px + pw - 36 - 10, at + 10, 12, Gfx.REGULAR, Theme.MUTED_2);
-			g.toggle(px + pw - 36, at, e.background);
-			ui.hit(px, at, pw, 20, () -> e.background = !e.background);
-		}
-		at += 20;
-
-		// Ecken der Hintergrundfläche: von eckig bis rund, in Pixelstufen wie Minecraft
-		if (e.background) {
-			at += 12;
-			int corner = HudConfig.clampCorner(e.corner);
-			at = slider(g, px, at, pw, draw, "Ecken", corner == 0 ? "Eckig" : corner + " px",
-				(corner - HudConfig.MIN_CORNER) / (float) (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER),
-				t -> e.corner = HudConfig.clampCorner(HudConfig.MIN_CORNER + Math.round(t * (HudConfig.MAX_CORNER - HudConfig.MIN_CORNER))));
-		}
-
-		// Mehr: Format, Beschriftung, Schatten
-		if (selected.variants != null && selected.variants.length > 1) {
-			at += 12;
-			if (draw) {
-				g.textMid("Format", px, at + 10, 13, Gfx.REGULAR, Theme.TEXT_SOFT);
-				String value = selected.variants[Math.min(e.variant, selected.variants.length - 1)];
-				float vw = g.width(value, 12, Gfx.MEDIUM);
-				int bw = Math.round(vw) + 34;
-				int bx = px + pw - bw;
-				boolean hover = ui.hover(bx, at - 2, bw, 24);
-				g.rect(bx, at - 2, bw, 24, 7, hover ? Theme.BUTTON_HOVER : Theme.ROW);
-				g.textMid(value, bx + 10, at + 10, 12, Gfx.MEDIUM, Theme.TEXT);
-				g.icon(Icons.CHEVRON_RIGHT, bx + bw - 20, at + 4, 12, Theme.TEXT_DIM);
-				ui.hit(bx, at - 2, bw, 24, () -> e.variant = (e.variant + 1) % selected.variants.length);
-			}
-			at += 20;
-		}
-		at += 12;
-		if (draw) {
-			g.textMid("Schatten", px, at + 10, 13, Gfx.REGULAR, Theme.TEXT_SOFT);
-			g.toggle(px + pw - 36, at, e.shadow);
-			ui.hit(px, at, pw, 20, () -> e.shadow = !e.shadow);
-		}
-		at += 20;
-		return at + 16 - y;
-	}
-
-	private int inspectorToasts(Gfx g, int x, int y, int w, boolean draw) {
-		int px = x + 16, pw = w - 32;
-		int at = y + 16;
-		if (draw) {
-			MenuScreen.heading(g, "Widget", px, at + 6);
-			g.textMid("Einblendungen", px, at + 25, 16, Gfx.SEMIBOLD, Theme.TEXT_STRONG);
-			g.toggle(px + pw - 36, at + 8, MenuConfig.toastsOn);
-			ui.hit(px + pw - 36, at + 8, 36, 20, () -> MenuConfig.toastsOn = !MenuConfig.toastsOn);
-		}
-		at += 36 + 13;
-		at = visibility(g, px, at, pw, draw, MenuConfig.toastsPrivate, priv -> MenuConfig.toastsPrivate = priv,
-			MenuConfig.toastsPrivate ? "Standard. Einladungen und Namen deiner Freunde landen nicht im Stream."
-				: "Achtung: Einladungen und Namen deiner Freunde sind im Stream zu sehen.");
-		at += 13;
-		if (draw)
-			g.textMid("Neue Einblendungen", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
-		at += 14 + 8;
-		if (draw) {
-			g.box(px, at, pw, 34, 9, Theme.WELL, 0xFF343434);
-			int half = (pw - 9) / 2;
-			g.segment("Nach unten", Icons.ARROW_DOWN, px + 3, at + 3, half, 28, 7, MenuConfig.toastsDown, 12);
-			g.segment("Nach oben", Icons.ARROW_UP, px + 6 + half, at + 3, half, 28, 7, !MenuConfig.toastsDown, 12);
-			ui.hit(px + 3, at + 3, half, 28, () -> MenuConfig.toastsDown = true);
-			ui.hit(px + 6 + half, at + 3, half, 28, () -> MenuConfig.toastsDown = false);
-		}
-		at += 34 + 8;
-		if (draw)
-			MenuScreen.paragraph(g, "Passt sich beim Verankern automatisch an, z. B. unten verankert = nach oben.", px, at, pw, 11.5F,
-				Gfx.REGULAR, Theme.MUTED_2, 16.7F, false);
-		at += 34 + 13;
-		at = slider(g, px, at, pw, draw, "Anzeigedauer", MenuConfig.toastSeconds + " s", (MenuConfig.toastSeconds - 3) / 12.0F,
-			t -> MenuConfig.toastSeconds = Math.round(3 + t * 12));
-		at += 13;
-		if (draw)
-			g.textMid("Was erscheint", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
-		at += 14 + 6;
-		for (String[] kind : MenuConfig.TOAST_KINDS) {
-			if (draw) {
-				boolean on = MenuConfig.TOAST_KIND_ON.getOrDefault(kind[0], true);
-				if (on)
-					g.accent(px, at + 5, 15, 15, 4);
-				else
-					g.box(px, at + 5, 15, 15, 4, Theme.WELL, 0xFF555555);
-				if (on)
-					g.icon(Icons.CHECK_BOLD, px + 2.5F, at + 7.5F, 10, Theme.WHITE);
-				g.textMid(kind[1], px + 24, at + 13, 12.5F, Gfx.REGULAR, Theme.TEXT_SOFT);
-				ui.hit(px, at, pw, 26, () -> MenuConfig.TOAST_KIND_ON.put(kind[0], !MenuConfig.TOAST_KIND_ON.getOrDefault(kind[0], true)));
-			}
-			at += 26 + 4;
-		}
-		at += 9;
-		at = slider(g, px, at, pw, draw, "Größe", MenuConfig.toastScale + " %", (MenuConfig.toastScale - 50) / 150.0F,
-			t -> MenuConfig.toastScale = Math.max(50, Math.min(200, Math.round((50 + t * 150) / 10.0F) * 10)));
-		at += 13;
-		at = anchorRow(g, px, at, pw, draw, MenuConfig.toastAnchor, cell -> {
-			MenuConfig.toastAnchor = cell;
-			MenuConfig.toastX = 12;
-			MenuConfig.toastY = 12;
-			MenuConfig.toastsDown = cell / 3 != 2;
-		});
-		return at + 16 - y;
-	}
-
-	private interface Pick {
-		void pick(boolean priv);
-	}
-
-	/** "Sichtbar für": Im Spiel / Privat mit Erklärung; gibt die neue Höhe zurück. */
-	private int visibility(Gfx g, int px, int at, int pw, boolean draw, boolean priv, Pick pick, String hint) {
-		boolean privacy = HudPrivacy.available();
-		boolean shownPriv = priv && privacy;
-		if (draw)
-			g.textMid("Sichtbar für", px, at + 7, 12, Gfx.SEMIBOLD, Theme.MUTED);
-		at += 14 + 8;
-		if (draw) {
-			g.box(px, at, pw, 36, 9, Theme.WELL, 0xFF343434);
-			int half = (pw - 9) / 2;
-			g.segment("Im Spiel", Icons.EYE, px + 3, at + 3, half, 30, 7, !shownPriv, 12);
-			g.segment("Privat", Icons.EYE_OFF, px + 6 + half, at + 3, half, 30, 7, shownPriv, 12);
-			if (!privacy)
-				g.rect(px + 6 + half, at + 3, half, 30, 7, Theme.alpha(Theme.WELL, 0.55F));
-			ui.hit(px + 3, at + 3, half, 30, () -> pick.pick(false));
-			if (privacy)
-				ui.hit(px + 6 + half, at + 3, half, 30, () -> pick.pick(true));
-		}
-		at += 36 + 8;
-		String text = privacy ? hint : "Privat braucht das Overlay-Fenster des Launchers. Bis es das gibt, steht alles im Spielbild.";
-		int lines = MenuScreen.wrap(g, text, 11.5F, Gfx.REGULAR, pw).size();
-		if (draw)
-			MenuScreen.paragraph(g, text, px, at, pw, 11.5F, Gfx.REGULAR, Theme.MUTED_2, 16.7F, false);
-		return at + Math.round(lines * 16.7F);
-	}
-
 	private interface Value {
 		void set(float t);
 	}
@@ -625,42 +406,52 @@ public final class OverlayEditScreen extends Screen {
 		return at + 16;
 	}
 
-	private interface Cell {
-		void set(int cell);
-	}
+	/** Widget, über dem gerade das Zahnrad steht (bleibt, solange die Maus auf Widget oder Zahnrad ist). */
+	private Piece gearOn;
 
-	/** "Verankert" mit Namen und 3 × 3-Auswahl; gibt die neue Höhe zurück. */
-	private int anchorRow(Gfx g, int px, int at, int pw, boolean draw, int anchor, Cell set) {
-		if (draw) {
-			g.textMid("Verankert", px, at + 12, 12, Gfx.SEMIBOLD, Theme.MUTED);
-			String name = OverlayTab.ANCHOR_NAMES[anchor];
-			g.textMid(Character.toUpperCase(name.charAt(0)) + name.substring(1), px, at + 31, 13, Gfx.REGULAR, Theme.TEXT);
-			int gx = px + pw - 70;
-			g.box(gx, at, 70, 70, 8, Theme.WELL, 0xFF343434);
-			for (int i = 0; i < 9; i++) {
-				int cx = gx + 4 + (i % 3) * 21, cy = at + 4 + (i / 3) * 21;
-				boolean on = i == anchor;
-				boolean hover = ui.hover(cx, cy, 18, 18);
-				if (on)
-					g.accent(cx, cy, 18, 18, 4);
-				else
-					g.rect(cx, cy, 18, 18, 4, hover ? 0xFF4A4A4A : Theme.BUTTON);
-				int cell = i;
-				ui.hit(cx, cy, 18, 18, () -> set.set(cell));
-			}
+	/** Zahnrad oben rechts am Widget unter der Maus: öffnet dessen Einstellungen im Axo-Menü. */
+	private void gear(Gfx g, int mouseX, int mouseY) {
+		if (dragging != null || profileMenu || addMenu || gridMenu) {
+			gearOn = null;
+			return;
 		}
-		return at + 70;
+		float k = hs / g.scale; // Einheiten der Widgets → Design-Pixel
+		int mx = g.mx(mouseX), my = g.my(mouseY);
+		Piece over = null;
+		for (int i = pieces.size() - 1; i >= 0 && over == null; i--) {
+			Piece p = pieces.get(i);
+			int x0 = Math.round(p.x() * k), y0 = Math.round(p.y() * k), x1 = Math.round((p.x() + p.w()) * k), y1 = Math.round((p.y() + p.h()) * k);
+			// Etwas großzügiger, damit man vom Widget zum Zahnrad fahren kann
+			if (mx >= x0 - 6 && my >= y0 - 20 && mx < x1 + 16 && my < y1 + 6 && (gearOn == null || samePiece(gearOn, p)
+				|| mx >= x0 && my >= y0 && mx < x1 && my < y1))
+				over = p;
+		}
+		gearOn = over;
+		if (over == null)
+			return;
+		int size = 24;
+		int bx = Math.round((over.x() + over.w()) * k) - size / 2 + 4, by = Math.round(over.y() * k) - size / 2 - 6;
+		boolean hover = ui.hover(bx, by, size, size);
+		g.shadow(bx, by, size, size, size / 2, 8, 4, 0.4F);
+		if (hover)
+			g.accent(bx, by, size, size, size / 2);
+		else
+			g.rect(bx, by, size, size, size / 2, 0xFF2C2C2C);
+		g.outline(bx, by, size, size, size / 2, hover ? Theme.alpha(0xFFFFFFFF, 0.25F) : Theme.WINDOW_LINE);
+		g.icon(Icons.SETTINGS, bx + 5, by + 5, 14, Theme.WHITE);
+		Piece target = over;
+		ui.hit(bx, by, size, size, () -> openSettings(target));
 	}
 
-	/** Neue Verankerung, das Widget bleibt dabei an seiner Stelle. */
-	private void setAnchor(HudModule module, int cell) {
-		HudConfig.Entry e = config.get(module);
-		Piece p = pieceOf(module);
-		e.autoAnchor = false;
-		e.anchorX = cell % 3;
-		e.anchorY = cell / 3;
-		if (p != null)
-			HudOverlay.move(e, p.element(), p.x(), p.y(), p.w(), p.h(), vw, vh);
+	private static boolean samePiece(Piece a, Piece b) {
+		return a.toasts() ? b.toasts() : !b.toasts() && a.element().module() == b.element().module() && a.element().slot() == b.element().slot();
+	}
+
+	/** Bearbeiten beenden (speichern) und die Einstellungen des Widgets im Menü zeigen. */
+	private void openSettings(Piece p) {
+		config.save();
+		MenuConfig.save();
+		MenuScreen.openWidget(p.toasts() ? null : p.element().module());
 	}
 
 	private Piece pieceOf(HudModule module) {
@@ -671,7 +462,7 @@ public final class OverlayEditScreen extends Screen {
 	}
 
 	private void hint(Gfx g) {
-		String[] parts = { "Ziehen zum Verschieben", "Ecken zum Skalieren", "Rastet am Raster und an Widgets ein" };
+		String[] parts = { "Ziehen zum Verschieben", "Ecken zum Skalieren", "Zahnrad für Einstellungen" };
 		float w = 14;
 		for (String p : parts)
 			w += g.width(p, 12, Gfx.REGULAR) + 28;

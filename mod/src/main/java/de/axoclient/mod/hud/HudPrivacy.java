@@ -32,6 +32,9 @@ public final class HudPrivacy {
 	/** Ob das Fenster des Launchers gerade etwas zeigt (dann muss es beim Wegfallen geleert werden). */
 	private static boolean showing;
 
+	/** Ob im Spiel gerade ein Menü offen ist (setzt die Version beim Zeichnen): dann bleibt das Overlay-Fenster leer. */
+	public static volatile boolean screenOpen;
+
 	/** Zeitpunkt des letzten Bildes, das das Anzeigen-Menü gezeichnet hat. */
 	private static volatile long editorFrame;
 
@@ -83,6 +86,8 @@ public final class HudPrivacy {
 	 */
 	public static void send(HudConfig config, List<HudElement> secret, HudPainter measure,
 						   Map<HudModule, String> texts, int width, int height) {
+		if (screenOpen)
+			secret = List.of();
 		// Nichts Privates und das Fenster ist schon leer: gar nicht erst mit dem Launcher reden
 		if (secret.isEmpty() && !showing)
 			return;
@@ -217,6 +222,12 @@ public final class HudPrivacy {
 		@Override
 		public int[] scoreboardSize() {
 			return measure.scoreboardSize();
+		}
+
+		/** Bildschirmpunkte je Einheit wie im Spiel: so werden Ecken und feine Linien genauso gezeichnet. */
+		@Override
+		public float pixelScale() {
+			return measure.pixelScale() * scale;
 		}
 	}
 }

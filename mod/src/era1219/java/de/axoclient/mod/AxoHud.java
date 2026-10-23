@@ -165,6 +165,8 @@ public final class AxoHud {
 		// (z.B. Chunk-Grenzen mit F3+G) läuft; gemeint ist hier aber nur der sichtbare F3-Text.
 		if (client.player == null || client.options.hudHidden || client.debugHudEntryList.isF3Enabled())
 			return;
+		// Ist ein Menü offen, zeigt auch das private Overlay-Fenster nichts (es läge sonst über dem Menü)
+		de.axoclient.mod.hud.HudPrivacy.screenOpen = client.currentScreen != null;
 		HudOverlay.draw(config(), new Painter(context), texts(),
 			context.getScaledWindowWidth(), context.getScaledWindowHeight());
 	}

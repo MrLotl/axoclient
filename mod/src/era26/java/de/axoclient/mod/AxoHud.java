@@ -166,6 +166,8 @@ public final class AxoHud {
 		// eingeschaltet ist - dann wäre das Overlay dauerhaft weg, ohne dass man den Grund sieht.
 		if (client.player == null || client.debugEntries.isOverlayVisible())
 			return;
+		// Ist ein Menü offen, zeigt auch das private Overlay-Fenster nichts (es läge sonst über dem Menü)
+		de.axoclient.mod.hud.HudPrivacy.screenOpen = client.gui.screen() != null;
 		if (!MenuHooks.hideHud) {
 			float s = hudScale();
 			Painter painter = hudPainter(graphics);

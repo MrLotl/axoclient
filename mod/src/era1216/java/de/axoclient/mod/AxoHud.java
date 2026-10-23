@@ -163,6 +163,8 @@ public final class AxoHud {
 		MinecraftClient client = MinecraftClient.getInstance();
 		if (client.player == null || client.options.hudHidden || client.getDebugHud().shouldShowDebugHud())
 			return;
+		// Ist ein Menü offen, zeigt auch das private Overlay-Fenster nichts (es läge sonst über dem Menü)
+		de.axoclient.mod.hud.HudPrivacy.screenOpen = client.currentScreen != null;
 		HudOverlay.draw(config(), new Painter(context), texts(),
 			context.getScaledWindowWidth(), context.getScaledWindowHeight());
 	}

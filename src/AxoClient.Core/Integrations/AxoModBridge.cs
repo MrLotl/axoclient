@@ -17,11 +17,19 @@ namespace AxoClient.Core.Integrations;
 /// </summary>
 public sealed class AxoModBridge : IGameLaunchHook, IAsyncDisposable
 {
+    /// <summary>Funktionen, die der Launcher der Mod per "welcome" anbietet.</summary>
+    private static readonly string[] BaseFeatures = ["emotes", "menu", "social", "capes", "customEmotes", "join", "toasts"];
+
     /// <summary>
-    /// Funktionen, die der Launcher der Mod per "welcome" anbietet. "privateOverlay" erst aufnehmen, wenn es ein
-    /// Overlay-Fenster gibt, das die "hud"-Nachrichten der Mod zeichnet.
+    /// Ob es ein Overlay-Fenster gibt, das die "hud"-Nachrichten der Mod (private Widgets) zeichnet. Setzt die App beim
+    /// Start; nur dann bietet der Launcher "privateOverlay" an.
     /// </summary>
-    private static readonly string[] Features = ["emotes", "menu", "social", "capes", "customEmotes", "join", "toasts"];
+    public static bool PrivateOverlay { get; set; }
+
+    private static string[] Features => PrivateOverlay ? [.. BaseFeatures, "privateOverlay"] : BaseFeatures;
+
+    /// <summary>Größte Nachricht der Mod (Bilder des privaten Overlays können ein paar hundert KB groß sein).</summary>
+    private const int MaxMessageBytes = 1024 * 1024;
 
     private readonly ConcurrentDictionary<string, string> _tokens = new();
     private readonly ConcurrentDictionary<string, WebSocket> _sockets = new();
@@ -146,16 +154,32 @@ public sealed class AxoModBridge : IGameLaunchHook, IAsyncDisposable
             using var socket = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, TimeSpan.FromSeconds(20));
             _sockets[instance] = socket;
             var buffer = new byte[64 * 1024];
+            using var message = new MemoryStream();
+            var tooLarge = false;
             while (socket.State == WebSocketState.Open && !ct.IsCancellationRequested)
             {
                 var result = await socket.ReceiveAsync(buffer, ct);
                 if (result.MessageType == WebSocketMessageType.Close)
                     break;
-                if (!result.EndOfMessage || result.MessageType != WebSocketMessageType.Text)
-                    continue; // zu große Nachrichten ignorieren
+                // Teilstücke zusammensetzen; zu große Nachrichten verwerfen
+                if (!tooLarge)
+                {
+                    if (message.Length + result.Count > MaxMessageBytes)
+                        tooLarge = true;
+                    else
+                        await message.WriteAsync(buffer.AsMemory(0, result.Count), ct);
+                }
+                if (!result.EndOfMessage)
+                    continue;
+                var skip = tooLarge || result.MessageType != WebSocketMessageType.Text;
+                var length = (int)message.Length;
+                message.SetLength(0);
+                tooLarge = false;
+                if (skip)
+                    continue;
                 try
                 {
-                    using var doc = JsonDocument.Parse(buffer.AsMemory(0, result.Count));
+                    using var doc = JsonDocument.Parse(message.GetBuffer().AsMemory(0, length));
                     var type = doc.RootElement.GetProperty("type").GetString();
                     if (type == "hello")
                         await SendAsync(instance, "welcome", new { protocol = 2, features = Features });

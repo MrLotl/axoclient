@@ -14,14 +14,31 @@ final class OverlayTab {
 	static final String[] ANCHOR_NAMES = { "oben links", "oben Mitte", "oben rechts", "Mitte links", "Mitte", "Mitte rechts",
 		"unten links", "unten Mitte", "unten rechts" };
 
+	/** Die Widgets nach Themen; was hier fehlt, landet unter "Weitere". */
+	private record Group(String name, HudModule... modules) {}
+
+	private static final Group[] GROUPS = {
+		new Group("Leistung", HudModule.FPS, HudModule.PING, HudModule.CPU, HudModule.GPU, HudModule.MEMORY),
+		new Group("Position und Welt", HudModule.COORDS, HudModule.DIRECTION, HudModule.SPEED, HudModule.BIOME, HudModule.CHUNK,
+			HudModule.LIGHT),
+		new Group("Zeit", HudModule.TIME, HudModule.WORLD_TIME),
+		new Group("Kampf und Steuerung", HudModule.CPS, HudModule.KEYS, HudModule.ARMOR, HudModule.EFFECTS),
+		new Group("Server", HudModule.SCOREBOARD)
+	};
+
 	private final MenuScreen m;
 	private boolean dirty;
+	/** Detailansicht eines Widgets (statt der Liste), siehe {@link WidgetDetail}. */
+	final WidgetDetail detail;
 
 	OverlayTab(MenuScreen m) {
 		this.m = m;
+		this.detail = new WidgetDetail(m);
 	}
 
 	int render(Gfx g, int x, int y, int w, int h) {
+		if (detail.open())
+			return detail.render(g, x, y, w, h);
 		Ui ui = m.ui;
 		HudConfig config = AxoHud.config();
 
@@ -69,44 +86,68 @@ final class OverlayTab {
 			break;
 		}
 
-		// Widgets
-		int at = y + 30 + 16;
+		// Widgets, nach Themen
+		int at = y + 30 + 10;
 		boolean privacy = HudPrivacy.available();
-		for (HudModule module : HudModule.values()) {
-			HudConfig.Entry entry = config.get(module);
-			row(g, x, at, w, module.label, ANCHOR_NAMES[Math.max(0, Math.min(8, entry.anchorY * 3 + entry.anchorX))], entry.enabled,
-				entry.privat && privacy, privacy, () -> {
-					entry.enabled = !entry.enabled;
-					dirty = true;
-				}, priv -> {
-					if (priv && !privacy) {
-						m.notice("Privat braucht das Overlay-Fenster des Launchers – noch nicht verfügbar", null, null);
-						return;
-					}
-					String reason = priv ? HudPrivacy.reasonAgainst(config, module) : null;
-					if (reason != null) {
-						m.notice(reason, null, null);
-						return;
-					}
-					entry.privat = priv;
-					dirty = true;
-				});
-			at += 40 + 4;
+		java.util.Set<HudModule> listed = java.util.EnumSet.noneOf(HudModule.class);
+		for (Group group : GROUPS)
+			java.util.Collections.addAll(listed, group.modules());
+		java.util.List<HudModule> rest = new java.util.ArrayList<>();
+		for (HudModule module : HudModule.values())
+			if (!listed.contains(module))
+				rest.add(module);
+		for (int gi = 0; gi <= GROUPS.length; gi++) {
+			String name = gi < GROUPS.length ? GROUPS[gi].name() : "Weitere";
+			java.util.List<HudModule> modules = gi < GROUPS.length ? java.util.List.of(GROUPS[gi].modules()) : rest;
+			boolean server = gi == GROUPS.length - 1;
+			if (modules.isEmpty() && !server)
+				continue;
+			at += 16;
+			MenuScreen.heading(g, name, x, at + 7);
+			at += 14 + 8;
+			for (HudModule module : modules) {
+				HudConfig.Entry entry = config.get(module);
+				row(g, x, at, w, module.label, ANCHOR_NAMES[Math.max(0, Math.min(8, entry.anchorY * 3 + entry.anchorX))], entry.enabled,
+					entry.privat && privacy, privacy, () -> {
+						entry.enabled = !entry.enabled;
+						dirty = true;
+					}, priv -> {
+						if (priv && !privacy) {
+							m.notice("Privat braucht den AxoClient-Launcher – Spiel über den Launcher starten", null, null);
+							return;
+						}
+						String reason = priv ? HudPrivacy.reasonAgainst(config, module) : null;
+						if (reason != null) {
+							m.notice(reason, null, null);
+							return;
+						}
+						entry.privat = priv;
+						dirty = true;
+					}, () -> open(module));
+				at += 40 + 4;
+			}
+			// Einblendungen sind ein eigenes Widget des Menüs und gehören zum Server
+			if (server) {
+				row(g, x, at, w, "Einblendungen", ANCHOR_NAMES[MenuConfig.toastAnchor], MenuConfig.toastsOn, MenuConfig.toastsPrivate && privacy,
+					privacy, () -> {
+						MenuConfig.toastsOn = !MenuConfig.toastsOn;
+						MenuConfig.save();
+					}, priv -> {
+						if (priv && !privacy) {
+							m.notice("Privat braucht den AxoClient-Launcher – Spiel über den Launcher starten", null, null);
+							return;
+						}
+						MenuConfig.toastsPrivate = priv;
+						MenuConfig.save();
+					}, () -> {
+						closed();
+						detail.showToasts();
+						m.resetScroll();
+					});
+				at += 40 + 4;
+			}
 		}
-		// Einblendungen sind ein eigenes Widget des Menüs
-		row(g, x, at, w, "Einblendungen", ANCHOR_NAMES[MenuConfig.toastAnchor], MenuConfig.toastsOn, MenuConfig.toastsPrivate && privacy, privacy,
-			() -> {
-				MenuConfig.toastsOn = !MenuConfig.toastsOn;
-				MenuConfig.save();
-			}, priv -> {
-				if (priv && !privacy) {
-					m.notice("Privat braucht das Overlay-Fenster des Launchers – noch nicht verfügbar", null, null);
-					return;
-				}
-				MenuConfig.toastsPrivate = priv;
-				MenuConfig.save();
-			});
-		at += 40 + 16;
+		at += 12;
 
 		// In den Bearbeiten-Modus
 		boolean hover = ui.hover(x, at, w, 48);
@@ -137,15 +178,25 @@ final class OverlayTab {
 		void pick(boolean priv);
 	}
 
+	/** Detailansicht eines Widgets öffnen. */
+	void open(HudModule module) {
+		closed();
+		detail.show(module);
+		m.resetScroll();
+	}
+
 	private void row(Gfx g, int x, int y, int w, String name, String where, boolean on, boolean priv, boolean privacy, Runnable toggle,
-					 Choice choice) {
+					 Choice choice, Runnable details) {
 		Ui ui = m.ui;
 		int segW = 170;
-		int sx = x + w - 6 - segW;
-		g.rect(x, y, w, 40, 10, Theme.ROW);
-		// Ganze Zeile (bis zur Auswahl rechts) schaltet ein und aus
-		ui.hit(x, y, sx - x - 4, 40, toggle);
+		int sx = x + w - 6 - 26 - segW;
+		boolean hover = ui.hover(x, y, w, 40);
+		g.rect(x, y, w, 40, 10, hover ? Theme.BUTTON_2 : Theme.ROW);
+		// Zeile öffnet die Einstellungen, der Schalter schaltet ein und aus
+		ui.hit(x, y, w, 40, details);
+		ui.hit(x + 6, y + 4, 36 + 12, 32, toggle);
 		g.toggle(x + 12, y + 10, on);
+		g.icon(Icons.CHEVRON_RIGHT, x + w - 6 - 18, y + 13, 14, hover ? Theme.TEXT_SOFT : Theme.MUTED_3);
 		g.textMid(name, x + 12 + 36 + 12, y + 20, 13.5F, Gfx.MEDIUM, on ? Theme.TEXT : Theme.MUTED_2);
 		g.textRight(where, sx - 12, y + 20, 12, Gfx.REGULAR, Theme.MUTED_2);
 		g.rect(sx, y + 4, segW, 32, 8, Theme.TRACK);
