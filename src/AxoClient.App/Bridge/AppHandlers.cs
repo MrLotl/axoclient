@@ -21,6 +21,9 @@ public static partial class Handlers
 
     private sealed record TextData(string Text);
 
+    // Quellbild vor dem Zuschnitt; gespeichert wird später nur das kleine zugeschnittene Ergebnis
+    private const long MaxPickedImageBytes = 25L * 1024 * 1024;
+
     private static void RegisterApp(MessageRouter r, HandlerContext ctx)
     {
         var host = ctx.Host;
@@ -126,6 +129,21 @@ public static partial class Handlers
             }, filters, d.Multi);
             return files.Where(File.Exists).Select(f => new { id = ctx.Files.Add(f), name = Path.GetFileName(f), size = new FileInfo(f).Length })
                 .ToList();
+        });
+
+        // Bild zum Zuschneiden: nativ gewählt, damit die Auswahl zum Launcher-Fenster gehört und nicht dahinter aufgeht
+        r.On("dialog.openImage", async ct =>
+        {
+            var files = await ctx.Window.OpenFileAsync("Bild auswählen", [("Bilder (.png, .jpg)", ["*.png", "*.jpg", "*.jpeg"])], false);
+            var path = files.FirstOrDefault(File.Exists);
+            if (path == null)
+                return null;
+            if (new FileInfo(path).Length > MaxPickedImageBytes)
+                throw new AxoException("errors.fileTooLarge");
+            var bytes = await File.ReadAllBytesAsync(path, ct);
+            if (!AxoClient.Core.Instances.ImageFormats.IsPngOrJpeg(bytes))
+                throw new AxoException("errors.invalidImage");
+            return new { name = Path.GetFileName(path), base64 = Convert.ToBase64String(bytes) };
         });
 
         r.On<SaveFileData>("dialog.saveFile", async (d, _) =>
