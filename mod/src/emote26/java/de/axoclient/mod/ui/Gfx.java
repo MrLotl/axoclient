@@ -5,15 +5,17 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix3x2fStack;
 
 /**
  * Zeichnen in "Design-Pixeln": dieselben Maße wie im Mockup (1280 × 800), damit das Menü immer gleich viel Platz
  * einnimmt. Gezeichnet wird aber in echten Bildschirmpunkten: jede Kante wird auf ganze Punkte gerundet, Ecken und
- * Symbole liegen 1:1 auf dem Raster, und die Schrift (Inter in vier Stärken) wird in Viertelstufen genau in der Größe
- * gerastert, in der sie erscheint. So bleibt alles scharf, auch wenn ein Design-Pixel z. B. 1,35 Punkte groß ist.
+ * Symbole liegen 1:1 auf dem Raster, und die Schrift ({@link TextRaster}) wird genau in der Größe gerastert, in der sie
+ * erscheint. So bleibt alles scharf, auch wenn ein Design-Pixel z. B. 1,35 Punkte groß ist.
+ * <p>
+ * Flächen, Rahmen und Schatten kommen aus wenigen Neun-Teile-Bildern ({@link Shapes}); gleiche Bilder hintereinander
+ * fasst Minecraft zu einem Zeichenaufruf zusammen. Jede Textzeile ist ein einziges Viereck.
  */
 public final class Gfx {
 	public static final float REF_WIDTH = 1280;
@@ -23,18 +25,6 @@ public final class Gfx {
 	public static final int MEDIUM = 500;
 	public static final int SEMIBOLD = 600;
 	public static final int BOLD = 700;
-
-	/** Rasterstufen der Schrift: Faktor q / 4 für q = 4 … 20 (assets/axoclient/font/ui_&lt;Stärke&gt;_&lt;q&gt;.json). */
-	private static final int MIN_Q = 4;
-	private static final int MAX_Q = 20;
-	private static final FontDescription[][] FONTS = new FontDescription[4][MAX_Q + 1];
-
-	static {
-		int[] weights = { 400, 500, 600, 700 };
-		for (int w = 0; w < weights.length; w++)
-			for (int q = MIN_Q; q <= MAX_Q; q++)
-				FONTS[w][q] = new FontDescription.Resource(Identifier.fromNamespaceAndPath("axoclient", "ui_" + weights[w] + "_" + q));
-	}
 
 	public final GuiGraphicsExtractor g;
 	/** GUI-Einheiten je Design-Pixel (für Mauspositionen). */
@@ -114,15 +104,59 @@ public final class Gfx {
 		return Math.round(oy + y * px);
 	}
 
+	// ---------- Grundbausteine ----------
+
+	/** Bild 1:1 (Bildschirmpunkte). */
+	private void blit(Identifier id, int x, int y, int w, int h, int texW, int texH, int argb) {
+		g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, 0, 0, w, h, texW, texH, texW, texH, argb);
+	}
+
+	/**
+	 * Ausschnitt (u, v, rw × rh) eines Bildes der Größe tex × tex nach (x, y, w × h) – 1:1 oder gestreckt. Gestreckt wird
+	 * nur ein gleichförmiger Bereich, deshalb bleibt das Ergebnis bei jedem Texturfilter sauber.
+	 */
+	private void piece(Identifier id, int x, int y, int w, int h, int u, int v, int rw, int rh, int tex, int argb) {
+		if (w <= 0 || h <= 0)
+			return;
+		if (w == rw && h == rh) {
+			g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, rw, rh, rw, rh, tex, tex, argb);
+			return;
+		}
+		pose().pushMatrix();
+		pose().translate(x, y);
+		pose().scale(w / (float) rw, h / (float) rh);
+		g.blit(RenderPipelines.GUI_TEXTURED, id, 0, 0, u, v, rw, rh, rw, rh, tex, tex, argb);
+		pose().popMatrix();
+	}
+
+	/**
+	 * Neun-Teile-Bild mit Eckgröße c auf das Rechteck (x0, y0, w × h) Bildschirmpunkte. edges/center: ob Kanten und Mitte
+	 * gezeichnet werden (bei Rahmen ist die Mitte leer, bei Masken auch die Kanten).
+	 */
+	private void nine(Identifier id, int c, int x0, int y0, int w, int h, int argb, boolean edges, boolean center) {
+		int tex = Shapes.size(c);
+		int far = c + Shapes.MID;
+		int mid = c + 1;
+		int x1 = x0 + w, y1 = y0 + h;
+		piece(id, x0, y0, c, c, 0, 0, c, c, tex, argb);
+		piece(id, x1 - c, y0, c, c, far, 0, c, c, tex, argb);
+		piece(id, x0, y1 - c, c, c, 0, far, c, c, tex, argb);
+		piece(id, x1 - c, y1 - c, c, c, far, far, c, c, tex, argb);
+		if (edges) {
+			piece(id, x0 + c, y0, w - 2 * c, c, mid, 0, 1, c, tex, argb);
+			piece(id, x0 + c, y1 - c, w - 2 * c, c, mid, far, 1, c, tex, argb);
+			piece(id, x0, y0 + c, c, h - 2 * c, 0, mid, c, 1, tex, argb);
+			piece(id, x1 - c, y0 + c, c, h - 2 * c, far, mid, c, 1, tex, argb);
+		}
+		if (center)
+			piece(id, x0 + c, y0 + c, w - 2 * c, h - 2 * c, mid, mid, 1, 1, tex, argb);
+	}
+
 	// ---------- Flächen ----------
 
 	public void fill(int x, int y, int w, int h, int argb) {
 		if (g != null && w > 0 && h > 0)
 			g.fill(X(x), Y(y), X(x + w), Y(y + h), argb);
-	}
-
-	private void blit(Identifier id, int x, int y, int w, int h, int texW, int texH, int argb) {
-		g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, 0, 0, w, h, texW, texH, texW, texH, argb);
 	}
 
 	/** Eckenradius in Punkten, höchstens halb so groß wie die kürzere Seite. */
@@ -140,19 +174,8 @@ public final class Gfx {
 		int r = radiusPx(radius, wp, hp);
 		if (r == 0)
 			g.fill(x0, y0, x1, y1, argb);
-		else {
-			g.fill(x0, y0 + r, x1, y1 - r, argb);
-			g.fill(x0 + r, y0, x1 - r, y0 + r, argb);
-			g.fill(x0 + r, y1 - r, x1 - r, y1, argb);
-			corners(Shapes.Kind.FILL, x0, y0, wp, hp, r, argb, argb);
-		}
-	}
-
-	private void corners(Shapes.Kind kind, int x0, int y0, int wp, int hp, int r, int left, int right) {
-		blit(Shapes.corner(kind, 0, r), x0, y0, r, r, r, r, left);
-		blit(Shapes.corner(kind, 1, r), x0 + wp - r, y0, r, r, r, r, right);
-		blit(Shapes.corner(kind, 2, r), x0, y0 + hp - r, r, r, r, r, left);
-		blit(Shapes.corner(kind, 3, r), x0 + wp - r, y0 + hp - r, r, r, r, r, right);
+		else
+			nine(Shapes.slice(Shapes.Kind.FILL, r), r, x0, y0, wp, hp, argb, true, true);
 	}
 
 	/** Rahmen, genau einen Bildschirmpunkt dick, innen an der Kante. */
@@ -164,12 +187,13 @@ public final class Gfx {
 		if (wp <= 1 || hp <= 1)
 			return;
 		int r = radiusPx(radius, wp, hp);
-		g.fill(x0 + r, y0, x1 - r, y0 + 1, argb);
-		g.fill(x0 + r, y1 - 1, x1 - r, y1, argb);
-		g.fill(x0, y0 + Math.max(r, 1), x0 + 1, y1 - Math.max(r, 1), argb);
-		g.fill(x1 - 1, y0 + Math.max(r, 1), x1, y1 - Math.max(r, 1), argb);
-		if (r > 0)
-			corners(Shapes.Kind.RING, x0, y0, wp, hp, r, argb, argb);
+		if (r == 0) {
+			g.fill(x0, y0, x1, y0 + 1, argb);
+			g.fill(x0, y1 - 1, x1, y1, argb);
+			g.fill(x0, y0 + 1, x0 + 1, y1 - 1, argb);
+			g.fill(x1 - 1, y0 + 1, x1, y1 - 1, argb);
+		} else
+			nine(Shapes.slice(Shapes.Kind.RING, r), r, x0, y0, wp, hp, argb, true, false);
 	}
 
 	/** Fläche mit Rahmen nach innen (wie box-shadow: inset 0 0 0 1px). */
@@ -183,7 +207,11 @@ public final class Gfx {
 		gradient(x, y, w, h, radius, Theme.ACCENT_FROM, Theme.ACCENT_TO);
 	}
 
-	/** Waagerechter Verlauf von from nach to: ein Verlaufsbild statt einer Fläche je Spalte. */
+	/**
+	 * Verlauf von from (links oben) nach to (rechts unten). Gezeichnet in schmalen senkrechten Streifen aus der
+	 * Flächen-Maske, jeder in seiner Farbe: kein eigenes Bild je Größe und Farbe, also auch kein Ruckeln, wenn sich
+	 * Größe oder Farbe ändern (Hover, Zoom, Fenstergröße).
+	 */
 	public void gradient(int x, int y, int w, int h, int radius, int from, int to) {
 		if (g == null || w <= 0 || h <= 0)
 			return;
@@ -192,22 +220,43 @@ public final class Gfx {
 		if (wp <= 0 || hp <= 0)
 			return;
 		int r = radiusPx(radius, wp, hp);
-		if (hp <= 6 && r <= 3) {
-			// Dünne Balken (z. B. Ablaufbalken, der jedes Bild kürzer wird): Abschnitte statt eigenem Bild
-			int steps = Math.max(1, Math.min(48, wp / 6));
-			for (int i = 0; i < steps; i++) {
-				int a = x0 + wp * i / steps, b = x0 + wp * (i + 1) / steps;
-				g.fill(a, y0, b, y1, Theme.mix(from, to, (i + 0.5F) / steps));
+		int step = Math.max(2, (wp + 55) / 56);
+		// Farbe je Streifen wie entlang der Mittellinie eines 135°-Verlaufs
+		float span = wp + hp;
+		if (r == 0) {
+			for (int a = x0; a < x1; a += step) {
+				int b = Math.min(x1, a + step);
+				g.fill(a, y0, b, y1, Theme.mix(from, to, ((a + b) / 2.0F - x0 + hp / 2.0F) / span));
 			}
 			return;
 		}
-		if (wp * hp > 600_000) {
-			// Riesige Flächen (kommt kaum vor): einfache Fläche in der Mischfarbe
-			rect(x, y, w, h, radius, Theme.mix(from, to, 0.5F));
-			return;
+		Identifier id = Shapes.slice(Shapes.Kind.FILL, r);
+		int tex = Shapes.size(r);
+		int far = r + Shapes.MID;
+		int mid = r + 1;
+		for (int a = x0; a < x1; ) {
+			// Streifen enden an den Eckgrenzen, damit jeder ganz in einer Zone liegt
+			int limit = a < x0 + r ? x0 + r : a < x1 - r ? x1 - r : x1;
+			int b = Math.min(limit, a + step);
+			int sw = b - a;
+			int c = Theme.mix(from, to, ((a + b) / 2.0F - x0 + hp / 2.0F) / span);
+			if (a < x0 + r) {
+				int u = a - x0;
+				piece(id, a, y0, sw, r, u, 0, sw, r, tex, c);
+				piece(id, a, y0 + r, sw, hp - 2 * r, u, mid, sw, 1, tex, c);
+				piece(id, a, y1 - r, sw, r, u, far, sw, r, tex, c);
+			} else if (a < x1 - r) {
+				piece(id, a, y0, sw, r, mid, 0, 1, r, tex, c);
+				piece(id, a, y0 + r, sw, hp - 2 * r, mid, mid, 1, 1, tex, c);
+				piece(id, a, y1 - r, sw, r, mid, far, 1, r, tex, c);
+			} else {
+				int u = far + (a - (x1 - r));
+				piece(id, a, y0, sw, r, u, 0, sw, r, tex, c);
+				piece(id, a, y0 + r, sw, hp - 2 * r, u, mid, sw, 1, tex, c);
+				piece(id, a, y1 - r, sw, r, u, far, sw, r, tex, c);
+			}
+			a = b;
 		}
-		// Fertiges Bild mit eingebackenem 135°-Verlauf und geglätteten Ecken, 1:1 auf den Bildschirmpunkten
-		blit(Shapes.gradient(wp, hp, r, from, to), x0, y0, wp, hp, wp, hp, 0xFFFFFFFF);
 	}
 
 	/** Weicher Schatten unter einer Fläche (wie box-shadow 0 offsetY spread). */
@@ -221,31 +270,7 @@ public final class Gfx {
 			return;
 		int r = radiusPx(radius, wp, hp);
 		int c = Theme.alpha(0xFF000000, Math.min(1, strength * 0.9F));
-		int ax = x0 - s, ay = y0 - s;
-		int full = r + s;
-		int tw = wp + 2 * s, th = hp + 2 * s;
-		blit(Shapes.shadowCorner(0, r, s), ax, ay, full, full, full, full, c);
-		blit(Shapes.shadowCorner(1, r, s), ax + tw - full, ay, full, full, full, full, c);
-		blit(Shapes.shadowCorner(2, r, s), ax, ay + th - full, full, full, full, full, c);
-		blit(Shapes.shadowCorner(3, r, s), ax + tw - full, ay + th - full, full, full, full, full, c);
-		// Kanten (gestreckt) und die Mitte
-		edge(Shapes.shadowEdge(0, s), ax + full, ay, tw - 2 * full, s, 1, s, c);
-		edge(Shapes.shadowEdge(2, s), ax + full, ay + th - s, tw - 2 * full, s, 1, s, c);
-		edge(Shapes.shadowEdge(3, s), ax, ay + full, s, th - 2 * full, s, 1, c);
-		edge(Shapes.shadowEdge(1, s), ax + tw - s, ay + full, s, th - 2 * full, s, 1, c);
-		g.fill(ax + s, ay + full, ax + tw - s, ay + th - full, c);
-		g.fill(ax + full, ay + s, ax + tw - full, ay + full, c);
-		g.fill(ax + full, ay + th - full, ax + tw - full, ay + th - s, c);
-	}
-
-	private void edge(Identifier id, int x, int y, int w, int h, int texW, int texH, int argb) {
-		if (w <= 0 || h <= 0)
-			return;
-		pose().pushMatrix();
-		pose().translate(x, y);
-		pose().scale(w / (float) texW, h / (float) texH);
-		g.blit(RenderPipelines.GUI_TEXTURED, id, 0, 0, 0, 0, texW, texH, texW, texH, texW, texH, argb);
-		pose().popMatrix();
+		nine(Shapes.shadow(r, s), r + s, x0 - s, y0 - s, wp + 2 * s, hp + 2 * s, c, true, true);
 	}
 
 	/** Waagerechte Linie, genau einen Bildschirmpunkt dick. */
@@ -280,47 +305,40 @@ public final class Gfx {
 		return Minecraft.getInstance().font;
 	}
 
-	/** Rasterstufe (q / 4 Punkte je Schrifteinheit) für Schriftgröße size. */
-	private int step(float size) {
-		return Math.max(MIN_Q, Math.min(MAX_Q, Math.round(size * px / 9.0F * 4)));
+	/** Ersatz, falls die eigene Schrift einen Text nicht kann: Minecraft-Schrift, Großbuchstaben so hoch wie bei Inter. */
+	private static float fallbackZoom(float em) {
+		return em * 0.7275F / 7.0F;
 	}
 
-	private static Component styled(String text, int q, int weight) {
-		int w = weight >= 700 ? 3 : weight >= 600 ? 2 : weight >= 500 ? 1 : 0;
-		FontDescription font = FONTS[w][q];
-		return Component.literal(text).withStyle(style -> style.withFont(font));
-	}
-
+	/** Breite in Design-Pixeln. */
 	public float width(String text, float size, int weight) {
+		return width(text, size, weight, 0);
+	}
+
+	/** Breite in Design-Pixeln, mit Sperrung tracking (Design-Pixel je Zeichen). */
+	public float width(String text, float size, int weight, float tracking) {
 		if (text == null || text.isEmpty())
 			return 0;
-		int q = step(size);
-		return font().width(styled(text, q, weight)) * (q / 4.0F) / px;
+		float em = size * px;
+		float w = TextRaster.width(text, weight, em, tracking * px);
+		if (w < 0)
+			w = font().width(Component.literal(text)) * fallbackZoom(em);
+		return w / px;
 	}
 
 	/** Text mit der Oberkante seines Schriftgrads bei y. */
 	public void text(String text, float x, float y, float size, int weight, int argb) {
-		if (g == null || text == null || text.isEmpty())
-			return;
-		int q = step(size);
-		float k = q / 4.0F;
-		// Mitte der Zeile wie gewünscht, die Schrift selbst ist genau 9 · k Punkte groß gerastert
-		float center = oy + (y + size * 0.47F) * px;
-		int top = Math.round(center - 0.47F * 9 * k);
-		pose().pushMatrix();
-		pose().translate(X(x), top);
-		pose().scale(k, k);
-		// Minecrafts Schrift-Engine rastert ohne Hinting; helle Schrift auf Dunkel wirkt dadurch weich. Zweimal an
-		// dieselbe Stelle gezeichnet steigt die Deckung der Kantenpunkte (wie die Gamma-Anhebung im Browser).
-		Component styled = styled(text, q, weight);
-		g.text(font(), styled, 0, 0, argb, false);
-		g.text(font(), styled, 0, 0, argb, false);
-		pose().popMatrix();
+		textMid(text, x, y + size * 0.47F, size, weight, argb);
 	}
 
 	/** Text senkrecht mittig auf cy (wie align-items: center). */
 	public void textMid(String text, float x, float cy, float size, int weight, int argb) {
-		text(text, x, cy - size * 0.47F, size, weight, argb);
+		draw(text, x, cy, size, weight, argb, 0, false, 0, 0);
+	}
+
+	/** Wie textMid, aber gesperrt (letter-spacing in Design-Pixeln). */
+	public void textMid(String text, float x, float cy, float size, int weight, int argb, float tracking) {
+		draw(text, x, cy, size, weight, argb, tracking, false, 0, 0);
 	}
 
 	public void textCentered(String text, float cx, float cy, float size, int weight, int argb) {
@@ -331,18 +349,32 @@ public final class Gfx {
 		textMid(text, right - width(text, size, weight), cy, size, weight, argb);
 	}
 
-	/** Text im Akzent-Verlauf (wie background-clip: text), Zeichen für Zeichen eingefärbt. */
+	/** Text im Akzent-Verlauf (wie background-clip: text); gibt die Breite zurück. */
 	public float gradientText(String text, float x, float cy, float size, int weight) {
-		float total = width(text, size, weight);
-		float at = x;
-		for (int i = 0; i < text.length(); i++) {
-			String c = String.valueOf(text.charAt(i));
-			float w = width(c, size, weight);
-			float t = total <= 0 ? 0 : (at - x + w / 2) / total;
-			textMid(c, at, cy, size, weight, Theme.mix(Theme.TEXT_FROM, Theme.TEXT_TO, t));
-			at += w;
+		draw(text, x, cy, size, weight, 0xFFFFFFFF, 0, true, Theme.TEXT_FROM, Theme.TEXT_TO);
+		return width(text, size, weight);
+	}
+
+	private void draw(String text, float x, float cy, float size, int weight, int argb, float tracking, boolean gradient, int from, int to) {
+		if (g == null || text == null || text.isEmpty() || (argb >>> 24) == 0)
+			return;
+		float em = size * px;
+		float center = oy + cy * px;
+		TextRaster.Sprite s = TextRaster.sprite(text, weight, em, tracking * px, gradient, from, to);
+		if (s != null) {
+			if (s.id() == null)
+				return; // nur Leerzeichen
+			int baseline = Math.round(center + TextRaster.baselineFromCenter(weight, em));
+			blit(s.id(), X(x) + s.dx(), baseline + s.dy(), s.w(), s.h(), s.w(), s.h(), argb);
+			return;
 		}
-		return total;
+		// Ersatz: Minecraft-Schrift (z. B. für Zeichen, die Inter nicht hat)
+		float k = fallbackZoom(em);
+		pose().pushMatrix();
+		pose().translate(X(x), Math.round(center - 3.5F * k));
+		pose().scale(k, k);
+		g.text(font(), Component.literal(text), 0, 0, gradient ? Theme.mix(from, to, 0.5F) : argb, false);
+		pose().popMatrix();
 	}
 
 	/** Kürzt den Text mit "…", bis er in maxWidth passt. */
@@ -351,10 +383,17 @@ public final class Gfx {
 			return "";
 		if (width(text, size, weight) <= maxWidth)
 			return text;
-		String cut = text;
-		while (cut.length() > 1 && width(cut + "…", size, weight) > maxWidth)
-			cut = cut.substring(0, cut.length() - 1);
-		return cut + "…";
+		// Längsten passenden Anfang suchen (in ganzen Zeichen; die Breite wächst mit der Länge)
+		int lo = 1, hi = text.codePointCount(0, text.length()) - 1;
+		while (lo < hi) {
+			int m = (lo + hi + 1) >>> 1;
+			if (width(text.substring(0, text.offsetByCodePoints(0, m)) + "…", size, weight) <= maxWidth)
+				lo = m;
+			else
+				hi = m - 1;
+		}
+		String cut = text.substring(0, text.offsetByCodePoints(0, Math.max(1, lo))).stripTrailing();
+		return (cut.isEmpty() ? text.substring(0, text.offsetByCodePoints(0, 1)) : cut) + "…";
 	}
 
 	// ---------- Bilder ----------
@@ -410,7 +449,7 @@ public final class Gfx {
 		int x0 = X(x), y0 = Y(y), wp = X(x + w) - x0, hp = Y(y + h) - y0;
 		int r = radiusPx(radius, wp, hp);
 		if (r > 0)
-			corners(Shapes.Kind.MASK, x0, y0, wp, hp, r, bg, bg);
+			nine(Shapes.slice(Shapes.Kind.MASK, r), r, x0, y0, wp, hp, bg, false, false);
 	}
 
 	// ---------- Bausteine ----------

@@ -46,7 +46,7 @@ public final class EmoteWheelScreen extends Screen {
 		g.rect(cx - 300, cy - 300, 600, 600, 300, Theme.alpha(0xFF0A0A0E, 0.22F));
 		int x = cx - SIZE / 2, y = cy - SIZE / 2;
 		g.shadow(x, y, SIZE, SIZE, SIZE / 2, 30, 24, 0.5F);
-		g.rect(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFF1E1E22, 0.78F));
+		g.rect(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFF1E1E22, 0.94F));
 		g.outline(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFFFFFFFF, 0.08F));
 
 		Emotes.Emote hover = null;

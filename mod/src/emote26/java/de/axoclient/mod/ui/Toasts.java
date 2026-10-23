@@ -102,8 +102,8 @@ public final class Toasts {
 	private static void big(Gfx g, Toast t, int x, int y, long now) {
 		int w = WIDTH, h = 98;
 		g.shadow(x, y, w, h, 12, 18, 14, 0.5F);
-		g.box(x, y, w, h, 12, Theme.alpha(0xFF222222, 0.94F), 0xFF3C3C3C);
-		g.head(MenuData.skin(t.uuid()), x + 12, y + 12, 38, 7, 0xF0222222, false);
+		g.box(x, y, w, h, 12, Theme.alpha(0xFF222222, 0.97F), 0xFF3C3C3C);
+		g.head(MenuData.skin(t.uuid()), x + 12, y + 12, 38, 7, 0xF7222222, false);
 		g.dot(x + 12 + 38 - 9 + 5, y + 12 + 38 - 9 + 5, 23, 0xFF222222);
 		g.gradient(x + 12 + 38 - 19 + 5, y + 12 + 38 - 19 + 5, 19, 19, 10, Theme.ACCENT_FROM, Theme.ACCENT_TO);
 		g.icon("invite".equals(t.kind()) ? Icons.SEND : Icons.PLUS, x + 12 + 38 - 14.5F + 5, y + 12 + 38 - 14.5F + 5, 10, Theme.WHITE);
@@ -123,8 +123,8 @@ public final class Toasts {
 	private static void small(Gfx g, Toast t, int x, int y) {
 		int w = WIDTH, h = 48;
 		g.shadow(x, y, w, h, 12, 14, 10, 0.4F);
-		g.box(x, y, w, h, 12, Theme.alpha(0xFF222222, 0.86F), 0xFF363636);
-		g.head(MenuData.skin(t.uuid()), x + 12, y + 10, 28, 6, 0xDB222222, false);
+		g.box(x, y, w, h, 12, Theme.alpha(0xFF222222, 0.94F), 0xFF363636);
+		g.head(MenuData.skin(t.uuid()), x + 12, y + 10, 28, 6, 0xF0222222, false);
 		String name = t.name() == null ? "" : t.name();
 		String rest = switch (t.kind()) {
 			case "accepted" -> " hat deine Anfrage angenommen";
