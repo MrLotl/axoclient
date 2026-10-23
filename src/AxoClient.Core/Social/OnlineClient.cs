@@ -149,7 +149,7 @@ public sealed class OnlineClient(ApiClient api, AccountManager accounts, TokenSt
             var keyPair = root.GetProperty("keyPair");
 
             using var rsa = RSA.Create();
-            rsa.ImportFromPem(keyPair.GetProperty("privateKey").GetString());
+            ImportPrivateKey(rsa, keyPair.GetProperty("privateKey").GetString()!);
             var uuid = session.CompactUuid;
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var signature = rsa.SignData(Encoding.UTF8.GetBytes($"axoclient:register:{uuid}:{timestamp}"),
@@ -217,6 +217,23 @@ public sealed class OnlineClient(ApiClient api, AccountManager accounts, TokenSt
         {
         }
         tokens.Remove(TokenKey(uuid));
+    }
+
+    /// <summary>
+    /// Mojang beschriftet den Schlüssel als "RSA PRIVATE KEY" (PKCS#1), liefert aber PKCS#8. ImportFromPem glaubt der
+    /// Beschriftung und scheitert, deshalb das Format selbst erkennen.
+    /// </summary>
+    private static void ImportPrivateKey(RSA rsa, string pem)
+    {
+        var der = Convert.FromBase64String(PemBody(pem));
+        try
+        {
+            rsa.ImportPkcs8PrivateKey(der, out _);
+        }
+        catch (CryptographicException)
+        {
+            rsa.ImportRSAPrivateKey(der, out _);
+        }
     }
 
     private static string PemBody(string pem) =>
