@@ -157,20 +157,25 @@
       </FormSection>
 
       <FormSection title={t('instance.settings.performance')} subtitle={t('instance.settings.performanceHint')}>
-        <div class="row between">
-          <span class="text">{t('instance.settings.ownMemory')}</span>
-          <Toggle bind:checked={ownMemory} label={t('instance.settings.ownMemory')} />
+        <!-- Zwei abgesetzte Blöcke mit viel Luft, damit die hohe Karte nicht gequetscht wirkt -->
+        <div class="perf">
+          <div class="perf-block">
+            <div class="row between">
+              <span class="text">{t('instance.settings.ownMemory')}</span>
+              <Toggle bind:checked={ownMemory} label={t('instance.settings.ownMemory')} />
+            </div>
+            {#if ownMemory}
+              <MemorySlider bind:value={memory} mods={details.summary.modCount} />
+            {:else}
+              <p class="hint">{t('instance.settings.memoryDefault', { gb: (details.effectiveMemoryMb / 1024).toLocaleString('de-DE') })}</p>
+            {/if}
+          </div>
+          <label class="label perf-block">
+            <span>{t('instance.settings.javaArgs')}</span>
+            <span class="field mono"><input bind:value={javaArgs} placeholder="-XX:+UseG1GC" spellcheck="false" /></span>
+            <span class="hint">{t('instance.settings.javaArgsHint')}</span>
+          </label>
         </div>
-        {#if ownMemory}
-          <MemorySlider bind:value={memory} mods={details.summary.modCount} />
-        {:else}
-          <p class="hint">{t('instance.settings.memoryDefault', { gb: (details.effectiveMemoryMb / 1024).toLocaleString('de-DE') })}</p>
-        {/if}
-        <label class="label">
-          <span>{t('instance.settings.javaArgs')}</span>
-          <span class="field mono"><input bind:value={javaArgs} placeholder="-XX:+UseG1GC" spellcheck="false" /></span>
-          <span class="hint">{t('instance.settings.javaArgsHint')}</span>
-        </label>
       </FormSection>
 
       <FormSection title={t('modLock.title')} subtitle={t('modLock.subtitle')}>
@@ -267,6 +272,24 @@
   }
   .between {
     justify-content: space-between;
+  }
+  .perf {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-top: 4px;
+  }
+  .perf-block {
+    padding: 18px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    box-shadow: inset 0 0 0 1px var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .perf-block .hint {
+    line-height: 1.55;
   }
   .text {
     font-size: 13.5px;
