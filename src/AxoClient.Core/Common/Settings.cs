@@ -29,6 +29,16 @@ public enum FriendOnServerScope
     All
 }
 
+/// <summary>Wann der Discord-Status angezeigt wird.</summary>
+public enum DiscordShow
+{
+    /// <summary>Schon im Launcher, im Spiel dann mit Instanz und Server.</summary>
+    Always,
+
+    /// <summary>Nur solange Minecraft läuft.</summary>
+    Playing
+}
+
 public sealed record Size2(int W, int H);
 
 public sealed class GameSettings
@@ -49,6 +59,7 @@ public sealed class DefaultSettings
 public sealed class IntegrationSettings
 {
     public bool DiscordRpc { get; set; } = true;
+    public DiscordShow DiscordShow { get; set; } = DiscordShow.Always;
     public bool FriendJoinRelay { get; set; } = true;
     public bool TablistIcon { get; set; } = true;
     public bool StreamerMode { get; set; }

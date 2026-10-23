@@ -192,6 +192,7 @@ public sealed class AppHost : IAsyncDisposable
     {
         await Settings.LoadAsync();
         await Accounts.LoadAsync();
+        Discord.Start();
         Bridge.Start();
         Ingame.Start();
         Social.Start();

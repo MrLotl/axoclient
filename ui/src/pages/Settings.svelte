@@ -469,6 +469,16 @@
             <div class="text"><span class="name">{t('settings.discord')}</span><span class="desc">{t('settings.discordHint')}</span></div>
             <Toggle checked={s.integrations.discordRpc} label={t('settings.discord')} onchange={(v) => set((x) => (x.integrations.discordRpc = v))} />
           </div>
+          {#if s.integrations.discordRpc}
+            <div class="item" transition:expand>
+              <div class="text"><span class="name">{t('settings.discordShow')}</span><span class="desc">{t('settings.discordShowHint')}</span></div>
+              <Segmented
+                value={s.integrations.discordShow}
+                label={t('settings.discordShow')}
+                options={[{ value: 'always', label: t('settings.discordShowAlways') }, { value: 'playing', label: t('settings.discordShowPlaying') }]}
+                onchange={(v) => set((x) => (x.integrations.discordShow = v as 'always' | 'playing'))} />
+            </div>
+          {/if}
           <div class="item">
             <div class="text"><span class="name">{t('settings.relay')}</span><span class="desc">{t('settings.relayHint')}</span></div>
             <Toggle checked={s.integrations.friendJoinRelay} label={t('settings.relay')} onchange={(v) => set((x) => (x.integrations.friendJoinRelay = v))} />

@@ -7,7 +7,8 @@ using DiscordRPC.Message;
 namespace AxoClient.Core.Integrations;
 
 /// <summary>
-/// Discord-Status während des Spielens: Instanz, Server (außer im Streamer-Modus) und "Beitreten" über Discord.
+/// Discord-Status: im Launcher (je nach Einstellung) und während des Spielens mit Instanz, Server
+/// (außer im Streamer-Modus) und "Beitreten" über Discord.
 /// </summary>
 public sealed class DiscordIntegration : IDisposable
 {
@@ -18,7 +19,9 @@ public sealed class DiscordIntegration : IDisposable
     private readonly SettingsService _settings;
     private readonly GameActivity _activity;
     private readonly Lock _lock = new();
+    private readonly DateTimeOffset _launcherStartedAt = DateTimeOffset.Now;
     private DiscordRpcClient? _client;
+    private bool _started;
 
     public DiscordIntegration(SettingsService settings, GameActivity activity)
     {
@@ -31,19 +34,37 @@ public sealed class DiscordIntegration : IDisposable
     /// <summary>Jemand hat in Discord auf "Beitreten" geklickt: Adresse und MC-Version.</summary>
     public event Action<string, string?>? JoinRequested;
 
+    /// <summary>Nach dem Laden der Einstellungen: Status im Launcher setzen, falls gewünscht.</summary>
+    public void Start()
+    {
+        lock (_lock)
+            _started = true;
+        // Verbindung zu Discord im Hintergrund, damit der Launcher-Start nicht wartet
+        _ = Task.Run(Update);
+    }
+
     private void Update()
     {
         lock (_lock)
         {
-            if (!_settings.Current.Integrations.DiscordRpc || _activity.InstanceName == null)
+            if (!_started)
+                return;
+            var integrations = _settings.Current.Integrations;
+            var playing = _activity.InstanceName != null;
+            if (!integrations.DiscordRpc || (!playing && integrations.DiscordShow != DiscordShow.Always))
             {
                 _client?.ClearPresence();
-                if (!_settings.Current.Integrations.DiscordRpc)
+                if (!integrations.DiscordRpc)
                     Disconnect();
                 return;
             }
             if (!Connect())
                 return;
+            if (!playing)
+            {
+                SetLauncherPresence();
+                return;
+            }
             try
             {
                 var streamer = _settings.Current.Integrations.StreamerMode;
@@ -73,6 +94,24 @@ public sealed class DiscordIntegration : IDisposable
             {
                 AppLog.Warn("Discord-Status setzen", ex);
             }
+        }
+    }
+
+    private void SetLauncherPresence()
+    {
+        try
+        {
+            _client!.SetPresence(new RichPresence
+            {
+                Details = "Im Launcher",
+                State = "Wählt, was gespielt wird",
+                Timestamps = new Timestamps(_launcherStartedAt.UtcDateTime),
+                Assets = new Assets { LargeImageKey = ImageKey, LargeImageText = AppInfo.Name }
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("Discord-Status setzen", ex);
         }
     }
 

@@ -32,7 +32,7 @@ export interface LauncherSettings {
   afterLaunch: 'open' | 'minimize' | 'hide' | 'close';
   game: { windowMode: 'window' | 'maximized' | 'fullscreen'; windowSize: { w: number; h: number }; checkModsOnLaunch: boolean };
   defaults: { memoryMb: number; java: string };
-  integrations: { discordRpc: boolean; friendJoinRelay: boolean; tablistIcon: boolean; streamerMode: boolean };
+  integrations: { discordRpc: boolean; discordShow: 'always' | 'playing'; friendJoinRelay: boolean; tablistIcon: boolean; streamerMode: boolean };
   social: { showOnline: boolean; allowJoin: boolean };
   appearance: { preset: string; accent: AccentGradient; customGradients: CustomGradient[]; waveOnStart: boolean };
   notifications: {
