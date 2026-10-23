@@ -8,6 +8,12 @@
   import PlayButton from '../lib/components/PlayButton.svelte';
   import { versionLabel } from '../lib/util/format';
   import { upload } from '../lib/util/files';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, fadeOut, pop, fadeLoad, stagger, reducedMotion, DUR } from '../lib/util/motion';
+
+  // Beim Öffnen der Seite kommen die Karten nacheinander herein
+  const delay = stagger(30, 12);
+  const flipMs = reducedMotion() ? 0 : DUR.slow;
 
   let view = $state<'grid' | 'list'>(app.ui?.views.instances ?? 'grid');
   let query = $state('');
@@ -50,7 +56,7 @@
   </div>
 
   {#if app.instances.length === 0}
-    <div class="empty">
+    <div class="empty" in:fadeSlide={{ y: 10, duration: DUR.slow }}>
       <img src="/img/logo.svg" alt="" width="72" height="72" />
       <h2>{t('instances.emptyTitle')}</h2>
       <p>{t('instances.emptyText')}</p>
@@ -61,18 +67,18 @@
     </div>
   {:else if view === 'grid'}
     <div class="grid">
-      {#each list as i (i.id)}
-        <article class="card">
+      {#each list as i, n (i.id)}
+        <article class="card" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(n), y: 12 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
           <button class="thumb" aria-label={t('instances.open', { name: i.name })} onclick={() => app.navigate({ page: 'instance', id: i.id })}>
             {#if i.hasIcon}
-              <img class="blur" src={i.iconUrl} alt="" aria-hidden="true" />
-              <img class="cover" src={i.iconUrl} alt="" />
+              <img class="blur" src={i.iconUrl} alt="" aria-hidden="true" use:fadeLoad={i.iconUrl} />
+              <img class="cover" src={i.iconUrl} alt="" use:fadeLoad={i.iconUrl} />
             {:else}
               <span class="blur-fallback"></span>
               <span class="cover-fallback"><ImageBox name={i.name} width="100%" height="100%" radius={16} /></span>
             {/if}
             <span class="version">{versionLabel(i.minecraftVersion, i.loader)}</span>
-            {#if i.running}<span class="live">{t('common.running')}</span>{/if}
+            {#if i.running}<span class="live" in:pop={{ scale: 0.8 }}>{t('common.running')}</span>{/if}
           </button>
           <h2 class="truncate">{i.name}</h2>
           <PlayButton instanceId={i.id} height={36} compact />
@@ -81,8 +87,8 @@
     </div>
   {:else}
     <div class="list">
-      {#each list as i (i.id)}
-        <article class="row-card">
+      {#each list as i, n (i.id)}
+        <article class="row-card" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(n), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
           <button class="row-open" onclick={() => app.navigate({ page: 'instance', id: i.id })} aria-label={t('instances.open', { name: i.name })}>
             <ImageBox url={i.hasIcon ? i.iconUrl : null} name={i.name} width={54} />
             <span class="row-text">
@@ -131,7 +137,9 @@
     align-content: start;
     overflow-y: auto;
     min-height: 0;
-    padding-bottom: 8px;
+    /* Luft, damit angehobene Karten und Schatten nicht abgeschnitten werden */
+    padding: 6px 6px 8px;
+    margin: -6px -6px 0;
   }
   .card {
     padding: 10px;
@@ -140,10 +148,19 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    transition: background-color 0.12s ease;
+    transition: background-color 0.12s ease, transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
   }
+  /* Karte hebt sich beim Hovern leicht an, das Bild zoomt minimal */
   .card:hover {
     background: #2f2f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  }
+  .card:hover .cover {
+    transform: translateX(-50%) scale(1.04);
+  }
+  .card:hover .blur {
+    transform: scale(1.06);
   }
   .thumb {
     position: relative;
@@ -164,6 +181,7 @@
     object-fit: cover;
     filter: blur(24px);
     opacity: 0.55;
+    transition: transform 0.4s var(--ease-out);
   }
   .blur-fallback {
     position: absolute;
@@ -182,6 +200,7 @@
     border-radius: 16px;
     object-fit: cover;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    transition: transform 0.3s var(--ease-out);
     display: flex;
   }
   .version,
@@ -223,9 +242,11 @@
     display: flex;
     align-items: center;
     gap: 14px;
+    transition: background-color 0.12s ease, transform var(--dur-med) var(--ease-out);
   }
   .row-card:hover {
     background: #2f2f2f;
+    transform: translateX(2px);
   }
   .row-open {
     flex-grow: 1;

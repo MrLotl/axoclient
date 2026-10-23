@@ -2,6 +2,8 @@
   import type { Snippet } from 'svelte';
   import Icon from './Icon.svelte';
   import { t } from '../i18n';
+  import { fadeOut, pop, DUR } from '../util/motion';
+  import { fade } from 'svelte/transition';
 
   let {
     title,
@@ -30,6 +32,9 @@
   } = $props();
 
   let box: HTMLDivElement | undefined = $state();
+  // Während des Ausblendens keine Klicks oder Tasten mehr annehmen
+  let closing = $state(false);
+  const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const id = `dlg-${Math.random().toString(36).slice(2, 8)}`;
 
   $effect(() => {
@@ -43,6 +48,7 @@
   });
 
   function onkeydown(e: KeyboardEvent) {
+    if (closing) return;
     if (e.key === 'Escape' && onclose) {
       e.stopPropagation();
       onclose();
@@ -64,8 +70,24 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="backdrop" onmousedown={(e) => e.target === e.currentTarget && onclose?.()} {onkeydown}>
-  <div bind:this={box} class="dialog {tone}" {role} aria-modal="true" aria-labelledby={id} tabindex="-1" style="width: {width}px">
+<div
+  class="backdrop"
+  class:closing
+  onmousedown={(e) => !closing && e.target === e.currentTarget && onclose?.()}
+  {onkeydown}
+  in:fade|global={{ duration: reduce ? 0 : DUR.med }}
+  out:fadeOut|global={{ duration: DUR.med - 20 }}
+  onoutrostart={() => (closing = true)}>
+  <div
+    bind:this={box}
+    class="dialog {tone}"
+    {role}
+    aria-modal="true"
+    aria-labelledby={id}
+    tabindex="-1"
+    style="width: {width}px"
+    in:pop|global={{ duration: DUR.med + 20, scale: 0.95, y: 6 }}
+    out:pop|global={{ duration: DUR.fast + 20, scale: 0.97, y: 4 }}>
     {#if header}
       {@render header()}
     {:else}
@@ -101,7 +123,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: fade-in 0.12s ease-out;
+  }
+  .backdrop.closing {
+    pointer-events: none;
   }
   .dialog {
     max-width: calc(100vw - 48px);
@@ -113,7 +137,6 @@
     flex-direction: column;
     overflow: hidden;
     outline: none;
-    animation: pop-in 0.14s ease-out;
   }
   .dialog.danger {
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px #3a2c2c;

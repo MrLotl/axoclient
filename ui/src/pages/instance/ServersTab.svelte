@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fadeSlide, fadeOut, stagger, DUR } from '../../lib/util/motion';
+
+  const delay = stagger(30, 12, 700);
   import { app } from '../../lib/stores/app.svelte';
   import { call } from '../../lib/bridge/bridge';
   import { t } from '../../lib/i18n';
@@ -153,6 +156,8 @@
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="row"
+        in:fadeSlide|global={{ delay: delay(i), y: 8 }}
+        out:fadeOut={{ duration: DUR.med }}
         class:lifted={drag?.active && drag.from === i}
         class:sortable={!query}
         style="transform: translateY({offsetOf(i)}px)"

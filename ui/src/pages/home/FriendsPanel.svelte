@@ -5,6 +5,11 @@
   import Icon from '../../lib/components/Icon.svelte';
   import Head from '../../lib/components/Head.svelte';
   import { statusText, presenceColors as colors } from '../../lib/util/social';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, fadeOut, pop, stagger, reducedMotion, DUR } from '../../lib/util/motion';
+
+  const delay = stagger(35, 8, 600);
+  const flipMs = reducedMotion() ? 0 : DUR.slow;
 
   const friends = $derived(app.social.friends.filter((f) => f.relation === 'friends'));
   const pending = $derived(app.social.friends.filter((f) => f.relation === 'pending'));
@@ -32,8 +37,8 @@
     {#if !app.social.available}
       <p class="empty">{app.activeAccount?.type === 'microsoft' ? t('friends.unavailable') : t('service.notSignedIn')}</p>
     {:else}
-      {#each incoming as f (f.uuid)}
-        <div class="row incoming">
+      {#each incoming as f, i (f.uuid)}
+        <div class="row incoming" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
           <Head uuid={f.uuid} size={40} radius={6} />
           <div class="text">
             <span class="name truncate">{f.name}</span>
@@ -47,8 +52,8 @@
           </button>
         </div>
       {/each}
-      {#each pending as f (f.uuid)}
-        <div class="row pending">
+      {#each pending as f, i (f.uuid)}
+        <div class="row pending" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
           <Head uuid={f.uuid} size={40} radius={6} dim />
           <div class="text">
             <span class="name muted truncate">{f.name}</span>
@@ -59,8 +64,8 @@
           </button>
         </div>
       {/each}
-      {#each friends as f (f.uuid)}
-        <div class="row">
+      {#each friends as f, i (f.uuid)}
+        <div class="row" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:fadeOut={{ duration: DUR.med }}>
           <button class="open" aria-label={t('friends.openProfile', { name: f.name })} aria-haspopup="dialog" onclick={() => (app.dialog = { kind: 'friendProfile', data: f.uuid })}>
             <Head uuid={f.uuid} size={40} radius={6} />
             <span class="text">
@@ -69,14 +74,14 @@
             </span>
           </button>
           {#if f.join}
-            <button class="icon-btn" aria-label={t('friends.join', { name: f.name })} title={t('friends.joinShort')} onclick={() => app.joinAddress(f.join!)}>
+            <button in:pop={{ scale: 0.7 }} class="icon-btn" aria-label={t('friends.join', { name: f.name })} title={t('friends.joinShort')} onclick={() => app.joinAddress(f.join!)}>
               <Icon name="play" />
             </button>
           {/if}
         </div>
       {/each}
       {#if friends.length + pending.length + incoming.length === 0}
-        <p class="empty">{t('friends.empty')}</p>
+        <p class="empty" in:fadeSlide={{ y: 6 }}>{t('friends.empty')}</p>
       {/if}
     {/if}
   </div>

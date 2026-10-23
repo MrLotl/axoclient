@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
   import { dropFiles } from '../util/drop';
+  import { pop, fadeOut } from '../util/motion';
 
   /**
    * Datei-Drop für eine ganze Seite oder einen Tab: hängt sich an das Elternelement
@@ -22,7 +23,7 @@
 
 <span bind:this={anchor} hidden></span>
 {#if active}
-  <div class="drop" style="inset: {inset}px"><Icon name={icon} size={28} /><span>{hint}</span></div>
+  <div class="drop" style="inset: {inset}px" in:pop={{ scale: 0.98 }} out:fadeOut><Icon name={icon} size={28} /><span>{hint}</span></div>
 {/if}
 
 <style>

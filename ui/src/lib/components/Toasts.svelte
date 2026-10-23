@@ -2,11 +2,17 @@
   import { app } from '../stores/app.svelte';
   import Icon from './Icon.svelte';
   import { t } from '../i18n';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, DUR, reducedMotion } from '../util/motion';
 </script>
 
 <div class="toasts" role="status" aria-live="polite">
   {#each app.toasts as toast (toast.id)}
-    <div class="toast {toast.kind}">
+    <div
+      class="toast {toast.kind}"
+      animate:flip={{ duration: reducedMotion() ? 0 : DUR.slow }}
+      in:fadeSlide={{ y: 16, duration: DUR.slow }}
+      out:fadeSlide={{ x: 60, y: 0, duration: DUR.med }}>
       <span class="icon"><Icon name={toast.kind === 'error' ? 'warning' : toast.kind === 'success' ? 'check' : 'info'} size={15} /></span>
       <span class="text">{toast.text}</span>
       {#if toast.action}
@@ -22,7 +28,7 @@
     position: fixed;
     right: 20px;
     bottom: calc(20px + var(--jobs-height, 0px));
-    transition: bottom 0.2s ease;
+    transition: bottom var(--dur-slow) var(--ease-out);
     z-index: 90;
     display: flex;
     flex-direction: column;
@@ -39,7 +45,6 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    animation: toast-in 0.25s ease-out;
     font-size: 13px;
     color: var(--text);
   }

@@ -1,5 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, pop, stagger, reducedMotion, DUR } from '../../lib/util/motion';
+
+  const delay = stagger(30, 12, 700);
+  const flipMs = reducedMotion() ? 0 : DUR.slow;
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
   import { t } from '../../lib/i18n';
@@ -180,8 +185,8 @@
       </div>
     {:else}
       <div class="grid">
-        {#each imported as e (e.id)}
-          <article class="card">
+        {#each imported as e, i (e.id)}
+          <article class="card" animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 8 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
             <span class="figure">
               {#if true}
                 {@const f = figure(e.id)}

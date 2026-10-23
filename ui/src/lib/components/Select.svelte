@@ -1,5 +1,6 @@
 <script lang="ts" generics="T extends string | number">
   import Icon from './Icon.svelte';
+  import { pop, DUR } from '../util/motion';
 
   // Auswahlliste, die innerhalb des Fensters aufklappt (statt des System-Dropdowns)
   let {
@@ -66,7 +67,13 @@
     <span class="chev" class:up={open}><Icon name="chevronDown" /></span>
   </button>
   {#if open}
-    <div class="menu popup" role="listbox" aria-label={label} bind:this={list}>
+    <div
+      class="menu popup"
+      role="listbox"
+      aria-label={label}
+      bind:this={list}
+      in:pop={{ origin: 'top center', scale: 0.96, y: -6, duration: DUR.med }}
+      out:pop={{ origin: 'top center', scale: 0.98, y: -4, duration: DUR.fast }}>
       {#if options.length > 12}
         <label class="field filter">
           <span class="filter-icon"><Icon name="search" size={14} /></span>

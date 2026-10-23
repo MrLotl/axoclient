@@ -6,6 +6,10 @@
   import Icon from '../../lib/components/Icon.svelte';
   import { bytes } from '../../lib/util/format';
   import type { ScreenshotInfo } from '../../lib/types';
+  import { fade } from 'svelte/transition';
+  import { fadeSlide, fadeOut, fadeLoad, pop, stagger, reducedMotion, DUR } from '../../lib/util/motion';
+
+  const delay = stagger(25, 12);
 
   let { instanceId, count = $bindable(null) }: { instanceId: string; count?: number | null } = $props();
   let shots = $state<ScreenshotInfo[]>([]);
@@ -91,9 +95,9 @@
     <div class="empty"><Icon name="camera" size={24} /><span>{t('screenshots.empty')}</span></div>
   {:else}
     <div class="grid">
-      {#each shown as s (s.file)}
-        <button class="shot" onclick={() => (preview = s)} aria-label={t('screenshots.open', { name: s.file })}>
-          <img src={s.url} alt="" loading="lazy" />
+      {#each shown as s, i (s.file)}
+        <button class="shot" onclick={() => (preview = s)} aria-label={t('screenshots.open', { name: s.file })} in:fadeSlide|global={{ delay: delay(i), y: 10 }}>
+          <img src={s.url} alt="" loading="lazy" use:fadeLoad={s.url} />
           <span class="date">{new Date(s.takenAt).toLocaleDateString('de-DE')}</span>
         </button>
       {/each}
@@ -103,9 +107,11 @@
 
 {#if preview}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="lightbox" role="dialog" tabindex="-1" aria-modal="true" aria-label={t('screenshots.preview')} onmousedown={(e) => e.target === e.currentTarget && (preview = null)}>
+  <div class="lightbox" role="dialog" tabindex="-1" aria-modal="true" aria-label={t('screenshots.preview')} onmousedown={(e) => e.target === e.currentTarget && (preview = null)} in:fade={{ duration: reducedMotion() ? 0 : DUR.med }} out:fadeOut={{ duration: DUR.med }}>
     <button class="nav prev" aria-label={t('screenshots.prev')} onclick={() => step(-1)}><Icon name="chevronLeft" size={20} /></button>
-    <img src={preview.url} alt={preview.file} />
+    {#key preview.url}
+      <img src={preview.url} alt={preview.file} in:pop={{ scale: 0.97, duration: DUR.med }} />
+    {/key}
     <button class="nav next" aria-label={t('screenshots.next')} onclick={() => step(1)}><Icon name="chevronRight" size={20} /></button>
     <div class="bar">
       {#if renaming}
@@ -173,7 +179,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.2s ease;
+    transition: transform 0.3s var(--ease-out);
   }
   .shot:hover img {
     transform: scale(1.04);

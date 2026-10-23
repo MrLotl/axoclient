@@ -1,4 +1,5 @@
 import { call } from '../bridge/bridge';
+import { app } from '../stores/app.svelte';
 import type { FileRef } from '../types';
 
 export async function toBase64(file: Blob): Promise<string> {
@@ -13,17 +14,20 @@ export async function upload(file: File): Promise<FileRef> {
   return call<FileRef>('files.upload', { name: file.name, base64: await toBase64(file) });
 }
 
-/** Öffnet die Dateiauswahl des Browsers für Bilder und gibt Base64 zurück. */
-export function pickImage(accept = 'image/png,image/jpeg'): Promise<{ name: string; base64: string; url: string } | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = accept;
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return resolve(null);
-      resolve({ name: file.name, base64: await toBase64(file), url: URL.createObjectURL(file) });
-    };
-    input.click();
-  });
+/**
+ * Bild über die native Dateiauswahl des Launchers wählen (wie alle anderen Dateien auch).
+ * Die Auswahl des Browsers (<input type=file>) gehört in der WebView nicht zum Fenster und ging dahinter auf.
+ */
+export async function pickImage(): Promise<{ name: string; base64: string; url: string } | null> {
+  let picked: { name: string; base64: string } | null;
+  try {
+    picked = await call<{ name: string; base64: string } | null>('dialog.openImage');
+  } catch (e) {
+    app.error(e);
+    return null;
+  }
+  if (!picked) return null;
+  const bytes = Uint8Array.from(atob(picked.base64), (c) => c.charCodeAt(0));
+  const type = bytes[0] === 0xff ? 'image/jpeg' : 'image/png';
+  return { ...picked, url: URL.createObjectURL(new Blob([bytes], { type })) };
 }

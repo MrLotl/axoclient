@@ -5,6 +5,7 @@
   import { dropFiles, isImage } from '../util/drop';
   import { pickImage } from '../util/files';
   import { t } from '../i18n';
+  import { fadeLoad } from '../util/motion';
 
   /**
    * Die eine Bildfläche für Instanz- und Server-Bilder (Icons und Banner).
@@ -104,7 +105,7 @@
   style="width: {css(width)}; height: {css(height)}; border-radius: {radius}px"
   use:dropFiles={{ accept: isImage, ondrop: (f) => startCrop(f[0]!), disabled: !(editable || droppable) || !onchange }}>
   {#if shown}
-    <img src={url} alt="" class:pixelated class:blur onerror={() => (failedUrl = url)} />
+    <img src={url} alt="" class:pixelated class:blur onerror={() => (failedUrl = url)} use:fadeLoad={url} />
   {:else if name}
     <span class="initials">{initials}</span>
   {:else if fallbackIcon}

@@ -14,6 +14,11 @@
   import UpdatesDialog from './UpdatesDialog.svelte';
   import RepairDialog from './RepairDialog.svelte';
   import type { ContentItem, ContentType, ContentUpdate, Instance, IssueView } from '../../lib/types';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, fadeOut, pop, bounce, fadeLoad, stagger, reducedMotion, DUR } from '../../lib/util/motion';
+
+  // Gestaffelt nur beim ersten Laden; bei sehr langen Listen kein Umsortier-Gleiten (zu teuer)
+  let delay = $state.raw(stagger(20, 14));
 
   let { instance, type, count = $bindable(null) }: { instance: Instance; type: ContentType; count?: number | null } = $props();
 
@@ -56,9 +61,11 @@
     try {
       items = await call<ContentItem[]>('content.list', { id: instance.id, type });
       count = items.filter((i) => i.source !== 'axoclient').length;
+      if (!loaded) delay = stagger(20, 14);
       loaded = true;
     } catch (e) {
       app.error(e);
+      loaded = true;
     }
   }
 
@@ -92,6 +99,7 @@
   const shown = $derived(
     items.filter((i) => !query.trim() || i.name.toLowerCase().includes(query.trim().toLowerCase()) || i.file.toLowerCase().includes(query.trim().toLowerCase()))
   );
+  const flipMs = $derived(reducedMotion() || shown.length > 120 ? 0 : DUR.slow);
   const disabledCount = $derived(items.filter((i) => !i.enabled).length);
 
   async function toggle(item: ContentItem) {
@@ -187,7 +195,7 @@
     {#if type === 'mod'}
       <button class="btn btn-tool" onclick={() => (dialog = 'repair')}>
         <Icon name="wrench" />{t('content.repair')}
-        {#if issues.length}<span class="warn-count">{issues.length}</span>{/if}
+        {#if issues.length}<span class="warn-count" in:bounce>{issues.length}</span>{/if}
       </button>
     {/if}
     <button class="btn btn-tool" onclick={() => (dialog = 'updates')}>
@@ -196,8 +204,12 @@
     <button class="btn btn-tool" disabled={addBlocked} title={addBlocked ? t('content.modLock.full') : undefined} onclick={() => (dialog = 'add')}><Icon name="plus" stroke={1.8} />{t(`content.${key}.add`)}</button>
   </div>
 
-  {#if loaded && items.length === 0}
-    <div class="empty">
+  {#if !loaded}
+    <div class="skel-grid" aria-busy="true" aria-label={t('common.loading')}>
+      {#each Array(8) as _, i (i)}<div class="skeleton" style="animation-delay: {i * 60}ms"></div>{/each}
+    </div>
+  {:else if items.length === 0}
+    <div class="empty" in:fadeSlide={{ y: 10, duration: DUR.slow }}>
       <span class="empty-icon"><Icon name={type === 'mod' ? 'puzzle' : type === 'resourcePack' ? 'image' : 'sun'} size={22} /></span>
       <h2>{t(`content.${key}.emptyTitle`)}</h2>
       <p>{t(`content.${key}.emptyText`)}</p>
@@ -205,19 +217,19 @@
     </div>
   {:else if view === 'grid'}
     <div class="grid" style="--k: {size}">
-      {#each shown as m (m.file)}
-        <article class="card" class:off={!m.enabled}>
+      {#each shown as m, i (m.file)}
+        <article class="card" class:off={!m.enabled} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 10 }} out:pop={{ scale: 0.94, duration: DUR.med }}>
           {#if !m.locked && !m.modLocked}
             <button class="remove" aria-label={t('content.removeNamed', { name: m.name })} title={t('common.remove')} onclick={() => remove(m)}><Icon name="x" size={12} /></button>
           {/if}
           <div class="thumb">
             {#if m.iconUrl}
-              <img class="blur" src={m.iconUrl} alt="" aria-hidden="true" />
-              <img class="icon" src={m.iconUrl} alt="" />
+              <img class="blur" src={m.iconUrl} alt="" aria-hidden="true" use:fadeLoad={m.iconUrl} />
+              <img class="icon" src={m.iconUrl} alt="" use:fadeLoad={m.iconUrl} />
             {:else}
               <span class="icon no-icon"><Icon name={m.locked ? 'sparkle' : type === 'mod' ? 'puzzle' : 'image'} size={26} /></span>
             {/if}
-            {#if updateFiles.has(m.file)}<span class="badge green">{t('content.updateAvailable')}</span>{/if}
+            {#if updateFiles.has(m.file)}<span class="badge green" in:pop={{ scale: 0.8 }}>{t('content.updateAvailable')}</span>{/if}
           </div>
           <div class="meta">
             <h3 class="truncate">{m.name}</h3>
@@ -244,9 +256,9 @@
     </div>
   {:else}
     <div class="list" style="--k: {size}">
-      {#each shown as m (m.file)}
-        <div class="row" class:off={!m.enabled}>
-          {#if m.iconUrl}<img class="row-icon" src={m.iconUrl} alt="" />{:else}<span class="row-icon no-icon"><Icon name={m.locked ? 'sparkle' : type === 'mod' ? 'puzzle' : 'image'} size={18} /></span>{/if}
+      {#each shown as m, i (m.file)}
+        <div class="row" class:off={!m.enabled} animate:flip={{ duration: flipMs }} in:fadeSlide|global={{ delay: delay(i), y: 6 }} out:fadeOut={{ duration: DUR.med }}>
+          {#if m.iconUrl}<img class="row-icon" src={m.iconUrl} alt="" use:fadeLoad={m.iconUrl} />{:else}<span class="row-icon no-icon"><Icon name={m.locked ? 'sparkle' : type === 'mod' ? 'puzzle' : 'image'} size={18} /></span>{/if}
           <div class="row-text">
             <span class="row-title">
               <span class="row-name truncate">{m.name}</span>
@@ -356,6 +368,22 @@
   .card:hover {
     background: #2f2f2f;
   }
+  .card:hover .icon {
+    transform: scale(1.05);
+  }
+  .skel-grid {
+    flex-grow: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-auto-rows: 210px;
+    gap: 14px;
+    align-content: start;
+  }
+  .skel-grid .skeleton {
+    border-radius: 12px;
+  }
   .card.off,
   .row.off {
     opacity: 0.55;
@@ -385,6 +413,7 @@
     aspect-ratio: 1 / 1;
     border-radius: 18px;
     object-fit: cover;
+    transition: transform 0.3s var(--ease-out);
   }
   .no-icon {
     display: flex;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fadeSlide, fadeLoad, stagger } from '../lib/util/motion';
   import { app } from '../lib/stores/app.svelte';
   import { call } from '../lib/bridge/bridge';
   import { t } from '../lib/i18n';
@@ -18,6 +19,11 @@
   let query = $state('');
   let page = $state(0);
   let result = $state<SearchPage | null>(null);
+  // Jede neue Ergebnisseite kommt wieder gestaffelt herein
+  const delay = $derived.by(() => {
+    void result;
+    return stagger(25, 12);
+  });
   let loading = $state(false);
   let picking = $state<ContentProject | null>(null);
   let versions = $state<ContentVersion[]>([]);
@@ -139,11 +145,11 @@
 
   <div class={view === 'grid' ? 'grid' : 'list'} class:loading>
     {#if result}
-      {#each result.items as p (p.id)}
-        <article class={view === 'grid' ? 'card' : 'row-card'}>
+      {#each result.items as p, i (p.id)}
+        <article class={view === 'grid' ? 'card' : 'row-card'} in:fadeSlide|global={{ delay: delay(i), y: 10 }}>
           <div class="thumb">
-            {#if p.imageUrl}<img class="banner" src={p.imageUrl} alt="" loading="lazy" />{:else if p.iconUrl}<img class="banner blur" src={p.iconUrl} alt="" loading="lazy" />{/if}
-            {#if p.iconUrl}<img class="icon" src={p.iconUrl} alt="" loading="lazy" />{/if}
+            {#if p.imageUrl}<img class="banner" src={p.imageUrl} alt="" loading="lazy" use:fadeLoad={p.imageUrl} />{:else if p.iconUrl}<img class="banner blur" src={p.iconUrl} alt="" loading="lazy" use:fadeLoad={p.iconUrl} />{/if}
+            {#if p.iconUrl}<img class="icon" src={p.iconUrl} alt="" loading="lazy" use:fadeLoad={p.iconUrl} />{/if}
           </div>
           <div class="info">
             <h2 class="truncate">{p.title}</h2>
