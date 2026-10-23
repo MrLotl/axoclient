@@ -13,7 +13,7 @@ public static class AppInfo
     public static string ServiceUrl { get; } =
         (Environment.GetEnvironmentVariable("AXOCLIENT_API") is { Length: > 0 } url && Uri.TryCreate(url, UriKind.Absolute, out _)
             ? url
-            : "https://axoclient-api.bernhardtfinn0.workers.dev").TrimEnd('/');
+            : "https://mclauncher-badge.bernhardtfinn0.workers.dev").TrimEnd('/');
 
     /// <summary>Erst einschalten, wenn der CurseForge-API-Key im Worker hinterlegt ist.</summary>
     public const bool CurseForgeEnabled = false;
