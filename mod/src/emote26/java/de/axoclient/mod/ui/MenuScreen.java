@@ -185,17 +185,24 @@ public final class MenuScreen extends Screen {
 		ui.hit(closeX, cy - 17, 34, 34, this::onClose);
 
 		int chipRight = closeX - 12;
+		// Nur so breit, wie neben den Tabs Platz ist
+		int room = chipRight - (tx + 8);
 		if (offline) {
 			String text = "Launcher getrennt";
-			int w = 12 + 14 + 8 + Math.round(g.width(text, 12.5F, Gfx.MEDIUM)) + 12;
+			if (12 + 14 + 8 + g.width(text, 12.5F, Gfx.MEDIUM) + 12 > room)
+				text = "Getrennt";
+			if (12 + 14 + 8 + g.width(text, 12.5F, Gfx.MEDIUM) + 12 > room)
+				text = "";
+			int w = text.isEmpty() ? 12 + 14 + 12 : 12 + 14 + 8 + Math.round(g.width(text, 12.5F, Gfx.MEDIUM)) + 12;
 			int cx = chipRight - w;
 			g.box(cx, cy - 16, w, 32, 8, Theme.alpha(Theme.YELLOW, 0.12F), Theme.alpha(Theme.YELLOW, 0.28F));
 			g.icon(Icons.OFFLINE, cx + 12, cy - 7, 14, Theme.YELLOW_TEXT);
 			g.textMid(text, cx + 34, cy, 12.5F, Gfx.MEDIUM, Theme.YELLOW_TEXT);
-		} else if (MenuData.here != null) {
+		} else if (MenuData.here != null && room > 90) {
 			MenuData.Here here = MenuData.here;
-			String text = g.ellipsize(here.world() ? "Offene Welt" : here.label(), 12.5F, Gfx.REGULAR, 170);
 			boolean icon = MenuData.hereIcon() != null;
+			int fixed = 6 + (icon ? 22 + 8 : 6) + 8 + 7 + 12;
+			String text = g.ellipsize(here.world() ? "Offene Welt" : here.label(), 12.5F, Gfx.REGULAR, Math.min(170, room - fixed));
 			int w = 6 + (icon ? 22 + 8 : 6) + Math.round(g.width(text, 12.5F, Gfx.REGULAR)) + 8 + 7 + 12;
 			int cx = chipRight - w;
 			g.rect(cx, cy - 16, w, 32, 8, Theme.CHIP);

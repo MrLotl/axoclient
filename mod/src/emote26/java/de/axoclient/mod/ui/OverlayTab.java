@@ -58,10 +58,16 @@ final class OverlayTab {
 				m.notice("Profil „" + name + "“ angelegt", null, null);
 			});
 		}
-		String note = "Privat = nur du siehst es, nicht Discord oder OBS";
-		float nw = g.width(note, 11.5F, Gfx.REGULAR);
-		g.icon(Icons.EYE_OFF, x + w - nw - 19, cy - 6.5F, 13, Theme.MUTED_2);
-		g.textMid(note, x + w - nw, cy, 11.5F, Gfx.REGULAR, Theme.MUTED_2);
+		// Hinweis rechts, nur so lang, wie neben den Profilen Platz ist
+		int free = profiles.size() < 8 ? px + 30 + 16 : px + 10;
+		for (String note : new String[] { "Privat = nur du siehst es, nicht Discord oder OBS", "Privat = nur du siehst es", "Privat = nur du" }) {
+			float nw = g.width(note, 11.5F, Gfx.REGULAR);
+			if (x + w - nw - 19 < free)
+				continue;
+			g.icon(Icons.EYE_OFF, x + w - nw - 19, cy - 6.5F, 13, Theme.MUTED_2);
+			g.textMid(note, x + w - nw, cy, 11.5F, Gfx.REGULAR, Theme.MUTED_2);
+			break;
+		}
 
 		// Widgets
 		int at = y + 30 + 16;

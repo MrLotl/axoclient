@@ -304,6 +304,11 @@ public final class MenuData {
 		return platform.texture("skin/" + uuid, png) instanceof Identifier id ? id : null;
 	}
 
+	/** Skin-Bild (PNG) eines Spielers, oder null. */
+	public static byte[] skinPng(String uuid) {
+		return uuid == null ? null : SKINS.get(uuid);
+	}
+
 	public static boolean hasSkin(String uuid) {
 		return uuid != null && SKINS.containsKey(uuid);
 	}

@@ -10,6 +10,8 @@
   import { t } from '../../lib/i18n';
   import Icon from '../../lib/components/Icon.svelte';
   import Select from '../../lib/components/Select.svelte';
+  import EmotePreview from '../../lib/components/EmotePreview.svelte';
+  import { clearEmotePreviews } from '../../lib/util/emotePreview';
 
   type EmoteInfo = { id: string; name: string; source: string; createdAt?: string; loop?: boolean; moving?: boolean };
   type EmoteList = { builtin: EmoteInfo[]; imported: EmoteInfo[]; slots: (string | null)[] };
@@ -20,6 +22,8 @@
   let importing = $state(false);
   let renaming = $state<string | null>(null);
   let renameValue = $state('');
+  /** Erhöht sich bei Skin- oder Emote-Änderungen: die Vorschaubilder werden neu gerechnet. */
+  let previewVersion = $state(0);
 
   // Strichmännchen der eingebauten Emotes (wie im Ingame-Menü), 24er Raster
   const legs = 'M12 14l-3 6M12 14l3 6';
@@ -49,9 +53,22 @@
     }
   }
 
+  function refreshPreviews() {
+    clearEmotePreviews();
+    previewVersion++;
+  }
+
   onMount(() => {
     load();
-    return on('emotes.changed', load);
+    const offEmotes = on('emotes.changed', () => {
+      refreshPreviews();
+      load();
+    });
+    const offSkins = on('skins.changed', refreshPreviews);
+    return () => {
+      offEmotes();
+      offSkins();
+    };
   });
 
   const options = $derived([
@@ -149,7 +166,9 @@
         <span class="slot" class:filled={!!id} style="left: {120 + 96 * Math.sin(a) - 25}px; top: {120 - 96 * Math.cos(a) - 25}px">
           {#if id}
             {@const f = figure(id)}
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
+            <EmotePreview {id} size={40} version={previewVersion}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
+            </EmotePreview>
           {:else}
             <Icon name="plus" size={16} />
           {/if}
@@ -190,7 +209,9 @@
             <span class="figure">
               {#if true}
                 {@const f = figure(e.id)}
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
+                <EmotePreview id={e.id} size={56} version={previewVersion}>
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
+                </EmotePreview>
               {/if}
               {#if slots.includes(e.id)}<span class="badge">{slots.indexOf(e.id) + 1}</span>{/if}
             </span>
@@ -223,7 +244,9 @@
       {#each builtin as e (e.id)}
         {@const f = figure(e.id)}
         <span class="chip">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
+          <EmotePreview id={e.id} size={28} version={previewVersion}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
+          </EmotePreview>
           {e.name}
         </span>
       {/each}

@@ -87,7 +87,7 @@ public final class EmoteWheelScreen extends Screen {
 				g.outline(bx, by, size, size, size / 2, Theme.alpha(0xFFFFFFFF, 0.12F));
 			if (e != null) {
 				float k = size / (float) SLOT;
-				g.icon(Icons.emote(e.id()), sx - 20 * k, sy - 26 * k, 40 * k, on ? Theme.WHITE : Theme.TEXT);
+				g.emote(e.id(), sx - 24 * k, sy - 32 * k, 48 * k, on ? Theme.WHITE : Theme.TEXT);
 				g.textCentered(g.ellipsize(e.label(), 11.5F * k, Gfx.SEMIBOLD, size - 14), sx, sy + 24 * k, 11.5F * k, Gfx.SEMIBOLD,
 					on ? Theme.WHITE : Theme.TEXT);
 			} else

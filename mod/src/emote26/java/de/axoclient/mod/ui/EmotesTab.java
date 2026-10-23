@@ -58,7 +58,7 @@ final class EmotesTab {
 			else
 				g.outline(sx, sy, 50, 50, 25, hover ? 0xFF555555 : Theme.OUTLINE);
 			if (e != null)
-				g.icon(Icons.emote(e.id()), sx + 12, sy + 12, 26, on ? Theme.ACCENT_TEXT : Theme.TEXT_SOFT);
+				g.emote(e.id(), sx + 6, sy + 5, 38, on ? Theme.ACCENT_TEXT : Theme.TEXT_SOFT);
 			else
 				g.icon(Icons.PLUS, sx + 17, sy + 17, 16, on ? Theme.ACCENT_TEXT : Theme.FAINT);
 			int index = i;
@@ -110,7 +110,7 @@ final class EmotesTab {
 			} else
 				g.rect(cx, cy, cw, ch, 10, hover ? 0xFF323232 : Theme.CARD);
 			g.rect(cx + 6, cy + 6, cw - 12, 52, 8, Theme.WELL);
-			g.icon(Icons.emote(e.id()), cx + cw / 2.0F - 16, cy + 6 + 10, 32, Theme.ACCENT_LINE);
+			g.emote(e.id(), cx + cw / 2.0F - 25, cy + 7, 50, Theme.ACCENT_LINE);
 			if (inSlot >= 0) {
 				String n = String.valueOf(inSlot + 1);
 				int bw = Math.max(16, Math.round(g.width(n, 9.5F, Gfx.BOLD)) + 8);

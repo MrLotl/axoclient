@@ -70,6 +70,8 @@ public final class Emotes {
 
 	/** Quelle der geladenen eigenen Animationen: ändert sie sich (z. B. "dauerhaft" umgestellt), wird neu geladen. */
 	private static final Map<String, Integer> CUSTOM_SOURCE = new java.util.concurrent.ConcurrentHashMap<>();
+	/** Rohdaten der eigenen Emotes ({JSON, Animationsname}) für die Vorschau. */
+	private static final Map<String, String[]> CUSTOM_JSON = new java.util.concurrent.ConcurrentHashMap<>();
 
 	/** Spieler (Entity-ID), die gerade ein Emote spielen (für Entity Model Features: so lange das normale Modell). */
 	private static final Map<Integer, AbstractClientPlayer> ACTIVE = new java.util.concurrent.ConcurrentHashMap<>();
@@ -216,10 +218,16 @@ public final class Emotes {
 			if (picked != null) {
 				CUSTOM.put(id, picked);
 				CUSTOM_SOURCE.put(id, source);
+				CUSTOM_JSON.put(id, new String[] { json, animation });
 			}
 		} catch (RuntimeException e) {
 			System.err.println("[AxoClient] Eigenes Emote " + id + " nicht lesbar: " + e);
 		}
+	}
+
+	/** {JSON, Animationsname} eines eigenen Emotes, sobald der Launcher es geschickt hat; sonst null. */
+	public static String[] customSource(String id) {
+		return id == null ? null : CUSTOM_JSON.get(id);
 	}
 
 	private static AnimationController controller(AbstractClientPlayer player) {

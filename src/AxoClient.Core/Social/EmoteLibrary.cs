@@ -203,6 +203,20 @@ public sealed class EmoteLibrary(AppPaths paths, EventHub events)
         events.Publish("emotes.changed");
     }
 
+    private static string? _builtInJson;
+
+    /// <summary>Animationen der eingebauten Emotes (Bedrock-JSON aus der Mod, als Ressource eingebettet), oder <c>null</c>.</summary>
+    public static string? BuiltInAnimations()
+    {
+        if (_builtInJson != null)
+            return _builtInJson;
+        using var stream = typeof(EmoteLibrary).Assembly.GetManifestResourceStream("emotes/builtin.json");
+        if (stream == null)
+            return null;
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        return _builtInJson = reader.ReadToEnd();
+    }
+
     /// <summary>Animation eines eigenen Emotes (kompaktes JSON) samt Name der Animation darin, oder <c>null</c>.</summary>
     public async Task<(string Json, string? Animation)?> AnimationAsync(string id, CancellationToken ct = default)
     {

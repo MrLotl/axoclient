@@ -19,6 +19,9 @@
     <!-- Ressourcennamen immer mit "/" (RecursiveDir liefert unter Windows "\", z. B. "axomod\…") -->
     <EmbeddedResource Include="Resources\**\*"
                       LogicalName="$([System.String]::Copy('%(RecursiveDir)%(Filename)%(Extension)').Replace('\', '/'))" />
+    <!-- Animationen der eingebauten Emotes, direkt aus der Mod (eine Quelle): für die Vorschaubilder im Launcher -->
+    <EmbeddedResource Include="..\..\mod\src\emote26\resources\assets\axoclient\player_animations\emotes.json"
+                      LogicalName="emotes/builtin.json" Link="Resources\emotes\builtin.json" />
     <InternalsVisibleTo Include="AxoClient.Tests" />
   </ItemGroup>
 

@@ -192,6 +192,96 @@ public final class Gfx {
 		return rows;
 	}
 
+	// ---------- Runde Formen (glatt) ----------
+
+	/** Kreise und Pillen (Radius ≥ halbe kürzere Seite) werden glatt gezeichnet, alles andere mit Pixel-Ecken. */
+	private static boolean isRound(int radius, int w, int h) {
+		return radius > 0 && radius * 2 >= Math.min(w, h);
+	}
+
+	/** Ausschnitt (u, v, w × h) eines Bildes tex × tex, 1:1 bei (x, y). */
+	private void region(Identifier id, int x, int y, int u, int v, int w, int h, int tex, int argb) {
+		if (w > 0 && h > 0)
+			g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, w, h, w, h, tex, tex, argb);
+	}
+
+	/** Glatte Pille (oder Kreis): zwei Kreishälften und eine Fläche dazwischen. */
+	private void pillPx(int x0, int y0, int x1, int y1, int argb) {
+		int wp = x1 - x0, hp = y1 - y0;
+		if (wp <= 0 || hp <= 0)
+			return;
+		if (wp >= hp) {
+			int d = hp, left = d / 2, right = d - left;
+			Identifier disc = Round.disc(d);
+			region(disc, x0, y0, 0, 0, left, d, d, argb);
+			region(disc, x1 - right, y0, left, 0, right, d, d, argb);
+			if (x1 - right > x0 + left)
+				g.fill(x0 + left, y0, x1 - right, y1, argb);
+		} else {
+			int d = wp, top = d / 2, bottom = d - top;
+			Identifier disc = Round.disc(d);
+			region(disc, x0, y0, 0, 0, d, top, d, argb);
+			region(disc, x0, y1 - bottom, 0, top, d, bottom, d, argb);
+			if (y1 - bottom > y0 + top)
+				g.fill(x0, y0 + top, x1, y1 - bottom, argb);
+		}
+	}
+
+	/** Glatter Rahmen einer Pille (oder eines Kreises), t Punkte stark. */
+	private void pillOutlinePx(int x0, int y0, int x1, int y1, int t, int argb) {
+		int wp = x1 - x0, hp = y1 - y0;
+		if (wp <= 0 || hp <= 0)
+			return;
+		if (wp >= hp) {
+			int d = hp, left = d / 2, right = d - left;
+			Identifier ring = Round.ring(d, t);
+			region(ring, x0, y0, 0, 0, left, d, d, argb);
+			region(ring, x1 - right, y0, left, 0, right, d, d, argb);
+			if (x1 - right > x0 + left) {
+				g.fill(x0 + left, y0, x1 - right, y0 + t, argb);
+				g.fill(x0 + left, y1 - t, x1 - right, y1, argb);
+			}
+		} else {
+			int d = wp, top = d / 2, bottom = d - top;
+			Identifier ring = Round.ring(d, t);
+			region(ring, x0, y0, 0, 0, d, top, d, argb);
+			region(ring, x0, y1 - bottom, 0, top, d, bottom, d, argb);
+			if (y1 - bottom > y0 + top) {
+				g.fill(x0, y0 + top, x0 + t, y1 - bottom, argb);
+				g.fill(x1 - t, y0 + top, x1, y1 - bottom, argb);
+			}
+		}
+	}
+
+	/** Glatte Pille mit waagerechtem Verlauf: Streifen, an den Enden aus der Kreismaske geschnitten. */
+	private void pillGradientPx(int x0, int y0, int x1, int y1, int from, int to) {
+		int wp = x1 - x0, hp = y1 - y0;
+		if (wp < hp) {
+			pillPx(x0, y0, x1, y1, Theme.mix(from, to, 0.5F));
+			return;
+		}
+		int d = hp, left = d / 2, right = d - left;
+		Identifier disc = Round.disc(d);
+		int step = Math.max(1, Math.min(mc, (wp + 63) / 64));
+		for (int a = x0; a < x1; ) {
+			int b;
+			if (a < x0 + left)
+				b = Math.min(x0 + left, a + step);
+			else if (a >= x1 - right)
+				b = Math.min(x1, a + step);
+			else
+				b = Math.min(x1 - right, a + Math.max(step, (wp + 47) / 48));
+			int c = Theme.mix(from, to, ((a + b) / 2.0F - x0) / wp);
+			if (a < x0 + left)
+				region(disc, a, y0, a - x0, 0, b - a, d, d, c);
+			else if (a >= x1 - right)
+				region(disc, a, y0, d - (x1 - a), 0, b - a, d, d, c);
+			else
+				g.fill(a, y0, b, y1, c);
+			a = b;
+		}
+	}
+
 	// ---------- Flächen ----------
 
 	public void fill(int x, int y, int w, int h, int argb) {
@@ -205,7 +295,10 @@ public final class Gfx {
 		int x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
 		if (x1 <= x0 || y1 <= y0)
 			return;
-		rectPx(x0, y0, x1, y1, steps(radius, w, h, x1 - x0, y1 - y0), argb);
+		if (isRound(radius, w, h))
+			pillPx(x0, y0, x1, y1, argb);
+		else
+			rectPx(x0, y0, x1, y1, steps(radius, w, h, x1 - x0, y1 - y0), argb);
 	}
 
 	/** Rahmen, einen Minecraft-Pixel dick, innen an der Kante. */
@@ -215,7 +308,10 @@ public final class Gfx {
 		int x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
 		if (x1 <= x0 || y1 <= y0)
 			return;
-		outlinePx(x0, y0, x1, y1, steps(radius, w, h, x1 - x0, y1 - y0), argb);
+		if (isRound(radius, w, h))
+			pillOutlinePx(x0, y0, x1, y1, Math.max(1, Math.round(px)), argb);
+		else
+			outlinePx(x0, y0, x1, y1, steps(radius, w, h, x1 - x0, y1 - y0), argb);
 	}
 
 	/** Fläche mit Rahmen nach innen. */
@@ -237,6 +333,10 @@ public final class Gfx {
 		int wp = x1 - x0, hp = y1 - y0;
 		if (wp <= 0 || hp <= 0)
 			return;
+		if (isRound(radius, w, h)) {
+			pillGradientPx(x0, y0, x1, y1, from, to);
+			return;
+		}
 		int r = steps(radius, w, h, wp, hp);
 		int u = mc;
 		int corner = r * u;
@@ -270,7 +370,10 @@ public final class Gfx {
 			return;
 		int d = offsetY >= 12 ? 2 * mc : mc;
 		int c = Theme.alpha(0xFF000000, Math.min(0.55F, strength * 0.8F));
-		rectPx(x0 + mc, y0 + d, x1 + mc, y1 + d, steps(radius, w, h, x1 - x0, y1 - y0), c);
+		if (isRound(radius, w, h))
+			pillPx(x0 + mc, y0 + d, x1 + mc, y1 + d, c);
+		else
+			rectPx(x0 + mc, y0 + d, x1 + mc, y1 + d, steps(radius, w, h, x1 - x0, y1 - y0), c);
 	}
 
 	/** Waagerechte Linie, einen Minecraft-Pixel dick. */
@@ -284,7 +387,7 @@ public final class Gfx {
 			g.fill(X(x), Y(y), X(x) + mc, Y(y + h), argb);
 	}
 
-	/** Runder Punkt (Status), als kleiner Pixel-Kreis. */
+	/** Runder Punkt (Status). */
 	public void dot(int cx, int cy, int diameter, int argb) {
 		rect(cx - diameter / 2, cy - diameter / 2, diameter, diameter, diameter, argb);
 	}
@@ -426,6 +529,24 @@ public final class Gfx {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Emote als Vorschau: der eigene Skin in der Pose des Emotes, genau in size × size Design-Pixeln gerastert. Solange
+	 * es noch kein Bild gibt (oder keinen Skin), das Pixel-Symbol in iconColor.
+	 */
+	public void emote(String id, float x, float y, float size, int iconColor) {
+		if (g == null)
+			return;
+		int n = Math.max(8, Math.round(size * px));
+		Identifier preview = EmotePreviews.get(id, n);
+		if (preview == null) {
+			icon(Icons.emote(id), x, y, size, iconColor);
+			return;
+		}
+		int x0 = Math.round(ox + (x + size / 2) * px - n / 2.0F);
+		int y0 = Math.round(oy + (y + size / 2) * px - n / 2.0F);
+		region(preview, x0, y0, 0, 0, n, n, n, 0xFFFFFFFF);
 	}
 
 	/** Ausschnitt einer Textur in ein Rechteck (Design-Pixel), z. B. Gesicht aus dem Skin. */

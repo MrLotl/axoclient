@@ -50,6 +50,14 @@ public static partial class Handlers
             await host.Emotes.RemoveAsync(d.Id, ct);
             return await host.Emotes.ListAsync(ct);
         });
+        // Für die Vorschaubilder: Animation eines Emotes (eingebaut oder eigen) als JSON samt Name der Animation darin
+        r.On<IdData>("emotes.animation", async (d, ct) =>
+        {
+            if (EmoteLibrary.BuiltIn.Any(b => b.Id == d.Id))
+                return EmoteLibrary.BuiltInAnimations() is { } json ? new { json, animation = (string?)d.Id } : null;
+            var own = await host.Emotes.AnimationAsync(d.Id, ct);
+            return own is { } a ? new { json = a.Json, animation = a.Animation } : null;
+        });
         r.On<EmoteSlotsData>("emotes.setSlots", async (d, ct) =>
         {
             await host.Emotes.SetSlotsAsync(d.Slots, ct);

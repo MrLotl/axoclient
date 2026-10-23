@@ -27,9 +27,9 @@ final class CapeTab {
 		figure(g, x + pw / 2, y + (h - 46 - figureH) / 2 + 4, figureH, selected, front);
 		int ry = y + h - 14 - 30;
 		int cx = x + pw / 2;
-		arrow(g, cx - 54, ry, Icons.CHEVRON_LEFT);
+		arrow(g, x + 14, ry, Icons.CHEVRON_LEFT);
 		g.textCentered(front ? "Vorderseite" : "Rückseite", cx, ry + 15, 12, Gfx.REGULAR, Theme.MUTED_2);
-		arrow(g, cx + 54 - 30, ry, Icons.CHEVRON_RIGHT);
+		arrow(g, x + pw - 14 - 30, ry, Icons.CHEVRON_RIGHT);
 
 		// Liste
 		int rx = x + pw + 18;
@@ -76,23 +76,26 @@ final class CapeTab {
 		int rows = (MenuData.CAPES.size() + 3) / 4;
 		int listBottom = gy + rows * (ch + gap);
 
-		// Unten: Hinweis und Anlegen
-		int by = Math.max(listBottom + 8, y + h - 40);
+		// Unten: Hinweis und Anlegen (der Hinweis darf mehrzeilig werden)
 		boolean same = selected == null || selected.equals(MenuData.capeWorn);
 		String label = same ? "Angelegt" : "Anlegen";
 		int bw = Math.round(g.width(label, 13, Gfx.SEMIBOLD)) + 40;
-		m.primary(g, label, null, rx + rw - bw, by, 40, 20, 10, 13, !same && MenuData.connected(), () -> {
+		MenuData.Cape sel = find(selected);
+		String hint = sel != null && "mojang".equals(sel.kind())
+			? "Mojang-Capes sehen alle Spieler. Eigene Capes erstellst und lädst du im Launcher hoch."
+			: "Alle AxoClient-Spieler sehen dein Cape sofort. Eigene Capes erstellst und lädst du im Launcher hoch.";
+		int hintW = rw - bw - 12;
+		int hintH = Math.round(MenuScreen.wrap(g, hint, 12, Gfx.REGULAR, hintW).size() * 17.4F);
+		int blockH = Math.max(40, hintH);
+		int by = Math.max(listBottom + 8, y + h - blockH);
+		m.primary(g, label, null, rx + rw - bw, by + (blockH - 40) / 2, 40, 20, 10, 13, !same && MenuData.connected(), () -> {
 			MenuData.send("capeWear", "key", selected);
 			MenuData.capeWorn = selected;
 			MenuData.Cape c = find(selected);
 			m.notice((c == null ? "Cape" : c.name()) + " angelegt", null, null);
 		});
-		MenuData.Cape sel = find(selected);
-		String hint = sel != null && "mojang".equals(sel.kind())
-			? "Mojang-Capes sehen alle Spieler. Eigene Capes erstellst und lädst du im Launcher hoch."
-			: "Alle AxoClient-Spieler sehen dein Cape sofort. Eigene Capes erstellst und lädst du im Launcher hoch.";
-		MenuScreen.paragraph(g, hint, rx, by + (40 - 35) / 2, rw - bw - 12, 12, Gfx.REGULAR, Theme.MUTED_2, 17.4F, false);
-		return Math.max(h, by + 40 - y);
+		MenuScreen.paragraph(g, hint, rx, by + (blockH - hintH) / 2, hintW, 12, Gfx.REGULAR, Theme.MUTED_2, 17.4F, false);
+		return Math.max(h, by + blockH - y);
 	}
 
 	private void arrow(Gfx g, int bx, int by, Icons.Icon icon) {
