@@ -104,7 +104,6 @@ public sealed class DiscordIntegration : IDisposable
             _client!.SetPresence(new RichPresence
             {
                 Details = "Im Launcher",
-                State = "Wählt, was gespielt wird",
                 Timestamps = new Timestamps(_launcherStartedAt.UtcDateTime),
                 Assets = new Assets { LargeImageKey = ImageKey, LargeImageText = AppInfo.Name }
             });
