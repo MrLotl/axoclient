@@ -48,7 +48,14 @@ export interface LauncherSettings {
 
 export interface UiState {
   lastInstance: string | null;
-  views: { instances: 'grid' | 'list'; localServers: 'grid' | 'list'; modpacks: 'grid' | 'list' };
+  views: {
+    instances: 'grid' | 'list';
+    localServers: 'grid' | 'list';
+    modpacks: 'grid' | 'list';
+    content: 'grid' | 'list';
+    contentGridSize: number;
+    contentListSize: number;
+  };
   sort: { modpacks: SearchSort; addMods: SearchSort };
   contentSource: { addMods: string; modpacks: string };
 }

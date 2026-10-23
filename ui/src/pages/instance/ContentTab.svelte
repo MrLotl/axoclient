@@ -25,28 +25,22 @@
   let items = $state<ContentItem[]>([]);
   let loaded = $state(false);
   let query = $state('');
-  let view = $state<'grid' | 'list'>('grid');
+  let view = $state<'grid' | 'list'>(app.ui?.views.content ?? 'grid');
   let updates = $state<ContentUpdate[]>([]);
   let issues = $state<IssueView[]>([]);
   let dialog = $state<null | 'add' | 'updates' | 'repair' | { version: ContentItem }>(null);
 
-  // Größe der Kacheln bzw. Zeilen (0 = klein, 1 = groß), je Ansicht gemerkt
-  function storedSize(v: 'grid' | 'list') {
-    try {
-      const n = parseFloat(localStorage.getItem(`content.size.${v}`) ?? '');
-      return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.5;
-    } catch {
-      return 0.5;
-    }
-  }
-  let sizes = $state({ grid: storedSize('grid'), list: storedSize('list') });
+  // Größe der Kacheln bzw. Zeilen (0 = klein, 1 = groß), je Ansicht gemerkt. Liegt in state.json:
+  // localStorage hilft hier nicht, die Oberfläche läuft bei jedem Start auf einem anderen Port.
+  const clamp = (n: number | undefined) => (typeof n === 'number' && Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.5);
+  let sizes = $state({ grid: clamp(app.ui?.views.contentGridSize), list: clamp(app.ui?.views.contentListSize) });
+  let saveTimer: ReturnType<typeof setTimeout> | undefined;
   function setSize(value: number) {
     sizes[view] = value;
-    try {
-      localStorage.setItem(`content.size.${view}`, String(value));
-    } catch {
-      // ohne Speicher gilt die Größe nur bis zum Schließen
-    }
+    // Beim Ziehen am Regler erst nach einer kurzen Pause speichern
+    clearTimeout(saveTimer);
+    const key = view === 'grid' ? 'contentGridSize' : 'contentListSize';
+    saveTimer = setTimeout(() => app.updateUiState({ [key]: value }), 400);
   }
   const size = $derived(sizes[view]);
 
@@ -170,7 +164,7 @@
       <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
       <input type="search" bind:value={query} placeholder={t(`content.${key}.search`)} aria-label={t(`content.${key}.search`)} />
     </label>
-    <Segmented bind:value={view} label={t('common.view')} options={[{ value: 'grid', icon: 'grid', aria: t('common.gridView') }, { value: 'list', icon: 'list', aria: t('common.listView') }]} />
+    <Segmented bind:value={view} label={t('common.view')} options={[{ value: 'grid', icon: 'grid', aria: t('common.gridView') }, { value: 'list', icon: 'list', aria: t('common.listView') }]} onchange={(v) => app.updateUiState({ content: v })} />
     <input
       class="size"
       type="range"

@@ -8,7 +8,8 @@ public static partial class Handlers
 {
     private sealed record SettingsData(LauncherSettings Settings);
 
-    private sealed record StateData(string? Instances, string? LocalServers, string? Modpacks, string? SortModpacks, string? SortAddMods);
+    private sealed record StateData(string? Instances, string? LocalServers, string? Modpacks, string? SortModpacks, string? SortAddMods,
+        string? Content = null, double? ContentGridSize = null, double? ContentListSize = null);
 
     private sealed record AccentData(string From, string To, int Angle);
 
@@ -33,11 +34,15 @@ public static partial class Handlers
         {
             static string? View(string? v) => v is "grid" or "list" ? v : null;
             static string? Sort(string? v) => v is "popular" or "relevance" or "newest" or "updated" ? v : null;
+            static double? Size(double? v) => v is { } n && double.IsFinite(n) ? Math.Clamp(n, 0, 1) : null;
             await host.Settings.UpdateStateAsync(s =>
             {
                 s.Views.Instances = View(d.Instances) ?? s.Views.Instances;
                 s.Views.LocalServers = View(d.LocalServers) ?? s.Views.LocalServers;
                 s.Views.Modpacks = View(d.Modpacks) ?? s.Views.Modpacks;
+                s.Views.Content = View(d.Content) ?? s.Views.Content;
+                s.Views.ContentGridSize = Size(d.ContentGridSize) ?? s.Views.ContentGridSize;
+                s.Views.ContentListSize = Size(d.ContentListSize) ?? s.Views.ContentListSize;
                 s.Sort.Modpacks = Sort(d.SortModpacks) ?? s.Sort.Modpacks;
                 s.Sort.AddMods = Sort(d.SortAddMods) ?? s.Sort.AddMods;
             });

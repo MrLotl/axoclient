@@ -226,7 +226,7 @@ class AppState {
     }
   }
 
-  async updateUiState(patch: Record<string, string>) {
+  async updateUiState(patch: Record<string, string | number>) {
     try {
       this.ui = await call<UiState>('state.update', patch);
     } catch (e) {

@@ -4,6 +4,7 @@
   import { t } from '../i18n';
   import { fadeOut, pop, DUR } from '../util/motion';
   import { fade } from 'svelte/transition';
+  import { portal } from '../util/portal';
 
   let {
     title,
@@ -69,8 +70,11 @@
   }
 </script>
 
+<!-- Der Wrapper bleibt an Ort und Stelle, der Dialog selbst hängt an <body> und liegt so immer ganz oben -->
+<div class="anchor">
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+  use:portal
   class="backdrop"
   class:closing
   onmousedown={(e) => !closing && e.target === e.currentTarget && onclose?.()}
@@ -112,8 +116,12 @@
     {/if}
   </div>
 </div>
+</div>
 
 <style>
+  .anchor {
+    display: contents;
+  }
   .backdrop {
     position: fixed;
     inset: 0;

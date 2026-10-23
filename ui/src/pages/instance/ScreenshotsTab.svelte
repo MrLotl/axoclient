@@ -8,6 +8,7 @@
   import type { ScreenshotInfo } from '../../lib/types';
   import { fade } from 'svelte/transition';
   import { fadeSlide, fadeOut, fadeLoad, pop, stagger, reducedMotion, DUR } from '../../lib/util/motion';
+  import { portal } from '../../lib/util/portal';
 
   const delay = stagger(25, 12);
 
@@ -106,8 +107,9 @@
 </div>
 
 {#if preview}
+  <div style="display: contents">
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="lightbox" role="dialog" tabindex="-1" aria-modal="true" aria-label={t('screenshots.preview')} onmousedown={(e) => e.target === e.currentTarget && (preview = null)} in:fade={{ duration: reducedMotion() ? 0 : DUR.med }} out:fadeOut={{ duration: DUR.med }}>
+  <div use:portal class="lightbox" role="dialog" tabindex="-1" aria-modal="true" aria-label={t('screenshots.preview')} onmousedown={(e) => e.target === e.currentTarget && (preview = null)} in:fade={{ duration: reducedMotion() ? 0 : DUR.med }} out:fadeOut={{ duration: DUR.med }}>
     <button class="nav prev" aria-label={t('screenshots.prev')} onclick={() => step(-1)}><Icon name="chevronLeft" size={20} /></button>
     {#key preview.url}
       <img src={preview.url} alt={preview.file} in:pop={{ scale: 0.97, duration: DUR.med }} />
@@ -128,6 +130,7 @@
         <button class="icon-btn" aria-label={t('screenshots.close')} onclick={() => (preview = null)}><Icon name="x" size={14} /></button>
       {/if}
     </div>
+  </div>
   </div>
 {/if}
 
