@@ -9,6 +9,7 @@
   import Toggle from '../../lib/components/Toggle.svelte';
   import Checkbox from '../../lib/components/Checkbox.svelte';
   import type { FileRef, InstanceDetails, LoaderType, ModLockLevel } from '../../lib/types';
+  import { expand } from '../../lib/util/motion';
 
   let { details, onsaved }: { details: InstanceDetails; onsaved: () => void } = $props();
 
@@ -152,7 +153,7 @@
           <span class="hint">{axoSupported ? t('instance.settings.axoHint') : t('versions.axoUnsupported')}</span>
         </div>
         {#if minecraft !== original.minecraft.version || loader !== original.loader.type}
-          <p class="note"><Icon name="warning" size={14} />{t('instance.settings.versionChangeNote')}</p>
+          <p class="note" transition:expand><Icon name="warning" size={14} />{t('instance.settings.versionChangeNote')}</p>
         {/if}
       </FormSection>
 
@@ -165,9 +166,9 @@
               <Toggle bind:checked={ownMemory} label={t('instance.settings.ownMemory')} />
             </div>
             {#if ownMemory}
-              <MemorySlider bind:value={memory} mods={details.summary.modCount} />
+              <div transition:expand><MemorySlider bind:value={memory} mods={details.summary.modCount} /></div>
             {:else}
-              <p class="hint">{t('instance.settings.memoryDefault', { gb: (details.effectiveMemoryMb / 1024).toLocaleString('de-DE') })}</p>
+              <p class="hint" transition:expand>{t('instance.settings.memoryDefault', { gb: (details.effectiveMemoryMb / 1024).toLocaleString('de-DE') })}</p>
             {/if}
           </div>
           <label class="label perf-block">
@@ -191,12 +192,12 @@
           {/each}
         </div>
         {#if lockLevel === 'pack'}
-          <div class="row between">
+          <div class="row between" transition:expand>
             <span class="hint">{t('modLock.packCount', { count: original.modLock?.packMods.length ?? 0 })}</span>
             <button class="btn btn-flat sm" disabled={lockBusy} onclick={() => setLock('pack', true)}>{t('modLock.adopt')}</button>
           </div>
         {/if}
-        {#if lockLevel !== 'off'}<p class="hint">{t('modLock.shareNote')}</p>{/if}
+        {#if lockLevel !== 'off'}<p class="hint" transition:expand>{t('modLock.shareNote')}</p>{/if}
       </FormSection>
 
       <FormSection title={t('instance.settings.manage')} subtitle={t('instance.settings.manageHint')}>

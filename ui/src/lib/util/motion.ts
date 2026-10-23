@@ -90,3 +90,26 @@ export function fadeLoad(node: HTMLImageElement, _src?: string | null) {
     }
   };
 }
+
+/** Auf- und Zuklappen: Höhe und Abstände laufen weich mit, der Inhalt blendet dabei ein bzw. aus.
+ *  Für Zeilen, die je nach Schalter erscheinen – die Karte darum wächst und schrumpft dann ohne Sprung. */
+export function expand(node: Element, { delay = 0, duration = DUR.slow - 40 }: Opts = {}): TransitionConfig {
+  if (reducedMotion()) return { duration: 0 };
+  const style = getComputedStyle(node);
+  const opacity = +style.opacity;
+  const height = parseFloat(style.height);
+  const num = (v: string) => parseFloat(v) || 0;
+  const [pt, pb, mt, mb, bt, bb] = [style.paddingTop, style.paddingBottom, style.marginTop, style.marginBottom, style.borderTopWidth, style.borderBottomWidth].map(num);
+  // Im Flex-/Grid-Container zählt auch der Abstand zum Vorgänger: der läuft mit, sonst springt es am Ende
+  const parent = node.parentElement ? getComputedStyle(node.parentElement) : null;
+  const gap = parent && /flex|grid/.test(parent.display) && node.previousElementSibling ? num(parent.rowGap) : 0;
+  return {
+    delay,
+    duration,
+    easing: cubicOut,
+    css: (t) =>
+      `overflow: hidden; opacity: ${Math.min(t * 1.4, 1) * opacity}; height: ${t * height}px;` +
+      `padding-top: ${t * pt}px; padding-bottom: ${t * pb}px; margin-top: ${t * mt - (1 - t) * gap}px; margin-bottom: ${t * mb}px;` +
+      `border-top-width: ${t * bt}px; border-bottom-width: ${t * bb}px; min-height: 0;`
+  };
+}

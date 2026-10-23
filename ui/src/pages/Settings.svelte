@@ -10,7 +10,7 @@
   import MemorySlider from '../lib/components/MemorySlider.svelte';
   import { bytes } from '../lib/util/format';
   import { copyText } from '../lib/util/clipboard';
-  import { fadeSlide, DUR } from '../lib/util/motion';
+  import { fadeSlide, expand, DUR } from '../lib/util/motion';
   import type { DiagnosticItem, CustomGradient, FileRef, LauncherSettings, StorageOverview } from '../lib/types';
 
   const s = $derived(app.settings!);
@@ -298,7 +298,7 @@
               onchange={(v) => set((x) => (x.game.windowMode = v as LauncherSettings['game']['windowMode']))} />
           </div>
           {#if s.game.windowMode === 'window'}
-            <div class="item">
+            <div class="item" transition:expand>
               <div class="text"><span class="name">{t('settings.windowSize')}</span></div>
               <div class="row">
                 <span class="field small"><input type="number" min="320" max="7680" value={s.game.windowSize.w} onchange={(e) => set((x) => (x.game.windowSize = { ...x.game.windowSize, w: +(e.currentTarget as HTMLInputElement).value }))} aria-label={t('settings.width')} /></span>
@@ -325,7 +325,7 @@
               <span class="desc">{s.defaults.java === 'auto' ? t('settings.javaAuto') : `${s.defaults.java}${javaInfo ? ` · ${javaInfo}` : ''}`}</span>
             </div>
             <div class="row">
-              {#if s.defaults.java !== 'auto'}<button class="btn btn-flat sm" onclick={() => set((x) => (x.defaults.java = 'auto'))}>{t('settings.javaReset')}</button>{/if}
+              {#if s.defaults.java !== 'auto'}<button transition:fadeSlide={{ y: 0, x: 6 }} class="btn btn-flat sm" onclick={() => set((x) => (x.defaults.java = 'auto'))}>{t('settings.javaReset')}</button>{/if}
               <button class="btn btn-second sm" onclick={chooseJava}>{t('settings.javaChoose')}</button>
             </div>
           </div>
@@ -357,7 +357,7 @@
           {/if}
         </div>
         {#if selectedCustom}
-          <div class="card">
+          <div class="card" transition:expand>
             <div class="item">
               <div class="text"><span class="name">{t('settings.colors')}</span></div>
               <div class="row">
@@ -374,7 +374,7 @@
               </div>
             </div>
             {#if contrast && !contrast.ok}
-              <p class="warn"><Icon name="warning" size={14} />{t('settings.lowContrast', { ratio: contrast.ratio.toLocaleString('de-DE') })}</p>
+              <p class="warn" transition:expand><Icon name="warning" size={14} />{t('settings.lowContrast', { ratio: contrast.ratio.toLocaleString('de-DE') })}</p>
             {/if}
           </div>
         {/if}
@@ -415,7 +415,7 @@
             <Toggle checked={s.notifications.quietWhilePlaying} label={t('settings.quietWhilePlaying')} onchange={(v) => set((x) => (x.notifications.quietWhilePlaying = v))} />
           </div>
           {#if s.notifications.quietWhilePlaying}
-            <div class="item">
+            <div class="item" transition:expand>
               <div class="text"><span class="name">{t('settings.invitesWhilePlaying')}</span></div>
               <Toggle checked={s.notifications.invitesWhilePlaying} label={t('settings.invitesWhilePlaying')} onchange={(v) => set((x) => (x.notifications.invitesWhilePlaying = v))} />
             </div>
