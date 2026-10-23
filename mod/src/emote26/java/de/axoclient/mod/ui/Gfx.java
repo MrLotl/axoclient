@@ -1,6 +1,5 @@
 package de.axoclient.mod.ui;
 
-import de.axoclient.mod.hud.HudSkin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -11,13 +10,12 @@ import org.joml.Matrix3x2fStack;
 
 /**
  * Zeichnen in "Design-Pixeln": dieselben Maße wie im Mockup (1280 × 800), damit das Menü immer gleich viel Platz
- * einnimmt. Das Aussehen ist Minecraft: Schrift, Symbole, Ecken und Rahmen bestehen aus "Minecraft-Pixeln"
- * ({@link #mc} Bildschirmpunkte groß, immer eine ganze Zahl). So bleibt alles pixelgenau scharf – die Schrift wird nur
- * in ganzen Vielfachen vergrößert, Ecken sind Pixel-Treppen statt weicher Bögen, Rahmen und Linien einen
- * Minecraft-Pixel dick.
+ * einnimmt. Gezeichnet wird aber in echten Bildschirmpunkten: jede Kante wird auf ganze Punkte gerundet, Ecken und
+ * Symbole liegen 1:1 auf dem Raster, die Ecken sind glatt gerundet. Die Schrift ist die Minecraft-Schrift, in ganzen
+ * Vielfachen vergrößert, damit ihre Pixel scharf bleiben.
  * <p>
- * Flächen, Rahmen, Verläufe und Symbole sind schlichte Rechtecke derselben Art; Minecraft fasst sie zu wenigen
- * Zeichenaufrufen zusammen.
+ * Flächen, Rahmen und Schatten kommen aus wenigen Neun-Teile-Bildern ({@link Shapes}); gleiche Bilder hintereinander
+ * fasst Minecraft zu einem Zeichenaufruf zusammen.
  */
 public final class Gfx {
 	public static final float REF_WIDTH = 1280;
@@ -33,7 +31,7 @@ public final class Gfx {
 	public final float scale;
 	/** Bildschirmpunkte je Design-Pixel. */
 	public final float px;
-	/** Bildschirmpunkte je Minecraft-Pixel (Schrift, Symbole, Ecken, Rahmen); immer ganzzahlig. */
+	/** Bildschirmpunkte je Pixel der Minecraft-Schrift (immer ganzzahlig, damit sie scharf bleibt). */
 	public final int mc;
 	/** Lage des Design-Ursprungs in Bildschirmpunkten. */
 	private final float ox;
@@ -109,177 +107,52 @@ public final class Gfx {
 		return Math.round(oy + y * px);
 	}
 
-	// ---------- Pixel-Ecken (alles in Bildschirmpunkten) ----------
+	// ---------- Grundbausteine ----------
+
+	/** Bild 1:1 (Bildschirmpunkte). */
+	private void blit(Identifier id, int x, int y, int w, int h, int texW, int texH, int argb) {
+		g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, 0, 0, w, h, texW, texH, texW, texH, argb);
+	}
 
 	/**
-	 * Eckenradius in Minecraft-Pixeln für ein Rechteck von wp × hp Punkten. Kreise und Pillen (Radius ≥ halbe Seite)
-	 * werden ganz rund; sonst wird der Radius aus dem Mockup auf wenige Pixelstufen verkleinert, wie bei Minecraft.
+	 * Ausschnitt (u, v, rw × rh) eines Bildes der Größe tex × tex nach (x, y, w × h) – 1:1 oder gestreckt. Gestreckt wird
+	 * nur ein gleichförmiger Bereich, deshalb bleibt das Ergebnis bei jedem Texturfilter sauber.
 	 */
-	private int steps(int radius, int w, int h, int wp, int hp) {
-		if (radius <= 0)
-			return 0;
-		int full = Math.min(wp, hp) / (2 * mc);
-		if (radius * 2 >= Math.min(w, h))
-			return full;
-		return Math.min(full, Math.max(1, Math.round(radius * px / (2.0F * mc))));
-	}
-
-	private void rectPx(int x0, int y0, int x1, int y1, int r, int argb) {
-		if (r <= 0) {
-			g.fill(x0, y0, x1, y1, argb);
+	private void piece(Identifier id, int x, int y, int w, int h, int u, int v, int rw, int rh, int tex, int argb) {
+		if (w <= 0 || h <= 0)
+			return;
+		if (w == rw && h == rh) {
+			g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, rw, rh, rw, rh, tex, tex, argb);
 			return;
 		}
-		int u = mc;
-		g.fill(x0, y0 + r * u, x1, y1 - r * u, argb);
-		for (int row = 0; row < r; row++) {
-			int in = HudSkin.inset(r, row) * u;
-			g.fill(x0 + in, y0 + row * u, x1 - in, y0 + (row + 1) * u, argb);
-			g.fill(x0 + in, y1 - (row + 1) * u, x1 - in, y1 - row * u, argb);
-		}
+		pose().pushMatrix();
+		pose().translate(x, y);
+		pose().scale(w / (float) rw, h / (float) rh);
+		g.blit(RenderPipelines.GUI_TEXTURED, id, 0, 0, u, v, rw, rh, rw, rh, tex, tex, argb);
+		pose().popMatrix();
 	}
 
-	/** Rahmen einen Minecraft-Pixel dick; kein Punkt doppelt (wichtig bei durchscheinenden Farben). */
-	private void outlinePx(int x0, int y0, int x1, int y1, int r, int argb) {
-		int u = mc;
-		if (x1 - x0 < 2 * u || y1 - y0 < 2 * u) {
-			g.fill(x0, y0, x1, y1, argb);
-			return;
+	/**
+	 * Neun-Teile-Bild mit Eckgröße c auf das Rechteck (x0, y0, w × h) Bildschirmpunkte. edges/center: ob Kanten und Mitte
+	 * gezeichnet werden (bei Rahmen ist die Mitte leer, bei Masken auch die Kanten).
+	 */
+	private void nine(Identifier id, int c, int x0, int y0, int w, int h, int argb, boolean edges, boolean center) {
+		int tex = Shapes.size(c);
+		int far = c + Shapes.MID;
+		int mid = c + 1;
+		int x1 = x0 + w, y1 = y0 + h;
+		piece(id, x0, y0, c, c, 0, 0, c, c, tex, argb);
+		piece(id, x1 - c, y0, c, c, far, 0, c, c, tex, argb);
+		piece(id, x0, y1 - c, c, c, 0, far, c, c, tex, argb);
+		piece(id, x1 - c, y1 - c, c, c, far, far, c, c, tex, argb);
+		if (edges) {
+			piece(id, x0 + c, y0, w - 2 * c, c, mid, 0, 1, c, tex, argb);
+			piece(id, x0 + c, y1 - c, w - 2 * c, c, mid, far, 1, c, tex, argb);
+			piece(id, x0, y0 + c, c, h - 2 * c, 0, mid, c, 1, tex, argb);
+			piece(id, x1 - c, y0 + c, c, h - 2 * c, far, mid, c, 1, tex, argb);
 		}
-		if (r <= 0) {
-			g.fill(x0, y0, x1, y0 + u, argb);
-			g.fill(x0, y1 - u, x1, y1, argb);
-			g.fill(x0, y0 + u, x0 + u, y1 - u, argb);
-			g.fill(x1 - u, y0 + u, x1, y1 - u, argb);
-			return;
-		}
-		for (int row = 0; row < r; row++) {
-			int in = HudSkin.inset(r, row);
-			if (row == 0) {
-				g.fill(x0 + in * u, y0, x1 - in * u, y0 + u, argb);
-				g.fill(x0 + in * u, y1 - u, x1 - in * u, y1, argb);
-				continue;
-			}
-			int run = Math.max(1, HudSkin.inset(r, row - 1) - in);
-			int top = y0 + row * u, bottom = y1 - (row + 1) * u;
-			g.fill(x0 + in * u, top, x0 + (in + run) * u, top + u, argb);
-			g.fill(x1 - (in + run) * u, top, x1 - in * u, top + u, argb);
-			g.fill(x0 + in * u, bottom, x0 + (in + run) * u, bottom + u, argb);
-			g.fill(x1 - (in + run) * u, bottom, x1 - in * u, bottom + u, argb);
-		}
-		g.fill(x0, y0 + r * u, x0 + u, y1 - r * u, argb);
-		g.fill(x1 - u, y0 + r * u, x1, y1 - r * u, argb);
-	}
-
-	/** Deckt außerhalb der Pixel-Ecken mit bg ab (für Bilder, die abgerundet aussehen sollen). */
-	private void maskPx(int x0, int y0, int x1, int y1, int r, int bg) {
-		int u = mc;
-		for (int row = 0; row < r; row++) {
-			int in = HudSkin.inset(r, row) * u;
-			if (in == 0)
-				continue;
-			g.fill(x0, y0 + row * u, x0 + in, y0 + (row + 1) * u, bg);
-			g.fill(x1 - in, y0 + row * u, x1, y0 + (row + 1) * u, bg);
-			g.fill(x0, y1 - (row + 1) * u, x0 + in, y1 - row * u, bg);
-			g.fill(x1 - in, y1 - (row + 1) * u, x1, y1 - row * u, bg);
-		}
-	}
-
-	/** Wie viele Pixelzeilen oben in Spalte column (von außen gezählt) einer Ecke mit Radius r fehlen. */
-	private static int cutRows(int r, int column) {
-		int rows = 0;
-		while (rows < r && HudSkin.inset(r, rows) > column)
-			rows++;
-		return rows;
-	}
-
-	// ---------- Runde Formen (glatt) ----------
-
-	/** Kreise und Pillen (Radius ≥ halbe kürzere Seite) werden glatt gezeichnet, alles andere mit Pixel-Ecken. */
-	private static boolean isRound(int radius, int w, int h) {
-		return radius > 0 && radius * 2 >= Math.min(w, h);
-	}
-
-	/** Ausschnitt (u, v, w × h) eines Bildes tex × tex, 1:1 bei (x, y). */
-	private void region(Identifier id, int x, int y, int u, int v, int w, int h, int tex, int argb) {
-		if (w > 0 && h > 0)
-			g.blit(RenderPipelines.GUI_TEXTURED, id, x, y, u, v, w, h, w, h, tex, tex, argb);
-	}
-
-	/** Glatte Pille (oder Kreis): zwei Kreishälften und eine Fläche dazwischen. */
-	private void pillPx(int x0, int y0, int x1, int y1, int argb) {
-		int wp = x1 - x0, hp = y1 - y0;
-		if (wp <= 0 || hp <= 0)
-			return;
-		if (wp >= hp) {
-			int d = hp, left = d / 2, right = d - left;
-			Identifier disc = Round.disc(d);
-			region(disc, x0, y0, 0, 0, left, d, d, argb);
-			region(disc, x1 - right, y0, left, 0, right, d, d, argb);
-			if (x1 - right > x0 + left)
-				g.fill(x0 + left, y0, x1 - right, y1, argb);
-		} else {
-			int d = wp, top = d / 2, bottom = d - top;
-			Identifier disc = Round.disc(d);
-			region(disc, x0, y0, 0, 0, d, top, d, argb);
-			region(disc, x0, y1 - bottom, 0, top, d, bottom, d, argb);
-			if (y1 - bottom > y0 + top)
-				g.fill(x0, y0 + top, x1, y1 - bottom, argb);
-		}
-	}
-
-	/** Glatter Rahmen einer Pille (oder eines Kreises), t Punkte stark. */
-	private void pillOutlinePx(int x0, int y0, int x1, int y1, int t, int argb) {
-		int wp = x1 - x0, hp = y1 - y0;
-		if (wp <= 0 || hp <= 0)
-			return;
-		if (wp >= hp) {
-			int d = hp, left = d / 2, right = d - left;
-			Identifier ring = Round.ring(d, t);
-			region(ring, x0, y0, 0, 0, left, d, d, argb);
-			region(ring, x1 - right, y0, left, 0, right, d, d, argb);
-			if (x1 - right > x0 + left) {
-				g.fill(x0 + left, y0, x1 - right, y0 + t, argb);
-				g.fill(x0 + left, y1 - t, x1 - right, y1, argb);
-			}
-		} else {
-			int d = wp, top = d / 2, bottom = d - top;
-			Identifier ring = Round.ring(d, t);
-			region(ring, x0, y0, 0, 0, d, top, d, argb);
-			region(ring, x0, y1 - bottom, 0, top, d, bottom, d, argb);
-			if (y1 - bottom > y0 + top) {
-				g.fill(x0, y0 + top, x0 + t, y1 - bottom, argb);
-				g.fill(x1 - t, y0 + top, x1, y1 - bottom, argb);
-			}
-		}
-	}
-
-	/** Glatte Pille mit waagerechtem Verlauf: Streifen, an den Enden aus der Kreismaske geschnitten. */
-	private void pillGradientPx(int x0, int y0, int x1, int y1, int from, int to) {
-		int wp = x1 - x0, hp = y1 - y0;
-		if (wp < hp) {
-			pillPx(x0, y0, x1, y1, Theme.mix(from, to, 0.5F));
-			return;
-		}
-		int d = hp, left = d / 2, right = d - left;
-		Identifier disc = Round.disc(d);
-		int step = Math.max(1, Math.min(mc, (wp + 63) / 64));
-		for (int a = x0; a < x1; ) {
-			int b;
-			if (a < x0 + left)
-				b = Math.min(x0 + left, a + step);
-			else if (a >= x1 - right)
-				b = Math.min(x1, a + step);
-			else
-				b = Math.min(x1 - right, a + Math.max(step, (wp + 47) / 48));
-			int c = Theme.mix(from, to, ((a + b) / 2.0F - x0) / wp);
-			if (a < x0 + left)
-				region(disc, a, y0, a - x0, 0, b - a, d, d, c);
-			else if (a >= x1 - right)
-				region(disc, a, y0, d - (x1 - a), 0, b - a, d, d, c);
-			else
-				g.fill(a, y0, b, y1, c);
-			a = b;
-		}
+		if (center)
+			piece(id, x0 + c, y0 + c, w - 2 * c, h - 2 * c, mid, mid, 1, 1, tex, argb);
 	}
 
 	// ---------- Flächen ----------
@@ -289,32 +162,44 @@ public final class Gfx {
 			g.fill(X(x), Y(y), X(x + w), Y(y + h), argb);
 	}
 
+	/** Eckenradius in Punkten, höchstens halb so groß wie die kürzere Seite. */
+	private int radiusPx(int radius, int wp, int hp) {
+		return Math.max(0, Math.min(Math.round(radius * px), Math.min(wp, hp) / 2));
+	}
+
 	public void rect(int x, int y, int w, int h, int radius, int argb) {
 		if (g == null || w <= 0 || h <= 0 || (argb >>> 24) == 0)
 			return;
 		int x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
-		if (x1 <= x0 || y1 <= y0)
+		int wp = x1 - x0, hp = y1 - y0;
+		if (wp <= 0 || hp <= 0)
 			return;
-		if (isRound(radius, w, h))
-			pillPx(x0, y0, x1, y1, argb);
+		int r = radiusPx(radius, wp, hp);
+		if (r == 0)
+			g.fill(x0, y0, x1, y1, argb);
 		else
-			rectPx(x0, y0, x1, y1, steps(radius, w, h, x1 - x0, y1 - y0), argb);
+			nine(Shapes.slice(Shapes.Kind.FILL, r), r, x0, y0, wp, hp, argb, true, true);
 	}
 
-	/** Rahmen, einen Minecraft-Pixel dick, innen an der Kante. */
+	/** Rahmen, genau einen Bildschirmpunkt dick, innen an der Kante. */
 	public void outline(int x, int y, int w, int h, int radius, int argb) {
 		if (g == null || w <= 0 || h <= 0 || (argb >>> 24) == 0)
 			return;
 		int x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
-		if (x1 <= x0 || y1 <= y0)
+		int wp = x1 - x0, hp = y1 - y0;
+		if (wp <= 1 || hp <= 1)
 			return;
-		if (isRound(radius, w, h))
-			pillOutlinePx(x0, y0, x1, y1, Math.max(1, Math.round(px)), argb);
-		else
-			outlinePx(x0, y0, x1, y1, steps(radius, w, h, x1 - x0, y1 - y0), argb);
+		int r = radiusPx(radius, wp, hp);
+		if (r == 0) {
+			g.fill(x0, y0, x1, y0 + 1, argb);
+			g.fill(x0, y1 - 1, x1, y1, argb);
+			g.fill(x0, y0 + 1, x0 + 1, y1 - 1, argb);
+			g.fill(x1 - 1, y0 + 1, x1, y1 - 1, argb);
+		} else
+			nine(Shapes.slice(Shapes.Kind.RING, r), r, x0, y0, wp, hp, argb, true, false);
 	}
 
-	/** Fläche mit Rahmen nach innen. */
+	/** Fläche mit Rahmen nach innen (wie box-shadow: inset 0 0 0 1px). */
 	public void box(int x, int y, int w, int h, int radius, int fill, int line) {
 		rect(x, y, w, h, radius, fill);
 		outline(x, y, w, h, radius, line);
@@ -325,7 +210,11 @@ public final class Gfx {
 		gradient(x, y, w, h, radius, Theme.ACCENT_FROM, Theme.ACCENT_TO);
 	}
 
-	/** Waagerechter Verlauf von from nach to, in Streifen von einem Minecraft-Pixel; Ecken als Pixel-Treppen. */
+	/**
+	 * Verlauf von from (links oben) nach to (rechts unten). Gezeichnet in schmalen senkrechten Streifen aus der
+	 * Flächen-Maske, jeder in seiner Farbe: kein eigenes Bild je Größe und Farbe, also auch kein Ruckeln, wenn sich
+	 * Größe oder Farbe ändern (Hover, Zoom, Fenstergröße).
+	 */
 	public void gradient(int x, int y, int w, int h, int radius, int from, int to) {
 		if (g == null || w <= 0 || h <= 0)
 			return;
@@ -333,58 +222,69 @@ public final class Gfx {
 		int wp = x1 - x0, hp = y1 - y0;
 		if (wp <= 0 || hp <= 0)
 			return;
-		if (isRound(radius, w, h)) {
-			pillGradientPx(x0, y0, x1, y1, from, to);
+		int r = radiusPx(radius, wp, hp);
+		int step = Math.max(2, (wp + 55) / 56);
+		// Farbe je Streifen wie entlang der Mittellinie eines 135°-Verlaufs
+		float span = wp + hp;
+		if (r == 0) {
+			for (int a = x0; a < x1; a += step) {
+				int b = Math.min(x1, a + step);
+				g.fill(a, y0, b, y1, Theme.mix(from, to, ((a + b) / 2.0F - x0 + hp / 2.0F) / span));
+			}
 			return;
 		}
-		int r = steps(radius, w, h, wp, hp);
-		int u = mc;
-		int corner = r * u;
-		int step = Math.max(u, (wp + 47) / 48 / u * u);
+		Identifier id = Shapes.slice(Shapes.Kind.FILL, r);
+		int tex = Shapes.size(r);
+		int far = r + Shapes.MID;
+		int mid = r + 1;
 		for (int a = x0; a < x1; ) {
-			int fromLeft = a - x0, fromRight = x1 - a;
-			int b;
-			int cut;
-			if (fromLeft < corner) {
-				b = Math.min(x0 + corner, a + u);
-				cut = cutRows(r, fromLeft / u);
-			} else if (a >= x1 - corner) {
-				b = Math.min(x1, a + u);
-				cut = cutRows(r, (fromRight - 1) / u);
+			// Streifen enden an den Eckgrenzen, damit jeder ganz in einer Zone liegt
+			int limit = a < x0 + r ? x0 + r : a < x1 - r ? x1 - r : x1;
+			int b = Math.min(limit, a + step);
+			int sw = b - a;
+			int c = Theme.mix(from, to, ((a + b) / 2.0F - x0 + hp / 2.0F) / span);
+			if (a < x0 + r) {
+				int u = a - x0;
+				piece(id, a, y0, sw, r, u, 0, sw, r, tex, c);
+				piece(id, a, y0 + r, sw, hp - 2 * r, u, mid, sw, 1, tex, c);
+				piece(id, a, y1 - r, sw, r, u, far, sw, r, tex, c);
+			} else if (a < x1 - r) {
+				piece(id, a, y0, sw, r, mid, 0, 1, r, tex, c);
+				piece(id, a, y0 + r, sw, hp - 2 * r, mid, mid, 1, 1, tex, c);
+				piece(id, a, y1 - r, sw, r, mid, far, 1, r, tex, c);
 			} else {
-				b = Math.min(x1 - corner, a + step);
-				cut = 0;
+				int u = far + (a - (x1 - r));
+				piece(id, a, y0, sw, r, u, 0, sw, r, tex, c);
+				piece(id, a, y0 + r, sw, hp - 2 * r, u, mid, sw, 1, tex, c);
+				piece(id, a, y1 - r, sw, r, u, far, sw, r, tex, c);
 			}
-			int c = Theme.mix(from, to, ((a + b) / 2.0F - x0) / wp);
-			g.fill(a, y0 + cut * u, b, y1 - cut * u, c);
 			a = b;
 		}
 	}
 
-	/** Harter Schatten wie in Minecraft: dieselbe Form, um einen Minecraft-Pixel nach rechts unten versetzt. */
+	/** Weicher Schatten unter einer Fläche (wie box-shadow 0 offsetY spread). */
 	public void shadow(int x, int y, int w, int h, int radius, int spread, int offsetY, float strength) {
-		if (g == null || w <= 0 || h <= 0)
+		if (g == null || w <= 0 || h <= 0 || spread <= 0)
 			return;
-		int x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
-		if (x1 <= x0 || y1 <= y0)
+		int s = Math.max(1, Math.round(spread * px));
+		int x0 = X(x), y0 = Y(y + offsetY), x1 = X(x + w), y1 = Y(y + offsetY + h);
+		int wp = x1 - x0, hp = y1 - y0;
+		if (wp <= 0 || hp <= 0)
 			return;
-		int d = offsetY >= 12 ? 2 * mc : mc;
-		int c = Theme.alpha(0xFF000000, Math.min(0.55F, strength * 0.8F));
-		if (isRound(radius, w, h))
-			pillPx(x0 + mc, y0 + d, x1 + mc, y1 + d, c);
-		else
-			rectPx(x0 + mc, y0 + d, x1 + mc, y1 + d, steps(radius, w, h, x1 - x0, y1 - y0), c);
+		int r = radiusPx(radius, wp, hp);
+		int c = Theme.alpha(0xFF000000, Math.min(1, strength * 0.9F));
+		nine(Shapes.shadow(r, s), r + s, x0 - s, y0 - s, wp + 2 * s, hp + 2 * s, c, true, true);
 	}
 
-	/** Waagerechte Linie, einen Minecraft-Pixel dick. */
+	/** Waagerechte Linie, genau einen Bildschirmpunkt dick. */
 	public void hline(int x, int y, int w, int argb) {
 		if (g != null)
-			g.fill(X(x), Y(y), X(x + w), Y(y) + mc, argb);
+			g.fill(X(x), Y(y), X(x + w), Y(y) + 1, argb);
 	}
 
 	public void vline(int x, int y, int h, int argb) {
 		if (g != null)
-			g.fill(X(x), Y(y), X(x) + mc, Y(y + h), argb);
+			g.fill(X(x), Y(y), X(x) + 1, Y(y + h), argb);
 	}
 
 	/** Runder Punkt (Status). */
@@ -507,28 +407,16 @@ public final class Gfx {
 
 	// ---------- Bilder ----------
 
-	/** Pixel-Symbol, mittig in size × size Design-Pixeln, in ganzen Vielfachen vergrößert. */
+	/** Symbol in size × size Design-Pixeln, eingefärbt, 1:1 auf dem Bildschirmraster. */
 	public void icon(Icons.Icon icon, float x, float y, float size, int argb) {
 		if (g == null)
 			return;
-		int n = Icons.grid(icon);
-		int s = Math.max(1, Math.round(size * px / n - 0.1F));
-		int total = n * s;
-		int x0 = Math.round(ox + (x + size / 2) * px - total / 2.0F);
-		int y0 = Math.round(oy + (y + size / 2) * px - total / 2.0F);
-		boolean[] on = Icons.pixels(icon);
-		for (int row = 0; row < n; row++) {
-			int start = -1;
-			for (int col = 0; col <= n; col++) {
-				boolean set = col < n && on[row * n + col];
-				if (set && start < 0)
-					start = col;
-				else if (!set && start >= 0) {
-					g.fill(x0 + start * s, y0 + row * s, x0 + col * s, y0 + (row + 1) * s, argb);
-					start = -1;
-				}
-			}
-		}
+		int pixels = Math.max(4, Math.round(size * px));
+		Identifier id = Icons.texture(icon, pixels);
+		// Mittig an die gewünschte Stelle, auf ganze Punkte
+		int x0 = Math.round(ox + (x + size / 2) * px - pixels / 2.0F);
+		int y0 = Math.round(oy + (y + size / 2) * px - pixels / 2.0F);
+		g.blit(RenderPipelines.GUI_TEXTURED, id, x0, y0, 0, 0, pixels, pixels, pixels, pixels, pixels, pixels, argb);
 	}
 
 	/**
@@ -546,7 +434,7 @@ public final class Gfx {
 		}
 		int x0 = Math.round(ox + (x + size / 2) * px - n / 2.0F);
 		int y0 = Math.round(oy + (y + size / 2) * px - n / 2.0F);
-		region(preview, x0, y0, 0, 0, n, n, n, 0xFFFFFFFF);
+		blit(preview, x0, y0, n, n, n, n, 0xFFFFFFFF);
 	}
 
 	/** Ausschnitt einer Textur in ein Rechteck (Design-Pixel), z. B. Gesicht aus dem Skin. */
@@ -557,46 +445,38 @@ public final class Gfx {
 		int x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
 		if (x1 <= x0 || y1 <= y0)
 			return;
-		blitScaled(id, x0, y0, (x1 - x0) / (float) regionW, (y1 - y0) / (float) regionH, u, v, regionW, regionH, texW, texH, argb);
-	}
-
-	private void blitScaled(Identifier id, int x0, int y0, float sx, float sy, float u, float v, int regionW, int regionH, int texW,
-							int texH, int argb) {
 		pose().pushMatrix();
 		pose().translate(x0, y0);
-		pose().scale(sx, sy);
+		pose().scale((x1 - x0) / (float) regionW, (y1 - y0) / (float) regionH);
 		g.blit(RenderPipelines.GUI_TEXTURED, id, 0, 0, u, v, regionW, regionH, regionW, regionH, texW, texH, argb);
 		pose().popMatrix();
 	}
 
 	/**
-	 * Kopf eines Spielers aus seinem Skin (Gesicht und Hut), jedes Skin-Pixel gleich groß (ganzzahlig vergrößert), mit
-	 * Pixel-Ecken auf der Hintergrundfarbe bg. Ohne Skin ein neutrales Feld.
+	 * Kopf eines Spielers aus seinem Skin (Gesicht und Hut), mit abgerundeten Ecken auf der Hintergrundfarbe bg. Ohne
+	 * Skin ein neutrales Feld.
 	 */
 	public void head(Identifier skin, int x, int y, int size, int radius, int bg, boolean dim) {
 		if (g == null)
 			return;
-		int t = Math.max(1, Math.round(size * px / 8));
-		int side = 8 * t;
-		int x0 = Math.round(ox + (x + size / 2.0F) * px - side / 2.0F);
-		int y0 = Math.round(oy + (y + size / 2.0F) * px - side / 2.0F);
-		int r = steps(radius, size, size, side, side);
 		if (skin == null) {
-			rectPx(x0, y0, x0 + side, y0 + side, r, 0xFF3A3A3A);
+			rect(x, y, size, size, radius, 0xFF3A3A3A);
 			return;
 		}
 		int tint = dim ? 0xB38C8C8C : 0xFFFFFFFF;
-		blitScaled(skin, x0, y0, t, t, 8, 8, 8, 8, 64, 64, tint);
-		blitScaled(skin, x0, y0, t, t, 40, 8, 8, 8, 64, 64, tint);
-		maskPx(x0, y0, x0 + side, y0 + side, r, bg);
+		image(skin, x, y, size, size, 8, 8, 8, 8, 64, 64, tint);
+		image(skin, x, y, size, size, 40, 8, 8, 8, 64, 64, tint);
+		cornerMask(x, y, size, size, radius, bg);
 	}
 
-	/** Deckt die Ecken eines Rechtecks mit der Hintergrundfarbe ab, damit es (pixelig) abgerundet aussieht. */
+	/** Deckt die Ecken eines Rechtecks mit der Hintergrundfarbe ab, damit es abgerundet aussieht. */
 	public void cornerMask(int x, int y, int w, int h, int radius, int bg) {
 		if (g == null || radius <= 0)
 			return;
-		int x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
-		maskPx(x0, y0, x1, y1, steps(radius, w, h, x1 - x0, y1 - y0), bg);
+		int x0 = X(x), y0 = Y(y), wp = X(x + w) - x0, hp = Y(y + h) - y0;
+		int r = radiusPx(radius, wp, hp);
+		if (r > 0)
+			nine(Shapes.slice(Shapes.Kind.MASK, r), r, x0, y0, wp, hp, bg, false, false);
 	}
 
 	// ---------- Bausteine ----------

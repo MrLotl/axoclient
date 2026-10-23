@@ -417,9 +417,9 @@ public final class SkinRender {
 		if (quads.isEmpty())
 			return new int[size * size];
 
-		// Fester Ausschnitt für alle Posen (gleich große Figuren): Höhe 42 Pixel um die Körpermitte
-		float scale = (size - 4) / 42.0F;
-		float ox = size / 2.0F, oy = size / 2.0F + 15 * scale;
+		// Fester Ausschnitt für alle Posen (gleich große Figuren): 38 Pixel hoch, Platz für hochgestreckte Arme
+		float scale = (size - 2) / 38.0F;
+		float ox = size / 2.0F, oy = size / 2.0F + 16.5F * scale;
 
 		int[] out = new int[size * size];
 		float[] depth = new float[size * size];

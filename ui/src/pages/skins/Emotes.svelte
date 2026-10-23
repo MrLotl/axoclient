@@ -163,10 +163,10 @@
     <div class="ring" aria-hidden="true">
       {#each slots as id, i}
         {@const a = (i * Math.PI) / 4}
-        <span class="slot" class:filled={!!id} style="left: {120 + 96 * Math.sin(a) - 25}px; top: {120 - 96 * Math.cos(a) - 25}px">
+        <span class="slot" class:filled={!!id} style="left: {132 + 102 * Math.sin(a) - 30}px; top: {132 - 102 * Math.cos(a) - 30}px">
           {#if id}
             {@const f = figure(id)}
-            <EmotePreview {id} size={40} version={previewVersion}>
+            <EmotePreview {id} size={56} version={previewVersion}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
             </EmotePreview>
           {:else}
@@ -209,7 +209,7 @@
             <span class="figure">
               {#if true}
                 {@const f = figure(e.id)}
-                <EmotePreview id={e.id} size={56} version={previewVersion}>
+                <EmotePreview id={e.id} size={124} version={previewVersion}>
                   <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
                 </EmotePreview>
               {/if}
@@ -240,14 +240,17 @@
     {/if}
 
     <span class="section-label">{t('emotes.builtin', { count: builtin.length })}</span>
-    <div class="chips">
+    <div class="builtin">
       {#each builtin as e (e.id)}
         {@const f = figure(e.id)}
-        <span class="chip">
-          <EmotePreview id={e.id} size={28} version={previewVersion}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
-          </EmotePreview>
-          {e.name}
+        <span class="mini">
+          <span class="mini-figure">
+            <EmotePreview id={e.id} size={84} version={previewVersion}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx={f.hx} cy={f.hy} r="2.2" /><path d={f.d} /></svg>
+            </EmotePreview>
+            {#if slots.includes(e.id)}<span class="badge">{slots.indexOf(e.id) + 1}</span>{/if}
+          </span>
+          <span class="name truncate">{e.name}</span>
         </span>
       {/each}
     </div>
@@ -282,23 +285,23 @@
   }
   .ring {
     position: relative;
-    width: 240px;
-    height: 240px;
+    width: 264px;
+    height: 264px;
     align-self: center;
     flex-shrink: 0;
   }
   .ring::before {
     content: '';
     position: absolute;
-    inset: 22px;
+    inset: 26px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
     box-shadow: inset 0 0 0 1px #3a3a3a;
   }
   .slot {
     position: absolute;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -313,10 +316,10 @@
   }
   .center {
     position: absolute;
-    left: 75px;
-    top: 75px;
-    width: 90px;
-    height: 90px;
+    left: 84px;
+    top: 84px;
+    width: 96px;
+    height: 96px;
     border-radius: 50%;
     background: #242424;
     box-shadow: inset 0 0 0 1px #3a3a3a;
@@ -385,7 +388,7 @@
   }
   .figure {
     position: relative;
-    height: 72px;
+    height: 132px;
     border-radius: 8px;
     background: #1f1f1f;
     color: #ecc6f2;
@@ -483,23 +486,33 @@
     align-items: center;
     justify-content: center;
   }
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+  .builtin {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 10px;
   }
-  .chip {
-    height: 30px;
-    padding: 0 10px 0 8px;
-    border-radius: 8px;
+  .mini {
+    padding: 6px;
+    border-radius: 12px;
     background: var(--panel);
-    color: var(--text-2);
-    font-size: 12.5px;
-    display: inline-flex;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
+    min-width: 0;
   }
-  .chip svg {
+  .mini-figure {
+    position: relative;
+    height: 92px;
+    border-radius: 8px;
+    background: #1f1f1f;
     color: #ecc6f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mini .name {
+    padding: 0 2px;
+    font-size: 12.5px;
+    color: var(--text-2);
   }
 </style>

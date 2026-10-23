@@ -238,8 +238,9 @@ export function render(skin: Skin, p: Pose, size: number): Int32Array {
   const out = new Int32Array(size * size);
   if (!quads.length) return out;
 
-  const scale = (size - 4) / 42;
-  const ox = size / 2, oy = size / 2 + 15 * scale;
+  // Fester Ausschnitt für alle Posen (gleich große Figuren): 38 Pixel hoch, Platz für hochgestreckte Arme
+  const scale = f((size - 2) / 38);
+  const ox = size / 2, oy = f(size / 2 + f(16.5 * scale));
   const depth = new Float64Array(size * size).fill(-Infinity);
   for (let i = 0; i < quads.length; i++) {
     const q = quads[i];

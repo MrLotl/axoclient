@@ -41,7 +41,7 @@ final class EmotePreviews {
 
 	/** Vorschau für das Emote in pixels × pixels Bildschirmpunkten, oder null (noch nicht fertig / kein Skin). */
 	static Identifier get(String emoteId, int pixels) {
-		byte[] png = MenuData.skinPng(MenuData.meUuid);
+		byte[] png = ownSkin();
 		if (png == null || emoteId == null || pixels < 8)
 			return null;
 		if (png != skinShown) {
@@ -84,6 +84,22 @@ final class EmotePreviews {
 		Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "AxoClient Emote-Vorschau", texture));
 		READY.put(key, id);
 		return id;
+	}
+
+	/**
+	 * Der eigene Skin: unter der UUID des angemeldeten Kontos (ohne Bindestriche, so legt das Menü die Skins ab), zur
+	 * Not unter der UUID, die der Launcher als "ich" meldet.
+	 */
+	private static byte[] ownSkin() {
+		try {
+			byte[] png = MenuData.skinPng(Minecraft.getInstance().getUser().getProfileId().toString().replace("-", ""));
+			if (png != null)
+				return png;
+		} catch (RuntimeException ignored) {
+			// kein Konto
+		}
+		String me = MenuData.meUuid;
+		return me == null ? null : MenuData.skinPng(me.replace("-", "").toLowerCase(java.util.Locale.ROOT));
 	}
 
 	private static void clear() {
