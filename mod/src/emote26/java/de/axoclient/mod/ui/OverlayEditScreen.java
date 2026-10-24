@@ -245,9 +245,13 @@ public final class OverlayEditScreen extends Screen {
 
 	/** Strg oder Umschalt gedrückt: Auswahl erweitern statt ersetzen. */
 	private static boolean adding() {
-		com.mojang.blaze3d.platform.Window window = Minecraft.getInstance().getWindow();
-		return InputConstants.isKeyDown(window, 341) || InputConstants.isKeyDown(window, 345) || InputConstants.isKeyDown(window, 340)
-			|| InputConstants.isKeyDown(window, 344);
+		return down(InputConstants.KEY_LCONTROL) || down(InputConstants.KEY_RCONTROL) || down(InputConstants.KEY_LSHIFT)
+			|| down(InputConstants.KEY_RSHIFT);
+	}
+
+	/** Taste gerade gedrückt (über HudPlatform, weil sich die Abfrage mit 26.3 geändert hat). */
+	private static boolean down(int key) {
+		return de.axoclient.mod.HudPlatform.isKeyDown(Minecraft.getInstance(), key);
 	}
 
 	private boolean isSelected(Piece p) {
@@ -739,9 +743,8 @@ public final class OverlayEditScreen extends Screen {
 			return true;
 		}
 		// Strg+A: alle auswählen
-		com.mojang.blaze3d.platform.Window window = Minecraft.getInstance().getWindow();
-		boolean ctrl = InputConstants.isKeyDown(window, 341) || InputConstants.isKeyDown(window, 345);
-		if (ctrl && InputConstants.isKeyDown(window, 65)) {
+		boolean ctrl = down(InputConstants.KEY_LCONTROL) || down(InputConstants.KEY_RCONTROL);
+		if (ctrl && down(InputConstants.KEY_A)) {
 			for (Piece p : pieces)
 				selection.add(key(p));
 			return true;
