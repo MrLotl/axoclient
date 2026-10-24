@@ -167,7 +167,7 @@ public final class AxoHud {
 		if (client.player == null || client.debugEntries.isOverlayVisible())
 			return;
 		// Ist ein Menü offen, zeigt auch das private Overlay-Fenster nichts (es läge sonst über dem Menü)
-		de.axoclient.mod.hud.HudPrivacy.screenOpen = client.gui.screen() != null;
+		de.axoclient.mod.hud.HudPrivacy.screenOpen = !HudPlatform.noScreenOpen(client);
 		if (!MenuHooks.hideHud) {
 			float s = hudScale();
 			Painter painter = hudPainter(graphics);
