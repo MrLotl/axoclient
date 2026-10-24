@@ -6,7 +6,7 @@ public static class AppInfo
 {
     public const string Name = "AxoClient";
 
-    /// <summary>GitHub-Repo für Releases (Velopack) und Links.</summary>
+    /// <summary>GitHub-Repo für Releases (Selbst-Update) und Links.</summary>
     public const string Repository = "https://github.com/MrLotl/AxoClient";
 
     /// <summary>Online-Service (Cloudflare Worker). Für die Entwicklung per <c>AXOCLIENT_API</c> überschreibbar.</summary>

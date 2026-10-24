@@ -122,7 +122,7 @@ public sealed class AppHost : IAsyncDisposable
         LocalServers = new LocalServerManager(paths, softwares, new ServerJava(paths, Api, Downloads, Java), Downloads, Processes, Jobs,
             Activity, CrashAnalyzer, new PortForwarding(), Events);
 
-        LauncherUpdates = new UpdateService(Settings, Events, () => Processes.AnyRunning());
+        LauncherUpdates = new UpdateService(Settings, Events, Api, Downloads, paths, () => Processes.AnyRunning());
         Storage = new StorageService(paths, Instances);
         Diagnostics = new DiagnosticsService(
         [

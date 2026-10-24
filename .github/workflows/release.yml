@@ -1,0 +1,70 @@
+# Neue Launcher-Version veröffentlichen: auf GitHub unter "Actions" → "Release" → "Run workflow",
+# Version eintragen (z. B. 1.2.0), fertig. Baut Oberfläche und Launcher als eine einzige Datei und legt das
+# Release mit AxoClient-Setup.exe an. Installierte Launcher finden es dann von selbst.
+# Die Mod wird jedes Mal frisch für alle Minecraft-Versionen gebaut und in den Launcher eingebettet.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version mit drei Teilen, höher als die letzte (z. B. 1.2.0)"
+        required: true
+      channel:
+        description: "Kanal (beta = Vorabversion, nur für Launcher mit Kanal Beta)"
+        type: choice
+        options: [stable, beta]
+        default: stable
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      CHANNEL: ${{ inputs.channel }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version prüfen
+        shell: pwsh
+        run: |
+          if ($env:VERSION -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Error "Version muss drei Teile haben, z. B. 1.2.0 (nicht '$env:VERSION')."
+            exit 1
+          }
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Ein JDK 25 baut alle Mod-Versionen (ältere mit --release 21)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+
+      - name: Mod bauen
+        shell: pwsh
+        run: ./mod/build-all.ps1
+
+      - name: Launcher bauen
+        shell: pwsh
+        run: |
+          dotnet publish src/AxoClient.App -c Release -r win-x64 -p:Version=$env:VERSION -o publish
+          Copy-Item publish/AxoClient.exe AxoClient-Setup.exe
+
+      - name: Auf GitHub veröffentlichen
+        shell: pwsh
+        run: |
+          $extra = @()
+          if ($env:CHANNEL -eq 'beta') { $extra += '--prerelease' }
+          gh release create "v$env:VERSION" AxoClient-Setup.exe --title "AxoClient $env:VERSION" --generate-notes --target $env:GITHUB_SHA @extra

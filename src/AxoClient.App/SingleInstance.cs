@@ -97,4 +97,10 @@ internal static class NativeMessage
     private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
 
     public static void Show(string title, string text) => MessageBoxW(IntPtr.Zero, text, title, 0x10);
+
+    /// <summary>Hinweis mit "Wiederholen"/"Abbrechen"; <c>true</c> bei Wiederholen.</summary>
+    public static bool RetryCancel(string title, string text) => MessageBoxW(IntPtr.Zero, text, title, 0x05 | 0x30) == 4;
+
+    /// <summary>Frage mit "Ja"/"Nein"; <c>true</c> bei Ja.</summary>
+    public static bool YesNo(string title, string text) => MessageBoxW(IntPtr.Zero, text, title, 0x04 | 0x20) == 6;
 }
