@@ -1,0 +1,67 @@
+# Neue Launcher-Version veröffentlichen: auf GitHub unter "Actions" → "Release" → "Run workflow",
+# Version eintragen (z. B. 1.1.1), fertig. Baut Oberfläche und Launcher, packt mit Velopack und legt das
+# Release mit Setup.exe an. Installierte Launcher finden es dann von selbst.
+# Die Mod-Jars werden nicht hier gebaut: nach Änderungen an der Mod vorher mod\build-all.ps1 ausführen und committen.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version mit drei Teilen, höher als die letzte (z. B. 1.1.1)"
+        required: true
+      channel:
+        description: "Kanal"
+        type: choice
+        options: [stable, beta]
+        default: stable
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      CHANNEL: ${{ inputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version prüfen
+        shell: pwsh
+        run: |
+          if ($env:VERSION -notmatch '^\d+\.\d+\.\d+$') {
+            Write-Error "Version muss drei Teile haben, z. B. 1.1.1 (nicht '$env:VERSION')."
+            exit 1
+          }
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Velopack installieren
+        run: dotnet tool install -g vpk --version 1.2.161
+
+      - name: Launcher bauen
+        run: dotnet publish src/AxoClient.App -c Release -r win-x64 --self-contained -p:Version=${{ env.VERSION }} -o publish
+
+      # Vorherige Version holen, damit kleine Delta-Updates entstehen (beim ersten Release gibt es keine)
+      - name: Letztes Release holen
+        continue-on-error: true
+        run: vpk download github --repoUrl https://github.com/${{ github.repository }} --channel ${{ env.CHANNEL }} -o Releases --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Packen
+        run: vpk pack -u AxoClient -v ${{ env.VERSION }} -p publish -e AxoClient.exe -i src/AxoClient.App/Assets/axoclient.ico --channel ${{ env.CHANNEL }} -o Releases
+
+      - name: Auf GitHub veröffentlichen
+        shell: pwsh
+        run: |
+          $extra = @()
+          if ($env:CHANNEL -eq 'beta') { $extra += '--pre' }
+          vpk upload github --repoUrl https://github.com/${{ github.repository }} --channel $env:CHANNEL `
+            --tag "v$env:VERSION" --releaseName "AxoClient $env:VERSION" --publish @extra --token ${{ secrets.GITHUB_TOKEN }}
