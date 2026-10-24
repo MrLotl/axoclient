@@ -1,7 +1,7 @@
 # Neue Launcher-Version veröffentlichen: auf GitHub unter "Actions" → "Release" → "Run workflow",
 # Version eintragen (z. B. 1.2.0), fertig. Baut Oberfläche und Launcher als eine einzige Datei und legt das
 # Release mit AxoClient-Setup.exe an. Installierte Launcher finden es dann von selbst.
-# Die Mod-Jars werden nicht hier gebaut: nach Änderungen an der Mod vorher mod\build-all.ps1 ausführen und committen.
+# Die Mod wird jedes Mal frisch für alle Minecraft-Versionen gebaut und in den Launcher eingebettet.
 name: Release
 
 on:
@@ -44,6 +44,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      # Ein JDK 25 baut alle Mod-Versionen (ältere mit --release 21)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+
+      - name: Mod bauen
+        shell: pwsh
+        run: ./mod/build-all.ps1
 
       - name: Launcher bauen
         shell: pwsh
