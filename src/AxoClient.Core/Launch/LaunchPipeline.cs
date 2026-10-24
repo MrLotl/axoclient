@@ -114,6 +114,9 @@ public sealed class LaunchPipeline(
     private async Task RunChecksAsync(LaunchContext ctx, JobContext job, LaunchPhase startPhase, LaunchPhase endPhase, bool interactive)
     {
         var phases = Enum.GetValues<LaunchPhase>().Where(p => p >= startPhase && p <= endPhase).ToList();
+        // Warnungen, auf die der Nutzer bei diesem Start schon reagiert hat, nicht erneut fragen. Sonst kommt z. B.
+        // "nur X MB frei" nach "RAM senken" sofort wieder, weil der freie Arbeitsspeicher ständig schwankt.
+        var answered = new HashSet<string>();
         for (var phaseIndex = 0; phaseIndex < phases.Count; phaseIndex++)
         {
             var phase = phases[phaseIndex];
@@ -155,7 +158,8 @@ public sealed class LaunchPipeline(
                 var ignored = ctx.Content.IgnoredWarnings.ToHashSet();
                 var issues = results
                     .Where(r => r.Severity == Severity.Blocker
-                                || r.Severity == Severity.Warning && !(r.CanSilence && r.Key != null && ignored.Contains(r.Key)))
+                                || r.Severity == Severity.Warning && !(r.CanSilence && r.Key != null && ignored.Contains(r.Key))
+                                                                 && !answered.Contains(WarningKey(r)))
                     .Concat(failedFixes)
                     .ToList();
                 if (issues.Count == 0)
@@ -167,6 +171,9 @@ public sealed class LaunchPipeline(
                 var decision = await prompt.AskAsync(ctx.LaunchId, ctx.Instance.Id, phase, views, job.Token);
                 if (decision.Choice == PromptChoice.Cancel)
                     throw new OperationCanceledException();
+
+                foreach (var warning in issues.Where(r => r.Severity == Severity.Warning))
+                    answered.Add(WarningKey(warning));
 
                 var hasBlocker = issues.Any(r => r.Severity == Severity.Blocker);
                 if (decision.Choice == PromptChoice.StartAnyway && !hasBlocker)
@@ -195,6 +202,8 @@ public sealed class LaunchPipeline(
         }
         job.Report(1, new TextRef("pipeline.phase.ready"));
     }
+
+    private static string WarningKey(CheckResult r) => r.Key ?? $"{r.CheckId}:{r.Message.Code}";
 
     private async Task<List<CheckResult>> RunPhaseAsync(LaunchContext ctx, LaunchPhase phase, CancellationToken ct)
     {

@@ -81,7 +81,8 @@
   {onkeydown}
   in:fade|global={{ duration: reduce ? 0 : DUR.med }}
   out:fadeOut|global={{ duration: DUR.med - 20 }}
-  onoutrostart={() => (closing = true)}>
+  onoutrostart={() => (closing = true)}
+  onintrostart={() => (closing = false)}>
   <div
     bind:this={box}
     class="dialog {tone}"

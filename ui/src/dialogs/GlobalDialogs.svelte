@@ -38,7 +38,11 @@
 
 <!-- Diese beiden kommen von der C#-Seite und überlagern alles -->
 {#if app.prompt}
-  <LaunchPromptDialog prompt={app.prompt} />
+  <!-- Jede Rückfrage bekommt einen eigenen Dialog: kommt die nächste, während der alte noch ausblendet,
+       würde Svelte sonst den ausblendenden (nicht mehr klickbaren) Dialog weiterverwenden -->
+  {#key app.prompt.promptId}
+    <LaunchPromptDialog prompt={app.prompt} />
+  {/key}
 {/if}
 {#if app.crash && !app.prompt}
   <CrashDialog crash={app.crash} onclose={() => (app.crash = null)} />
