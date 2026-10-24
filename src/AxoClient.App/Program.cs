@@ -1,5 +1,4 @@
 using AxoClient.Core.Common;
-using Velopack;
 
 namespace AxoClient.App;
 
@@ -8,8 +7,9 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        // Muss ganz am Anfang stehen (Velopack: Installations- und Update-Hooks)
-        VelopackApp.Build().Run();
+        // Ganz am Anfang: als Setup installieren, deinstallieren oder nach einem Update aufräumen
+        if (Installer.Handle(args, out var exitCode))
+            return exitCode;
 
         using var single = SingleInstance.TryAcquire(args);
         if (single == null)

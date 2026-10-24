@@ -11,6 +11,15 @@
     <UiDir>$(MSBuildProjectDirectory)\..\..\ui</UiDir>
   </PropertyGroup>
 
+  <!-- Veröffentlichung als eine einzige EXE (= AxoClient-Setup.exe): dotnet publish -c Release -r win-x64 -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
@@ -50,7 +59,8 @@
   </Target>
 
   <ItemGroup>
-    <Content Include="Assets\axoclient.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Eingebettet statt daneben kopiert: die veröffentlichte AxoClient.exe ist eine einzige Datei -->
+    <EmbeddedResource Include="Assets\axoclient.ico" LogicalName="axoclient.ico" />
   </ItemGroup>
 
 </Project>

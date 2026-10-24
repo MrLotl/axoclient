@@ -48,8 +48,7 @@ public sealed class MainWindow
             .RegisterRestoredHandler((_, _) => _router!.Emit("window.state", new { maximized = false }))
             .RegisterWindowClosingHandler((_, _) => OnClosing());
 
-        var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "axoclient.ico");
-        if (File.Exists(icon))
+        if (WindowIcon(host.Paths.Cache) is { } icon)
         {
             _window.SetIconFile(icon);
         }
@@ -283,6 +282,30 @@ public sealed class MainWindow
     }
 
     public static string Serialize(object? value) => JsonSerializer.Serialize(value, Json.Compact);
+
+    /// <summary>Photino will eine Datei: das eingebettete Symbol einmal in den Cache schreiben.</summary>
+    private static string? WindowIcon(string cacheDir)
+    {
+        try
+        {
+            using var stream = typeof(MainWindow).Assembly.GetManifestResourceStream("axoclient.ico");
+            if (stream == null)
+                return null;
+            var path = Path.Combine(cacheDir, "axoclient.ico");
+            if (!File.Exists(path) || new FileInfo(path).Length != stream.Length)
+            {
+                Directory.CreateDirectory(cacheDir);
+                using var file = File.Create(path);
+                stream.CopyTo(file);
+            }
+            return path;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warn("Fenstersymbol", ex);
+            return null;
+        }
+    }
 }
 
 internal static class Toasts
