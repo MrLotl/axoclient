@@ -24,4 +24,31 @@
     <InternalsVisibleTo Include="AxoClient.Tests" />
   </ItemGroup>
 
+  <!-- Die AxoMod wird beim Build automatisch mitgebaut (mod/build-all.ps1), aber nur, wenn sich unter mod/ etwas
+       geändert hat. Abschalten mit -p:SkipMod=true (z. B. ohne Java). Braucht ein JDK 25 im PATH oder JAVA_HOME. -->
+  <PropertyGroup>
+    <ModDir>$(MSBuildProjectDirectory)\..\..\mod</ModDir>
+    <AxoModManifest>$(MSBuildProjectDirectory)\Resources\axomod\axomod-versions.json</AxoModManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ModSource Include="$(ModDir)\src\**\*;$(ModDir)\versions\*.properties;$(ModDir)\build.gradle;$(ModDir)\settings.gradle;$(ModDir)\gradle.properties;$(ModDir)\build-all.ps1" />
+    <!-- Damit Visual Studio/Rider nicht als "aktuell" überspringen, wenn sich nur die Mod geändert hat -->
+    <UpToDateCheckInput Include="@(ModSource)" />
+  </ItemGroup>
+
+  <Target Name="BuildAxoMod" BeforeTargets="BeforeBuild" Condition="'$(SkipMod)' != 'true'"
+          Inputs="@(ModSource)" Outputs="$(AxoModManifest)">
+    <Message Importance="high" Text="AxoMod: Mod hat sich geändert, baue alle Minecraft-Versionen …" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(ModDir)\build-all.ps1&quot;" WorkingDirectory="$(ModDir)" />
+    <!-- Manifest kann inhaltlich gleich bleiben; Zeitstempel setzen, damit Inputs/Outputs stimmen -->
+    <Touch Files="$(AxoModManifest)" />
+    <!-- Neu hinzugekommene Jars einbetten (die Platzhalter oben wurden vor dem Mod-Build ausgewertet) -->
+    <ItemGroup>
+      <_AxoModFile Include="Resources\axomod\*" />
+      <EmbeddedResource Remove="Resources\axomod\**\*" />
+      <EmbeddedResource Include="@(_AxoModFile)" LogicalName="axomod/%(_AxoModFile.Filename)%(_AxoModFile.Extension)" />
+    </ItemGroup>
+  </Target>
+
 </Project>

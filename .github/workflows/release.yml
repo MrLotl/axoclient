@@ -59,7 +59,7 @@ jobs:
       - name: Launcher bauen
         shell: pwsh
         run: |
-          dotnet publish src/AxoClient.App -c Release -r win-x64 -p:Version=$env:VERSION -o publish
+          dotnet publish src/AxoClient.App -c Release -r win-x64 -p:Version=$env:VERSION -p:SkipMod=true -o publish
           Copy-Item publish/AxoClient.exe AxoClient-Setup.exe
 
       - name: Auf GitHub veröffentlichen

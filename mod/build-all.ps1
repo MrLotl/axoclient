@@ -1,6 +1,7 @@
 ﻿# Baut die AxoMod für alle unterstützten Minecraft-Versionen, legt die Jars in
 # src/AxoClient.Core/Resources/axomod ab und schreibt dort axomod-versions.json (mit SHA-256).
 # Der Launcher bettet beides ein und legt die passende Jar beim Spielstart in die Instanz.
+# Läuft automatisch bei jedem dotnet build (Ziel BuildAxoMod in AxoClient.Core.csproj), sobald sich unter mod/ etwas ändert.
 #
 # Aufruf:  .\build-all.ps1            alle Versionen
 #          .\build-all.ps1 1.21.8     nur diese (Manifest wird trotzdem aus allen vorhandenen Jars erzeugt)
