@@ -354,6 +354,8 @@
     "updating": "Aktualisiere {name} …",
     "updatingAll": "Aktualisiere Inhalte …",
     "repairing": "Repariere Instanz …",
+    "fullscreenOn": "Vollbild",
+    "fullscreenOff": "Vollbild beenden",
     "issueGone": "Das Problem besteht nicht mehr oder hat sich geändert. Die Liste wurde neu geprüft.",
     "fixOne": "Beheben",
     "locked": "Die AxoClient-Mod kann nicht entfernt werden.",

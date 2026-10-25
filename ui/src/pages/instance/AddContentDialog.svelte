@@ -26,6 +26,25 @@
   let versions = $state<ContentVersion[]>([]);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
+  // Vollbild wie die Modpack-Seite; die Wahl merkt sich der Launcher (nur hier im Browser-Speicher)
+  const FULL_KEY = 'axo.addContent.fullscreen';
+  let full = $state(readFull());
+  function readFull() {
+    try {
+      return localStorage.getItem(FULL_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+  function toggleFull() {
+    full = !full;
+    try {
+      localStorage.setItem(FULL_KEY, full ? '1' : '0');
+    } catch {
+      // ohne Speicher gilt die Wahl nur für dieses Mal
+    }
+  }
+
   const installedProjects = $derived(new Set(installed.map((i) => i.projectId).filter(Boolean)));
 
   const categories: Record<string, string[]> = {
@@ -103,7 +122,7 @@
   const pages = $derived(result ? Math.ceil(result.total / 20) : 0);
 </script>
 
-<Dialog title={t(`content.${key}.add`)} width={980} padded={false} {onclose}>
+<Dialog title={t(`content.${key}.add`)} width={980} padded={false} fullscreen={full} {onclose}>
   {#snippet header()}
     <div class="top">
       <h2>{t(`content.${key}.add`)}</h2>
@@ -124,10 +143,12 @@
           }
           search();
         }} />
+      <button class="icon-btn flat" aria-label={full ? t('content.fullscreenOff') : t('content.fullscreenOn')} title={full ? t('content.fullscreenOff') : t('content.fullscreenOn')}
+              aria-pressed={full} onclick={toggleFull}><Icon name={full ? 'shrink' : 'expand'} size={14} /></button>
       <button class="icon-btn flat" aria-label={t('common.close')} onclick={onclose}><Icon name="x" size={14} /></button>
     </div>
   {/snippet}
-  <div class="body">
+  <div class="body" class:full>
     <aside class="filters">
       <span class="section-label">{t('content.categories')}</span>
       <div class="cats" role="radiogroup" aria-label={t('content.categories')}>
@@ -150,7 +171,7 @@
           <option value="updated">{t('content.sorts.updated')}</option>
         </select>
       </div>
-      <div class="list" class:loading>
+      <div class="list" class:loading class:grid={full}>
         {#if result}
           {#each result.items as p (p.id)}
             {@const state = installedProjects.has(p.id) ? 'done' : installing[p.id]}
@@ -228,6 +249,20 @@
     height: 600px;
     display: flex;
     border-top: 1px solid var(--line);
+  }
+  .body.full {
+    height: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  /* Im Vollbild nebeneinander, wie die Modpack-Seite */
+  .list.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+    align-content: start;
+  }
+  .list.grid .none {
+    grid-column: 1 / -1;
   }
   .filters {
     width: 200px;

@@ -15,6 +15,7 @@
     role = 'dialog',
     tone = 'accent',
     padded = true,
+    fullscreen = false,
     header = undefined,
     children,
     footer = undefined
@@ -27,6 +28,8 @@
     role?: 'dialog' | 'alertdialog';
     tone?: 'accent' | 'danger' | 'plain';
     padded?: boolean;
+    /** Füllt das ganze Fenster unter der Titelleiste (wie eine Seite), z. B. beim Mods-Installieren. */
+    fullscreen?: boolean;
     header?: Snippet;
     children: Snippet;
     footer?: Snippet;
@@ -86,11 +89,12 @@
   <div
     bind:this={box}
     class="dialog {tone}"
+    class:full={fullscreen}
     {role}
     aria-modal="true"
     aria-labelledby={id}
     tabindex="-1"
-    style="width: {width}px"
+    style={fullscreen ? '' : `width: ${width}px`}
     in:pop|global={{ duration: DUR.med + 20, scale: 0.95, y: 6 }}
     out:pop|global={{ duration: DUR.fast + 20, scale: 0.97, y: 4 }}>
     {#if header}
@@ -197,6 +201,20 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+  /* Vollbild: unter der Titelleiste (52 px) bis an die Ränder, Inhalt füllt die Höhe */
+  .dialog.full {
+    position: fixed;
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+    max-height: none;
+    transition: inset 0.2s var(--ease-out);
+  }
+  .dialog.full .body {
+    flex: 1;
   }
   .body.padded {
     padding: 0 22px 20px;
