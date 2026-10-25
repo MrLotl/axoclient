@@ -43,8 +43,8 @@ public final class EmoteWheelScreen extends Screen {
 	private void draw(Gfx g, int cx, int cy) {
 		int x = cx - SIZE / 2, y = cy - SIZE / 2;
 		// Nur ein leichter Schatten direkt hinter dem Rad
-		g.shadow(x, y, SIZE, SIZE, SIZE / 2, 22, 6, 0.35F);
-		g.rect(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFF1E1E22, 0.94F));
+		g.shadow(x, y, SIZE, SIZE, SIZE / 2, 22, 6, 0.2F);
+		g.rect(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFF1E1E22, 0.6F));
 		g.outline(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFFFFFFFF, 0.08F));
 
 		Emotes.Emote hover = null;
@@ -79,7 +79,7 @@ public final class EmoteWheelScreen extends Screen {
 				g.shadow(bx, by, size, size, size / 2, 12, 10, 0.4F);
 				g.gradient(bx, by, size, size, size / 2, Theme.ACCENT_FROM, Theme.ACCENT_TO);
 			} else if (e != null) {
-				g.rect(bx, by, size, size, size / 2, Theme.alpha(0xFF343438, 0.9F));
+				g.rect(bx, by, size, size, size / 2, Theme.alpha(0xFF343438, 0.75F));
 				g.outline(bx, by, size, size, size / 2, Theme.alpha(0xFFFFFFFF, 0.06F));
 			} else
 				g.outline(bx, by, size, size, size / 2, Theme.alpha(0xFFFFFFFF, 0.12F));
