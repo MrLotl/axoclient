@@ -50,6 +50,27 @@ public sealed class LaunchPipeline(
         return ctx;
     }
 
+    /// <summary>Prüfungen, die nur beim Start Sinn ergeben (Konto, laufendes Spiel, Internet) oder still mitlaufen.</summary>
+    private static readonly HashSet<string> NotARepair = ["account", "running", "internet", "disk", "gameFiles", "axomod", "joinRelay",
+        "unknownFiles"];
+
+    /// <summary>
+    /// Ob ein Ergebnis im Mods-Tab als "muss repariert werden" zählt. Einrichtungsschritte, die beim Start ohnehin still
+    /// laufen (AxoClient-Mod, e4mc, neue Dateien eintragen), schwankende Werte (gerade freier Arbeitsspeicher) und
+    /// stummgeschaltete Warnungen gehören nicht dazu – sonst meldet auch ein einwandfreies Modpack ständig ein Problem.
+    /// </summary>
+    public static bool IsRepairIssue(CheckResult r, ContentDocument content)
+    {
+        if (r.Severity == Severity.Ok || NotARepair.Contains(r.CheckId))
+            return false;
+        // Auto-Fixes laufen beim Start still; nur fehlende oder beschädigte Mod-Dateien sind ein echtes Problem
+        if (r.Severity == Severity.AutoFix)
+            return r.CheckId == "contentFiles";
+        if (r.Key == "ram-not-free")
+            return false;
+        return !(r.Severity == Severity.Warning && r.CanSilence && r.Key != null && content.IgnoredWarnings.Contains(r.Key));
+    }
+
     /// <summary>Für die Diagnose: alle Prüfungen einer Instanz ohne Dialog und ohne Reparatur.</summary>
     public async Task<IReadOnlyList<CheckResult>> DiagnoseAsync(string instanceId, CancellationToken ct)
     {
@@ -65,7 +86,7 @@ public sealed class LaunchPipeline(
             GameDir = gameDir
         };
         var results = new List<CheckResult>();
-        foreach (var check in _checks.Where(c => c is not AccountCheck and not AlreadyRunningCheck and not InternetCheck))
+        foreach (var check in _checks.Where(c => !NotARepair.Contains(c.Id)))
         {
             try
             {
@@ -73,10 +94,11 @@ public sealed class LaunchPipeline(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                results.Add(new CheckResult(check.Id, Severity.Warning, AxoException.Describe(ex), []));
+                // Eine Prüfung, die selbst scheitert (z. B. Modrinth nicht erreichbar), ist kein Problem der Instanz
+                AppLog.Warn($"Prüfung {check.Id} für die Diagnose fehlgeschlagen", ex);
             }
         }
-        return results;
+        return results.Where(r => IsRepairIssue(r, ctx.Content)).ToList();
     }
 
     /// <summary>"Alles reparieren" im Mods-Tab: für jedes gefundene Problem die erste (empfohlene) Maßnahme ausführen.</summary>
@@ -97,13 +119,22 @@ public sealed class LaunchPipeline(
         foreach (var phase in new[] { LaunchPhase.Content, LaunchPhase.Compatibility, LaunchPhase.Resources })
         {
             var results = await RunPhaseAsync(ctx, phase, job.Token);
-            foreach (var result in results.Where(r => r.Severity != Severity.Ok && r.Actions.Count > 0))
+            // Genau das reparieren, was die Diagnose als Problem zeigt – nicht still nebenbei RAM senken o. Ä.
+            foreach (var result in results.Where(r => IsRepairIssue(r, ctx.Content) && r.Actions.Count > 0))
             {
                 var action = result.Actions.FirstOrDefault(a => a.Primary) ?? result.Actions[0];
                 if (action.Id is "switch" or "retry" or "login")
                     continue;
-                await action.Run(ctx, job.Sub(0, 1));
-                fixedCount++;
+                try
+                {
+                    await action.Run(ctx, job.Sub(0, 1));
+                    fixedCount++;
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Eine Maßnahme, die nicht klappt (z. B. keine passende Version), hält die übrigen nicht auf
+                    AppLog.Warn($"Reparatur {result.CheckId}/{action.Id} fehlgeschlagen", ex);
+                }
             }
             ctx.Content = await instances.ContentOf(instanceId).LoadAsync(job.Token);
             ctx.Instance = await instances.GetAsync(instanceId, job.Token);
@@ -146,7 +177,10 @@ public sealed class LaunchPipeline(
                     catch (Exception ex) when (ex is not OperationCanceledException and not LaunchAbortedException)
                     {
                         AppLog.Warn($"Auto-Fix {fix.CheckId} fehlgeschlagen", ex);
-                        failedFixes.Add(new CheckResult(fix.CheckId, Severity.Blocker,
+                        // Bei Mods (z. B. eine Abhängigkeit gibt es nicht für diese Version) darf man trotzdem starten;
+                        // fehlen Spieldateien oder der Loader, geht es nicht.
+                        var severity = phase is LaunchPhase.Content or LaunchPhase.Compatibility ? Severity.Warning : Severity.Blocker;
+                        failedFixes.Add(new CheckResult(fix.CheckId, severity,
                             TextRef.Of("pipeline.autoFixFailed", ("what", fix.Message.Code), ("reason", AxoException.Describe(ex).Code)),
                             [new CheckAction("retry", new TextRef("pipeline.action.retry"), (_, _) => Task.CompletedTask, true)],
                             CanSilence: false, Detail: AxoException.Describe(ex)));

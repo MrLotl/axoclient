@@ -107,8 +107,6 @@ public static partial class Handlers
 
         // Probleme einer Instanz ohne Start (Mods-Tab "Reparieren") und "Alles reparieren"
         r.On<IdData>("instances.diagnose", async (d, ct) => (await host.Pipeline.DiagnoseAsync(d.Id, ct))
-            .Where(x => x.Severity is Core.Launch.Severity.Warning or Core.Launch.Severity.Blocker or Core.Launch.Severity.AutoFix
-                        && x.CheckId is not "gameFiles" and not "axomod")
             .Select((x, i) => new Core.Launch.IssueView($"{x.CheckId}-{i}", x.Severity, x.Message, x.Detail,
                 x.Actions.Select(a => new Core.Launch.ActionView(a.Id, a.Label, a.Primary)).ToList(), false))
             .ToList());

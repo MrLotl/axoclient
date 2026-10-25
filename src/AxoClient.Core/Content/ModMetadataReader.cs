@@ -125,10 +125,17 @@ public static class ModMetadataReader
         var mod = tables.FirstOrDefault(t => t.Name == "mods");
         var modId = mod?.Get("modId");
         var meta = new ModMetadata { ModId = modId, Loaders = [loaderName] };
+        // Eine Jar kann mehrere Mods enthalten ([[mods]] mehrfach): die übrigen stellt sie ebenfalls bereit
+        var ownIds = tables.Where(t => t.Name == "mods").Select(t => t.Get("modId")).OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        meta.Provides.AddRange(ownIds.Where(id => !string.Equals(id, modId, StringComparison.OrdinalIgnoreCase)));
         foreach (var dep in tables.Where(t => t.Name.StartsWith("dependencies.", StringComparison.Ordinal)))
         {
             var id = dep.Get("modId");
-            if (id == null)
+            if (id == null || ownIds.Contains(id))
+                continue;
+            // Nur auf dem Server nötig: für den Client keine Abhängigkeit
+            if (string.Equals(dep.Get("side"), "SERVER", StringComparison.OrdinalIgnoreCase))
                 continue;
             var type = dep.Get("type")?.ToLowerInvariant();
             var mandatory = dep.Get("mandatory") == "true" || type == "required";

@@ -77,7 +77,8 @@ public sealed class ModMetadata
     /// <summary>Stand des Lesers; ältere Einträge werden beim nächsten Abgleich neu gelesen.</summary>
     public int Format { get; set; }
 
-    public const int CurrentFormat = 2;
+    /// <summary>3: alle Mod-IDs einer Forge-Jar, reine Server-Abhängigkeiten ausgelassen.</summary>
+    public const int CurrentFormat = 3;
 
     /// <summary>IDs, die diese Jar zusätzlich bereitstellt (<c>provides</c> und mitgelieferte Jars).</summary>
     public List<string> Provides { get; set; } = [];

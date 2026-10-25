@@ -226,6 +226,7 @@
       "conflicts": "„{name}“ kann sich mit „{other}“ beißen.",
       "dependencyInstall": "Installiere „{dependency}“ für „{name}“ …",
       "dependencyUnavailable": "„{name}“ braucht „{dependency}“, das nicht verfügbar ist.",
+      "dependencyDisabled": "„{name}“ braucht „{dependency}“, das du deaktiviert hast.",
       "shaderWithoutMod": "Shader sind installiert, aber keine Shader-Mod (Iris)."
     },
     "ram": {
@@ -246,6 +247,7 @@
       "redownload": "Neu laden",
       "register": "Eintragen",
       "disableMod": "Mod deaktivieren",
+      "enableMod": "„{name}“ wieder aktivieren",
       "keepNewest": "Neuere behalten",
       "installMatching": "Passende Version installieren",
       "updateLoader": "Loader aktualisieren",

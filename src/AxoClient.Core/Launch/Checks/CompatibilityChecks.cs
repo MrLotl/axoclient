@@ -37,6 +37,11 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
             provided.UnionWith(mod.Meta.Provides);
         }
         var installedProjects = ctx.Content.Mods.Where(m => m.ProjectId != null).Select(m => m.ProjectId!).ToHashSet();
+        // Was deaktivierte Mods bereitstellen würden: fehlt so eine Abhängigkeit, nicht still neu installieren
+        var disabledProviders = new Dictionary<string, ContentEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mod in ctx.Content.Mods.Where(m => !m.Enabled && m.Meta != null && m.Source != ContentSource.AxoClient))
+            foreach (var id in mod.Meta!.ModId is { } own ? mod.Meta.Provides.Prepend(own) : mod.Meta.Provides)
+                disabledProviders.TryAdd(id, mod);
         var hasFabricApi = provided.Contains("fabric-api") || provided.Contains("fabric");
 
         foreach (var mod in mods)
@@ -66,9 +71,9 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
                     ("range", Text.Clean(range, 40)), ("version", mc)), actions, Key: $"version-mismatch:{key}"));
             }
 
-            // Loader zu alt
+            // Loader zu alt (Forge-Versionen tauchen auch als "1.20.1-47.2.0" auf)
             if (meta?.LoaderRange is { } loaderRange && instance.Loader.Version is { } loaderVersion
-                                                      && !VersionRange.Satisfies(loaderVersion, loaderRange))
+                                                      && !VersionRange.Satisfies(StripMinecraftPrefix(loaderVersion, mc), loaderRange))
                 results.Add(new CheckResult(Id, Severity.Warning, TextRef.Of("pipeline.compat.loaderTooOld", ("name", mod.Name),
                         ("loader", LoaderNames.Display(loader))),
                     [new CheckAction("updateLoader", new TextRef("pipeline.action.updateLoader"), UpdateLoaderAsync, true)],
@@ -87,16 +92,26 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
             {
                 if (Builtin.Contains(dep) || provided.Contains(dep) || (hasFabricApi && dep.StartsWith("fabric-", StringComparison.Ordinal)))
                     continue;
+                if (disabledProviders.TryGetValue(dep, out var off))
+                {
+                    // Bewusst deaktiviert: nichts nachinstallieren, sondern fragen – zuerst die Mod, die es braucht, abschalten
+                    results.Add(new CheckResult(Id, Severity.Blocker,
+                        TextRef.Of("pipeline.compat.dependencyDisabled", ("name", mod.Name), ("dependency", off.Name)),
+                        [
+                            ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File),
+                            new CheckAction("enableDependency", TextRef.Of("pipeline.action.enableMod", ("name", off.Name)),
+                                (c, job) => content.SetEnabledAsync(c.Instance.Id, ContentType.Mod, off.File, true, job.Token))
+                        ], CanSilence: false));
+                    continue;
+                }
                 results.Add(await MissingDependencyAsync(ctx, mod, dep, ct));
             }
 
-            // Fehlende Abhängigkeiten laut Modrinth (Projekt-IDs)
-            foreach (var projectId in mod.Dependencies.Where(p => !installedProjects.Contains(p)))
-            {
-                if (meta?.Depends.Count > 0)
-                    break; // Metadaten sind genauer
-                results.Add(InstallDependency(mod, projectId, mod.Source == ContentSource.CurseForge ? "curseforge" : "modrinth", projectId));
-            }
+            // Fehlende Abhängigkeiten laut Modrinth (Projekt-IDs) – nur, wenn die Jar selbst nichts verrät. Die Angaben
+            // auf Modrinth gelten oft für eine andere Loader-Variante oder sind schon in der Jar enthalten.
+            if (meta == null)
+                foreach (var projectId in mod.Dependencies.Where(p => !installedProjects.Contains(p)))
+                    results.Add(InstallDependency(mod, projectId, mod.Source == ContentSource.CurseForge ? "curseforge" : "modrinth", projectId));
         }
 
         // Shader ohne Shader-Mod
@@ -148,6 +163,9 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
         ctx.VersionName = null;
         await Task.CompletedTask;
     }
+
+    private static string StripMinecraftPrefix(string loaderVersion, string mc) =>
+        loaderVersion.StartsWith(mc + "-", StringComparison.Ordinal) ? loaderVersion[(mc.Length + 1)..] : loaderVersion;
 
     private static bool LoaderFits(List<string> modLoaders, LoaderType loader) => loader switch
     {

@@ -14,7 +14,8 @@ public static partial class VersionRange
     {
         if (string.IsNullOrWhiteSpace(range))
             return true;
-        range = range.Trim();
+        // ">= 1.21.2" gehört zusammen; sonst würde das Leerzeichen als UND gelesen und "1.21.2" als genaue Version
+        range = OperatorSpace().Replace(range.Trim(), "$1");
         try
         {
             if (range[0] is '[' or '(')
@@ -120,6 +121,9 @@ public static partial class VersionRange
 
     [GeneratedRegex(@"^(>=|<=|>|<|=|~|\^)?\s*([0-9][0-9A-Za-z.\-+*]*)$")]
     private static partial Regex Predicate();
+
+    [GeneratedRegex(@"(>=|<=|>|<|=|~|\^)\s+")]
+    private static partial Regex OperatorSpace();
 
     [GeneratedRegex(@"[\[\(][^\]\)]*[\]\)]")]
     private static partial Regex MavenParts();

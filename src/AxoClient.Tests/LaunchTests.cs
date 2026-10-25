@@ -15,6 +15,9 @@ public class VersionRangeTests
     [InlineData("47.2.0", "[47,)", true)]
     [InlineData("1.21", "", true)]
     [InlineData("1.21", null, true)]
+    [InlineData("1.21.4", ">= 1.21.2", true)]
+    [InlineData("1.21.1", ">= 1.21.2", false)]
+    [InlineData("1.21.4", ">= 1.21 < 1.22", true)]
     public void Satisfies(string version, string? range, bool expected)
     {
         Assert.Equal(expected, VersionRange.Satisfies(version, range));
@@ -65,5 +68,39 @@ public class CrashAnalyzerTests
         var result = new CrashAnalyzer().Analyze(Log("Etwas völlig Unbekanntes ist passiert"), null);
         Assert.False(result.KnownCause);
         Assert.Null(result.RuleId);
+    }
+}
+
+public class RepairIssueTests
+{
+    private static CheckResult Result(string check, Severity severity, string? key = null) =>
+        new(check, severity, new AxoClient.Core.Common.TextRef("x"), [], Key: key);
+
+    [Fact]
+    public void SetupStepsAreNoRepair()
+    {
+        var doc = new AxoClient.Core.Content.ContentDocument();
+        Assert.False(LaunchPipeline.IsRepairIssue(Result("joinRelay", Severity.AutoFix), doc));
+        Assert.False(LaunchPipeline.IsRepairIssue(Result("unknownFiles", Severity.AutoFix), doc));
+        Assert.False(LaunchPipeline.IsRepairIssue(Result("compat", Severity.AutoFix), doc));
+        Assert.False(LaunchPipeline.IsRepairIssue(Result("memory", Severity.Warning, "ram-not-free"), doc));
+        Assert.False(LaunchPipeline.IsRepairIssue(Result("compat", Severity.Ok), doc));
+    }
+
+    [Fact]
+    public void RealProblemsCount()
+    {
+        var doc = new AxoClient.Core.Content.ContentDocument();
+        Assert.True(LaunchPipeline.IsRepairIssue(Result("contentFiles", Severity.AutoFix), doc));
+        Assert.True(LaunchPipeline.IsRepairIssue(Result("duplicate", Severity.Blocker), doc));
+        Assert.True(LaunchPipeline.IsRepairIssue(Result("compat", Severity.Warning, "version-mismatch:x@1"), doc));
+    }
+
+    [Fact]
+    public void SilencedWarningsAreHidden()
+    {
+        var doc = new AxoClient.Core.Content.ContentDocument();
+        doc.IgnoredWarnings.Add("version-mismatch:x@1");
+        Assert.False(LaunchPipeline.IsRepairIssue(Result("compat", Severity.Warning, "version-mismatch:x@1"), doc));
     }
 }

@@ -78,7 +78,8 @@ public sealed class CrashAnalyzer
             ["hserr"] = Trim(input.HsErr),
             ["log"] = Trim(input.LogTail)
         };
-        var mods = content?.Mods.Where(m => m.Source != ContentSource.AxoClient).ToList() ?? [];
+        // Nur aktive Mods: deaktivierte können den Absturz nicht ausgelöst haben
+        var mods = content?.Mods.Where(m => m.Enabled && m.Source != ContentSource.AxoClient).ToList() ?? [];
 
         foreach (var (rule, patterns) in _rules.Where(r => r.Rule.Server == server))
         {
