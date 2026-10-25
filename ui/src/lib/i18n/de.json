@@ -349,6 +349,8 @@
     "updating": "Aktualisiere {name} …",
     "updatingAll": "Aktualisiere Inhalte …",
     "repairing": "Repariere Instanz …",
+    "issueGone": "Das Problem besteht nicht mehr oder hat sich geändert. Die Liste wurde neu geprüft.",
+    "fixOne": "Beheben",
     "locked": "Die AxoClient-Mod kann nicht entfernt werden.",
     "manualDownload": "„{name}“ erlaubt keinen Download durch Launcher. Bitte manuell herunterladen.",
     "noCompatibleVersion": "Keine passende Version für Minecraft {version}.",

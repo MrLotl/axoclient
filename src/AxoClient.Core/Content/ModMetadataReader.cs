@@ -17,12 +17,16 @@ public static class ModMetadataReader
 
     public sealed record Result(ModMetadata Meta, string? Name, string? Version, string? Author);
 
-    public static Result? Read(string jarPath)
+    /// <param name="preferLoader">
+    /// Enthält die Jar Metadaten für mehrere Loader (z. B. Collective: Fabric und NeoForge), werden die für diesen Loader
+    /// gelesen ("fabric", "quilt", "forge", "neoforge"). <see cref="ModMetadata.Loaders"/> nennt immer alle.
+    /// </param>
+    public static Result? Read(string jarPath, string? preferLoader = null)
     {
         try
         {
             using var zip = ZipFile.OpenRead(jarPath);
-            return Read(zip);
+            return Read(zip, preferLoader);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or JsonException)
         {
@@ -30,19 +34,29 @@ public static class ModMetadataReader
         }
     }
 
-    public static Result? Read(ZipArchive zip)
+    public static Result? Read(ZipArchive zip, string? preferLoader = null)
     {
-        Result? result = null;
+        // Alle Metadaten der Jar, in der üblichen Reihenfolge
+        var variants = new List<(string Loader, Func<Result?> Parse)>();
         if (Entry(zip, "fabric.mod.json") is { } fabric)
-            result = ReadFabric(fabric);
-        else if (Entry(zip, "quilt.mod.json") is { } quilt)
-            result = ReadQuilt(quilt);
-        else if (Entry(zip, "META-INF/neoforge.mods.toml") is { } neo)
-            result = ReadToml(neo, "neoforge");
-        else if (Entry(zip, "META-INF/mods.toml") is { } forge)
-            result = ReadToml(forge, "forge");
-        else if (Entry(zip, "mcmod.info") is { } legacy)
-            result = ReadMcmodInfo(legacy);
+            variants.Add(("fabric", () => ReadFabric(fabric)));
+        if (Entry(zip, "quilt.mod.json") is { } quilt)
+            variants.Add(("quilt", () => ReadQuilt(quilt)));
+        if (Entry(zip, "META-INF/neoforge.mods.toml") is { } neo)
+            variants.Add(("neoforge", () => ReadToml(neo, "neoforge")));
+        if (Entry(zip, "META-INF/mods.toml") is { } forge)
+            variants.Add(("forge", () => ReadToml(forge, "forge")));
+        if (variants.Count == 0 && Entry(zip, "mcmod.info") is { } legacy)
+            variants.Add(("forge", () => ReadMcmodInfo(legacy)));
+
+        // Quilt lädt auch Fabric-Mods
+        string[] wanted = preferLoader == "quilt" ? ["quilt", "fabric"] : preferLoader != null ? [preferLoader] : [];
+        var chosen = variants.FirstOrDefault(v => wanted.Contains(v.Loader));
+        if (chosen.Parse == null && variants.Count > 0)
+            chosen = variants[0];
+        var result = chosen.Parse?.Invoke();
+        if (result != null)
+            result.Meta.Loaders = result.Meta.Loaders.Concat(variants.Select(v => v.Loader)).Distinct().ToList();
 
         if (result == null)
         {
@@ -148,10 +162,18 @@ public static class ModMetadataReader
                 continue;
             var type = dep.Get("type")?.ToLowerInvariant();
             var mandatory = dep.Get("mandatory") == "true" || type == "required";
+            // Stecken mehrere Mods in der Jar, gilt der Bereich der Haupt-Mod (sonst zählt, was zuletzt kam)
+            var primary = modId != null && dep.Name.Equals($"dependencies.{modId}", StringComparison.OrdinalIgnoreCase);
             if (id == "minecraft")
-                meta.MinecraftRange = dep.Get("versionRange");
+            {
+                if (primary || meta.MinecraftRange == null)
+                    meta.MinecraftRange = dep.Get("versionRange");
+            }
             else if (id is "forge" or "neoforge")
-                meta.LoaderRange = dep.Get("versionRange");
+            {
+                if (primary || meta.LoaderRange == null)
+                    meta.LoaderRange = dep.Get("versionRange");
+            }
             else if (type == "incompatible")
             {
                 meta.Breaks.Add(id);

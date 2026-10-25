@@ -72,13 +72,34 @@ public sealed class LaunchPipeline(
     }
 
     /// <summary>Für die Diagnose: alle Prüfungen einer Instanz ohne Dialog und ohne Reparatur.</summary>
-    public async Task<IReadOnlyList<CheckResult>> DiagnoseAsync(string instanceId, CancellationToken ct)
+    public async Task<IReadOnlyList<CheckResult>> DiagnoseAsync(string instanceId, CancellationToken ct) =>
+        (await CollectIssuesAsync(instanceId, "diagnose", ct)).Issues;
+
+    /// <summary>
+    /// Ein einzelnes Problem aus der Diagnose beheben. <paramref name="index"/> ist die Stelle in der Liste von
+    /// <see cref="DiagnoseAsync"/>; die Prüfungen laufen dafür neu, damit die Maßnahme zum aktuellen Stand passt.
+    /// </summary>
+    public async Task RepairOneAsync(string instanceId, string checkId, int index, string? actionId, JobContext job)
+    {
+        var (ctx, issues) = await CollectIssuesAsync(instanceId, "repair", job.Token);
+        if (index < 0 || index >= issues.Count || issues[index].CheckId != checkId)
+            throw new AxoException("content.issueGone");
+        var issue = issues[index];
+        var action = issue.Actions.FirstOrDefault(a => a.Id == actionId)
+                     ?? issue.Actions.FirstOrDefault(a => a.Primary) ?? issue.Actions.FirstOrDefault()
+                     ?? throw new AxoException("content.issueGone");
+        AppLog.Info($"Reparatur einzeln: {issue.CheckId}/{action.Id} ({issue.Message.Code})");
+        await action.Run(ctx, job.Sub(0, 1));
+    }
+
+    private async Task<(LaunchContext Ctx, List<CheckResult> Issues)> CollectIssuesAsync(string instanceId, string launchId,
+        CancellationToken ct)
     {
         var instance = await instances.GetAsync(instanceId, ct);
         var gameDir = instances.GameDir(instanceId);
         var ctx = new LaunchContext
         {
-            LaunchId = "diagnose",
+            LaunchId = launchId,
             Instance = instance,
             Content = await instances.ContentOf(instanceId).LoadAsync(ct),
             Settings = settings.Current,
@@ -98,7 +119,7 @@ public sealed class LaunchPipeline(
                 AppLog.Warn($"Prüfung {check.Id} für die Diagnose fehlgeschlagen", ex);
             }
         }
-        return results.Where(r => IsRepairIssue(r, ctx.Content)).ToList();
+        return (ctx, results.Where(r => IsRepairIssue(r, ctx.Content)).ToList());
     }
 
     /// <summary>"Alles reparieren" im Mods-Tab: für jedes gefundene Problem die erste (empfohlene) Maßnahme ausführen.</summary>

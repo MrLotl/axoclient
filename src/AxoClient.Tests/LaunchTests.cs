@@ -151,3 +151,49 @@ public class ContainerJarTests
         Assert.Contains("kotlinforforge", result!.Meta.Provides);
     }
 }
+
+public class MultiLoaderJarTests
+{
+    private static System.IO.Compression.ZipArchive Jar(params (string Name, string Text)[] files)
+    {
+        var buffer = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, true))
+            foreach (var (name, text) in files)
+                using (var s = zip.CreateEntry(name).Open())
+                    s.Write(System.Text.Encoding.UTF8.GetBytes(text));
+        buffer.Position = 0;
+        return new System.IO.Compression.ZipArchive(buffer);
+    }
+
+    [Fact]
+    public void KnowsAllLoadersAndReadsPreferredOne()
+    {
+        // Wie Collective: Fabric- und NeoForge-Metadaten in einer Jar
+        (string, string)[] files =
+        [
+            ("fabric.mod.json", "{\"id\":\"collective\",\"depends\":{\"minecraft\":\"1.21.1\"}}"),
+            ("META-INF/neoforge.mods.toml", "[[mods]]\nmodId=\"collective\"\n[[dependencies.collective]]\nmodId=\"minecraft\"\nversionRange=\"[1.21.1]\"\n")
+        ];
+        using var plain = Jar(files);
+        var fabricFirst = AxoClient.Core.Content.ModMetadataReader.Read(plain)!;
+        Assert.Contains("neoforge", fabricFirst.Meta.Loaders);
+        Assert.Contains("fabric", fabricFirst.Meta.Loaders);
+
+        using var again = Jar(files);
+        var neo = AxoClient.Core.Content.ModMetadataReader.Read(again, "neoforge")!;
+        Assert.Equal("neoforge", neo.Meta.Loaders[0]);
+        Assert.Equal("[1.21.1]", neo.Meta.MinecraftRange);
+    }
+
+    [Fact]
+    public void MinecraftRangeComesFromPrimaryMod()
+    {
+        using var jar = Jar(("META-INF/neoforge.mods.toml",
+            "[[mods]]\nmodId=\"main\"\n[[mods]]\nmodId=\"extra\"\n" +
+            "[[dependencies.main]]\nmodId=\"minecraft\"\nversionRange=\"[1.21.1,1.22)\"\n" +
+            "[[dependencies.extra]]\nmodId=\"minecraft\"\nversionRange=\"[1.20.1,1.21.1)\"\n"));
+        var meta = AxoClient.Core.Content.ModMetadataReader.Read(jar)!.Meta;
+        Assert.Equal("[1.21.1,1.22)", meta.MinecraftRange);
+        Assert.Contains("extra", meta.Provides);
+    }
+}

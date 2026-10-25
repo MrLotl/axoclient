@@ -28,6 +28,7 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
         var instance = ctx.Instance;
         var loader = instance.Loader.Type;
         var mc = instance.Minecraft.Version;
+        UseLoaderVariants(ctx, loader);
         var mods = ctx.Content.Mods.Where(m => m.Enabled && m.Source != ContentSource.AxoClient).ToList();
         var provided = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var mod in mods.Where(m => m.Meta != null))
@@ -96,13 +97,13 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
                     continue;
                 if (disabledProviders.TryGetValue(dep, out var off))
                 {
-                    // Bewusst deaktiviert: nichts nachinstallieren, sondern fragen – zuerst die Mod, die es braucht, abschalten
+                    // Deaktiviert: nichts nachinstallieren. Vorschlag: die Abhängigkeit wieder aktivieren, sonst die Mod abschalten
                     results.Add(new CheckResult(Id, Severity.Blocker,
                         TextRef.Of("pipeline.compat.dependencyDisabled", ("name", mod.Name), ("dependency", off.Name)),
                         [
-                            ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File),
                             new CheckAction("enableDependency", TextRef.Of("pipeline.action.enableMod", ("name", off.Name)),
-                                (c, job) => content.SetEnabledAsync(c.Instance.Id, ContentType.Mod, off.File, true, job.Token))
+                                (c, job) => content.SetEnabledAsync(c.Instance.Id, ContentType.Mod, off.File, true, job.Token), true),
+                            ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File)
                         ], CanSilence: false));
                     continue;
                 }
@@ -190,6 +191,24 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
         ctx.Instance.Loader = ctx.Instance.Loader with { Version = null };
         ctx.VersionName = null;
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Jars mit Metadaten für mehrere Loader (z. B. Collective: Fabric und NeoForge) wurden evtl. mit den Angaben eines
+    /// anderen Loaders eingelesen. Für die Prüfung die Angaben zum Loader der Instanz nehmen (nur im Speicher).
+    /// </summary>
+    private static void UseLoaderVariants(LaunchContext ctx, LoaderType loader)
+    {
+        if (loader == LoaderType.Vanilla)
+            return;
+        foreach (var mod in ctx.Content.Mods)
+        {
+            if (mod.Meta is not { Loaders.Count: > 1 } meta || LoaderFits([meta.Loaders[0]], loader) || !LoaderFits(meta.Loaders, loader))
+                continue;
+            var path = Path.Combine(ctx.GameDir, "mods", mod.DiskName);
+            if (File.Exists(path) && ModMetadataReader.Read(path, LoaderNames.ModrinthId(loader))?.Meta is { } variant)
+                mod.Meta = variant;
+        }
     }
 
     private static string StripMinecraftPrefix(string loaderVersion, string mc) =>

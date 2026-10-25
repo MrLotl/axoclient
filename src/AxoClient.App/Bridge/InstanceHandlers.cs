@@ -8,6 +8,8 @@ public static partial class Handlers
 {
     private sealed record IdData(string Id);
 
+    private sealed record RepairOneData(string Id, string IssueId, string? ActionId);
+
     private sealed record VersionListData(bool Snapshots = false, bool Old = false);
 
     private sealed record LoaderVersionsData(LoaderType Loader, string Minecraft);
@@ -110,6 +112,16 @@ public static partial class Handlers
             .Select((x, i) => new Core.Launch.IssueView($"{x.CheckId}-{i}", x.Severity, x.Message, x.Detail,
                 x.Actions.Select(a => new Core.Launch.ActionView(a.Id, a.Label, a.Primary)).ToList(), false))
             .ToList());
+        r.On<RepairOneData>("instances.repairOne", async (d, _) =>
+        {
+            // Id aus der Diagnose: "<Prüfung>-<Stelle>"
+            var cut = d.IssueId.LastIndexOf('-');
+            if (cut <= 0 || !int.TryParse(d.IssueId[(cut + 1)..], out var index))
+                throw new AxoException("errors.invalidInput");
+            await host.Jobs.RunAsync("content.repair", new TextRef("content.repairing"),
+                job => host.Pipeline.RepairOneAsync(d.Id, d.IssueId[..cut], index, d.ActionId, job), d.Id);
+            return true;
+        });
         r.On<IdData>("instances.repairAll", async (d, _) => await host.Jobs.RunAsync("content.repair", new TextRef("content.repairing"),
             job => host.Pipeline.RepairAllAsync(d.Id, job), d.Id));
 

@@ -29,6 +29,23 @@
     }
   }
 
+  // Einzelnes Problem mit der gewählten Maßnahme beheben
+  let fixing = $state<string | null>(null);
+  async function fixOne(issue: IssueView, actionId: string) {
+    fixing = `${issue.id}:${actionId}`;
+    try {
+      await call('instances.repairOne', { id: instanceId, issueId: issue.id, actionId });
+    } catch (e) {
+      app.error(e);
+    } finally {
+      await onrescan();
+      fixing = null;
+    }
+  }
+
+  // Vorgeschlagene Maßnahme zuerst
+  const ordered = (issue: IssueView) => [...issue.actions].sort((a, b) => Number(b.primary) - Number(a.primary));
+
   async function redownloadAll() {
     try {
       await call('content.repair', { id: instanceId });
@@ -54,7 +71,16 @@
           <Icon name="warning" size={15} />
           <span class="col grow" style="gap: 3px">
             <span class="msg">{tr(issue.message)}</span>
-            {#if issue.actions[0]}<span class="act">{tr((issue.actions.find((a) => a.primary) ?? issue.actions[0]).label)}</span>{/if}
+            {#if issue.actions.length > 0}
+              <span class="fixes">
+                {#each ordered(issue) as action, ai (ai)}
+                  <button class="btn sm {ai === 0 ? 'btn-second' : 'btn-flat'}" disabled={busy || fixing !== null}
+                          onclick={() => fixOne(issue, action.id)}>
+                    {#if fixing === `${issue.id}:${action.id}`}<span class="spinner"></span>{/if}{tr(action.label)}
+                  </button>
+                {/each}
+              </span>
+            {/if}
           </span>
         </div>
       {/each}
@@ -73,6 +99,12 @@
 </Dialog>
 
 <style>
+  .fixes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
   .ok {
     padding: 14px;
     border-radius: 12px;
@@ -116,9 +148,5 @@
     font-weight: 600;
     color: var(--text-strong);
     line-height: 1.4;
-  }
-  .act {
-    font-size: 12px;
-    color: var(--accent-text);
   }
 </style>
