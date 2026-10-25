@@ -115,7 +115,7 @@ public sealed class ContentManager(
                 }
                 // Metadaten eines älteren Lesers (ohne Versionsbedingungen) einmal neu lesen
                 if (entry.Size != file.Length || entry.Modified != file.LastWriteTimeUtc
-                    || type == ContentType.Mod && entry.Meta is { Format: < ModMetadata.CurrentFormat })
+                    || type == ContentType.Mod && (entry.Meta?.Format ?? entry.MetaFormat) < ModMetadata.CurrentFormat)
                 {
                     RefreshFileInfo(entry, file, type);
                     changed = true;
@@ -191,6 +191,7 @@ public sealed class ContentManager(
             return;
         var meta = ModMetadataReader.Read(file.FullName);
         entry.Meta = meta?.Meta;
+        entry.MetaFormat = ModMetadata.CurrentFormat;
         if (meta != null && entry.Source == ContentSource.Local)
         {
             if (!string.IsNullOrWhiteSpace(meta.Name))

@@ -126,3 +126,28 @@ public class AxoModInstallerTests
         }
     }
 }
+
+public class ContainerJarTests
+{
+    private static byte[] Zip(params (string Name, byte[] Data)[] files)
+    {
+        using var buffer = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, true))
+            foreach (var (name, data) in files)
+                using (var s = zip.CreateEntry(name).Open())
+                    s.Write(data);
+        return buffer.ToArray();
+    }
+
+    [Fact]
+    public void ContainerJarProvidesNestedModIds()
+    {
+        // Wie Kotlin for Forge: außen keine Metadaten, innen eine Jar mit modId "kotlinforforge"
+        var inner = Zip(("META-INF/neoforge.mods.toml", System.Text.Encoding.UTF8.GetBytes("[[mods]]\nmodId=\"kotlinforforge\"\n")));
+        var outer = Zip(("META-INF/jarjar/kffmod.jar", inner));
+        using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(outer));
+        var result = AxoClient.Core.Content.ModMetadataReader.Read(zip);
+        Assert.NotNull(result);
+        Assert.Contains("kotlinforforge", result!.Meta.Provides);
+    }
+}

@@ -34,6 +34,9 @@ public sealed class ContentEntry
     public ContentHashes Hashes { get; set; } = new(null, null);
     public long Size { get; set; }
     public List<string> Dependencies { get; set; } = [];
+
+    /// <summary>Mit welchem Stand des Lesers die Jar zuletzt gelesen wurde (auch wenn sie keine Metadaten hatte).</summary>
+    public int MetaFormat { get; set; }
     public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>Änderungszeit beim letzten Hashen: nur bei Änderung neu rechnen (Start-Pipeline).</summary>
@@ -77,8 +80,8 @@ public sealed class ModMetadata
     /// <summary>Stand des Lesers; ältere Einträge werden beim nächsten Abgleich neu gelesen.</summary>
     public int Format { get; set; }
 
-    /// <summary>3: alle Mod-IDs einer Forge-Jar, reine Server-Abhängigkeiten ausgelassen.</summary>
-    public const int CurrentFormat = 3;
+    /// <summary>3: alle Mod-IDs einer Forge-Jar, reine Server-Abhängigkeiten ausgelassen. 4: Container-Jars (Kotlin for Forge).</summary>
+    public const int CurrentFormat = 4;
 
     /// <summary>IDs, die diese Jar zusätzlich bereitstellt (<c>provides</c> und mitgelieferte Jars).</summary>
     public List<string> Provides { get; set; } = [];

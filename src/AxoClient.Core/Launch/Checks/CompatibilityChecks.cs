@@ -43,6 +43,8 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
             foreach (var id in mod.Meta!.ModId is { } own ? mod.Meta.Provides.Prepend(own) : mod.Meta.Provides)
                 disabledProviders.TryAdd(id, mod);
         var hasFabricApi = provided.Contains("fabric-api") || provided.Contains("fabric");
+        // Fehlende Abhängigkeiten erst sammeln und dann gemeinsam bei Modrinth nachschlagen (jede nur einmal)
+        var missing = new List<(ContentEntry Mod, string Dependency)>();
 
         foreach (var mod in mods)
         {
@@ -104,7 +106,7 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
                         ], CanSilence: false));
                     continue;
                 }
-                results.Add(await MissingDependencyAsync(ctx, mod, dep, ct));
+                missing.Add((mod, dep));
             }
 
             // Fehlende Abhängigkeiten laut Modrinth (Projekt-IDs) – nur, wenn die Jar selbst nichts verrät. Die Angaben
@@ -112,6 +114,18 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
             if (meta == null)
                 foreach (var projectId in mod.Dependencies.Where(p => !installedProjects.Contains(p)))
                     results.Add(InstallDependency(mod, projectId, mod.Source == ContentSource.CurseForge ? "curseforge" : "modrinth", projectId));
+        }
+
+        if (missing.Count > 0)
+        {
+            var found = await LookupDependenciesAsync(ctx, missing.Select(m => m.Dependency).Distinct(StringComparer.OrdinalIgnoreCase), ct);
+            foreach (var (mod, dep) in missing)
+                results.Add(found.GetValueOrDefault(dep) is { } projectId
+                    ? InstallDependency(mod, dep, "modrinth", projectId)
+                    // Warnung statt Blocker: die Erkennung kann sich irren (z. B. ungewöhnlich verpackte Mods), dann soll
+                    // man trotzdem starten oder die Meldung stummschalten können
+                    : new CheckResult(Id, Severity.Warning, TextRef.Of("pipeline.compat.dependencyUnavailable", ("name", mod.Name), ("dependency", dep)),
+                        [ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File)], Key: $"dependency-missing:{mod.File}:{dep}"));
         }
 
         // Shader ohne Shader-Mod
@@ -130,25 +144,39 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
         return results.Count == 0 ? [CheckResult.Ok(Id)] : results.DistinctBy(r => r.Message.ToString()).ToList();
     }
 
-    private async Task<CheckResult> MissingDependencyAsync(LaunchContext ctx, ContentEntry mod, string dependencyId, CancellationToken ct)
+    /// <summary>
+    /// Sucht fehlende Abhängigkeiten bei Modrinth (viele Mod-IDs entsprechen dem Slug): parallel, jede ID nur einmal und
+    /// mit kurzem Zeitlimit. Sonst dauert die Prüfung bei großen Packs oder gedrosseltem Modrinth Minuten und der Start
+    /// scheint bei 60 % zu hängen. Ergebnis: Mod-ID → Projekt-ID (fehlt = nicht gefunden).
+    /// </summary>
+    private async Task<Dictionary<string, string>> LookupDependenciesAsync(LaunchContext ctx, IEnumerable<string> dependencyIds,
+        CancellationToken ct)
     {
-        // Viele Mod-IDs entsprechen dem Modrinth-Slug: dort nach einer passenden Version suchen
-        try
+        var modrinth = providers.Get("modrinth");
+        var found = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        using var gate = new SemaphoreSlim(6);
+        await Task.WhenAll(dependencyIds.Where(d => Text.IsValidId(d.Replace('_', '-'))).Select(async dependencyId =>
         {
-            if (Text.IsValidId(dependencyId.Replace('_', '-')))
+            await gate.WaitAsync(ct);
+            try
             {
-                var modrinth = providers.Get("modrinth");
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(TimeSpan.FromSeconds(8));
                 var versions = await modrinth.GetVersionsAsync(dependencyId, ctx.Instance.Minecraft.Version, ctx.Instance.Loader.Type,
-                    ProjectKind.Mod, ct);
+                    ProjectKind.Mod, timeout.Token);
                 if (versions.Count > 0)
-                    return InstallDependency(mod, dependencyId, "modrinth", versions[0].ProjectId);
+                    found[dependencyId] = versions[0].ProjectId;
             }
-        }
-        catch (Exception ex) when (ex is AxoException or HttpRequestException)
-        {
-        }
-        return new CheckResult(Id, Severity.Blocker, TextRef.Of("pipeline.compat.dependencyUnavailable", ("name", mod.Name), ("dependency", dependencyId)),
-            [ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File)], CanSilence: false);
+            catch (Exception ex) when (ex is AxoException or HttpRequestException or OperationCanceledException && !ct.IsCancellationRequested)
+            {
+                // Nicht gefunden, nicht erreichbar oder zu langsam: gilt als nicht verfügbar
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }));
+        return new Dictionary<string, string>(found, StringComparer.OrdinalIgnoreCase);
     }
 
     private CheckResult InstallDependency(ContentEntry mod, string label, string source, string projectId) =>

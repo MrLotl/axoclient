@@ -45,7 +45,16 @@ public static class ModMetadataReader
             result = ReadMcmodInfo(legacy);
 
         if (result == null)
-            return null;
+        {
+            // Reine Container-Jar (z. B. Kotlin for Forge): keine eigenen Metadaten, die Mods stecken in META-INF/jarjar.
+            // Ohne diese IDs gälte z. B. "kotlinforforge" als fehlend, obwohl es installiert ist.
+            var nestedOnly = NestedIds(zip).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (nestedOnly.Count == 0)
+                return null;
+            var container = new ModMetadata { Format = ModMetadata.CurrentFormat, Provides = nestedOnly };
+            container.Packages = Packages(zip);
+            return new Result(container, null, null, null);
+        }
         result.Meta.Format = ModMetadata.CurrentFormat;
         result.Meta.ModVersion = result.Version;
         result.Meta.Packages = Packages(zip);
