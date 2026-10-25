@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { untrack, type Snippet } from 'svelte';
   import Icon from './Icon.svelte';
   import { t } from '../i18n';
   import { fadeOut, pop, DUR } from '../util/motion';
@@ -49,6 +49,31 @@
       target?.focus();
     });
     return () => previous?.focus?.();
+  });
+
+  // Vollbild an/aus: weich von der alten auf die neue Größe (Lage und Größe vorher merken, danach animieren)
+  let before: DOMRect | null = null;
+  let lastFull = untrack(() => fullscreen);
+  $effect.pre(() => {
+    if (fullscreen !== lastFull) before = box?.getBoundingClientRect() ?? null;
+  });
+  $effect(() => {
+    if (fullscreen === lastFull) return;
+    lastFull = fullscreen;
+    const from = before;
+    before = null;
+    if (!box || !from || reduce) return;
+    const to = box.getBoundingClientRect();
+    // Wo der Dialog mit der alten Größe stünde: im Vollbild fest oben links, sonst mittig (wandert mit der Größe mit)
+    const startLeft = fullscreen ? to.left : to.left + (to.width - from.width) / 2;
+    const startTop = fullscreen ? to.top : to.top + (to.height - from.height) / 2;
+    box.animate(
+      [
+        { width: `${from.width}px`, height: `${from.height}px`, transform: `translate(${from.left - startLeft}px, ${from.top - startTop}px)` },
+        { width: `${to.width}px`, height: `${to.height}px`, transform: 'translate(0, 0)' }
+      ],
+      { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    );
   });
 
   function onkeydown(e: KeyboardEvent) {
@@ -211,7 +236,6 @@
     bottom: 12px;
     max-width: none;
     max-height: none;
-    transition: inset 0.2s var(--ease-out);
   }
   .dialog.full .body {
     flex: 1;
