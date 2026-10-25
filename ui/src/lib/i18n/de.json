@@ -354,6 +354,7 @@
     "noSource": "Für lokale Dateien gibt es keine anderen Versionen.",
     "sourceUnavailable": "Diese Quelle ist noch nicht verfügbar.",
     "wrongFileType": "Dieser Dateityp passt hier nicht.",
+    "fileInUse": "„{name}“ ist gerade in Benutzung, meist vom laufenden Spiel. Beende Minecraft und versuche es erneut.",
     "mods": {
       "search": "Mods durchsuchen …",
       "count": "{count} Mods",

@@ -95,10 +95,10 @@ public sealed class ContentManager(
         var list = doc.ListOf(type);
         var changed = false;
 
-        var onDisk = Directory.EnumerateFiles(dir)
-            .Select(f => new FileInfo(f))
-            .Where(f => IsContentFile(type, f.Name))
-            .ToDictionary(f => BaseName(f.Name), StringComparer.OrdinalIgnoreCase);
+        var onDisk = new Dictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in Directory.EnumerateFiles(dir).Select(f => new FileInfo(f)).Where(f => IsContentFile(type, f.Name))
+                     .GroupBy(f => BaseName(f.Name), StringComparer.OrdinalIgnoreCase))
+            onDisk[group.Key] = group.Count() == 1 ? group.First() : ResolveDouble(dir, group.Key, group.ToList(), list);
         var onDiskDirs = type != ContentType.Mod
             ? Directory.EnumerateDirectories(dir).Select(d => new DirectoryInfo(d)).ToDictionary(d => d.Name, StringComparer.OrdinalIgnoreCase)
             : [];
@@ -154,6 +154,31 @@ public sealed class ContentManager(
             changed = true;
         }
         return changed;
+    }
+
+    /// <summary>
+    /// "x.jar" und "x.jar.disabled" liegen beide im Ordner (z. B. nach einem Pack-Update): Minecraft lädt dann die aktive
+    /// trotz Deaktivierung. Die neuere Datei bleibt im Zustand, den content.json kennt (sonst aktiv), die andere fällt weg.
+    /// </summary>
+    private static FileInfo ResolveDouble(string dir, string baseName, List<FileInfo> files, List<ContentEntry> list)
+    {
+        var known = list.FirstOrDefault(e => e.File.Equals(baseName, StringComparison.OrdinalIgnoreCase));
+        var target = Path.Combine(dir, known is { Enabled: false } ? baseName + ".disabled" : baseName);
+        var newest = files.OrderByDescending(f => f.LastWriteTimeUtc).First();
+        try
+        {
+            if (!newest.FullName.Equals(target, StringComparison.OrdinalIgnoreCase))
+                File.Move(newest.FullName, target, overwrite: true);
+            foreach (var other in files.Where(f => !f.FullName.Equals(target, StringComparison.OrdinalIgnoreCase)
+                                                   && !f.FullName.Equals(newest.FullName, StringComparison.OrdinalIgnoreCase)))
+                File.Delete(other.FullName);
+            return new FileInfo(target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warn($"Doppelte Datei {baseName} konnte nicht bereinigt werden", ex);
+            return files.First(f => f.FullName.Equals(target, StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     private static void RefreshFileInfo(ContentEntry entry, FileInfo file, ContentType type)
@@ -356,14 +381,26 @@ public sealed class ContentManager(
                 throw new AxoException("content.locked");
             if (type == ContentType.Mod)
                 modLock.ThrowIfLocked(entry);
-            if (entry.Enabled == enabled)
-                return;
+            // Nach dem tatsächlichen Stand auf der Platte richten, nicht nur nach content.json: sonst passiert nichts,
+            // wenn beide auseinanderlaufen, oder es liegen "x.jar" und "x.jar.disabled" nebeneinander und die aktive lädt weiter.
             var dir = Folder(instanceId, type);
-            var from = Path.Combine(dir, entry.DiskName);
+            var on = Path.Combine(dir, entry.File);
+            var off = on + ".disabled";
+            var to = enabled ? on : off;
+            var from = File.Exists(enabled ? off : on) ? (enabled ? off : on) : null;
+            if (from != null)
+            {
+                try
+                {
+                    File.Move(from, to, overwrite: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Meist hält das laufende Spiel die Datei fest
+                    throw new AxoException("content.fileInUse", new() { ["name"] = entry.Name }, ex);
+                }
+            }
             entry.Enabled = enabled;
-            var to = Path.Combine(dir, entry.DiskName);
-            if (File.Exists(from))
-                File.Move(from, to, overwrite: true);
         }, ct);
     }
 
