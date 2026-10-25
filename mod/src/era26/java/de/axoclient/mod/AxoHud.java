@@ -349,6 +349,20 @@ public final class AxoHud {
 			return AxoHud.effectsSize();
 		}
 
+		/** Beispiel-Effekte für die Vorschau: Schnelligkeit und Stärke. */
+		private static final String[] SAMPLE_EFFECTS = { "speed", "strength" };
+		private static final Identifier EFFECT_BACKGROUND = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/effect_background.png");
+
+		@Override
+		public boolean sampleEffect(int index, int x, int y) {
+			if (graphics == null)
+				return true;
+			Identifier icon = Identifier.fromNamespaceAndPath("minecraft", "textures/mob_effect/" + SAMPLE_EFFECTS[Math.floorMod(index, SAMPLE_EFFECTS.length)] + ".png");
+			image(EFFECT_BACKGROUND, x, y, 24, 24, 0, 0, 24, 24, 24, 24);
+			image(icon, x + 3, y + 3, 18, 18, 0, 0, 18, 18, 18, 18);
+			return true;
+		}
+
 		@Override
 		public void pushMoved(int dx, int dy, int ax, int ay, float scale) {
 			if (graphics == null)

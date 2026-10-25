@@ -37,6 +37,14 @@ public interface HudPainter {
 	}
 
 	/**
+	 * Zeichnet ein Beispiel-Effektsymbol (24x24, wie Minecraft: Hintergrund und Bild) für die Vorschau, wenn man gerade
+	 * keine Effekte hat. Gibt false zurück, wenn die Version das nicht kann (dann bleibt ein schlichter Platzhalter).
+	 */
+	default boolean sampleEffect(int index, int x, int y) {
+		return false;
+	}
+
+	/**
 	 * Wie {@link #push}, verschiebt aber vorher noch um (dx, dy): erst verschieben, dann um (ax, ay) vergrößern. Damit
 	 * lässt sich das Zeichnen von Minecraft selbst an eine andere Stelle legen.
 	 */

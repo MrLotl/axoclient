@@ -69,38 +69,50 @@ final class WidgetDetail {
 		int gap = 16;
 		int colW = (w - gap) / 2;
 		int lx = x, rx = x + colW + gap;
-		int left, right;
+		int bottom;
+		// Je zwei Karten nebeneinander sind immer gleich hoch
 		if (toasts) {
-			left = section(g, "Darstellung", lx, top, colW, this::toastsLook);
-			left = section(g, "Was erscheint", lx, left + gap, colW, this::toastsKinds);
-			right = section(g, "Sichtbarkeit", rx, top, colW, (gg, px, at, pw) -> toastsVisibility(gg, px, at, pw));
-			right = section(g, "Position", rx, right + gap, colW, this::toastsPosition);
+			bottom = pair(g, top, lx, rx, colW, "Darstellung", this::toastsLook, "Sichtbarkeit",
+				(gg, px, at, pw) -> toastsVisibility(gg, px, at, pw));
+			bottom = pair(g, bottom + gap, lx, rx, colW, "Was erscheint", this::toastsKinds, "Position", this::toastsPosition);
 		} else {
-			left = section(g, "Darstellung", lx, top, colW, (gg, px, at, pw) -> look(gg, config, px, at, pw));
-			left = section(g, "Hintergrund", lx, left + gap, colW, (gg, px, at, pw) -> background(gg, config, px, at, pw));
-			right = section(g, "Sichtbarkeit", rx, top, colW, (gg, px, at, pw) -> visibilityOf(gg, config, px, at, pw));
-			right = section(g, "Position", rx, right + gap, colW, (gg, px, at, pw) -> position(gg, config, px, at, pw));
+			bottom = pair(g, top, lx, rx, colW, "Darstellung", (gg, px, at, pw) -> look(gg, config, px, at, pw), "Sichtbarkeit",
+				(gg, px, at, pw) -> visibilityOf(gg, config, px, at, pw));
+			bottom = pair(g, bottom + gap, lx, rx, colW, "Hintergrund", (gg, px, at, pw) -> background(gg, config, px, at, pw),
+				"Position", (gg, px, at, pw) -> position(gg, config, px, at, pw));
 		}
-		return Math.max(left, right) - y + 6;
+		return bottom - y + 6;
+	}
+
+	/** Zwei Karten nebeneinander in derselben Höhe (die höhere bestimmt); gibt die Unterkante zurück. */
+	private int pair(Gfx g, int y, int lx, int rx, int w, String leftTitle, Body left, String rightTitle, Body right) {
+		int h = Math.max(measure(lx, y, w, left), measure(rx, y, w, right));
+		section(g, leftTitle, lx, y, w, h, left);
+		section(g, rightTitle, rx, y, w, h, right);
+		return y + h;
 	}
 
 	private interface Body {
 		int draw(Gfx g, int px, int at, int pw);
 	}
 
-	/** Karte mit Überschrift; der Inhalt wird erst gemessen, dann auf die Karte gezeichnet. Gibt die Unterkante zurück. */
-	private int section(Gfx g, String title, int x, int y, int w, Body body) {
-		int pad = 16;
+	private static final int PAD = 16;
+
+	/** Höhe, die eine Karte für ihren Inhalt braucht (nur gemessen, nichts gezeichnet). */
+	private int measure(int x, int y, int w, Body body) {
 		Ui ui = m.ui;
 		boolean inert = ui.inert;
 		ui.inert = true; // Messen: keine Klickflächen anmelden
-		int end = body.draw(Gfx.measure(m.width, m.height), x + pad, y + pad + 14 + 12, w - 2 * pad);
+		int end = body.draw(Gfx.measure(m.width, m.height), x + PAD, y + PAD + 14 + 12, w - 2 * PAD);
 		ui.inert = inert;
-		int h = end + pad - y;
+		return end + PAD - y;
+	}
+
+	/** Karte mit Überschrift in der Höhe h. */
+	private void section(Gfx g, String title, int x, int y, int w, int h, Body body) {
 		g.rect(x, y, w, h, 12, Theme.PANEL);
-		MenuScreen.heading(g, title, x + pad, y + pad + 7);
-		body.draw(g, x + pad, y + pad + 14 + 12, w - 2 * pad);
-		return y + h;
+		MenuScreen.heading(g, title, x + PAD, y + PAD + 7);
+		body.draw(g, x + PAD, y + PAD + 14 + 12, w - 2 * PAD);
 	}
 
 	private void changed() {
@@ -119,11 +131,12 @@ final class WidgetDetail {
 		int size = Math.min(30, (pw - 5 * 8) / 6);
 		for (int rgb : SWATCHES) {
 			boolean picked = (e.textRgb & 0xFFFFFF) == rgb;
-			if (picked) {
-				g.rect(sx - 3, at - 3, size + 6, size + 6, 10, Theme.ACCENT_LINE);
+			boolean hover = m.ui.hover(sx, at, size, size);
+			if (picked || hover) {
+				g.rect(sx - 3, at - 3, size + 6, size + 6, 10, picked ? Theme.ACCENT_LINE : 0xFF5A5A5A);
 				g.rect(sx - 1, at - 1, size + 2, size + 2, 9, Theme.PANEL);
 			}
-			g.rect(sx, at, size, size, 8, 0xFF000000 | rgb);
+			g.rect(sx, at, size, size, 8, hover && !picked ? Theme.mix(0xFF000000 | rgb, 0xFFFFFFFF, 0.12F) : 0xFF000000 | rgb);
 			int pick = rgb;
 			m.ui.hit(sx, at, size, size, () -> {
 				e.textRgb = pick;
@@ -277,6 +290,8 @@ final class WidgetDetail {
 		at += 14 + 8;
 		g.box(px, at, pw, 34, 9, Theme.WELL, 0xFF343434);
 		int half = (pw - 9) / 2;
+		segHover(g, px + 3, at + 3, half, 28, MenuConfig.toastsDown);
+		segHover(g, px + 6 + half, at + 3, half, 28, !MenuConfig.toastsDown);
 		g.segment("Nach unten", Icons.ARROW_DOWN, px + 3, at + 3, half, 28, 7, MenuConfig.toastsDown, 12);
 		g.segment("Nach oben", Icons.ARROW_UP, px + 6 + half, at + 3, half, 28, 7, !MenuConfig.toastsDown, 12);
 		m.ui.hit(px + 3, at + 3, half, 28, () -> {
@@ -294,11 +309,13 @@ final class WidgetDetail {
 	private int toastsKinds(Gfx g, int px, int at, int pw) {
 		for (String[] kind : MenuConfig.TOAST_KINDS) {
 			boolean on = MenuConfig.TOAST_KIND_ON.getOrDefault(kind[0], true);
+			if (m.ui.hover(px, at, pw, 26))
+				g.rect(px - 8, at, pw + 16, 26, 7, Theme.alpha(0xFFFFFFFF, 0.04F));
 			if (on) {
 				g.accent(px, at + 5, 15, 15, 4);
 				g.icon(Icons.CHECK_BOLD, px + 2.5F, at + 7.5F, 10, Theme.WHITE);
 			} else
-				g.box(px, at + 5, 15, 15, 4, Theme.WELL, 0xFF555555);
+				g.box(px, at + 5, 15, 15, 4, Theme.WELL, m.ui.hover(px, at, pw, 26) ? 0xFF777777 : 0xFF555555);
 			g.textMid(kind[1], px + 24, at + 13, 12.5F, Gfx.REGULAR, Theme.TEXT_SOFT);
 			m.ui.hit(px, at, pw, 26, () -> {
 				MenuConfig.TOAST_KIND_ON.put(kind[0], !MenuConfig.TOAST_KIND_ON.getOrDefault(kind[0], true));
@@ -323,6 +340,9 @@ final class WidgetDetail {
 		at += 14 + 8;
 		g.box(px, at, pw, 36, 9, Theme.WELL, 0xFF343434);
 		int half = (pw - 9) / 2;
+		segHover(g, px + 3, at + 3, half, 30, !shownPriv);
+		if (privacy)
+			segHover(g, px + 6 + half, at + 3, half, 30, shownPriv);
 		g.segment("Im Spiel", Icons.EYE, px + 3, at + 3, half, 30, 7, !shownPriv, 12);
 		g.segment("Privat", Icons.EYE_OFF, px + 6 + half, at + 3, half, 30, 7, shownPriv, 12);
 		if (!privacy)
@@ -340,6 +360,12 @@ final class WidgetDetail {
 		return at + Math.round(lines * 16.7F);
 	}
 
+	/** Leichte Aufhellung eines nicht gewählten Segments unter der Maus. */
+	private void segHover(Gfx g, int x, int y, int w, int h, boolean on) {
+		if (!on && m.ui.hover(x, y, w, h))
+			g.rect(x, y, w, h, 7, Theme.alpha(0xFFFFFFFF, 0.06F));
+	}
+
 	private interface Value {
 		void set(float t);
 	}
@@ -350,9 +376,12 @@ final class WidgetDetail {
 		g.textRight(value, px + pw, at + 7, 12, Gfx.SEMIBOLD, Theme.TEXT);
 		at += 14 + 8;
 		float clamped = Math.max(0, Math.min(1, t));
-		g.rect(px, at + 6, pw, 4, 2, 0xFF3A3A3A);
+		boolean hover = m.ui.hover(px - 6, at - 4, pw + 12, 24);
+		g.rect(px, at + 6, pw, 4, 2, hover ? 0xFF454545 : 0xFF3A3A3A);
 		g.gradient(px, at + 6, Math.max(4, Math.round(pw * clamped)), 4, 2, 0xFFDB2777, 0xFFC026D3);
 		int knob = px + Math.round((pw - 14) * clamped);
+		if (hover)
+			g.rect(knob - 4, at - 3, 22, 22, 11, Theme.alpha(0xFFEC4899, 0.22F));
 		g.rect(knob, at + 1, 14, 14, 7, Theme.WHITE);
 		m.ui.drag(px - 6, at - 4, pw + 12, 24, mx -> set.set(Math.max(0, Math.min(1, (mx - px) / (float) pw))));
 		return at + 16;
@@ -360,7 +389,10 @@ final class WidgetDetail {
 
 	/** Zeile mit Text, Wert und Schalter; gibt die neue Höhe zurück. */
 	private int toggleRow(Gfx g, int px, int at, int pw, String label, String value, boolean on, Runnable toggle) {
-		g.textMid(label, px, at + 10, 13, Gfx.REGULAR, Theme.TEXT_SOFT);
+		boolean hover = m.ui.hover(px, at, pw, 20);
+		if (hover)
+			g.rect(px - 8, at - 5, pw + 16, 30, 8, Theme.alpha(0xFFFFFFFF, 0.04F));
+		g.textMid(label, px, at + 10, 13, Gfx.REGULAR, hover ? Theme.TEXT : Theme.TEXT_SOFT);
 		if (value != null)
 			g.textRight(value, px + pw - 36 - 10, at + 10, 12, Gfx.REGULAR, Theme.MUTED_2);
 		g.toggle(px + pw - 36, at, on);

@@ -9,7 +9,7 @@ import net.minecraft.client.Minecraft;
 
 import java.util.List;
 
-/** Tab "Overlay": Profil, alle Widgets mit Schalter und "Im Spiel / Privat", Knopf in den Bearbeiten-Modus. */
+/** Tab "Overlay": Profil, alle Widgets mit Schalter (Einstellungen per Klick), Knopf in den Bearbeiten-Modus. */
 final class OverlayTab {
 	static final String[] ANCHOR_NAMES = { "oben links", "oben Mitte", "oben rechts", "Mitte links", "Mitte", "Mitte rechts",
 		"unten links", "unten Mitte", "unten rechts" };
@@ -75,16 +75,6 @@ final class OverlayTab {
 				m.notice("Profil „" + name + "“ angelegt", null, null);
 			});
 		}
-		// Hinweis rechts, nur so lang, wie neben den Profilen Platz ist
-		int free = profiles.size() < 8 ? px + 30 + 16 : px + 10;
-		for (String note : new String[] { "Privat = nur du siehst es, nicht Discord oder OBS", "Privat = nur du siehst es", "Privat = nur du" }) {
-			float nw = g.width(note, 11.5F, Gfx.REGULAR);
-			if (x + w - nw - 19 < free)
-				continue;
-			g.icon(Icons.EYE_OFF, x + w - nw - 19, cy - 6.5F, 13, Theme.MUTED_2);
-			g.textMid(note, x + w - nw, cy, 11.5F, Gfx.REGULAR, Theme.MUTED_2);
-			break;
-		}
 
 		// Widgets, nach Themen
 		int at = y + 30 + 10;
@@ -108,20 +98,8 @@ final class OverlayTab {
 			for (HudModule module : modules) {
 				HudConfig.Entry entry = config.get(module);
 				row(g, x, at, w, module.label, ANCHOR_NAMES[Math.max(0, Math.min(8, entry.anchorY * 3 + entry.anchorX))], entry.enabled,
-					entry.privat && privacy, privacy, () -> {
+					entry.privat && privacy && HudPrivacy.reasonAgainst(config, module) == null, () -> {
 						entry.enabled = !entry.enabled;
-						dirty = true;
-					}, priv -> {
-						if (priv && !privacy) {
-							m.notice("Privat braucht den AxoClient-Launcher – Spiel über den Launcher starten", null, null);
-							return;
-						}
-						String reason = priv ? HudPrivacy.reasonAgainst(config, module) : null;
-						if (reason != null) {
-							m.notice(reason, null, null);
-							return;
-						}
-						entry.privat = priv;
 						dirty = true;
 					}, () -> open(module));
 				at += 40 + 4;
@@ -129,15 +107,8 @@ final class OverlayTab {
 			// Einblendungen sind ein eigenes Widget des Menüs und gehören zum Server
 			if (server) {
 				row(g, x, at, w, "Einblendungen", ANCHOR_NAMES[MenuConfig.toastAnchor], MenuConfig.toastsOn, MenuConfig.toastsPrivate && privacy,
-					privacy, () -> {
+					() -> {
 						MenuConfig.toastsOn = !MenuConfig.toastsOn;
-						MenuConfig.save();
-					}, priv -> {
-						if (priv && !privacy) {
-							m.notice("Privat braucht den AxoClient-Launcher – Spiel über den Launcher starten", null, null);
-							return;
-						}
-						MenuConfig.toastsPrivate = priv;
 						MenuConfig.save();
 					}, () -> {
 						closed();
@@ -174,10 +145,6 @@ final class OverlayTab {
 		return at - y;
 	}
 
-	private interface Choice {
-		void pick(boolean priv);
-	}
-
 	/** Detailansicht eines Widgets öffnen. */
 	void open(HudModule module) {
 		closed();
@@ -185,28 +152,23 @@ final class OverlayTab {
 		m.resetScroll();
 	}
 
-	private void row(Gfx g, int x, int y, int w, String name, String where, boolean on, boolean priv, boolean privacy, Runnable toggle,
-					 Choice choice, Runnable details) {
+	/** Zeile der Liste: Schalter, Name, Verankerung; "Im Spiel / Privat" gibt es erst in der Detailansicht. */
+	private void row(Gfx g, int x, int y, int w, String name, String where, boolean on, boolean priv, Runnable toggle, Runnable details) {
 		Ui ui = m.ui;
-		int segW = 170;
-		int sx = x + w - 6 - 26 - segW;
 		boolean hover = ui.hover(x, y, w, 40);
 		g.rect(x, y, w, 40, 10, hover ? Theme.BUTTON_2 : Theme.ROW);
 		// Zeile öffnet die Einstellungen, der Schalter schaltet ein und aus
 		ui.hit(x, y, w, 40, details);
 		ui.hit(x + 6, y + 4, 36 + 12, 32, toggle);
 		g.toggle(x + 12, y + 10, on);
-		g.icon(Icons.CHEVRON_RIGHT, x + w - 6 - 18, y + 13, 14, hover ? Theme.TEXT_SOFT : Theme.MUTED_3);
+		int chevron = x + w - 6 - 18;
+		g.icon(Icons.CHEVRON_RIGHT, chevron, y + 13, 14, hover ? Theme.TEXT_SOFT : Theme.MUTED_3);
 		g.textMid(name, x + 12 + 36 + 12, y + 20, 13.5F, Gfx.MEDIUM, on ? Theme.TEXT : Theme.MUTED_2);
-		g.textRight(where, sx - 12, y + 20, 12, Gfx.REGULAR, Theme.MUTED_2);
-		g.rect(sx, y + 4, segW, 32, 8, Theme.TRACK);
-		int half = (segW - 6 - 3) / 2;
-		g.segment("Im Spiel", null, sx + 3, y + 7, half, 26, 6, !priv, 12);
-		g.segment("Privat", null, sx + 3 + half + 3, y + 7, half, 26, 6, priv, 12);
-		if (!privacy)
-			g.rect(sx + 3 + half + 3, y + 7, half, 26, 6, Theme.alpha(Theme.TRACK, 0.5F));
-		ui.hit(sx + 3, y + 7, half, 26, () -> choice.pick(false));
-		ui.hit(sx + 3 + half + 3, y + 7, half, 26, () -> choice.pick(true));
+		int right = chevron - 10;
+		g.textRight(where, right, y + 20, 12, Gfx.REGULAR, Theme.MUTED_2);
+		if (priv)
+			// Nur ein kleiner Hinweis, dass das Widget privat ist
+			g.icon(Icons.EYE_OFF, right - g.width(where, 12, Gfx.REGULAR) - 10 - 13, y + 13.5F, 13, Theme.MUTED_2);
 	}
 
 	/** Änderungen speichern (beim Verlassen des Tabs bzw. Schließen). */

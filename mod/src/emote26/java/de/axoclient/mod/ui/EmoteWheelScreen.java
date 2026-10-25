@@ -41,11 +41,9 @@ public final class EmoteWheelScreen extends Screen {
 	}
 
 	private void draw(Gfx g, int cx, int cy) {
-		// Abgedunkelt zur Mitte hin
-		g.rect(cx - 420, cy - 420, 840, 840, 420, Theme.alpha(0xFF0A0A0E, 0.18F));
-		g.rect(cx - 300, cy - 300, 600, 600, 300, Theme.alpha(0xFF0A0A0E, 0.22F));
 		int x = cx - SIZE / 2, y = cy - SIZE / 2;
-		g.shadow(x, y, SIZE, SIZE, SIZE / 2, 30, 24, 0.5F);
+		// Nur ein leichter Schatten direkt hinter dem Rad
+		g.shadow(x, y, SIZE, SIZE, SIZE / 2, 22, 6, 0.35F);
 		g.rect(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFF1E1E22, 0.94F));
 		g.outline(x, y, SIZE, SIZE, SIZE / 2, Theme.alpha(0xFFFFFFFF, 0.08F));
 
@@ -102,28 +100,6 @@ public final class EmoteWheelScreen extends Screen {
 			Theme.TEXT_STRONG);
 		MenuScreen.paragraph(g, hover == null ? "Maus in Richtung bewegen" : "Loslassen zum Abspielen", cx - 55, cy + 4, 110, 11.5F,
 			Gfx.REGULAR, Theme.MUTED_2, 16, true);
-
-		// Hinweis unten
-		String key = Keys.label(Keys.wheel);
-		String[] parts = { "gedrückt halten", "Maus in Richtung bewegen", "Rechtsklick bricht ab" };
-		float tw = 0;
-		for (String p : parts)
-			tw += g.width(p, 12, Gfx.REGULAR);
-		float kw = g.width(key, 11, Gfx.BOLD) + 12;
-		float total = 14 + kw + 10 + tw + 2 * (10 + 5 + 10) + 14;
-		int hx = Math.round(cx - total / 2), hy = g.height - 112 - 34;
-		g.rect(hx, hy, Math.round(total), 34, 17, Theme.alpha(0xFF141414, 0.82F));
-		g.outline(hx, hy, Math.round(total), 34, 17, 0xFF333333);
-		int at = hx + 14;
-		at += g.kbd(key, at, hy + 17, 20, 11, Theme.BUTTON_2, Theme.TEXT_STRONG) + 10;
-		for (int i = 0; i < parts.length; i++) {
-			g.textMid(parts[i], at, hy + 17, 12, Gfx.REGULAR, Theme.MUTED);
-			at += Math.round(g.width(parts[i], 12, Gfx.REGULAR));
-			if (i < parts.length - 1) {
-				g.textMid("·", at + 10, hy + 17, 12, Gfx.REGULAR, 0xFF555555);
-				at += 25;
-			}
-		}
 	}
 
 	/** Platz in Richtung (dx, dy) von der Mitte, oben beginnend im Uhrzeigersinn, oder -1. */

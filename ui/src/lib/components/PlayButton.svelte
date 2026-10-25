@@ -12,6 +12,10 @@
   const running = $derived(instanceId ? app.running.includes(instanceId) : false);
   // Wechsel zwischen Spielen / Startet / Stoppen blendet über statt zu springen
   const mode = $derived(job ? 'busy' : running ? 'running' : 'idle');
+  // Alle Spielen-Buttons (Startseite, Übersicht, Instanz) pulsieren im selben Takt:
+  // die Animation wird an der Uhrzeit ausgerichtet statt am Zeitpunkt des Einblendens.
+  const PULSE_MS = 2400;
+  const pulseDelay = $derived(running ? -(Date.now() % PULSE_MS) : 0);
   const pct = $derived(job?.progress !== null && job?.progress !== undefined ? Math.round(job.progress * 100) : null);
 
   async function onclick() {
@@ -37,11 +41,12 @@
   class:busy={!!job}
   class:running={running && !job}
   class:compact
-  style="height: {height}px"
+  style="height: {height}px; --pulse-delay: {pulseDelay}ms; --pulse-dur: {PULSE_MS}ms"
   disabled={!instanceId}
   aria-busy={!!job}
   aria-label={job ? t('home.cancelLaunch') : running ? t('home.stopGame') : t('common.play')}
   {onclick}>
+  {#if running && !job}<span class="pulse"></span>{/if}
   {#if job}
     <span class="fill" style="width: {pct ?? 0}%"></span>
     <span class="shine"></span>
@@ -94,8 +99,19 @@
   .play.running {
     background: var(--panel-4);
     color: var(--text-strong);
-    /* Dezentes Glühen, solange das Spiel läuft */
-    animation: axo-glow 2.4s ease-in-out infinite;
+  }
+  /* Solange das Spiel läuft, färbt sich der ganze Button langsam rot und wieder zurück */
+  .pulse {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--red) 78%, #8a1c14);
+    opacity: 0;
+    pointer-events: none;
+    animation: play-pulse var(--pulse-dur) ease-in-out var(--pulse-delay) infinite;
+  }
+  @keyframes play-pulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
   }
   .fill {
     position: absolute;

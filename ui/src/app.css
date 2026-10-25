@@ -158,7 +158,6 @@ body.files-dragging .drop-target { outline: 1.5px dashed color-mix(in srgb, var(
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 @keyframes axo-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-@keyframes axo-glow { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 18px 2px color-mix(in srgb, var(--accent-from) 30%, transparent); } }
 @keyframes axo-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 @keyframes axo-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(330%); } }
 .spinner { display: inline-block; width: 18px; height: 18px; border-radius: 9px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #ffffff; animation: axo-spin .8s linear infinite; flex-shrink: 0; }

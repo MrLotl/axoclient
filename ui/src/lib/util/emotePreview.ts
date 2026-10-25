@@ -5,7 +5,7 @@ import { call } from '../bridge/bridge';
  * im Spiel (mod/src/emote26/java/de/axoclient/mod/emote/SkinRender.java), damit die Vorschau überall gleich aussieht.
  *
  * Koordinaten wie im Bedrock-Format der Emotes: y nach oben, der Spieler schaut nach +z (zur Kamera), Winkel in Grad,
- * Drehreihenfolge erst z, dann y, dann x. Kopf und Arme hängen am Oberkörper, der sich um die Hüfte dreht.
+ * Drehreihenfolge erst z, dann y, dann x. Kopf und Arme hängen am Oberkörper, der sich um die Hüfte dreht; verschiebt sich der Körper, wandern die Beine mit.
  */
 
 type Vec = [number, number, number];
@@ -227,7 +227,13 @@ export function render(skin: Skin, p: Pose, size: number): Int32Array {
   const legacy = skin.length < 64;
   const slim = !legacy && isSlim(skin);
   const local: Record<string, Mat> = {};
-  for (const name of PARTS) local[name] = transform(p.rotation[name] ?? [0, 0, 0], pivot(name, slim), p.position[name] ?? [0, 0, 0]);
+  // Eine Verschiebung des Körpers (Sitzen, Springen) bewegt wie im Spiel die ganze Figur, also auch die Beine
+  const bodyPos = p.position.body ?? [0, 0, 0];
+  for (const name of PARTS) {
+    const own = p.position[name] ?? [0, 0, 0];
+    const pos: Vec = name.endsWith('_leg') ? [own[0] + bodyPos[0], own[1] + bodyPos[1], own[2] + bodyPos[2]] : own;
+    local[name] = transform(p.rotation[name] ?? [0, 0, 0], pivot(name, slim), pos);
+  }
   const world: Record<string, Mat> = { ...local };
   for (const name of ['head', 'right_arm', 'left_arm']) world[name] = combine(local.body, local[name]);
   const view = transform([10, 25, 0], [0, 0, 0], [0, 0, 0]);

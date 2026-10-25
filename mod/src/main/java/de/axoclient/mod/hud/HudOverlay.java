@@ -154,10 +154,11 @@ public final class HudOverlay {
 								Map<HudModule, String> texts, int x, int y) {
 		int color = entry.textArgb();
 		if (element.module() == HudModule.EFFECTS && entry.variant == 0) {
-			// Die Symbole zeichnet Minecraft selbst (verschoben); im Editor nur Platzhalter
+			// Die Symbole zeichnet Minecraft selbst (verschoben); ohne Effekte zeigt die Vorschau Beispiele
 			if (painter.effectsSize() == null)
 				for (int i = 0; i < 2; i++)
-					HudSkin.rounded(painter, x + i * 25, y, 24, 24, 3, 0x66000000);
+					if (!painter.sampleEffect(i, x + i * 25, y))
+						HudSkin.rounded(painter, x + i * 25, y, 24, 24, 3, 0x66000000);
 			return;
 		}
 		if (element.module() == HudModule.SCOREBOARD) {

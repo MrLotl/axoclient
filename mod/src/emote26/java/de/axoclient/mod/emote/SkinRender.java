@@ -21,7 +21,7 @@ import java.util.zip.InflaterInputStream;
  * dieselbe Rechnung in TypeScript ({@code ui/src/lib/util/emotePreview.ts}), damit die Vorschau überall gleich aussieht.
  * <p>
  * Koordinaten wie im Bedrock-Format der Emotes: y nach oben, der Spieler schaut nach +z (zur Kamera), Winkel in Grad,
- * Drehreihenfolge erst z, dann y, dann x. Kopf und Arme hängen am Oberkörper, der sich um die Hüfte dreht.
+ * Drehreihenfolge erst z, dann y, dann x. Kopf und Arme hängen am Oberkörper, der sich um die Hüfte dreht; verschiebt sich der Körper, wandern die Beine mit.
  */
 public final class SkinRender {
 	private SkinRender() {}
@@ -401,8 +401,14 @@ public final class SkinRender {
 		boolean slim = !legacy && slim(skin);
 		// Teile bewegen: Kopf und Arme hängen am Oberkörper
 		Map<String, float[]> local = new HashMap<>();
-		for (String part : new String[] { "head", "body", "right_arm", "left_arm", "right_leg", "left_leg" })
-			local.put(part, transform(pose.rot(part), pivot(part, slim), pose.pos(part)));
+		// Eine Verschiebung des Körpers (Sitzen, Springen) bewegt wie im Spiel die ganze Figur, also auch die Beine
+		float[] bodyPos = pose.pos("body");
+		for (String part : new String[] { "head", "body", "right_arm", "left_arm", "right_leg", "left_leg" }) {
+			float[] pos = pose.pos(part);
+			if (part.endsWith("_leg"))
+				pos = new float[] { pos[0] + bodyPos[0], pos[1] + bodyPos[1], pos[2] + bodyPos[2] };
+			local.put(part, transform(pose.rot(part), pivot(part, slim), pos));
+		}
 		float[] body = local.get("body");
 		Map<String, float[]> world = new HashMap<>(local);
 		for (String part : new String[] { "head", "right_arm", "left_arm" })
