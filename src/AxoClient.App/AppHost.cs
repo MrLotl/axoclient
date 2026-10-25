@@ -76,7 +76,7 @@ public sealed class AppHost : IAsyncDisposable
             new DuplicateModCheck(Content),
             new AxoModCheck(AxoMod, Content),
             new JoinRelayCheck(Content),
-            new CompatibilityCheck(Content, Providers),
+            new CompatibilityCheck(Content, Providers, Loaders, Instances),
             new MemoryCheck(Instances),
             new JavaArgsCheck(Instances)
         ], Prompt, Instances, Installer, Settings);

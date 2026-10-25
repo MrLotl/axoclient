@@ -6,6 +6,7 @@
   import FriendProfileDialog from './FriendProfileDialog.svelte';
   import UpdateDialog from './UpdateDialog.svelte';
   import LaunchPromptDialog from './LaunchPromptDialog.svelte';
+  import PromptFallback from './PromptFallback.svelte';
   import CrashDialog from './CrashDialog.svelte';
   import ServerCrashDialog from './ServerCrashDialog.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -41,7 +42,13 @@
   <!-- Jede Rückfrage bekommt einen eigenen Dialog: kommt die nächste, während der alte noch ausblendet,
        würde Svelte sonst den ausblendenden (nicht mehr klickbaren) Dialog weiterverwenden -->
   {#key app.prompt.promptId}
-    <LaunchPromptDialog prompt={app.prompt} />
+    <!-- Stürzt der Dialog beim Anzeigen ab, bleibt der Start nicht stumm hängen: einfacher Ersatz mit denselben Antworten -->
+    <svelte:boundary onerror={(e) => console.error('Rückfrage-Dialog', e)}>
+      <LaunchPromptDialog prompt={app.prompt} />
+      {#snippet failed()}
+        <PromptFallback prompt={app.prompt!} />
+      {/snippet}
+    </svelte:boundary>
   {/key}
 {/if}
 {#if app.crash && !app.prompt}

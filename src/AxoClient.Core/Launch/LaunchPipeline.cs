@@ -276,7 +276,8 @@ public sealed class LaunchPipeline(
             try
             {
                 // WaitAsync: auch eine Prüfung, die das Token nicht beachtet, hält den Start nicht auf
-                results.AddRange(await check.RunAsync(ctx, timeout.Token).WaitAsync(CheckTimeout, ct));
+                // Task.Run: das Zeitlimit greift auch, wenn eine Prüfung vor ihrem ersten await lange rechnet oder liest
+                results.AddRange(await Task.Run(() => check.RunAsync(ctx, timeout.Token), ct).WaitAsync(CheckTimeout, ct));
             }
             catch (Exception ex) when (ex is TimeoutException or OperationCanceledException && !ct.IsCancellationRequested)
             {

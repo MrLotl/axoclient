@@ -6,19 +6,27 @@
   import { call } from '../lib/bridge/bridge';
   import { t, tr } from '../lib/i18n';
   import type { LaunchPrompt } from '../lib/types';
+  import { onMount } from 'svelte';
 
   let { prompt }: { prompt: LaunchPrompt } = $props();
 
   const hasBlocker = $derived(prompt.issues.some((i) => i.severity === 'blocker'));
   const instanceName = $derived(app.instances.find((i) => i.id === prompt.instanceId)?.name ?? '');
   let chosen = $state<Record<string, string>>({});
-  let silence = $state<Record<string, boolean>>({});
+  // Für jede Meldung von Anfang an ein Wert: bind:checked auf einen fehlenden Eintrag (undefined) lässt Svelte die
+  // ganze Anzeige abbrechen – der Dialog blieb dann unsichtbar und der Start hing ohne Meldung
+  let silence = $state<Record<string, boolean>>(Object.fromEntries(prompt.issues.map((i) => [i.id, false])));
 
   $effect(() => {
     for (const issue of prompt.issues) {
       if (!(issue.id in chosen) && issue.actions.length > 0)
         chosen[issue.id] = (issue.actions.find((a) => a.primary) ?? issue.actions[0]).id;
     }
+  });
+
+  // Dem Launcher melden, dass der Dialog wirklich zu sehen ist (sonst bricht er den Start nach 10 s mit Meldung ab)
+  onMount(() => {
+    call('launch.promptShown', { promptId: prompt.promptId }).catch(() => {});
   });
 
   async function resolve(choice: 'cancel' | 'startAnyway' | 'fix') {

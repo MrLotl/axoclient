@@ -1,6 +1,7 @@
 using AxoClient.Core.Common;
 using AxoClient.Core.Content;
 using AxoClient.Core.Game;
+using AxoClient.Core.Instances;
 
 namespace AxoClient.Core.Launch.Checks;
 
@@ -8,7 +9,8 @@ namespace AxoClient.Core.Launch.Checks;
 /// Kompatibilität der Mods (nur nach Änderungen an der Instanz oder wenn "Mods bei jedem Start prüfen" an ist):
 /// falscher Loader, falsche MC-Version, fehlende Abhängigkeiten, breaks/conflicts, Loader zu alt, Shader ohne Shader-Mod.
 /// </summary>
-public sealed class CompatibilityCheck(ContentManager content, ContentProviders providers) : ILaunchCheck
+public sealed class CompatibilityCheck(ContentManager content, ContentProviders providers, LoaderManager? loaders = null,
+    InstanceManager? instances = null) : ILaunchCheck
 {
     /// <summary>IDs, die der Loader selbst mitbringt oder die über Fabric API laufen.</summary>
     private static readonly HashSet<string> Builtin = new(StringComparer.OrdinalIgnoreCase)
@@ -192,12 +194,32 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
                 ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File)
             ], Key: $"dependency-missing:{mod.File}:{label}");
 
-    private static async Task UpdateLoaderAsync(LaunchContext ctx, JobContext job)
+    /// <summary>
+    /// Neueste Loader-Version, die alle Mods zufriedenstellt, eintragen und speichern. Vorher wurde nur im Speicher
+    /// "leer" gesetzt: beim Reparieren passierte nichts, und beim Start kam die empfohlene – oft wieder zu alte – Version.
+    /// </summary>
+    private async Task UpdateLoaderAsync(LaunchContext ctx, JobContext job)
     {
-        // Leere Version = beim nächsten Schritt die empfohlene eintragen
-        ctx.Instance.Loader = ctx.Instance.Loader with { Version = null };
+        var loader = ctx.Instance.Loader.Type;
+        var mc = ctx.Instance.Minecraft.Version;
+        if (loaders == null || instances == null)
+        {
+            ctx.Instance.Loader = ctx.Instance.Loader with { Version = null };
+            ctx.VersionName = null;
+            return;
+        }
+        job.Status("pipeline.compat.loaderSearching");
+        var ranges = ctx.Content.Mods.Where(m => m.Enabled && m.Meta?.LoaderRange is { Length: > 0 }).Select(m => m.Meta!.LoaderRange!).ToList();
+        var versions = (await loaders.ListVersionsAsync(loader, mc, job.Token))
+            .OrderByDescending(v => StripMinecraftPrefix(v.Version, mc), Comparer<string>.Create(VersionRange.Compare)).ToList();
+        bool Fits(LoaderVersionInfo v) => ranges.All(r => VersionRange.Satisfies(StripMinecraftPrefix(v.Version, mc), r));
+        var pick = versions.FirstOrDefault(v => v.Stable && Fits(v)) ?? versions.FirstOrDefault(Fits)
+                   ?? throw new AxoException("pipeline.compat.noLoaderVersion", new() { ["loader"] = LoaderNames.Display(loader) });
+        AppLog.Info($"Loader für {ctx.Instance.Id}: {ctx.Instance.Loader.Version} → {pick.Version}");
+        ctx.Instance = await instances.UpdateAsync(ctx.Instance.Id, new InstanceUpdate(Loader: loader, LoaderVersion: pick.Version),
+            job.Token);
+        // Neue Version muss vor dem Start installiert werden
         ctx.VersionName = null;
-        await Task.CompletedTask;
     }
 
     /// <summary>

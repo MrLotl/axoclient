@@ -9,6 +9,8 @@ public static partial class Handlers
 {
     private sealed record LaunchData(string Id, string? World, string? Server);
 
+    private sealed record PromptIdData(string PromptId);
+
     private sealed record ResolveData(string PromptId, PromptChoice Choice, Dictionary<string, string>? Actions, List<string>? Silence);
 
     private sealed record CrashActionData(string Id, string Action, string? File);
@@ -39,6 +41,7 @@ public static partial class Handlers
 
         r.On("games.running", () => host.Games.Running);
 
+        r.On<PromptIdData>("launch.promptShown", (d, _) => Task.FromResult<object?>(host.Prompt.Shown(d.PromptId)));
         r.On<ResolveData>("launch.resolve", (d, _) => Task.FromResult<object?>(host.Prompt.Resolve(d.PromptId,
             new PromptDecision(d.Choice, d.Actions, d.Silence))));
 

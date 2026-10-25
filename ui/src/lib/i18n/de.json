@@ -172,6 +172,7 @@
     "promptFailed": "Die Rückfrage vor dem Start konnte nicht angezeigt werden. Bitte erneut versuchen.",
     "dialog": {
       "title": "Vor dem Start",
+      "fallback": "Vor dem Start gibt es {count} Hinweis(e), die hier nicht angezeigt werden konnten. Details stehen im Log. „Beheben“ führt die vorgeschlagenen Maßnahmen aus.",
       "blockerTitle": "Das Spiel kann so nicht starten",
       "warningTitle": "Bitte kurz prüfen",
       "fixAndStart": "Beheben und starten",
@@ -228,6 +229,8 @@
       "conflicts": "„{name}“ kann sich mit „{other}“ beißen.",
       "dependencyInstall": "Installiere „{dependency}“ für „{name}“ …",
       "dependencyMissing": "„{name}“ braucht „{dependency}“, das nicht installiert ist.",
+      "loaderSearching": "Suche passende Loader-Version …",
+      "noLoaderVersion": "Keine {loader}-Version passt zu allen Mods.",
       "dependencyUnavailable": "„{name}“ braucht „{dependency}“, das nicht verfügbar ist.",
       "dependencyDisabled": "„{name}“ braucht „{dependency}“, das du deaktiviert hast.",
       "shaderWithoutMod": "Shader sind installiert, aber keine Shader-Mod (Iris)."
