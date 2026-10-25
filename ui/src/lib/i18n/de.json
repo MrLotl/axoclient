@@ -293,6 +293,7 @@
       "modCorrupt": "Eine Mod-Datei ist beschädigt.",
       "dependency": "Eine Abhängigkeit fehlt oder Mods vertragen sich nicht.",
       "mixin": "Eine Mod verträgt sich nicht mit einer anderen Mod oder der Minecraft-Version.",
+      "mixinConflict": "„{mod}“ verträgt sich nicht mit „{other}“. Deaktiviere eine der beiden Mods oder aktualisiere sie.",
       "duplicate": "Zwei Versionen derselben Mod sind installiert.",
       "graphicsDriver": "Der Grafiktreiber ist abgestürzt.",
       "openGl": "Grafiktreiber bzw. OpenGL macht Probleme.",

@@ -211,3 +211,40 @@ public class LooseVersionTests
         Assert.Equal(expected, VersionRange.SatisfiesLoosely(version, range));
     }
 }
+
+public class MixinConflictTests
+{
+    private static AxoClient.Core.Content.ContentEntry Mod(string file, string name, string id, string mixins, params string[] provides) => new()
+    {
+        File = file, Name = name, Enabled = true,
+        Meta = new AxoClient.Core.Content.ModMetadata { ModId = id, Mixins = [mixins], Provides = [.. provides] }
+    };
+
+    [Fact]
+    public void NamesOnlyTheConflictingModsNotEveryModInTheLog()
+    {
+        // Gekürzt aus einem echten Log: Sable scheitert, weil Immersive Portals dieselbe Stelle schon verändert hat.
+        // Davor nennt das Log beim normalen Laden die Mixin-Konfigurationen aller Mods.
+        var log = string.Join('\n',
+            "[19:35:36] [main/INFO] [mixin/]: Compatibility level set to JAVA_21 for create.mixins.json",
+            "[19:35:36] [main/INFO] [mixin/]: Loaded jei.mixins.json and lithium.mixins.json",
+            "[19:35:37] [main/WARN] [mixin/]: @Redirect conflict. Skipping imm_ptl.mixins.json:common.collision.MixinEntity from mod immersive_portals_core->@Redirect::redirectHandleCollisions with priority 1000, already redirected by sable.mixins.json:entity.EntityMixin from mod sable->@Redirect::sable$collideRedirect with priority 1100",
+            "[19:35:37] [main/FATAL] [mixin/]: Mixin apply for mod sable failed sable.mixins.json:player_standup.PlayerMixin from mod sable -> net.minecraft.world.entity.player.Player: org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException cannot inject into Player::canPlayerFitWithinBlocksAndEntitiesWhen merged by qouteall.imm_ptl.core.mixin.common.collision.MixinPlayer_Collision with priority 1000",
+            "Caused by: org.spongepowered.asm.mixin.throwables.MixinApplyError: Mixin [sable.mixins.json:player_standup.PlayerMixin from mod sable] from phase [DEFAULT] in config [sable.mixins.json] FAILED during APPLY");
+        var content = new AxoClient.Core.Content.ContentDocument
+        {
+            Mods =
+            [
+                Mod("create.jar", "Create", "create", "create.mixins.json"),
+                Mod("jei.jar", "JEI", "jei", "jei.mixins.json"),
+                Mod("lithium.jar", "Lithium", "lithium", "lithium.mixins.json"),
+                Mod("immersive_portals-6.0.7-all.jar", "Immersive Portals", "immersive_portals", "ip.mixins.json", "immersive_portals_core"),
+                Mod("sable.jar", "Sable", "sable", "sable.mixins.json")
+            ]
+        };
+        var result = new CrashAnalyzer().Analyze(new CrashInput(1, null, null, log, null), content);
+        Assert.Equal("mixin", result.RuleId);
+        Assert.Equal(["Sable", "Immersive Portals"], result.Suspects.Select(s => s.Name).ToArray());
+        Assert.Equal("crash.cause.mixinConflict", result.Cause.Code);
+    }
+}

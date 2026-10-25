@@ -46,7 +46,7 @@ public sealed record CrashAnalysis(
 /// Sucht per Regeln aus <c>crash-rules.json</c> die wahrscheinliche Ursache. Eine Ursache wird nur genannt, wenn eine
 /// Regel sicher passt; sonst "Ursache unbekannt" mit den zuletzt hinzugefügten Mods als mögliche Auslöser.
 /// </summary>
-public sealed class CrashAnalyzer
+public sealed partial class CrashAnalyzer
 {
     private const int MaxText = 600_000;
     private readonly IReadOnlyList<(CrashRule Rule, Regex[] Patterns)> _rules;
@@ -112,7 +112,11 @@ public sealed class CrashAnalyzer
                 if (suspects.Count == 0)
                     suspects = FindForgeSuspects(sources["crash"], mods);
                 var file = match.Groups["file"] is { Success: true } g ? g.Value : null;
-                return new CrashAnalysis(true, TextRef.Of(rule.Cause, ("file", file), ("mod", suspects.FirstOrDefault()?.Name)),
+                // Zwei Mods beißen sich: beide nennen, statt nur "verträgt sich nicht"
+                var cause = rule.FindMod == "mixin" && suspects.Count >= 2
+                    ? TextRef.Of("crash.cause.mixinConflict", ("mod", suspects[0].Name), ("other", suspects[1].Name))
+                    : TextRef.Of(rule.Cause, ("file", file), ("mod", suspects.FirstOrDefault()?.Name));
+                return new CrashAnalysis(true, cause,
                     rule.Id, rule.Actions, suspects, [], file, input.CrashReportFile, input.ExitCode);
             }
         }
@@ -144,17 +148,59 @@ public sealed class CrashAnalyzer
         return hits;
     }
 
-    /// <summary>Mixin-Fehler nennen die Konfiguration (z. B. "sodium.mixins.json"), die genau zu einer Mod gehört.</summary>
+    /// <summary>
+    /// Mixin-Fehler: nur die eigentlichen Fehlerzeilen auswerten. Beim normalen Laden nennt das Log die Mixin-Konfiguration
+    /// jeder Mod; wer das ganze Log durchsucht, verdächtigt am Ende alle. Reihenfolge: die Mod, deren Mixin scheitert,
+    /// danach die Mod(s), mit denen sie sich beißt ("merged by", "already redirected by", "@Redirect conflict").
+    /// </summary>
     internal static List<CrashSuspect> FindByMixin(string text, List<ContentEntry> mods)
     {
-        var configs = Regex.Matches(text, @"([A-Za-z0-9_.\-]+\.mixins?\.json)").Select(m => m.Groups[1].Value).Distinct().ToList();
-        var hits = mods.Where(m => m.Meta?.Mixins.Any(x => configs.Contains(x, StringComparer.OrdinalIgnoreCase)) == true)
-            .Select(m => new CrashSuspect(m.File, m.Name)).ToList();
-        if (hits.Count > 0)
-            return hits;
-        var ids = Regex.Matches(text, @"(?:from mod|for mod) ([a-z0-9_\-]+)").Select(m => m.Groups[1].Value).ToHashSet();
-        return mods.Where(m => m.Meta?.ModId != null && ids.Contains(m.Meta.ModId)).Select(m => new CrashSuspect(m.File, m.Name)).ToList();
+        var errorLines = text.Split('\n')
+            .Where(l => !l.TrimStart().StartsWith("at ", StringComparison.Ordinal))
+            .Where(l => MixinErrorLine().IsMatch(l))
+            .ToList();
+        var primary = new List<string>();
+        var others = new List<string>();
+        foreach (var line in errorLines)
+        {
+            foreach (Match m in Regex.Matches(line, @"Mixin apply for mod ([a-z0-9_]+(?:-[a-z0-9_]+)*) failed"))
+                primary.Add(m.Groups[1].Value);
+            foreach (Match m in Regex.Matches(line, @"from mod ([a-z0-9_]+(?:-[a-z0-9_]+)*)"))
+                others.Add(m.Groups[1].Value);
+        }
+
+        var hits = new List<CrashSuspect>();
+        void Add(ContentEntry? mod)
+        {
+            if (mod != null && hits.All(h => h.File != mod.File))
+                hits.Add(new CrashSuspect(mod.File, mod.Name));
+        }
+        ContentEntry? ById(string id) => mods.FirstOrDefault(m => m.Meta != null
+            && (string.Equals(m.Meta.ModId, id, StringComparison.OrdinalIgnoreCase) || m.Meta.Provides.Contains(id, StringComparer.OrdinalIgnoreCase)));
+        ContentEntry? ByConfig(string config) => mods.FirstOrDefault(m => m.Meta?.Mixins.Contains(config, StringComparer.OrdinalIgnoreCase) == true);
+        ContentEntry? ByClass(string cls) => mods.FirstOrDefault(m => m.Meta?.Packages.Any(p => cls.StartsWith(p + ".", StringComparison.Ordinal)) == true);
+
+        foreach (var id in primary)
+            Add(ById(id));
+        // Gescheiterte Konfiguration ("Mixin [sodium.mixins.json:…] … FAILED")
+        foreach (var line in errorLines)
+            foreach (Match m in Regex.Matches(line, @"Mixin \[([A-Za-z0-9_.\-]+\.mixins?\.json)"))
+                Add(ByConfig(m.Groups[1].Value));
+        // Konfliktpartner
+        foreach (var line in errorLines)
+        {
+            foreach (Match m in Regex.Matches(line, @"(?:merged by|already redirected by|conflicts? with) ([a-zA-Z_][\w$]*(?:\.[\w$]+){2,})"))
+                Add(ByClass(m.Groups[1].Value) ?? ByConfig(m.Groups[1].Value));
+            foreach (Match m in Regex.Matches(line, @"([A-Za-z0-9_.\-]+\.mixins?\.json)"))
+                Add(ByConfig(m.Groups[1].Value));
+        }
+        foreach (var id in others)
+            Add(ById(id));
+        return hits.Take(3).ToList();
     }
+
+    [GeneratedRegex(@"FATAL|/ERROR|Mixin apply for mod|MixinApplyError|InvalidInjectionException|InvalidMixinException|@Redirect conflict|Caused by|cannot inject|merged by")]
+    private static partial Regex MixinErrorLine();
 
     /// <summary>Fabric: "Mod 'X' (x) 1.0 requires …" bzw. "- Mod 'X' (x) … is incompatible".</summary>
     internal static List<CrashSuspect> FindByResolution(string text, List<ContentEntry> mods)
