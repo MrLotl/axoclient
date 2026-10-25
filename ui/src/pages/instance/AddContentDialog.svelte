@@ -36,6 +36,25 @@
       return false;
     }
   }
+  // Im Vollbild wahlweise Karten wie auf der Modpack-Seite
+  const VIEW_KEY = 'axo.addContent.view';
+  let view = $state<'list' | 'grid'>(readView());
+  const cards = $derived(full && view === 'grid');
+  function readView(): 'list' | 'grid' {
+    try {
+      return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list';
+    } catch {
+      return 'list';
+    }
+  }
+  function saveView(v: string) {
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // nur für dieses Mal
+    }
+  }
+
   function toggleFull() {
     full = !full;
     try {
@@ -122,12 +141,42 @@
   const pages = $derived(result ? Math.ceil(result.total / 20) : 0);
 </script>
 
+{#snippet actionsFor(p: ContentProject, state: 'busy' | 'done' | undefined)}
+                {#if state === 'done'}
+                  <span class="installed"><Icon name="check" size={13} />{installedProjects.has(p.id) ? t('content.installed') : t('content.added')}</span>
+                {:else if state === 'busy'}
+                  <button class="btn btn-second sm" disabled><span class="spinner"></span>{t('content.installingShort')}</button>
+                {:else}
+                  <div class="split">
+                    <button class="btn btn-second sm" onclick={() => install(p)}><Icon name="download" size={13} stroke={1.8} />{t('content.install')}</button>
+                    <button class="btn btn-second sm more" aria-label={t('content.versions')} aria-expanded={versionsFor === p.id} onclick={() => openVersions(p)}><Icon name="chevronDown" size={13} /></button>
+                  </div>
+                  {#if versionsFor === p.id}
+                    <div class="menu versions" role="menu">
+                      {#each versions.slice(0, 12) as v (v.id)}
+                        <button class="menu-item" role="menuitem" onclick={() => install(p, v.id)}>
+                          <span class="truncate grow">{v.versionNumber}</span>
+                          {#if v.channel !== 'release'}<span class="chip">{v.channel === 'beta' ? 'Beta' : 'Alpha'}</span>{/if}
+                          {#if v === versions[0]}<span class="chip accent">{t('content.newest')}</span>{/if}
+                        </button>
+                      {:else}
+                        <span class="hint" style="padding: 10px">{t('common.loading')}</span>
+                      {/each}
+                    </div>
+                  {/if}
+                {/if}
+              {/snippet}
+
 <Dialog title={t(`content.${key}.add`)} width={980} padded={false} fullscreen={full} {onclose}>
   {#snippet header()}
     <div class="top">
       <h2>{t(`content.${key}.add`)}</h2>
       <span class="for">{t('content.forInstance', { name: instance.name, version: instance.minecraft.version })}</span>
       <div class="grow"></div>
+      {#if full}
+        <Segmented bind:value={view} label={t('common.view')} onchange={saveView}
+          options={[{ value: 'list', icon: 'list', aria: t('common.listView') }, { value: 'grid', icon: 'grid', aria: t('common.gridView') }]} />
+      {/if}
       <Segmented
         bind:value={source}
         label={t('content.source')}
@@ -171,10 +220,29 @@
           <option value="updated">{t('content.sorts.updated')}</option>
         </select>
       </div>
-      <div class="list" class:loading>
+      <div class="list" class:loading class:cards>
         {#if result}
           {#each result.items as p (p.id)}
             {@const state = installedProjects.has(p.id) ? 'done' : installing[p.id]}
+            {#if cards}
+              <article class="card" class:menu-open={versionsFor === p.id}>
+                <div class="thumb">
+                  {#if p.imageUrl}<img class="banner" src={p.imageUrl} alt="" loading="lazy" />{:else if p.iconUrl}<img class="banner blur" src={p.iconUrl} alt="" loading="lazy" />{/if}
+                  {#if p.iconUrl}<img class="c-icon" src={p.iconUrl} alt="" loading="lazy" />{:else}<span class="c-icon blank"><Icon name="puzzle" /></span>{/if}
+                </div>
+                <div class="c-info">
+                  <h3 class="truncate">{p.title}</h3>
+                  {#if p.author}<span class="by">{t('content.by', { author: p.author })}</span>{/if}
+                  <p class="desc">{p.description}</p>
+                  <div class="p-meta">
+                    <span><Icon name="download" size={12} />{compactNumber(p.downloads)}</span>
+                    {#if p.updated}<span><Icon name="clock" size={12} />{ago(p.updated)}</span>{/if}
+                    <button class="link" onclick={() => call('shell.openUrl', { url: p.webUrl })}><Icon name="external" size={12} />{t('content.details')}</button>
+                  </div>
+                </div>
+                <div class="c-actions p-actions">{@render actionsFor(p, state)}</div>
+              </article>
+            {:else}
             <article class="item">
               {#if p.iconUrl}<img class="p-icon" src={p.iconUrl} alt="" loading="lazy" />{:else}<span class="p-icon blank"><Icon name="puzzle" /></span>{/if}
               <div class="p-text">
@@ -187,32 +255,9 @@
                   <button class="link" onclick={() => call('shell.openUrl', { url: p.webUrl })}><Icon name="external" size={12} />{t('content.details')}</button>
                 </div>
               </div>
-              <div class="p-actions">
-                {#if state === 'done'}
-                  <span class="installed"><Icon name="check" size={13} />{installedProjects.has(p.id) ? t('content.installed') : t('content.added')}</span>
-                {:else if state === 'busy'}
-                  <button class="btn btn-second sm" disabled><span class="spinner"></span>{t('content.installingShort')}</button>
-                {:else}
-                  <div class="split">
-                    <button class="btn btn-second sm" onclick={() => install(p)}><Icon name="download" size={13} stroke={1.8} />{t('content.install')}</button>
-                    <button class="btn btn-second sm more" aria-label={t('content.versions')} aria-expanded={versionsFor === p.id} onclick={() => openVersions(p)}><Icon name="chevronDown" size={13} /></button>
-                  </div>
-                  {#if versionsFor === p.id}
-                    <div class="menu versions" role="menu">
-                      {#each versions.slice(0, 12) as v (v.id)}
-                        <button class="menu-item" role="menuitem" onclick={() => install(p, v.id)}>
-                          <span class="truncate grow">{v.versionNumber}</span>
-                          {#if v.channel !== 'release'}<span class="chip">{v.channel === 'beta' ? 'Beta' : 'Alpha'}</span>{/if}
-                          {#if v === versions[0]}<span class="chip accent">{t('content.newest')}</span>{/if}
-                        </button>
-                      {:else}
-                        <span class="hint" style="padding: 10px">{t('common.loading')}</span>
-                      {/each}
-                    </div>
-                  {/if}
-                {/if}
-              </div>
+              <div class="p-actions">{@render actionsFor(p, state)}</div>
             </article>
+            {/if}
           {:else}
             <p class="none">{t('content.nothingFound')}</p>
           {/each}
@@ -254,6 +299,89 @@
     height: auto;
     flex: 1;
     min-height: 0;
+  }
+  /* Karten wie auf der Modpack-Seite (nur im Vollbild wählbar) */
+  .list.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-auto-rows: max-content;
+    gap: 14px;
+    align-content: start;
+  }
+  .list.cards .none {
+    grid-column: 1 / -1;
+  }
+  .card {
+    position: relative;
+    border-radius: 12px;
+    background: var(--panel-2);
+    display: flex;
+    flex-direction: column;
+  }
+  .card.menu-open {
+    z-index: 5;
+  }
+  .thumb {
+    position: relative;
+    aspect-ratio: 16 / 7;
+    border-radius: 12px 12px 0 0;
+    background: #1c1c1c;
+    overflow: hidden;
+  }
+  .banner {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .banner.blur {
+    filter: blur(22px) saturate(1.3);
+    opacity: 0.5;
+    transform: scale(1.4);
+  }
+  .c-icon {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    object-fit: cover;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+  .c-icon.blank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #333;
+    color: var(--muted-2);
+  }
+  .c-info {
+    padding: 12px 14px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-grow: 1;
+    min-width: 0;
+  }
+  h3 {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .c-actions {
+    padding: 10px 14px 14px;
+  }
+  .c-actions :global(.split),
+  .c-actions .installed {
+    width: 100%;
+  }
+  .c-actions .split > .btn:first-child {
+    flex-grow: 1;
+  }
+  .c-actions .installed {
+    justify-content: center;
   }
   .filters {
     width: 200px;
