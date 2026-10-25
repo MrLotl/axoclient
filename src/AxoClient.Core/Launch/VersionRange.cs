@@ -29,6 +29,42 @@ public static partial class VersionRange
         }
     }
 
+    /// <summary>
+    /// Wie <see cref="Satisfies"/>, aber nachsichtig: nennt die Bedingung eine Version derselben Reihe (z. B. 1.21.x
+    /// für 1.21.1), gilt sie als erfüllt. Viele Mods schreiben "[1.21, 1.21.1)" und meinen "bis 1.21.1"; der Loader
+    /// startet sie trotzdem. Gewarnt wird nur, wenn die Mod für eine ganz andere Reihe ist (z. B. 1.20 auf 1.21).
+    /// </summary>
+    public static bool SatisfiesLoosely(string version, string? range)
+    {
+        if (Satisfies(version, range))
+            return true;
+        int[] own;
+        try
+        {
+            own = Parts(version);
+        }
+        catch (FormatException)
+        {
+            return true;
+        }
+        foreach (Match token in VersionToken().Matches(range ?? ""))
+        {
+            try
+            {
+                var p = Parts(token.Value);
+                if (p[0] == own[0] && p[1] == own[1])
+                    return true;
+            }
+            catch (FormatException)
+            {
+            }
+        }
+        return false;
+    }
+
+    [GeneratedRegex(@"\d+\.\d+(?:\.\d+)?")]
+    private static partial Regex VersionToken();
+
     private static bool PredicateSatisfies(string version, string predicate, bool unknown)
     {
         if (predicate is "*" or "" or "x" or "X")

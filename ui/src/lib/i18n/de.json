@@ -227,6 +227,7 @@
       "breaks": "„{name}“ läuft laut Hersteller nicht mit „{other}“.",
       "conflicts": "„{name}“ kann sich mit „{other}“ beißen.",
       "dependencyInstall": "Installiere „{dependency}“ für „{name}“ …",
+      "dependencyMissing": "„{name}“ braucht „{dependency}“, das nicht installiert ist.",
       "dependencyUnavailable": "„{name}“ braucht „{dependency}“, das nicht verfügbar ist.",
       "dependencyDisabled": "„{name}“ braucht „{dependency}“, das du deaktiviert hast.",
       "shaderWithoutMod": "Shader sind installiert, aber keine Shader-Mod (Iris)."
@@ -245,6 +246,7 @@
       "retry": "Erneut versuchen",
       "switchToGame": "Zum laufenden Spiel wechseln",
       "install": "Installieren",
+      "installNamed": "„{name}“ installieren",
       "javaAuto": "Automatisch wählen lassen",
       "redownload": "Neu laden",
       "register": "Eintragen",

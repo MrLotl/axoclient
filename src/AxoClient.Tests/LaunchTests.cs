@@ -197,3 +197,17 @@ public class MultiLoaderJarTests
         Assert.Contains("extra", meta.Provides);
     }
 }
+
+public class LooseVersionTests
+{
+    [Theory]
+    [InlineData("1.21.1", "[1.21, 1.21.1)", true)]
+    [InlineData("1.21.1", "[1.20.1,1.21.1)", true)]
+    [InlineData("1.21.1", "[1.20,1.20.6]", false)]
+    [InlineData("1.21.1", ">=1.21.2", true)]
+    [InlineData("1.21.1", "1.20.x", false)]
+    public void ToleratesSameLine(string version, string range, bool expected)
+    {
+        Assert.Equal(expected, VersionRange.SatisfiesLoosely(version, range));
+    }
+}

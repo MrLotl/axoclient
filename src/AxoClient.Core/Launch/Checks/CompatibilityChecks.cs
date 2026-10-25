@@ -62,7 +62,7 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
             }
 
             // Falsche MC-Version
-            if (meta?.MinecraftRange is { } range && !VersionRange.Satisfies(mc, range))
+            if (meta?.MinecraftRange is { } range && !VersionRange.SatisfiesLoosely(mc, range))
             {
                 var actions = new List<CheckAction>();
                 if (mod.ProjectId != null && mod.Source is ContentSource.Modrinth or ContentSource.CurseForge)
@@ -180,10 +180,17 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
         return new Dictionary<string, string>(found, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Fehlende Abhängigkeit: fragen statt still installieren. Die Erkennung kann sich irren (dann würde eine fremde Mod
+    /// installiert), und eine stille Installation lief beim Start ohne eigene Anzeige – der Start schien bei 60 % zu hängen.
+    /// </summary>
     private CheckResult InstallDependency(ContentEntry mod, string label, string source, string projectId) =>
-        new(Id, Severity.AutoFix, TextRef.Of("pipeline.compat.dependencyInstall", ("name", mod.Name), ("dependency", label)),
-            [new CheckAction("installDependency", new TextRef("pipeline.action.install"),
-                (c, job) => content.InstallAsync(c.Instance.Id, ContentType.Mod, new InstallRequest(source, projectId), job), true)]);
+        new(Id, Severity.Warning, TextRef.Of("pipeline.compat.dependencyMissing", ("name", mod.Name), ("dependency", label)),
+            [
+                new CheckAction("installDependency", TextRef.Of("pipeline.action.installNamed", ("name", label)),
+                    (c, job) => content.InstallAsync(c.Instance.Id, ContentType.Mod, new InstallRequest(source, projectId), job), true),
+                ContentFilesCheck.DisableAction(content, ContentType.Mod, mod.File)
+            ], Key: $"dependency-missing:{mod.File}:{label}");
 
     private static async Task UpdateLoaderAsync(LaunchContext ctx, JobContext job)
     {
