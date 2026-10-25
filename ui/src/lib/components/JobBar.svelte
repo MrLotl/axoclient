@@ -7,8 +7,10 @@
   import { flip } from 'svelte/animate';
   import { fadeSlide, DUR, reducedMotion } from '../util/motion';
 
-  // Start-Jobs zeigt der Spielen-Knopf selbst; hier alle anderen langen Vorgänge
-  const jobs = $derived(app.activeJobs.filter((j) => j.kind !== 'launch'));
+  // Start-Jobs zeigt der Spielen-Knopf selbst, das Launcher-Update der offene Update-Dialog; hier alle anderen langen Vorgänge
+  const jobs = $derived(
+    app.activeJobs.filter((j) => j.kind !== 'launch' && !(j.kind === 'launcher.update' && app.dialog?.kind === 'update'))
+  );
 
   // Unten rechts wie die Toasts: die rücken um die Höhe der Jobleiste nach oben
   let height = $state(0);
