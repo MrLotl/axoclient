@@ -166,6 +166,7 @@ public sealed class LaunchPipeline(
                     try
                     {
                         job.Report(progressFrom, fix.Message);
+                        AppLog.Info($"Start {ctx.LaunchId}: Auto-Fix {fix.CheckId} ({fix.Message.Code})");
                         var sub = new JobContextScope(job, progressFrom, progressTo);
                         await fix.AutoFix!.Run(ctx, sub.Context);
                     }
@@ -239,13 +240,31 @@ public sealed class LaunchPipeline(
 
     private static string WarningKey(CheckResult r) => r.Key ?? $"{r.CheckId}:{r.Message.Code}";
 
+    /// <summary>Höchstdauer einer einzelnen Prüfung; Spieldateien (Download, Loader-Installation) laufen als Auto-Fix und zählen nicht.</summary>
+    private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(45);
+
     private async Task<List<CheckResult>> RunPhaseAsync(LaunchContext ctx, LaunchPhase phase, CancellationToken ct)
     {
         var results = new List<CheckResult>();
         foreach (var check in _checks.Where(c => c.Phase == phase))
         {
             ct.ThrowIfCancellationRequested();
-            results.AddRange(await check.RunAsync(ctx, ct));
+            var started = System.Diagnostics.Stopwatch.StartNew();
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(CheckTimeout);
+            try
+            {
+                // WaitAsync: auch eine Prüfung, die das Token nicht beachtet, hält den Start nicht auf
+                results.AddRange(await check.RunAsync(ctx, timeout.Token).WaitAsync(CheckTimeout, ct));
+            }
+            catch (Exception ex) when (ex is TimeoutException or OperationCanceledException && !ct.IsCancellationRequested)
+            {
+                // Eine Prüfung, die hängt (z. B. Modrinth antwortet nicht), darf den Start nicht blockieren
+                AppLog.Warn($"Start {ctx.LaunchId}: Prüfung {check.Id} nach {started.Elapsed.TotalSeconds:0} s abgebrochen");
+                ctx.Hints.Add(TextRef.Of("pipeline.checkSkipped", ("check", check.Id)));
+                continue;
+            }
+            AppLog.Info($"Start {ctx.LaunchId}: Prüfung {check.Id} fertig ({started.ElapsedMilliseconds} ms)");
         }
         return results;
     }

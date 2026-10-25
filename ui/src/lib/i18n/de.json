@@ -168,6 +168,8 @@
       "resources": "Prüfe Arbeitsspeicher …",
       "ready": "Bereit"
     },
+    "checkSkipped": "Eine Prüfung ({check}) hat zu lange gedauert und wurde übersprungen.",
+    "promptFailed": "Die Rückfrage vor dem Start konnte nicht angezeigt werden. Bitte erneut versuchen.",
     "dialog": {
       "title": "Vor dem Start",
       "blockerTitle": "Das Spiel kann so nicht starten",

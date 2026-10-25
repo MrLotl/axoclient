@@ -55,7 +55,7 @@
         {#if issue.detail}<p class="detail">{tr(issue.detail)}</p>{/if}
         {#if issue.actions.length > 1}
           <div class="actions" role="radiogroup" aria-label={tr(issue.message)}>
-            {#each issue.actions as action (action.id)}
+            {#each issue.actions as action, ai (ai)}
               <label class="opt" class:on={chosen[issue.id] === action.id}>
                 <input class="sr" type="radio" name={issue.id} value={action.id} bind:group={chosen[issue.id]} />
                 <span class="radio"></span>{tr(action.label)}

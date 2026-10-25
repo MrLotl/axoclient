@@ -8,6 +8,21 @@ public sealed class EventHub
 {
     public event Action<string, object?>? Published;
 
+    /// <summary>Wie <see cref="Publish"/>, gibt aber zurück, ob die Zustellung geklappt hat.</summary>
+    public bool TryPublish(string type, object? data = null)
+    {
+        try
+        {
+            Published?.Invoke(type, data);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error($"Ereignis {type} konnte nicht zugestellt werden", ex);
+            return false;
+        }
+    }
+
     public void Publish(string type, object? data = null)
     {
         try
