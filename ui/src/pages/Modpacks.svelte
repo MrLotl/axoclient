@@ -6,6 +6,8 @@
   import { t } from '../lib/i18n';
   import Icon from '../lib/components/Icon.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
+  import PageSizeSwitch from '../lib/components/PageSizeSwitch.svelte';
+  import { pageSize } from '../lib/stores/pageSize.svelte';
   import Select from '../lib/components/Select.svelte';
   import Dialog from '../lib/components/Dialog.svelte';
   import { ago, compactNumber } from '../lib/util/format';
@@ -45,7 +47,7 @@
         category: null,
         sort: query.trim() && sort === 'popular' ? 'relevance' : sort,
         page,
-        pageSize: 24
+        pageSize: pageSize.for(source)
       });
     } catch (e) {
       app.error(e);
@@ -79,7 +81,8 @@
   }
 
   const installingJob = $derived(app.jobFor('modpack.install'));
-  const pages = $derived(result ? Math.ceil(Math.min(result.total, 2400) / 24) : 0);
+  // Wie bisher höchstens 2400 Treffer durchblättern
+  const pages = $derived(result ? Math.ceil(Math.min(result.total, 2400) / pageSize.for(source)) : 0);
 </script>
 
 <div class="page">
@@ -173,11 +176,14 @@
       {/each}
     {/if}
   </div>
-  {#if pages > 1}
+  {#if result && result.total > 0}
     <div class="pager">
-      <button class="icon-btn" disabled={page === 0} aria-label={t('content.prevPage')} onclick={() => { page--; search(false); }}><Icon name="chevronLeft" /></button>
-      <span>{t('content.page', { page: page + 1, pages })}</span>
-      <button class="icon-btn" disabled={page + 1 >= pages} aria-label={t('content.nextPage')} onclick={() => { page++; search(false); }}><Icon name="chevronRight" /></button>
+      {#if pages > 1}
+        <button class="icon-btn" disabled={page === 0} aria-label={t('content.prevPage')} onclick={() => { page--; search(false); }}><Icon name="chevronLeft" /></button>
+        <span>{t('content.page', { page: page + 1, pages })}</span>
+        <button class="icon-btn" disabled={page + 1 >= pages} aria-label={t('content.nextPage')} onclick={() => { page++; search(false); }}><Icon name="chevronRight" /></button>
+      {/if}
+      <span class="pager-end"><PageSizeSwitch onchange={() => search()} /></span>
     </div>
   {/if}
 </div>
@@ -376,6 +382,8 @@
     color: var(--muted-2);
   }
   .pager {
+    position: relative;
+    min-height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -410,5 +418,12 @@
   .v-name {
     font-size: 13.5px;
     font-weight: 600;
+  }
+  /* Seitengröße rechts, die Seitenpfeile bleiben mittig */
+  .pager-end {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
   }
 </style>
