@@ -104,3 +104,25 @@ public class RepairIssueTests
         Assert.False(LaunchPipeline.IsRepairIssue(Result("compat", Severity.Warning, "version-mismatch:x@1"), doc));
     }
 }
+
+public class AxoModInstallerTests
+{
+    [Fact]
+    public void ReplacesJarWhenContentDiffers()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"axomod-{Guid.NewGuid():N}.jar");
+        File.WriteAllBytes(path, [1, 2, 3]);
+        try
+        {
+            var sameHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(new byte[] { 1, 2, 3 })).ToLowerInvariant();
+            var installer = new AxoClient.Core.Game.AxoModInstaller(typeof(AxoModInstallerTests).Assembly);
+            Assert.True(installer.IsCurrent(new AxoClient.Core.Game.AxoModEntry { File = "x.jar", Sha256 = sameHash }, path));
+            Assert.False(installer.IsCurrent(new AxoClient.Core.Game.AxoModEntry { File = "x.jar", Sha256 = new string('0', 64) }, path));
+            Assert.False(installer.IsCurrent(new AxoClient.Core.Game.AxoModEntry { File = "x.jar", Sha256 = sameHash }, path + ".missing"));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+}

@@ -153,7 +153,7 @@ public sealed class AxoModCheck(AxoModInstaller axoMod, ContentManager content) 
         var currentFile = current == null ? null : Path.Combine(ctx.GameDir, "mods", current.File);
         var upToDate = wanted == null
             ? current == null
-            : current?.File == wanted.File && current.Version == AppInfo.Version && File.Exists(currentFile);
+            : current?.File == wanted.File && currentFile != null && axoMod.IsCurrent(wanted, currentFile);
         var results = new List<CheckResult>();
         if (!upToDate)
             results.Add(new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.axomod.sync"),

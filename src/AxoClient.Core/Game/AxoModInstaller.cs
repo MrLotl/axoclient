@@ -81,6 +81,26 @@ public sealed class AxoModInstaller
         return bytes;
     }
 
+    /// <summary>
+    /// Ob die Jar unter <paramref name="path"/> genau die mitgelieferte ist (SHA-256). Verglichen wird der Inhalt, nicht
+    /// die Launcher-Version: ein neuer Mod-Build ohne neue Launcher-Version (z. B. 1.0.0-dev) wird so trotzdem ersetzt.
+    /// </summary>
+    public bool IsCurrent(AxoModEntry entry, string path)
+    {
+        if (!File.Exists(path))
+            return false;
+        var expected = entry.Sha256;
+        if (expected is not { Length: > 0 })
+        {
+            using var embedded = _assembly.GetManifestResourceStream(ResourcePrefix + entry.File);
+            if (embedded == null)
+                return true; // nichts zum Vergleichen da: die vorhandene Jar behalten
+            expected = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(embedded));
+        }
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)).Equals(expected, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Legt die richtige Jar in <c>mods/</c> und entfernt alte AxoMod-Jars.</summary>
     public async Task<ContentEntry?> SyncAsync(string modsDir, string minecraftVersion, LoaderType loader, bool enabled,
         CancellationToken ct)
