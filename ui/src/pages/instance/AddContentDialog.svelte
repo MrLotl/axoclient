@@ -171,7 +171,7 @@
           <option value="updated">{t('content.sorts.updated')}</option>
         </select>
       </div>
-      <div class="list" class:loading class:grid={full}>
+      <div class="list" class:loading>
         {#if result}
           {#each result.items as p (p.id)}
             {@const state = installedProjects.has(p.id) ? 'done' : installing[p.id]}
@@ -254,15 +254,6 @@
     height: auto;
     flex: 1;
     min-height: 0;
-  }
-  /* Im Vollbild nebeneinander, wie die Modpack-Seite */
-  .list.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
-    align-content: start;
-  }
-  .list.grid .none {
-    grid-column: 1 / -1;
   }
   .filters {
     width: 200px;
