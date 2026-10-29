@@ -440,7 +440,7 @@
       "updated": "Zuletzt aktualisiert"
     },
     "by": "von {author}",
-    "details": "Details",
+    "onSource": "Auf {source} ansehen",
     "install": "Installieren",
     "installed": "Installiert",
     "installingShort": "Installiere …",

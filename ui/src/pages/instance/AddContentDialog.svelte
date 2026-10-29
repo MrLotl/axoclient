@@ -140,10 +140,12 @@
     }
   }
 
+  const webLabel = $derived(t('content.onSource', { source: source === 'curseforge' ? 'CurseForge' : 'Modrinth' }));
   const pages = $derived(result ? Math.ceil(result.total / pageSize.for(source)) : 0);
 </script>
 
 {#snippet actionsFor(p: ContentProject, state: 'busy' | 'done' | undefined)}
+                <div class="act-row">
                 {#if state === 'done'}
                   <span class="installed"><Icon name="check" size={13} />{installedProjects.has(p.id) ? t('content.installed') : t('content.added')}</span>
                 {:else if state === 'busy'}
@@ -167,6 +169,8 @@
                     </div>
                   {/if}
                 {/if}
+                <button class="icon-btn" aria-label={webLabel} title={webLabel} onclick={() => call('shell.openUrl', { url: p.webUrl })}><Icon name="external" size={14} /></button>
+                </div>
               {/snippet}
 
 <Dialog title={t(`content.${key}.add`)} width={980} padded={false} fullscreen={full} {onclose}>
@@ -239,7 +243,6 @@
                   <div class="p-meta">
                     <span><Icon name="download" size={12} />{compactNumber(p.downloads)}</span>
                     {#if p.updated}<span><Icon name="clock" size={12} />{ago(p.updated)}</span>{/if}
-                    <button class="link" onclick={() => call('shell.openUrl', { url: p.webUrl })}><Icon name="external" size={12} />{t('content.details')}</button>
                   </div>
                 </div>
                 <div class="c-actions p-actions">{@render actionsFor(p, state)}</div>
@@ -254,7 +257,6 @@
                   <span><Icon name="download" size={12} />{compactNumber(p.downloads)}</span>
                   {#if p.updated}<span><Icon name="clock" size={12} />{ago(p.updated)}</span>{/if}
                   {#each p.categories.slice(0, 3) as c (c)}<span class="chip">{t(`categories.${c}`)}</span>{/each}
-                  <button class="link" onclick={() => call('shell.openUrl', { url: p.webUrl })}><Icon name="external" size={12} />{t('content.details')}</button>
                 </div>
               </div>
               <div class="p-actions">{@render actionsFor(p, state)}</div>
@@ -378,9 +380,14 @@
   .c-actions {
     padding: 10px 14px 14px;
   }
-  .c-actions :global(.split),
-  .c-actions .installed {
-    width: 100%;
+  /* Installieren und daneben der Button zur Webseite */
+  .act-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .c-actions .act-row > :first-child {
+    flex-grow: 1;
   }
   .c-actions .split > .btn:first-child {
     flex-grow: 1;
@@ -526,20 +533,6 @@
     display: flex;
     align-items: center;
     gap: 4px;
-  }
-  .link {
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--muted-2);
-    font-size: 11.5px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-  }
-  .link:hover {
-    color: var(--accent-text);
   }
   .p-actions {
     position: relative;
