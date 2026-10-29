@@ -29,7 +29,7 @@ public sealed class GameInstaller(AppPaths paths, LoaderManager loaders, HttpCli
             LoaderType.Fabric => loaderVersion != null ? $"fabric-loader-{loaderVersion}-{mc}" : null,
             LoaderType.Quilt => loaderVersion != null ? $"quilt-loader-{loaderVersion}-{mc}" : null,
             LoaderType.Forge => loaderVersion != null ? $"{mc}-forge-{loaderVersion}" : null,
-            LoaderType.NeoForge => loaderVersion != null ? $"neoforge-{loaderVersion}" : null,
+            LoaderType.NeoForge => loaderVersion != null ? NeoForgeLoader.VersionId(mc, loaderVersion) : null,
             _ => null
         };
         if (candidate != null && File.Exists(Path.Combine(paths.Versions, candidate, candidate + ".json")))

@@ -196,7 +196,39 @@ public sealed class NeoForgeLoader(ApiClient api) : ILoaderInstaller
 {
     private const string Metadata = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml";
 
+    // NeoForge für 1.20.1 liegt noch unter dem alten Namen net.neoforged:forge und ist ein Forge-Installer
+    private const string LegacyMaven = "https://maven.neoforged.net/releases/net/neoforged/forge";
+    private const string ForgeMetadata = "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml";
+    internal const string LegacyMinecraft = "1.20.1";
+
     public LoaderType Type => LoaderType.NeoForge;
+
+    /// <summary>Versions-ID im versions-Ordner: 1.20.1 heißt wie Forge („1.20.1-forge-47.1.106“), danach „neoforge-21.4.x“.</summary>
+    public static string VersionId(string mc, string loaderVersion) =>
+        mc == LegacyMinecraft ? $"{mc}-forge-{loaderVersion}" : $"neoforge-{loaderVersion}";
+
+    /// <summary>
+    /// NeoForge-Versionen für 1.20.1, neueste zuerst. Builds, die es mit gleicher Nummer auch bei Forge gibt,
+    /// fallen weg – beide würden sonst denselben versions-Ordner belegen.
+    /// </summary>
+    internal static List<string> LegacyVersions(XDocument neoForge, XDocument forge)
+    {
+        var prefix = LegacyMinecraft + "-";
+        var taken = forge.Descendants("version").Select(v => v.Value).ToHashSet(StringComparer.Ordinal);
+        return neoForge.Descendants("version").Select(v => v.Value)
+            .Where(v => v.StartsWith(prefix, StringComparison.Ordinal) && !taken.Contains(v))
+            .Select(v => v[prefix.Length..])
+            .Where(LoaderManager.IsSafeVersion)
+            .OrderByDescending(v => System.Version.TryParse(v, out var parsed) ? parsed : new System.Version())
+            .ToList();
+    }
+
+    private async Task<List<string>> LegacyVersionsAsync(CancellationToken ct)
+    {
+        var neoForge = XDocument.Parse(await api.GetStringAsync($"{LegacyMaven}/maven-metadata.xml", TimeSpan.FromHours(6), ct));
+        var forge = XDocument.Parse(await api.GetStringAsync(ForgeMetadata, TimeSpan.FromHours(6), ct));
+        return LegacyVersions(neoForge, forge);
+    }
 
     /// <summary>MC 1.21.4 → NeoForge 21.4.x; MC 26.1 → NeoForge 26.1.x.</summary>
     internal static string? Prefix(string mc)
@@ -210,6 +242,11 @@ public sealed class NeoForgeLoader(ApiClient api) : ILoaderInstaller
 
     public async Task<IReadOnlyList<LoaderVersionInfo>> ListVersionsAsync(string mc, CancellationToken ct)
     {
+        if (mc == LegacyMinecraft)
+        {
+            var legacy = await LegacyVersionsAsync(ct);
+            return legacy.Select((v, i) => new LoaderVersionInfo(v, true, i == 0)).ToList();
+        }
         var prefix = Prefix(mc);
         if (prefix == null)
             return [];
@@ -225,6 +262,8 @@ public sealed class NeoForgeLoader(ApiClient api) : ILoaderInstaller
     public async Task<string> InstallAsync(LoaderInstallContext ctx)
     {
         ctx.Status.Report("loader.installing:NeoForge");
+        if (ctx.MinecraftVersion == LegacyMinecraft)
+            return await InstallLegacyAsync(ctx);
         var neoForge = new NeoForgeInstaller(ctx.Launcher);
         var options = new NeoForgeInstallOptions
         {
@@ -239,6 +278,35 @@ public sealed class NeoForgeLoader(ApiClient api) : ILoaderInstaller
             : await neoForge.Install(ctx.MinecraftVersion, options);
     }
 
+    /// <summary>1.20.1: der Forge-Installer von CmlLib, nur mit dem Installer-Jar von maven.neoforged.net.</summary>
+    private async Task<string> InstallLegacyAsync(LoaderInstallContext ctx)
+    {
+        var mc = ctx.MinecraftVersion;
+        var version = LoaderManager.IsSafeVersion(ctx.LoaderVersion)
+            ? ctx.LoaderVersion!
+            : (await LegacyVersionsAsync(ctx.Token)).FirstOrDefault()
+              ?? throw new AxoException("game.loaderUnsupported", new() { ["loader"] = LoaderNames.Display(Type), ["version"] = mc });
+        var forge = new ForgeInstaller(ctx.Launcher);
+        var options = new ForgeInstallOptions
+        {
+            FileProgress = ctx.Files,
+            ByteProgress = ctx.Bytes,
+            InstallerOutput = new Progress<string>(_ => { }),
+            SkipIfAlreadyInstalled = true,
+            CancellationToken = ctx.Token
+        };
+        return await forge.Install(LegacyForgeVersion(mc, version), options);
+    }
+
+    internal static CmlLib.Core.Installer.Forge.Versions.ForgeVersion LegacyForgeVersion(string mc, string version)
+    {
+        var full = $"{mc}-{version}";
+        return new CmlLib.Core.Installer.Forge.Versions.ForgeVersion(mc, version)
+        {
+            Files = [new ForgeVersionFile { Type = "installer", DirectUrl = $"{LegacyMaven}/{full}/forge-{full}-installer.jar" }]
+        };
+    }
+
     public bool IsInstalled(MinecraftPath path, string mc, string? loaderVersion) =>
-        loaderVersion != null && File.Exists(path.GetVersionJsonPath($"neoforge-{loaderVersion}"));
+        loaderVersion != null && File.Exists(path.GetVersionJsonPath(VersionId(mc, loaderVersion)));
 }
