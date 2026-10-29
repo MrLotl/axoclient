@@ -30,7 +30,7 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
         var instance = ctx.Instance;
         var loader = instance.Loader.Type;
         var mc = instance.Minecraft.Version;
-        UseLoaderVariants(ctx, loader);
+        UseLoaderVariants(ctx, loader, mc);
         var mods = ctx.Content.Mods.Where(m => m.Enabled && m.Source != ContentSource.AxoClient).ToList();
         var provided = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var mod in mods.Where(m => m.Meta != null))
@@ -55,7 +55,7 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
             var key = $"{mod.Meta?.ModId ?? mod.File}@{(mod.Hashes.Sha1 ?? "")[..Math.Min(8, mod.Hashes.Sha1?.Length ?? 0)]}";
 
             // Falscher Loader (Quilt lädt auch Fabric-Mods)
-            if (meta is { Loaders.Count: > 0 } && loader != LoaderType.Vanilla && !LoaderFits(meta.Loaders, loader))
+            if (meta is { Loaders.Count: > 0 } && loader != LoaderType.Vanilla && !LoaderFits(meta.Loaders, loader, mc))
             {
                 results.Add(new CheckResult(Id, Severity.Blocker, TextRef.Of("pipeline.compat.wrongLoader", ("name", mod.Name),
                         ("modLoader", LoaderLabel(meta.Loaders[0])), ("loader", LoaderNames.Display(loader))),
@@ -226,13 +226,13 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
     /// Jars mit Metadaten für mehrere Loader (z. B. Collective: Fabric und NeoForge) wurden evtl. mit den Angaben eines
     /// anderen Loaders eingelesen. Für die Prüfung die Angaben zum Loader der Instanz nehmen (nur im Speicher).
     /// </summary>
-    private static void UseLoaderVariants(LaunchContext ctx, LoaderType loader)
+    private static void UseLoaderVariants(LaunchContext ctx, LoaderType loader, string mc)
     {
         if (loader == LoaderType.Vanilla)
             return;
         foreach (var mod in ctx.Content.Mods)
         {
-            if (mod.Meta is not { Loaders.Count: > 1 } meta || LoaderFits([meta.Loaders[0]], loader) || !LoaderFits(meta.Loaders, loader))
+            if (mod.Meta is not { Loaders.Count: > 1 } meta || LoaderFits([meta.Loaders[0]], loader, mc) || !LoaderFits(meta.Loaders, loader, mc))
                 continue;
             var path = Path.Combine(ctx.GameDir, "mods", mod.DiskName);
             if (File.Exists(path) && ModMetadataReader.Read(path, LoaderNames.ModrinthId(loader))?.Meta is { } variant)
@@ -243,12 +243,17 @@ public sealed class CompatibilityCheck(ContentManager content, ContentProviders 
     private static string StripMinecraftPrefix(string loaderVersion, string mc) =>
         loaderVersion.StartsWith(mc + "-", StringComparison.Ordinal) ? loaderVersion[(mc.Length + 1)..] : loaderVersion;
 
-    private static bool LoaderFits(List<string> modLoaders, LoaderType loader) => loader switch
+    /// <summary>
+    /// Passt eine Mod zum Loader der Instanz? NeoForge bis 1.20.4 nutzt noch Forges mods.toml (und lädt unter 1.20.1
+    /// Forge-Mods direkt), solche Jars gelten dort deshalb als passend.
+    /// </summary>
+    internal static bool LoaderFits(List<string> modLoaders, LoaderType loader, string mc) => loader switch
     {
         LoaderType.Quilt => modLoaders.Any(l => l is "quilt" or "fabric"),
         LoaderType.Fabric => modLoaders.Contains("fabric"),
         LoaderType.Forge => modLoaders.Contains("forge"),
-        LoaderType.NeoForge => modLoaders.Contains("neoforge"),
+        LoaderType.NeoForge => modLoaders.Contains("neoforge")
+                               || (modLoaders.Contains("forge") && VersionRange.Satisfies(mc, "<1.20.5", unknown: false)),
         _ => true
     };
 

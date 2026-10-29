@@ -49,14 +49,21 @@ public static class ModMetadataReader
         if (variants.Count == 0 && Entry(zip, "mcmod.info") is { } legacy)
             variants.Add(("forge", () => ReadMcmodInfo(legacy)));
 
-        // Quilt lädt auch Fabric-Mods
-        string[] wanted = preferLoader == "quilt" ? ["quilt", "fabric"] : preferLoader != null ? [preferLoader] : [];
-        var chosen = variants.FirstOrDefault(v => wanted.Contains(v.Loader));
+        // Quilt lädt auch Fabric-Mods; Forge und NeoForge lesen notfalls die toml des anderen (gleicher Aufbau)
+        string[] wanted = preferLoader switch
+        {
+            "quilt" => ["quilt", "fabric"],
+            "forge" => ["forge", "neoforge"],
+            "neoforge" => ["neoforge", "forge"],
+            null => [],
+            _ => [preferLoader]
+        };
+        var chosen = wanted.Select(w => variants.FirstOrDefault(v => v.Loader == w)).FirstOrDefault(v => v.Parse != null);
         if (chosen.Parse == null && variants.Count > 0)
             chosen = variants[0];
         var result = chosen.Parse?.Invoke();
         if (result != null)
-            result.Meta.Loaders = result.Meta.Loaders.Concat(variants.Select(v => v.Loader)).Distinct().ToList();
+            result.Meta.Loaders = result.Meta.Loaders.Concat(variants.Select(v => v.Loader)).Concat(ServiceLoaders(zip)).Distinct().ToList();
 
         if (result == null)
         {
@@ -77,6 +84,23 @@ public static class ModMetadataReader
             result.Meta.Mixins = zip.Entries.Where(e => !e.FullName.Contains('/') && e.Name.EndsWith(".mixins.json"))
                 .Select(e => e.Name).Take(20).ToList();
         return result;
+    }
+
+    /// <summary>
+    /// Loader, bei denen sich die Jar nur über Java-Services anmeldet (z. B. Preloading Tricks: Forge-Mod-Locator ohne
+    /// eigene mods.toml). Ohne das gälte so eine Bibliothek in einer Forge-Instanz als falscher Loader.
+    /// </summary>
+    private static IEnumerable<string> ServiceLoaders(ZipArchive zip)
+    {
+        const string services = "META-INF/services/";
+        foreach (var entry in zip.Entries.Where(e => e.FullName.StartsWith(services, StringComparison.Ordinal)))
+        {
+            var name = entry.FullName[services.Length..];
+            if (name.StartsWith("net.minecraftforge.", StringComparison.Ordinal))
+                yield return "forge";
+            else if (name.StartsWith("net.neoforged.", StringComparison.Ordinal))
+                yield return "neoforge";
+        }
     }
 
     private static string? Entry(ZipArchive zip, string name)

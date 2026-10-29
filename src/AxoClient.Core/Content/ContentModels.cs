@@ -80,8 +80,8 @@ public sealed class ModMetadata
     /// <summary>Stand des Lesers; ältere Einträge werden beim nächsten Abgleich neu gelesen.</summary>
     public int Format { get; set; }
 
-    /// <summary>3: alle Mod-IDs einer Forge-Jar, reine Server-Abhängigkeiten ausgelassen. 4: Container-Jars (Kotlin for Forge). 5: alle Loader einer Jar.</summary>
-    public const int CurrentFormat = 5;
+    /// <summary>3: alle Mod-IDs einer Forge-Jar, reine Server-Abhängigkeiten ausgelassen. 4: Container-Jars (Kotlin for Forge). 5: alle Loader einer Jar. 6: auch Loader, bei denen sich die Jar nur über META-INF/services anmeldet.</summary>
+    public const int CurrentFormat = 6;
 
     /// <summary>IDs, die diese Jar zusätzlich bereitstellt (<c>provides</c> und mitgelieferte Jars).</summary>
     public List<string> Provides { get; set; } = [];
