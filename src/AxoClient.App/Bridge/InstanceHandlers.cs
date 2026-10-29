@@ -154,6 +154,15 @@ public static partial class Handlers
                 d.ResetMemory, d.JavaArgs, d.BannerAuto, d.AxoMod), ct);
         });
 
+        // Nach einem Wechsel von Version oder Loader: Mods passend umstellen bzw. deaktivieren
+        r.On<IdData>("instances.adaptMods", async (d, _) =>
+        {
+            if (host.Games.IsRunning(d.Id))
+                throw new AxoException("instances.running");
+            return await host.Jobs.RunAsync("content.adapt", new TextRef("content.adapt.title"),
+                job => host.Content.AdaptModsAsync(d.Id, job), d.Id);
+        });
+
         r.On<ModLockData>("instances.setModLock", async (d, ct) =>
         {
             if (host.Games.IsRunning(d.Id))

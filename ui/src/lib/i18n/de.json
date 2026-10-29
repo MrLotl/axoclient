@@ -349,6 +349,10 @@
     "unreadDot": "Ungelesen"
   },
   "content": {
+    "adapt": {
+      "title": "Passe Mods an die neue Version an …",
+      "checking": "Prüfe Mod {index} von {count} …"
+    },
     "installing": "Installiere Inhalte …",
     "resolving": "Suche passende Versionen …",
     "downloading": "Lade Dateien …",
@@ -996,6 +1000,12 @@
       "generalHint": "Name, Mod-Loader und Spielversion",
       "name": "Name",
       "versionChangeNote": "Beim Wechsel von Version oder Loader passen Mods eventuell nicht mehr. Die Prüfung vor dem Start zeigt, was zu tun ist.",
+      "adaptMods": "Mods automatisch anpassen",
+      "adaptModsHint": "Mods von Modrinth und CurseForge werden auf die passende Version umgestellt. Mods ohne passende Version werden deaktiviert, nicht gelöscht.",
+      "adaptDone": "Mods angepasst: {updated} umgestellt, {disabled} deaktiviert.",
+      "adaptNothing": "Alle Mods passen bereits.",
+      "adaptDisabledNames": "Deaktiviert, weil es keine passende Version gibt: {names}",
+      "adaptFailed": "{count} Mods ließen sich gerade nicht prüfen. Die Prüfung vor dem Start zeigt, was zu tun ist.",
       "performance": "Leistung & Java",
       "performanceHint": "Arbeitsspeicher und Start-Argumente für diese Instanz",
       "ownMemory": "Eigener Arbeitsspeicher",

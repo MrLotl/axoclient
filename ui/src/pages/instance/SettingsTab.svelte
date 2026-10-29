@@ -33,6 +33,26 @@
     if (!axoSupported) axoMod = false;
   });
   let saving = $state(false);
+  // Beim Wechsel von Version oder Loader die Mods gleich mit umstellen
+  let adaptMods = $state(true);
+  const setupChanged = $derived(minecraft !== original.minecraft.version || loader !== original.loader.type);
+  const canAdapt = $derived(loader !== 'vanilla' && original.loader.type !== 'vanilla' && (original.modLock?.level ?? 'off') !== 'full');
+
+  async function adapt() {
+    try {
+      const r = await call<{ updated: number; disabled: string[]; failed: number }>('instances.adaptMods', { id: original.id });
+      if (r.updated === 0 && r.disabled.length === 0 && r.failed === 0) {
+        app.toast(t('instance.settings.adaptNothing'), 'success');
+        return;
+      }
+      app.toast(t('instance.settings.adaptDone', { updated: r.updated, disabled: r.disabled.length }), 'success');
+      if (r.disabled.length > 0)
+        app.toast(t('instance.settings.adaptDisabledNames', { names: r.disabled.slice(0, 5).join(', ') + (r.disabled.length > 5 ? ' …' : '') }));
+      if (r.failed > 0) app.toast(t('instance.settings.adaptFailed', { count: r.failed }), 'error');
+    } catch (e) {
+      app.error(e);
+    }
+  }
 
   const dirty = $derived(
     name !== original.name ||
@@ -47,6 +67,7 @@
 
   async function save() {
     saving = true;
+    const adaptAfter = setupChanged && canAdapt && adaptMods;
     try {
       await call('instances.update', {
         id: original.id,
@@ -64,9 +85,12 @@
       onsaved();
     } catch (e) {
       app.error(e);
+      return;
     } finally {
       saving = false;
     }
+    // Läuft als Job mit eigener Fortschrittsanzeige; die Seite muss darauf nicht warten
+    if (adaptAfter) void adapt();
   }
 
   // Mod-Schutz wirkt sofort (nicht über die Speichern-Leiste), weil er die Mod-Liste direkt betrifft
@@ -152,8 +176,13 @@
           <Checkbox bind:checked={axoMod} label={t('instance.settings.axoMod')} disabled={!axoSupported} />
           <span class="hint">{axoSupported ? t('instance.settings.axoHint') : t('versions.axoUnsupported')}</span>
         </div>
-        {#if minecraft !== original.minecraft.version || loader !== original.loader.type}
-          <p class="note" transition:expand><Icon name="warning" size={14} />{t('instance.settings.versionChangeNote')}</p>
+        {#if setupChanged}
+          <div class="adapt" transition:expand>
+            {#if canAdapt}
+              <Checkbox bind:checked={adaptMods} label={t('instance.settings.adaptMods')} />
+            {/if}
+            <p class="note" class:calm={canAdapt && adaptMods}><Icon name={canAdapt && adaptMods ? 'info' : 'warning'} size={14} />{canAdapt && adaptMods ? t('instance.settings.adaptModsHint') : t('instance.settings.versionChangeNote')}</p>
+          </div>
         {/if}
       </FormSection>
 
@@ -306,6 +335,14 @@
     font-size: 12.5px;
     line-height: 1.45;
     color: var(--yellow);
+  }
+  .note.calm {
+    color: var(--muted);
+  }
+  .adapt {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
   .locks {
     display: flex;

@@ -92,3 +92,18 @@ public class LoaderDetectionTests
     public void NeoForgeOnlyMod_DoesNotFitForge() =>
         Assert.False(CompatibilityCheck.LoaderFits(["neoforge"], LoaderType.Forge, "1.20.1"));
 }
+
+public class ModAdaptTests
+{
+    [Theory]
+    [InlineData("forge", "[1.20.1,1.21)", LoaderType.Forge, "1.20.1", true)]
+    [InlineData("neoforge", "[1.21.1,1.22)", LoaderType.Forge, "1.20.1", false)]
+    [InlineData("forge", "[1.20.1,1.20.2)", LoaderType.Forge, "1.21.1", false)]
+    [InlineData("fabric", null, LoaderType.Quilt, "1.21.1", true)]
+    public void LocalMod_FitsByLoaderAndVersion(string modLoader, string? range, LoaderType loader, string mc, bool fits) =>
+        Assert.Equal(fits, ContentManager.ModFits(new ModMetadata { Loaders = [modLoader], MinecraftRange = range }, loader, mc));
+
+    [Fact]
+    public void LocalModWithoutLoaderInfo_IsKept() =>
+        Assert.True(ContentManager.ModFits(new ModMetadata(), LoaderType.Forge, "1.20.1"));
+}

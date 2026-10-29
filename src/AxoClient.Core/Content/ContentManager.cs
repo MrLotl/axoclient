@@ -1,6 +1,8 @@
 using AxoClient.Core.Common;
 using AxoClient.Core.Game;
 using AxoClient.Core.Instances;
+using AxoClient.Core.Launch;
+using AxoClient.Core.Launch.Checks;
 
 namespace AxoClient.Core.Content;
 
@@ -22,6 +24,14 @@ public sealed record ContentItem(
 
 /// <summary>Was installiert werden soll: eine Version aus einer Quelle.</summary>
 public sealed record InstallRequest(string Source, string ProjectId, string? VersionId = null);
+
+/// <summary>Ergebnis von <see cref="ContentManager.AdaptModsAsync"/>.</summary>
+public sealed class ModAdaptResult
+{
+    public int Updated { get; set; }
+    public List<string> Disabled { get; } = [];
+    public int Failed { get; set; }
+}
 
 /// <summary>
 /// Mods, Ressourcepacks und Shader einer Instanz über <see cref="ContentType"/>. Hält Ordner und
@@ -458,6 +468,69 @@ public sealed class ContentManager(
         return await providers.Get(entry.Source).GetVersionsAsync(entry.ProjectId,
             allMinecraftVersions ? null : instance.Minecraft.Version, instance.Loader.Type, ToKind(type), ct);
     }
+
+    /// <summary>
+    /// Nach einem Wechsel von Minecraft-Version oder Loader: Mods von Modrinth/CurseForge auf eine passende Version
+    /// umstellen, Mods ohne passende Version deaktivieren (nicht löschen). Lokale Mods werden nur deaktiviert, wenn ihre
+    /// Metadaten klar sagen, dass sie nicht passen. Gesperrte Pack-Mods und bereits deaktivierte Mods bleiben, wie sie sind.
+    /// </summary>
+    public async Task<ModAdaptResult> AdaptModsAsync(string instanceId, JobContext job)
+    {
+        var instance = await instances.GetAsync(instanceId, job.Token);
+        var mc = instance.Minecraft.Version;
+        var loader = instance.Loader.Type;
+        var result = new ModAdaptResult();
+        if (loader == LoaderType.Vanilla)
+            return result;
+
+        var mods = (await SyncAsync(instanceId, job.Token)).Mods
+            .Where(m => m.Enabled && m.Source != ContentSource.AxoClient && !instance.ModLock.IsLocked(m)).ToList();
+        for (var i = 0; i < mods.Count; i++)
+        {
+            job.Token.ThrowIfCancellationRequested();
+            var mod = mods[i];
+            job.Status("content.adapt.checking", ("index", i + 1), ("count", mods.Count));
+            job.Report((double)i / Math.Max(1, mods.Count));
+            try
+            {
+                if (mod.ProjectId != null && mod.Source is ContentSource.Modrinth or ContentSource.CurseForge)
+                {
+                    var source = mod.Source == ContentSource.CurseForge ? "curseforge" : "modrinth";
+                    var versions = await providers.Get(source).GetVersionsAsync(mod.ProjectId, mc, loader, ProjectKind.Mod, job.Token);
+                    if (versions.Any(v => v.Id == mod.VersionId))
+                        continue; // Die installierte Version passt schon
+                    var best = versions.FirstOrDefault(v => v.Channel == "release") ?? versions.FirstOrDefault();
+                    if (best == null)
+                    {
+                        await SetEnabledAsync(instanceId, ContentType.Mod, mod.File, false, job.Token);
+                        result.Disabled.Add(mod.Name);
+                        continue;
+                    }
+                    await InstallAsync(instanceId, ContentType.Mod, new InstallRequest(source, mod.ProjectId, best.Id),
+                        job.Sub((double)i / mods.Count, (double)(i + 1) / mods.Count));
+                    result.Updated++;
+                }
+                else if (mod.Meta is { } meta && !ModFits(meta, loader, mc))
+                {
+                    await SetEnabledAsync(instanceId, ContentType.Mod, mod.File, false, job.Token);
+                    result.Disabled.Add(mod.Name);
+                }
+            }
+            catch (Exception ex) when (ex is AxoException or HttpRequestException)
+            {
+                // Offline, Datei gerade in Benutzung o. Ä.: Mod bleibt unverändert, die Startprüfung meldet sie ggf.
+                AppLog.Warn($"Mod nicht angepasst: {mod.Name}", ex);
+                result.Failed++;
+            }
+        }
+        job.Report(1);
+        return result;
+    }
+
+    /// <summary>Passt eine lokale Mod laut ihren Metadaten (Loader und Minecraft-Version)?</summary>
+    internal static bool ModFits(ModMetadata meta, LoaderType loader, string mc) =>
+        (meta.Loaders.Count == 0 || CompatibilityCheck.LoaderFits(meta.Loaders, loader, mc))
+        && (meta.MinecraftRange is not { } range || VersionRange.SatisfiesLoosely(mc, range));
 
     public async Task ChangeAsync(string instanceId, Action<ContentDocument> change, CancellationToken ct = default)
     {
