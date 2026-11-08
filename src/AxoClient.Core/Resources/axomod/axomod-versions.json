@@ -11,7 +11,7 @@
                                     ],
                         "file":  "axoclient-1.21.1.jar",
                         "level":  "full",
-                        "sha256":  "65e47670ebe91363c4171bcd89f4a0df516a4aa08298071684c106339fa15879"
+                        "sha256":  "8e1d71403070db9d6db0107a2e0798755a05a49921e7c32b8c1c39894433e135"
                     },
                     {
                         "minecraft":  [
@@ -25,7 +25,7 @@
                                     ],
                         "file":  "axoclient-1.21.4.jar",
                         "level":  "full",
-                        "sha256":  "fb442413410fbb71536749db5cb3a109180f01862a8c4fcae99cf2392ded601c"
+                        "sha256":  "5801a6433c28099a2bd4a2ae2f3000b35a10f031921db28d797f46482c8c3a64"
                     },
                     {
                         "minecraft":  [
@@ -38,7 +38,7 @@
                                     ],
                         "file":  "axoclient-1.21.8.jar",
                         "level":  "full",
-                        "sha256":  "f3e1e4939bd7db62c317ee48cc1f3e16029efd81d00389654bf7c4ff2b1c9de8"
+                        "sha256":  "15da5645ff1cbc9c164c6b886be5c91476b6e6a290bca382e13d2dd24f81d7c5"
                     },
                     {
                         "minecraft":  [
@@ -51,7 +51,7 @@
                                     ],
                         "file":  "axoclient-1.21.11.jar",
                         "level":  "full",
-                        "sha256":  "4ccef9bc2e5f261a9f0469112b34bb257bcd2ef7e478e314732dabb779d589db"
+                        "sha256":  "76ad7cbeec2a2073486a75f795928eddc50cf624b797fd7f37822c60453106b4"
                     },
                     {
                         "minecraft":  [
@@ -64,7 +64,7 @@
                                     ],
                         "file":  "axoclient-26.1.jar",
                         "level":  "full",
-                        "sha256":  "6c28f6a486c1f6f5dcb54eb4c575239685cc1c5f0e231f3d2afedb8b83ca58f3"
+                        "sha256":  "45fe30577b1756a0343f13608239f443dcf32d8993429199f2ea870b32667875"
                     },
                     {
                         "minecraft":  [
@@ -77,7 +77,7 @@
                                     ],
                         "file":  "axoclient-26.2.jar",
                         "level":  "full",
-                        "sha256":  "bba7adece182040fdb60ce796eb85c946a53b0395a3be6e496f34561a53974b5"
+                        "sha256":  "f2f6cf3bad6dc5a7b6ef3ae78958f211bd9b51eca69119775bdff4af6773a7c1"
                     },
                     {
                         "minecraft":  [
@@ -90,7 +90,7 @@
                                     ],
                         "file":  "axoclient-26.3.jar",
                         "level":  "full",
-                        "sha256":  "179e38d47a0368414b8c68eef77585deb1b1c422de6a04c6dc5f03726093553d"
+                        "sha256":  "e39e99c0263b135b46e0d546379cb1a1cb49caf6196c99191332db171a6c03d6"
                     }
                 ]
 }
