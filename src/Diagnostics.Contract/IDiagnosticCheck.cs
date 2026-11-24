@@ -6,6 +6,6 @@ namespace AxoClient.Diagnostics.Contract
     public interface IDiagnosticCheck
     {
         string Area { get; }
-        Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken ct);
+        Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken cancellationToken);
     }
 }

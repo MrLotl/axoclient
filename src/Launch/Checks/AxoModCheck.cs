@@ -21,18 +21,18 @@ namespace AxoClient.Launch.Checks
         public override string Id => "axomod";
         public override LaunchPhase Phase => LaunchPhase.Content;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            var instance = ctx.Instance;
+            var instance = context.Instance;
             var supported = _axoMod.IsSupported(instance.Minecraft.Version, instance.Loader.Type);
             if (!supported && instance.AxoMod)
             {
-                ctx.Hints.Add(new TextRef("pipeline.axomod.unsupported"));
+                context.Hints.Add(new TextRef("pipeline.axomod.unsupported"));
             }
 
             var wanted = supported && instance.AxoMod ? _axoMod.Find(instance.Minecraft.Version, instance.Loader.Type) : null;
-            var current = ctx.Content.Mods.FirstOrDefault(m => m.Source == ContentSource.AxoClient);
-            var currentFile = current == null ? null : Path.Combine(ctx.GameDir, "mods", current.File);
+            var current = context.Content.Mods.FirstOrDefault(mod => mod.Source == ContentSource.AxoClient);
+            var currentFile = current == null ? null : Path.Combine(context.GameDir, "mods", current.File);
             var upToDate = wanted == null
                 ? current == null
                 : current?.File == wanted.File && currentFile != null && _axoMod.IsCurrent(wanted, currentFile);
@@ -40,14 +40,14 @@ namespace AxoClient.Launch.Checks
             if (!upToDate)
             {
                 results.Add(new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.axomod.sync"),
-                    [new CheckAction("sync", new TextRef("pipeline.action.install"), (c, job) => sync(c, job), true)]));
+                    [new CheckAction("sync", new TextRef("pipeline.action.install"), (launchContext, job) => sync(launchContext, job), true)]));
             }
             // Die Badge-Mod des alten Launchers (aus importierten Instanzen) würde neben der AxoMod doppelt laufen
-            var legacy = wanted == null ? [] : ctx.Content.Mods.Where(m => m.Enabled && isLegacyBadgeMod(m)).Select(m => m.File).ToList();
+            var legacy = wanted == null ? [] : context.Content.Mods.Where(mod => mod.Enabled && isLegacyBadgeMod(mod)).Select(mod => mod.File).ToList();
             if (legacy.Count > 0)
             {
                 results.Add(new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.axomod.legacy"),
-                    [new CheckAction("disableLegacy", new TextRef("pipeline.action.disableMod"), (c, job) => disable(c, legacy, job), true)]));
+                    [new CheckAction("disableLegacy", new TextRef("pipeline.action.disableMod"), (launchContext, job) => disable(launchContext, legacy, job), true)]));
             }
 
             return Task.FromResult<IReadOnlyList<CheckResult>>(results.Count == 0 ? [Ok()] : results);
@@ -59,31 +59,31 @@ namespace AxoClient.Launch.Checks
                 || string.Equals(mod.Meta?.ModId, "mclauncher_badge", StringComparison.OrdinalIgnoreCase));
 
         /// <summary>Deaktiviert statt löscht (umkehrbar); am Mod-Schutz vorbei, weil die Datei nie zum Pack gehört.</summary>
-        private Task disable(LaunchContext ctx, IReadOnlyList<string> files, JobContext job) =>
-            _content.Change(ctx.Instance.Id, doc =>
+        private Task disable(LaunchContext context, IReadOnlyList<string> files, JobContext job) =>
+            _content.Change(context.Instance.Id, document =>
             {
-                var dir = Path.Combine(ctx.GameDir, "mods");
-                foreach (var mod in doc.Mods.Where(m => m.Enabled && files.Contains(m.File, StringComparer.OrdinalIgnoreCase)))
+                var directory = Path.Combine(context.GameDir, "mods");
+                foreach (var mod in document.Mods.Where(mod => mod.Enabled && files.Contains(mod.File, StringComparer.OrdinalIgnoreCase)))
                 {
-                    var from = Path.Combine(dir, mod.DiskName);
+                    var from = Path.Combine(directory, mod.DiskName);
                     mod.Enabled = false;
                     if (File.Exists(from))
                     {
-                        File.Move(from, Path.Combine(dir, mod.DiskName), overwrite: true);
+                        File.Move(from, Path.Combine(directory, mod.DiskName), overwrite: true);
                     }
                 }
             }, job.Token);
 
-        private async Task sync(LaunchContext ctx, JobContext job)
+        private async Task sync(LaunchContext context, JobContext job)
         {
-            var entry = await _axoMod.Sync(Path.Combine(ctx.GameDir, "mods"), ctx.Instance.Minecraft.Version,
-                ctx.Instance.Loader.Type, ctx.Instance.AxoMod, job.Token);
-            await _content.Change(ctx.Instance.Id, doc =>
+            var entry = await _axoMod.Sync(Path.Combine(context.GameDir, "mods"), context.Instance.Minecraft.Version,
+                context.Instance.Loader.Type, context.Instance.AxoMod, job.Token);
+            await _content.Change(context.Instance.Id, document =>
             {
-                doc.Mods.RemoveAll(m => m.Source == ContentSource.AxoClient);
+                document.Mods.RemoveAll(mod => mod.Source == ContentSource.AxoClient);
                 if (entry != null)
                 {
-                    doc.Mods.Add(entry);
+                    document.Mods.Add(entry);
                 }
             }, job.Token);
         }

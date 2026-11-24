@@ -36,39 +36,39 @@ namespace AxoClient.App.Bridge
             _skins = skins;
         }
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            r.On("accounts.list", () => _accounts.Views());
+            router.On("accounts.list", () => _accounts.Views());
 
-            r.On<LoginData>("accounts.login", async (d, ct) =>
+            router.On<LoginData>("accounts.login", async (request, cancellationToken) =>
             {
-                if (d.Type == AccountType.Dev)
+                if (request.Type == AccountType.Dev)
                 {
                     if (!_devAuth.Enabled)
                     {
                         throw new AxoException("auth.failed");
                     }
                     // Entwicklungs-Provider: Name kommt aus der UI
-                    _devAuth.PendingName = TextHelper.Clean(d.DevName, 16) is { Length: >= 3 } n ? n : "Entwickler";
+                    _devAuth.PendingName = TextHelper.Clean(request.DevName, 16) is { Length: >= 3 } devName ? devName : "Entwickler";
                 }
-                var account = await _accounts.Login(d.Type, ct);
+                var account = await _accounts.Login(request.Type, cancellationToken);
                 _ = refreshOwnSkin();
                 _social.Start();
                 return new { uuid = account.Uuid, name = account.Name, accounts = _accounts.Views() };
             });
 
-            r.On<UuidData>("accounts.switch", async (d, ct) =>
+            router.On<UuidData>("accounts.switch", async (request, cancellationToken) =>
             {
-                await _accounts.Switch(d.Uuid, ct);
+                await _accounts.Switch(request.Uuid, cancellationToken);
                 _ = refreshOwnSkin();
                 _social.Start();
                 return _accounts.Views();
             });
 
-            r.On<UuidData>("accounts.remove", async (d, ct) =>
+            router.On<UuidData>("accounts.remove", async (request, cancellationToken) =>
             {
-                await _online.SignOutDevice(d.Uuid, ct);
-                await _accounts.Remove(d.Uuid, ct);
+                await _online.SignOutDevice(request.Uuid, cancellationToken);
+                await _accounts.Remove(request.Uuid, cancellationToken);
                 return _accounts.Views();
             });
         }
@@ -81,9 +81,9 @@ namespace AxoClient.App.Bridge
                 var profile = await _mojang.GetOwnProfile(CancellationToken.None);
                 await _skins.CacheOwnSkin(profile, CancellationToken.None);
             }
-            catch (Exception ex) when (ex is AxoException or HttpRequestException)
+            catch (Exception exception) when (exception is AxoException or HttpRequestException)
             {
-                AppLog.Warn("Eigenen Skin laden", ex);
+                AppLog.Warn("Eigenen Skin laden", exception);
             }
         }
     }

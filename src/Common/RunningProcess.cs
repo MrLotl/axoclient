@@ -47,14 +47,14 @@ namespace AxoClient.Common
         {
             lock (_lock)
             {
-                return string.Join('\n', _lines.Skip(Math.Max(0, _lines.Count - count)).Select(l => l.Text));
+                return string.Join('\n', _lines.Skip(Math.Max(0, _lines.Count - count)).Select(line => line.Text));
             }
         }
 
         internal void Start()
         {
-            _process.OutputDataReceived += (_, e) => add(e.Data, false);
-            _process.ErrorDataReceived += (_, e) => add(e.Data, true);
+            _process.OutputDataReceived += (_, dataReceivedEventArgs) => add(dataReceivedEventArgs.Data, false);
+            _process.ErrorDataReceived += (_, dataReceivedEventArgs) => add(dataReceivedEventArgs.Data, true);
             _process.EnableRaisingEvents = true;
             _process.Exited += (_, _) =>
             {
@@ -102,7 +102,7 @@ namespace AxoClient.Common
                     await Exited.WaitAsync(grace ?? TimeSpan.FromSeconds(30));
                     return;
                 }
-                catch (Exception ex) when (ex is TimeoutException or IOException or InvalidOperationException)
+                catch (Exception exception) when (exception is TimeoutException or IOException or InvalidOperationException)
                 {
                 }
             }

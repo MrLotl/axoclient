@@ -19,28 +19,28 @@ namespace AxoClient.Servers
             _project = project;
         }
 
-        public override async Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken ct)
+        public override async Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken cancellationToken)
         {
-            using var json = JsonDocument.Parse(await _api.GetString(Fill + _project, TimeSpan.FromHours(1), ct));
+            using var json = JsonDocument.Parse(await _api.GetString(Fill + _project, TimeSpan.FromHours(1), cancellationToken));
             var versions = json.RootElement.GetProperty("versions");
             var ids = versions.ValueKind == JsonValueKind.Object
-                ? versions.EnumerateObject().SelectMany(g => g.Value.EnumerateArray().Select(v => v.GetString()!)).ToList()
-                : versions.EnumerateArray().Select(v => v.GetString()!).Reverse().ToList();
+                ? versions.EnumerateObject().SelectMany(property => property.Value.EnumerateArray().Select(versionElement => versionElement.GetString()!)).ToList()
+                : versions.EnumerateArray().Select(version => version.GetString()!).Reverse().ToList();
             return ids.Select(id => new ServerVersionInfo(id, Type == ServerSoftware.Velocity
                                                               || !(id.Contains("-pre", StringComparison.OrdinalIgnoreCase)
                                                                    || id.Contains("-rc", StringComparison.OrdinalIgnoreCase))))
                 .ToList();
         }
 
-        public override async Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken ct)
+        public override async Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken cancellationToken)
         {
             using var build = JsonDocument.Parse(await _api.GetString(
-                $"{Fill}{_project}/versions/{Uri.EscapeDataString(version)}/builds/latest", ct: ct));
+                $"{Fill}{_project}/versions/{Uri.EscapeDataString(version)}/builds/latest", cancellationToken: cancellationToken));
             var downloads = build.RootElement.GetProperty("downloads");
             var server = downloads.TryGetProperty("server:default", out var main) ? main : downloads.EnumerateObject().First().Value;
-            var checksums = server.TryGetProperty("checksums", out var c) ? c : default;
+            var checksums = server.TryGetProperty("checksums", out var checksumsElement) ? checksumsElement : default;
             return new DownloadRequest(server.GetProperty("url").GetString()!, targetPath,
-                Sha256: checksums.ValueKind == JsonValueKind.Object && checksums.TryGetProperty("sha256", out var sha) ? sha.GetString() : null,
+                Sha256: checksums.ValueKind == JsonValueKind.Object && checksums.TryGetProperty("sha256", out var hash) ? hash.GetString() : null,
                 Size: server.TryGetProperty("size", out var size) ? size.GetInt64() : null);
         }
     }

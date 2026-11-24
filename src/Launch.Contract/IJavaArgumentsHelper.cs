@@ -3,13 +3,13 @@ namespace AxoClient.Launch.Contract
     public interface IJavaArgumentsHelper
     {
         /// <summary>Enthalten die Argumente -Xmx/-Xms (der RAM-Regler hat Vorrang)?</summary>
-        bool HasMemoryArg(string args);
+        bool HasMemoryArgument(string arguments);
 
-        string StripMemory(string args);
+        string StripMemory(string arguments);
 
         /// <summary>Jedes Argument muss mit - beginnen, Anführungszeichen müssen paarig sein, keine Steuerzeichen.</summary>
-        bool IsValid(string args);
+        bool IsValid(string arguments);
 
-        List<string> Split(string args);
+        List<string> Split(string arguments);
     }
 }

@@ -32,97 +32,97 @@ namespace AxoClient.App.Bridge
             _files = files;
         }
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            r.On("skins.list", async ct => await _skins.List(ct));
+            router.On("skins.list", async cancellationToken => await _skins.List(cancellationToken));
 
-            r.On("skins.profile", async ct =>
+            router.On("skins.profile", async cancellationToken =>
             {
-                var profile = await _mojang.GetOwnProfile(ct);
+                var profile = await _mojang.GetOwnProfile(cancellationToken);
                 return profile;
             });
 
-            r.On<SkinAddData>("skins.add", async (d, ct) =>
+            router.On<SkinAddData>("skins.add", async (request, cancellationToken) =>
             {
-                var bytes = d.FileRef != null ? await File.ReadAllBytesAsync(_files.Resolve(d.FileRef), ct)
-                    : d.Base64 != null ? Convert.FromBase64String(d.Base64) : throw new AxoException("errors.invalidInput");
-                return await _skins.Add(bytes, d.Name, d.Model, ct: ct);
+                var bytes = request.FileRef != null ? await File.ReadAllBytesAsync(_files.Resolve(request.FileRef), cancellationToken)
+                    : request.Base64 != null ? Convert.FromBase64String(request.Base64) : throw new AxoException("errors.invalidInput");
+                return await _skins.Add(bytes, request.Name, request.Model, cancellationToken: cancellationToken);
             });
 
-            r.On<SkinAdoptData>("skins.adopt", async (d, ct) => await _skins.AdoptFromPlayer(d.Player, ct));
+            router.On<SkinAdoptData>("skins.adopt", async (request, cancellationToken) => await _skins.AdoptFromPlayer(request.Player, cancellationToken));
 
-            r.On<SkinUpdateData>("skins.update", async (d, ct) =>
+            router.On<SkinUpdateData>("skins.update", async (request, cancellationToken) =>
             {
-                await _skins.Update(d.Id, d.Name, d.Model, d.Base64 == null ? null : Convert.FromBase64String(d.Base64), ct);
-                return await _skins.List(ct);
+                await _skins.Update(request.Id, request.Name, request.Model, request.Base64 == null ? null : Convert.FromBase64String(request.Base64), cancellationToken);
+                return await _skins.List(cancellationToken);
             });
 
-            r.On<IdData>("skins.remove", async (d, ct) =>
+            router.On<IdData>("skins.remove", async (request, cancellationToken) =>
             {
-                await _skins.Remove(d.Id, ct);
-                return await _skins.List(ct);
+                await _skins.Remove(request.Id, cancellationToken);
+                return await _skins.List(cancellationToken);
             });
 
-            r.On<IdData>("skins.apply", async (d, ct) => await _skins.Apply(d.Id, ct));
+            router.On<IdData>("skins.apply", async (request, cancellationToken) => await _skins.Apply(request.Id, cancellationToken));
 
-            r.On<MojangCapeData>("skins.mojangCape", async (d, ct) => await _mojang.SetCape(d.CapeId, ct));
+            router.On<MojangCapeData>("skins.mojangCape", async (request, cancellationToken) => await _mojang.SetCape(request.CapeId, cancellationToken));
 
             // ---- Capes ----
-            r.On("capes.list", async ct => await _capes.List(ct));
+            router.On("capes.list", async cancellationToken => await _capes.List(cancellationToken));
 
-            r.On<CapeSaveData>("capes.save", async (d, ct) =>
-                await _capes.Save(d.Id, d.Name, Convert.FromBase64String(d.Base64), d.Source, d.Edit, ct));
+            router.On<CapeSaveData>("capes.save", async (request, cancellationToken) =>
+                await _capes.Save(request.Id, request.Name, Convert.FromBase64String(request.Base64), request.Source, request.Edit, cancellationToken));
 
-            r.On<IdData>("capes.editState", async (d, ct) => await _capes.LoadEditState(d.Id, ct));
+            router.On<IdData>("capes.editState", async (request, cancellationToken) => await _capes.LoadEditState(request.Id, cancellationToken));
 
-            r.On<IdData>("capes.remove", async (d, ct) =>
+            router.On<IdData>("capes.remove", async (request, cancellationToken) =>
             {
-                await _capes.Remove(d.Id, ct);
-                return await _capes.List(ct);
+                await _capes.Remove(request.Id, cancellationToken);
+                return await _capes.List(cancellationToken);
             });
 
-            r.On("capes.official", async ct => await _capeService.Official(ct));
+            router.On("capes.official", async cancellationToken => await _capeService.Official(cancellationToken));
 
-            r.On<AxoCapeData>("capes.setActive", async (d, ct) =>
+            router.On<AxoCapeData>("capes.setActive", async (request, cancellationToken) =>
             {
-                await _capeService.SetActive(d.Source is { } s && d.Id != null ? new AxoCapeChoice(s, d.Id) : null, ct);
+                await _capeService.SetActive(request.Source is { } source && request.Id != null ? new AxoCapeChoice(source, request.Id) : null, cancellationToken);
                 return null;
             });
 
-            r.On<IdData>("capes.submit", async (d, ct) =>
+            router.On<IdData>("capes.submit", async (request, cancellationToken) =>
             {
-                await _capeService.Submit(d.Id, ct);
-                return await _capes.List(ct);
+                await _capeService.Submit(request.Id, cancellationToken);
+                return await _capes.List(cancellationToken);
             });
 
-            r.On<IdData>("capes.withdraw", async (d, ct) =>
+            router.On<IdData>("capes.withdraw", async (request, cancellationToken) =>
             {
-                await _capeService.Withdraw(d.Id, ct);
-                return await _capes.List(ct);
+                await _capeService.Withdraw(request.Id, cancellationToken);
+                return await _capes.List(cancellationToken);
             });
 
             // ---- Admin (Rollen prüft immer der Service, die UI blendet nur aus) ----
-            r.On("admin.submissions", async ct => await _capeService.Submissions(ct));
-            r.On<ReviewData>("admin.review", async (d, ct) =>
+            router.On("admin.submissions", async cancellationToken => await _capeService.Submissions(cancellationToken));
+            router.On<ReviewData>("admin.review", async (request, cancellationToken) =>
             {
-                await _capeService.Review(d.Id, d.Approve, d.Reason, ct);
-                return await _capeService.Submissions(ct);
+                await _capeService.Review(request.Id, request.Approve, request.Reason, cancellationToken);
+                return await _capeService.Submissions(cancellationToken);
             });
-            r.On<OfficialCapeData>("admin.uploadCape", async (d, ct) =>
+            router.On<OfficialCapeData>("admin.uploadCape", async (request, cancellationToken) =>
             {
-                await _capeService.UploadOfficial(d.Name, Convert.FromBase64String(d.Base64), ct);
+                await _capeService.UploadOfficial(request.Name, Convert.FromBase64String(request.Base64), cancellationToken);
                 return null;
             });
-            r.On<IdData>("admin.deleteCape", async (d, ct) =>
+            router.On<IdData>("admin.deleteCape", async (request, cancellationToken) =>
             {
-                await _capeService.DeleteOfficial(d.Id, ct);
+                await _capeService.DeleteOfficial(request.Id, cancellationToken);
                 return null;
             });
-            r.On("admin.admins", async ct => await _capeService.Admins(ct));
-            r.On<AdminData>("admin.setAdmin", async (d, ct) =>
+            router.On("admin.admins", async cancellationToken => await _capeService.Admins(cancellationToken));
+            router.On<AdminData>("admin.setAdmin", async (request, cancellationToken) =>
             {
-                await _capeService.SetAdmin(d.Uuid, d.Admin, ct);
-                return await _capeService.Admins(ct);
+                await _capeService.SetAdmin(request.Uuid, request.Admin, cancellationToken);
+                return await _capeService.Admins(cancellationToken);
             });
         }
     }

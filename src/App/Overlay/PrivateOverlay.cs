@@ -76,7 +76,7 @@ namespace AxoClient.App.Overlay
                 return;
             }
 
-            var empty = !data.TryGetProperty("cmds", out var cmds) || cmds.ValueKind != JsonValueKind.Array || cmds.GetArrayLength() == 0;
+            var empty = !data.TryGetProperty("cmds", out var commands) || commands.ValueKind != JsonValueKind.Array || commands.GetArrayLength() == 0;
             lock (_lock)
             {
                 _latest = empty ? null : (instance, data, DateTime.UtcNow);
@@ -99,9 +99,9 @@ namespace AxoClient.App.Overlay
                 _window = new OverlayWindow(this, _appLog);
                 System.Windows.Forms.Application.Run(_window);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _appLog.Error("Privates Overlay beendet", ex);
+                _appLog.Error("Privates Overlay beendet", exception);
             }
         }
 
@@ -117,12 +117,12 @@ namespace AxoClient.App.Overlay
                 latest = _latest;
             }
             // Kommt eine Sekunde nichts mehr (Spiel hängt, Verbindung weg), nichts mehr zeigen
-            if (latest is not { } l || DateTime.UtcNow - l.At > TimeSpan.FromSeconds(1))
+            if (latest is not { } latestFrame || DateTime.UtcNow - latestFrame.At > TimeSpan.FromSeconds(1))
             {
                 return null;
             }
 
-            var game = _games.Running.FirstOrDefault(g => g.InstanceId == l.Instance);
+            var game = _games.Running.FirstOrDefault(runningGame => runningGame.InstanceId == latestFrame.Instance);
             if (game == null)
             {
                 return null;
@@ -130,19 +130,19 @@ namespace AxoClient.App.Overlay
 
             lock (_fonts)
             {
-                if (!_fonts.TryGetValue(l.Instance, out var font))
+                if (!_fonts.TryGetValue(latestFrame.Instance, out var font))
                 {
-                    _fonts[l.Instance] = null;
-                    _loading.Add(l.Instance);
-                    _ = loadFont(l.Instance);
+                    _fonts[latestFrame.Instance] = null;
+                    _loading.Add(latestFrame.Instance);
+                    _ = loadFont(latestFrame.Instance);
                     return null;
                 }
-                if (_loading.Contains(l.Instance))
+                if (_loading.Contains(latestFrame.Instance))
                 {
                     return null;
                 }
 
-                return (l.Frame, l.At, font, gameWindow(game.Pid));
+                return (latestFrame.Frame, latestFrame.At, font, gameWindow(game.Pid));
             }
         }
 
@@ -162,9 +162,9 @@ namespace AxoClient.App.Overlay
                     _appLog.Warn("Privates Overlay: Minecraft-Schrift nicht gefunden in " + jar);
                 }
             }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
+            catch (Exception exception) when (exception is not OutOfMemoryException)
             {
-                _appLog.Warn("Privates Overlay: Minecraft-Schrift nicht lesbar", ex);
+                _appLog.Warn("Privates Overlay: Minecraft-Schrift nicht lesbar", exception);
             }
             lock (_fonts)
             {
@@ -175,26 +175,26 @@ namespace AxoClient.App.Overlay
 
         private readonly Dictionary<int, IntPtr> _windows = new();
 
-        private IntPtr gameWindow(int pid)
+        private IntPtr gameWindow(int processId)
         {
-            if (_windows.TryGetValue(pid, out var known) && Native.IsWindow(known))
+            if (_windows.TryGetValue(processId, out var known) && Native.IsWindow(known))
             {
                 return known;
             }
 
             try
             {
-                using var process = Process.GetProcessById(pid);
+                using var process = Process.GetProcessById(processId);
                 process.Refresh();
                 var handle = process.MainWindowHandle;
                 if (handle != IntPtr.Zero)
                 {
-                    _windows[pid] = handle;
+                    _windows[processId] = handle;
                 }
 
                 return handle;
             }
-            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
                 return IntPtr.Zero;
             }
@@ -238,15 +238,15 @@ namespace AxoClient.App.Overlay
             {
                 get
                 {
-                    var cp = base.CreateParams;
-                    cp.ExStyle |= Native.WsExLayered | Native.WsExTransparent | Native.WsExToolWindow | Native.WsExNoActivate | Native.WsExTopMost;
-                    return cp;
+                    var createParams = base.CreateParams;
+                    createParams.ExStyle |= Native.WsExLayered | Native.WsExTransparent | Native.WsExToolWindow | Native.WsExNoActivate | Native.WsExTopMost;
+                    return createParams;
                 }
             }
 
-            protected override void OnHandleCreated(EventArgs e)
+            protected override void OnHandleCreated(EventArgs eventArgs)
             {
-                base.OnHandleCreated(e);
+                base.OnHandleCreated(eventArgs);
                 // Aus Aufnahmen heraushalten; geht das nicht, lieber gar nichts zeigen
                 if (!Native.SetWindowDisplayAffinity(Handle, Native.WdaExcludeFromCapture))
                 {
@@ -271,22 +271,22 @@ namespace AxoClient.App.Overlay
             private void tick()
             {
                 var current = _owner.Current();
-                if (current is not { } c || c.Game == IntPtr.Zero || Native.IsIconic(c.Game) || !gameInFront(c.Game)
-                    || !Native.GetClientRect(c.Game, out var client) || client.Right <= 0 || client.Bottom <= 0)
+                if (current is not { } currentFrame || currentFrame.Game == IntPtr.Zero || Native.IsIconic(currentFrame.Game) || !gameInFront(currentFrame.Game)
+                    || !Native.GetClientRect(currentFrame.Game, out var client) || client.Right <= 0 || client.Bottom <= 0)
                 {
                     hide();
                     return;
                 }
                 var origin = new Native.Point();
-                Native.ClientToScreen(c.Game, ref origin);
-                var state = (c.At, origin.X, origin.Y, client.Right, client.Bottom);
+                Native.ClientToScreen(currentFrame.Game, ref origin);
+                var state = (currentFrame.At, origin.X, origin.Y, client.Right, client.Bottom);
                 if (_visible && state == _shown)
                 {
                     return;
                 }
 
                 _shown = state;
-                var image = _owner.Renderer.Render(c.Frame, client.Right, client.Bottom, c.Font);
+                var image = _owner.Renderer.Render(currentFrame.Frame, client.Right, client.Bottom, currentFrame.Font);
                 if (image == null)
                 {
                     hide();
@@ -325,8 +325,8 @@ namespace AxoClient.App.Overlay
                 var screen = Native.GetDC(IntPtr.Zero);
                 var memory = Native.CreateCompatibleDC(screen);
                 // Kopf der Bitmap (BITMAPINFOHEADER, 40 Byte); negative Höhe = Zeilen von oben nach unten
-                var info = new Native.BitmapInfo { Size = 40, Width = width, Height = -height, Planes = 1, BitCount = 32 };
-                var bitmap = Native.CreateDIBSection(memory, ref info, 0, out var bits, IntPtr.Zero, 0);
+                var bitmapInfo = new Native.BitmapInfo { Size = 40, Width = width, Height = -height, Planes = 1, BitCount = 32 };
+                var bitmap = Native.CreateDIBSection(memory, ref bitmapInfo, 0, out var bits, IntPtr.Zero, 0);
                 var old = IntPtr.Zero;
                 try
                 {

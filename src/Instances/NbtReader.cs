@@ -21,9 +21,9 @@ namespace AxoClient.Instances
         public NbtCompound Read(Stream input)
         {
             var buffered = new BufferedStream(input);
-            var b1 = buffered.ReadByte();
-            var b2 = buffered.ReadByte();
-            var gzip = b1 == 0x1F && b2 == 0x8B;
+            var firstByte = buffered.ReadByte();
+            var secondByte = buffered.ReadByte();
+            var gzip = firstByte == 0x1F && secondByte == 0x8B;
             Stream stream;
             if (buffered.CanSeek)
             {
@@ -33,8 +33,8 @@ namespace AxoClient.Instances
             else
             {
                 var all = new MemoryStream();
-                all.WriteByte((byte)b1);
-                all.WriteByte((byte)b2);
+                all.WriteByte((byte)firstByte);
+                all.WriteByte((byte)secondByte);
                 buffered.CopyTo(all);
                 all.Position = 0;
                 stream = gzip ? new GZipStream(all, CompressionMode.Decompress) : all;
@@ -59,8 +59,8 @@ namespace AxoClient.Instances
         /// <summary>servers.dat ist unkomprimiert, level.dat GZip. Atomar schreiben.</summary>
         public void WriteFile(string path, NbtCompound root, bool gzip = false)
         {
-            var tmp = path + ".tmp";
-            using (var file = File.Create(tmp))
+            var temporary = path + ".tmp";
+            using (var file = File.Create(temporary))
             {
                 using Stream stream = gzip ? new GZipStream(file, CompressionLevel.Optimal) : file;
                 using var writer = new BinaryWriter(stream);
@@ -68,10 +68,10 @@ namespace AxoClient.Instances
                 writeString(writer, "");
                 writePayload(writer, root);
             }
-            File.Move(tmp, path, overwrite: true);
+            File.Move(temporary, path, overwrite: true);
         }
 
-        private object readPayload(BinaryReader r, byte type, int depth)
+        private object readPayload(BinaryReader reader, byte type, int depth)
         {
             if (depth > MaxDepth)
             {
@@ -80,21 +80,21 @@ namespace AxoClient.Instances
 
             switch (type)
             {
-                case Byte: return r.ReadSByte();
-                case Short: return BinaryPrimitives.ReadInt16BigEndian(r.ReadBytes(2));
-                case Int: return readInt(r);
-                case Long: return BinaryPrimitives.ReadInt64BigEndian(r.ReadBytes(8));
-                case Float: return BinaryPrimitives.ReadSingleBigEndian(r.ReadBytes(4));
-                case Double: return BinaryPrimitives.ReadDoubleBigEndian(r.ReadBytes(8));
-                case ByteArray: return r.ReadBytes(readLength(r));
-                case String: return readString(r);
+                case Byte: return reader.ReadSByte();
+                case Short: return BinaryPrimitives.ReadInt16BigEndian(reader.ReadBytes(2));
+                case Int: return readInt(reader);
+                case Long: return BinaryPrimitives.ReadInt64BigEndian(reader.ReadBytes(8));
+                case Float: return BinaryPrimitives.ReadSingleBigEndian(reader.ReadBytes(4));
+                case Double: return BinaryPrimitives.ReadDoubleBigEndian(reader.ReadBytes(8));
+                case ByteArray: return reader.ReadBytes(readLength(reader));
+                case String: return readString(reader);
                 case List:
                     {
-                        var list = new NbtList(r.ReadByte());
-                        var count = readLength(r);
-                        for (var i = 0; i < count; i++)
+                        var list = new NbtList(reader.ReadByte());
+                        var count = readLength(reader);
+                        for (var index = 0; index < count; index++)
                         {
-                            list.Add(readPayload(r, list.ElementType, depth + 1));
+                            list.Add(readPayload(reader, list.ElementType, depth + 1));
                         }
 
                         return list;
@@ -103,31 +103,31 @@ namespace AxoClient.Instances
                     {
                         var compound = new NbtCompound();
                         byte tag;
-                        while ((tag = r.ReadByte()) != End)
+                        while ((tag = reader.ReadByte()) != End)
                         {
-                            compound[readString(r)] = readPayload(r, tag, depth + 1);
+                            compound[readString(reader)] = readPayload(reader, tag, depth + 1);
                         }
 
                         return compound;
                     }
                 case IntArray:
                     {
-                        var count = readLength(r);
+                        var count = readLength(reader);
                         var values = new int[count];
-                        for (var i = 0; i < count; i++)
+                        for (var index = 0; index < count; index++)
                         {
-                            values[i] = readInt(r);
+                            values[index] = readInt(reader);
                         }
 
                         return values;
                     }
                 case LongArray:
                     {
-                        var count = readLength(r);
+                        var count = readLength(reader);
                         var values = new long[count];
-                        for (var i = 0; i < count; i++)
+                        for (var index = 0; index < count; index++)
                         {
-                            values[i] = BinaryPrimitives.ReadInt64BigEndian(r.ReadBytes(8));
+                            values[index] = BinaryPrimitives.ReadInt64BigEndian(reader.ReadBytes(8));
                         }
 
                         return values;
@@ -137,11 +137,11 @@ namespace AxoClient.Instances
             }
         }
 
-        private int readInt(BinaryReader r) => BinaryPrimitives.ReadInt32BigEndian(r.ReadBytes(4));
+        private int readInt(BinaryReader reader) => BinaryPrimitives.ReadInt32BigEndian(reader.ReadBytes(4));
 
-        private int readLength(BinaryReader r)
+        private int readLength(BinaryReader reader)
         {
-            var length = readInt(r);
+            var length = readInt(reader);
             if (length is < 0 or > MaxArray)
             {
                 throw new InvalidDataException("Ungültige NBT-Länge.");
@@ -150,10 +150,10 @@ namespace AxoClient.Instances
             return length;
         }
 
-        private string readString(BinaryReader r)
+        private string readString(BinaryReader reader)
         {
-            var length = BinaryPrimitives.ReadUInt16BigEndian(r.ReadBytes(2));
-            return Encoding.UTF8.GetString(r.ReadBytes(length));
+            var length = BinaryPrimitives.ReadUInt16BigEndian(reader.ReadBytes(2));
+            return Encoding.UTF8.GetString(reader.ReadBytes(length));
         }
 
         private byte typeOf(object value) => value switch
@@ -173,67 +173,67 @@ namespace AxoClient.Instances
             _ => throw new InvalidDataException($"Typ {value.GetType()} kann nicht als NBT gespeichert werden.")
         };
 
-        private void writePayload(BinaryWriter w, object value)
+        private void writePayload(BinaryWriter binaryWriter, object value)
         {
             Span<byte> buffer = stackalloc byte[8];
             switch (value)
             {
-                case bool b: w.Write((byte)(b ? 1 : 0)); break;
-                case sbyte b: w.Write(b); break;
-                case short s: BinaryPrimitives.WriteInt16BigEndian(buffer, s); w.Write(buffer[..2]); break;
-                case int i: writeInt(w, i); break;
-                case long l: BinaryPrimitives.WriteInt64BigEndian(buffer, l); w.Write(buffer[..8]); break;
-                case float f: BinaryPrimitives.WriteSingleBigEndian(buffer, f); w.Write(buffer[..4]); break;
-                case double d: BinaryPrimitives.WriteDoubleBigEndian(buffer, d); w.Write(buffer[..8]); break;
-                case byte[] bytes: writeInt(w, bytes.Length); w.Write(bytes); break;
-                case string s: writeString(w, s); break;
+                case bool flag: binaryWriter.Write((byte)(flag ? 1 : 0)); break;
+                case sbyte byteValue: binaryWriter.Write(byteValue); break;
+                case short shortValue: BinaryPrimitives.WriteInt16BigEndian(buffer, shortValue); binaryWriter.Write(buffer[..2]); break;
+                case int intValue: writeInt(binaryWriter, intValue); break;
+                case long longValue: BinaryPrimitives.WriteInt64BigEndian(buffer, longValue); binaryWriter.Write(buffer[..8]); break;
+                case float floatValue: BinaryPrimitives.WriteSingleBigEndian(buffer, floatValue); binaryWriter.Write(buffer[..4]); break;
+                case double doubleValue: BinaryPrimitives.WriteDoubleBigEndian(buffer, doubleValue); binaryWriter.Write(buffer[..8]); break;
+                case byte[] bytes: writeInt(binaryWriter, bytes.Length); binaryWriter.Write(bytes); break;
+                case string text: writeString(binaryWriter, text); break;
                 case NbtList list:
-                    w.Write(list.Count == 0 ? list.ElementType : typeOf(list[0]));
-                    writeInt(w, list.Count);
+                    binaryWriter.Write(list.Count == 0 ? list.ElementType : typeOf(list[0]));
+                    writeInt(binaryWriter, list.Count);
                     foreach (var item in list)
                     {
-                        writePayload(w, item);
+                        writePayload(binaryWriter, item);
                     }
 
                     break;
                 case NbtCompound compound:
                     foreach (var (key, item) in compound)
                     {
-                        w.Write(typeOf(item));
-                        writeString(w, key);
-                        writePayload(w, item);
+                        binaryWriter.Write(typeOf(item));
+                        writeString(binaryWriter, key);
+                        writePayload(binaryWriter, item);
                     }
-                    w.Write(End);
+                    binaryWriter.Write(End);
                     break;
                 case int[] ints:
-                    writeInt(w, ints.Length);
-                    foreach (var i in ints)
+                    writeInt(binaryWriter, ints.Length);
+                    foreach (var intValue in ints)
                     {
-                        writeInt(w, i);
+                        writeInt(binaryWriter, intValue);
                     }
 
                     break;
                 case long[] longs:
-                    writeInt(w, longs.Length);
-                    foreach (var l in longs)
+                    writeInt(binaryWriter, longs.Length);
+                    foreach (var longValue in longs)
                     {
-                        BinaryPrimitives.WriteInt64BigEndian(buffer, l);
-                        w.Write(buffer[..8]);
+                        BinaryPrimitives.WriteInt64BigEndian(buffer, longValue);
+                        binaryWriter.Write(buffer[..8]);
                     }
                     break;
             }
         }
 
-        private void writeInt(BinaryWriter w, int value)
+        private void writeInt(BinaryWriter binaryWriter, int value)
         {
             Span<byte> buffer = stackalloc byte[4];
             BinaryPrimitives.WriteInt32BigEndian(buffer, value);
-            w.Write(buffer);
+            binaryWriter.Write(buffer);
         }
 
-        private void writeString(BinaryWriter w, string s)
+        private void writeString(BinaryWriter binaryWriter, string text)
         {
-            var bytes = Encoding.UTF8.GetBytes(s);
+            var bytes = Encoding.UTF8.GetBytes(text);
             if (bytes.Length > ushort.MaxValue)
             {
                 throw new InvalidDataException("NBT-Text zu lang.");
@@ -241,8 +241,8 @@ namespace AxoClient.Instances
 
             Span<byte> buffer = stackalloc byte[2];
             BinaryPrimitives.WriteUInt16BigEndian(buffer, (ushort)bytes.Length);
-            w.Write(buffer);
-            w.Write(bytes);
+            binaryWriter.Write(buffer);
+            binaryWriter.Write(bytes);
         }
     }
 }

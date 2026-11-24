@@ -24,27 +24,27 @@ namespace AxoClient.Social.Contract
         void Stop();
 
         /// <summary>Sofort synchronisieren (z. B. nach dem Senden einer Anfrage).</summary>
-        Task SyncNow(CancellationToken ct = default);
+        Task SyncNow(CancellationToken cancellationToken = default);
 
         /// <summary>Wo man gerade spielt (Server-Adresse oder e4mc-Adresse der offenen Welt), damit Freunde nachjoinen können.</summary>
         void SetJoinAddress(string? address);
 
-        Task SendRequest(string name, CancellationToken ct);
+        Task SendRequest(string name, CancellationToken cancellationToken);
 
-        Task Accept(string uuid, CancellationToken ct);
+        Task Accept(string uuid, CancellationToken cancellationToken);
 
         /// <summary>Anfrage zurückziehen oder ablehnen.</summary>
-        Task Decline(string uuid, CancellationToken ct);
+        Task Decline(string uuid, CancellationToken cancellationToken);
 
-        Task Remove(string uuid, CancellationToken ct);
+        Task Remove(string uuid, CancellationToken cancellationToken);
 
-        Task Block(string uuid, bool block, CancellationToken ct);
+        Task Block(string uuid, bool block, CancellationToken cancellationToken);
 
         /// <summary>Eigene Blockliste vom Service holen; meldet sie als <c>social.blocked</c>.</summary>
-        Task<IReadOnlyList<BlockedPlayer>> LoadBlocked(CancellationToken ct);
+        Task<IReadOnlyList<BlockedPlayer>> LoadBlocked(CancellationToken cancellationToken);
 
-        Task MarkNotificationsRead(CancellationToken ct);
+        Task MarkNotificationsRead(CancellationToken cancellationToken);
 
-        Task DeleteAccount(CancellationToken ct);
+        Task DeleteAccount(CancellationToken cancellationToken);
     }
 }

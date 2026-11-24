@@ -8,6 +8,6 @@ namespace AxoClient.Launch.Contract
         string Id { get; }
         LaunchPhase Phase { get; }
 
-        Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct);
+        Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken);
     }
 }

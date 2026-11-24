@@ -68,17 +68,17 @@ namespace AxoClient.Launch
         }
 
         public IReadOnlyList<RunningGame> Running => _processes.All
-            .Where(p => !p.HasExited && p.Key.StartsWith("instance:"))
-            .Select(p =>
+            .Where(process => !process.HasExited && process.Key.StartsWith("instance:"))
+            .Select(process =>
             {
-                var id = p.Key["instance:".Length..];
+                var id = process.Key["instance:".Length..];
                 lock (_contexts)
                 {
-                    return new RunningGame(id, _contexts.TryGetValue(id, out var c) ? c.Instance.Name : id, p.StartedAt, p.Pid);
+                    return new RunningGame(id, _contexts.TryGetValue(id, out var value) ? value.Instance.Name : id, process.StartedAt, process.Pid);
                 }
             }).ToList();
 
-        public bool AnyRunning => _processes.AnyRunning(k => k.StartsWith("instance:"));
+        public bool AnyRunning => _processes.AnyRunning(processKey => processKey.StartsWith("instance:"));
 
         public bool IsRunning(string instanceId) => _processes.Get(_instances.ProcessKey(instanceId)) != null;
 
@@ -92,30 +92,30 @@ namespace AxoClient.Launch
 
             return _jobs.Run("launch", new TextRef("launch.title"), async job =>
             {
-                var ctx = await _pipeline.Prepare(instanceId, quickPlay, job);
+                var context = await _pipeline.Prepare(instanceId, quickPlay, job);
                 job.Status("launch.starting");
-                var process = await buildProcess(ctx, job.Token);
+                var process = await buildProcess(context, job.Token);
                 lock (_contexts)
                 {
-                    _contexts[instanceId] = ctx;
+                    _contexts[instanceId] = context;
                 }
 
                 var running = _processes.Start(_instances.ProcessKey(instanceId), process.StartInfo);
                 var key = running.Key;
                 running.LineReceived += line => _events.Publish("console.line", new { key, line });
-                foreach (var hint in ctx.Hints)
+                foreach (var hint in context.Hints)
                 {
                     _events.Publish("notify", new { type = "hint", text = hint, instanceId });
                 }
 
                 foreach (var hook in _hooks)
                 {
-                    safeHook(() => hook.OnStarted(ctx, running));
+                    safeHook(() => hook.OnStarted(context, running));
                 }
 
-                GameStarted?.Invoke(new RunningGame(instanceId, ctx.Instance.Name, running.StartedAt, running.Pid));
+                GameStarted?.Invoke(new RunningGame(instanceId, context.Instance.Name, running.StartedAt, running.Pid));
                 _events.Publish("game.started", new { instanceId });
-                _ = watch(ctx, running);
+                _ = watch(context, running);
             }, instanceId);
         }
 
@@ -127,10 +127,10 @@ namespace AxoClient.Launch
             }
         }
 
-        private async Task<System.Diagnostics.Process> buildProcess(LaunchContext ctx, CancellationToken ct)
+        private async Task<System.Diagnostics.Process> buildProcess(LaunchContext context, CancellationToken cancellationToken)
         {
-            var session = ctx.Session ?? throw new AxoException("auth.noAccount");
-            var launcher = _installer.CreateLauncher(ctx.GamePath);
+            var session = context.Session ?? throw new AxoException("auth.noAccount");
+            var launcher = _installer.CreateLauncher(context.GamePath);
             var option = new MLaunchOption
             {
                 Session = new MSession(session.Name, session.AccessToken, session.Uuid.Replace("-", ""))
@@ -138,76 +138,76 @@ namespace AxoClient.Launch
                     Xuid = session.Xuid,
                     UserType = session.Type == AccountType.Dev ? "legacy" : "msa"
                 },
-                MaximumRamMb = ctx.MemoryMb,
-                MinimumRamMb = Math.Min(1024, ctx.MemoryMb),
+                MaximumRamMb = context.MemoryMb,
+                MinimumRamMb = Math.Min(1024, context.MemoryMb),
                 GameLauncherName = AppInfo.Name,
                 GameLauncherVersion = _appInfo.Version,
-                FullScreen = ctx.Settings.Game.WindowMode == WindowMode.Fullscreen
+                FullScreen = context.Settings.Game.WindowMode == WindowMode.Fullscreen
             };
-            if (ctx.Settings.Game.WindowMode == WindowMode.Window)
+            if (context.Settings.Game.WindowMode == WindowMode.Window)
             {
-                option.ScreenWidth = ctx.Settings.Game.WindowSize.W;
-                option.ScreenHeight = ctx.Settings.Game.WindowSize.H;
+                option.ScreenWidth = context.Settings.Game.WindowSize.W;
+                option.ScreenHeight = context.Settings.Game.WindowSize.H;
             }
-            if (ctx.JavaOverride is { } java && File.Exists(java))
+            if (context.JavaOverride is { } java && File.Exists(java))
             {
                 option.JavaPath = java;
             }
 
-            if (ctx.QuickPlay?.Server is { } server && _serverPing.IsValidAddress(server))
+            if (context.QuickPlay?.Server is { } server && _serverPing.IsValidAddress(server))
             {
                 var (host, port) = _serverPing.ParseAddress(server);
                 option.ServerIp = host;
                 option.ServerPort = port;
             }
-            else if (ctx.QuickPlay?.World is { } world && _pathGuard.IsSafeFileName(world))
+            else if (context.QuickPlay?.World is { } world && _pathGuard.IsSafeFileName(world))
             {
                 option.QuickPlaySingleplayer = world;
             }
 
-            var jvm = new List<MArgument>();
-            if (!string.IsNullOrWhiteSpace(ctx.Instance.JavaArgs))
+            var jvmArguments = new List<MArgument>();
+            if (!string.IsNullOrWhiteSpace(context.Instance.JavaArgs))
             {
-                jvm.AddRange(_javaArgumentsHelper.Split(ctx.Instance.JavaArgs).Select(a => new MArgument(a)));
+                jvmArguments.AddRange(_javaArgumentsHelper.Split(context.Instance.JavaArgs).Select(part => new MArgument(part)));
             }
 
             foreach (var hook in _hooks)
             {
-                jvm.AddRange(hook.JvmArguments(ctx).Select(a => new MArgument(a)));
+                jvmArguments.AddRange(hook.JvmArguments(context).Select(jvmArgument => new MArgument(jvmArgument)));
             }
 
-            if (jvm.Count > 0)
+            if (jvmArguments.Count > 0)
             {
-                option.ExtraJvmArguments = jvm;
+                option.ExtraJvmArguments = jvmArguments;
             }
 
-            return await launcher.BuildProcessAsync(ctx.VersionName!, option, ct);
+            return await launcher.BuildProcessAsync(context.VersionName!, option, cancellationToken);
         }
 
-        private async Task watch(LaunchContext ctx, RunningProcess running)
+        private async Task watch(LaunchContext context, RunningProcess running)
         {
             var exitCode = await running.Exited;
             var end = DateTimeOffset.Now;
             try
             {
-                await _activity.AddSession(_paths.PlaytimeJson(ctx.Instance.Id), ActivitySessionKind.Playtime, running.StartedAt, end);
+                await _activity.AddSession(_paths.PlaytimeJson(context.Instance.Id), ActivitySessionKind.Playtime, running.StartedAt, end);
             }
-            catch (Exception ex) when (ex is IOException or AxoException)
+            catch (Exception exception) when (exception is IOException or AxoException)
             {
-                _appLog.Warn("Spielzeit konnte nicht gespeichert werden", ex);
+                _appLog.Warn("Spielzeit konnte nicht gespeichert werden", exception);
             }
 
-            var (crashText, crashFile, hsErr) = _crashAnalyzer.CollectFiles(ctx.GameDir, running.StartedAt);
+            var (crashText, crashFile, hsErr) = _crashAnalyzer.CollectFiles(context.GameDir, running.StartedAt);
             var crashed = !running.StopRequested && (exitCode != 0 || crashText != null || hsErr != null)
                           // Minecraft beendet sich bei manchen Fehlern mit 0, schreibt aber einen Crash-Report
                           && (end - running.StartedAt).TotalSeconds > 1;
             foreach (var hook in _hooks)
             {
-                safeHook(() => hook.OnExited(ctx, running, exitCode, crashed));
+                safeHook(() => hook.OnExited(context, running, exitCode, crashed));
             }
 
-            GameExited?.Invoke(ctx.Instance.Id);
-            _events.Publish("game.exited", new { instanceId = ctx.Instance.Id, exitCode, crashed });
+            GameExited?.Invoke(context.Instance.Id);
+            _events.Publish("game.exited", new { instanceId = context.Instance.Id, exitCode, crashed });
             _events.Publish("instances.changed");
 
             if (!crashed)
@@ -215,10 +215,10 @@ namespace AxoClient.Launch
                 return;
             }
 
-            var content = await _instances.ContentOf(ctx.Instance.Id).Load();
+            var content = await _instances.ContentOf(context.Instance.Id).Load();
             var analysis = _crashAnalyzer.Analyze(new CrashInput(exitCode, crashText, hsErr, running.Tail(), crashFile), content);
-            _appLog.Info($"Absturz erkannt ({ctx.Instance.Id}, Exit {exitCode}): {analysis.RuleId ?? "unbekannt"}");
-            _events.Publish("game.crashed", new CrashEvent(ctx.Instance.Id, ctx.Instance.Name, analysis));
+            _appLog.Info($"Absturz erkannt ({context.Instance.Id}, Exit {exitCode}): {analysis.RuleId ?? "unbekannt"}");
+            _events.Publish("game.crashed", new CrashEvent(context.Instance.Id, context.Instance.Name, analysis));
         }
 
         /// <summary>Letzte Log-Zeilen einer Instanz (laufend oder gerade beendet), für Konsole und Absturz-Dialog.</summary>
@@ -231,9 +231,9 @@ namespace AxoClient.Launch
             {
                 action();
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _appLog.Error("Start-Erweiterung fehlgeschlagen", ex);
+                _appLog.Error("Start-Erweiterung fehlgeschlagen", exception);
             }
         }
     }

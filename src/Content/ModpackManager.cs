@@ -82,7 +82,7 @@ namespace AxoClient.Content
                 ? await _modrinth.GetVersion(versionId, job.Token) ?? throw new AxoException("errors.notFound")
                 : (await _modrinth.GetVersions(projectId, null, null, ProjectKind.Modpack, job.Token)).FirstOrDefault()
                   ?? throw new AxoException("content.noCompatibleVersion", new() { ["version"] = "" });
-            var file = version.Files.FirstOrDefault(f => f.FileName.EndsWith(".mrpack", StringComparison.OrdinalIgnoreCase))
+            var file = version.Files.FirstOrDefault(candidateFile => candidateFile.FileName.EndsWith(".mrpack", StringComparison.OrdinalIgnoreCase))
                        ?? throw new AxoException("content.noFile");
 
             job.Status("modpacks.downloading", ("name", project.Title));
@@ -118,8 +118,8 @@ namespace AxoClient.Content
         {
             using var zip = ZipFile.OpenRead(packPath);
             var index = ReadIndex(zip);
-            var (mc, loader, loaderVersion) = ParseDependencies(index.Dependencies);
-            var instance = await _instances.Create(new CreateInstanceRequest(nameOverride ?? _textHelper.Clean(index.Name, 60), mc, loader,
+            var (minecraftVersion, loader, loaderVersion) = ParseDependencies(index.Dependencies);
+            var instance = await _instances.Create(new CreateInstanceRequest(nameOverride ?? _textHelper.Clean(index.Name, 60), minecraftVersion, loader,
                 loaderVersion), OriginType.Modpack, job.Token);
             try
             {
@@ -135,7 +135,7 @@ namespace AxoClient.Content
 
         private async Task applyPack(string instanceId, ZipArchive zip, MrpackIndex index, JobContext job, bool replaceExisting)
         {
-            var gameDir = _instances.GameDir(instanceId);
+            var gameDirectory = _instances.GameDirectory(instanceId);
             var requests = new List<DownloadRequest>();
             foreach (var file in index.Files)
             {
@@ -144,7 +144,7 @@ namespace AxoClient.Content
                     continue;
                 }
 
-                var target = _pathGuard.Combine(gameDir, file.Path);
+                var target = _pathGuard.Combine(gameDirectory, file.Path);
                 var url = file.Downloads.FirstOrDefault(isAllowedDownload)
                           ?? throw new AxoException("modpacks.untrustedDownload", new() { ["file"] = Path.GetFileName(file.Path) });
                 if (!file.Hashes.TryGetValue("sha1", out var sha1) && !file.Hashes.ContainsKey("sha512"))
@@ -160,15 +160,15 @@ namespace AxoClient.Content
             await _downloads.DownloadAll(requests, job.Range(0.1, 0.85), job.Token);
 
             job.Status("modpacks.extracting");
-            var overrides = zip.Entries.Where(e => !e.FullName.EndsWith('/') &&
-                                                   (e.FullName.StartsWith("overrides/") || e.FullName.StartsWith("client-overrides/")))
-                .OrderBy(e => e.FullName.StartsWith("client-overrides/") ? 1 : 0)
+            var overrides = zip.Entries.Where(zipEntry => !zipEntry.FullName.EndsWith('/') &&
+                                                   (zipEntry.FullName.StartsWith("overrides/") || zipEntry.FullName.StartsWith("client-overrides/")))
+                .OrderBy(zipEntry => zipEntry.FullName.StartsWith("client-overrides/") ? 1 : 0)
                 .ToList();
             foreach (var entry in overrides)
             {
                 job.Token.ThrowIfCancellationRequested();
                 var relative = entry.FullName[(entry.FullName.IndexOf('/') + 1)..];
-                var target = _pathGuard.Combine(gameDir, relative);
+                var target = _pathGuard.Combine(gameDirectory, relative);
                 if (!replaceExisting && File.Exists(target) && isUserData(relative))
                 {
                     continue;
@@ -182,13 +182,13 @@ namespace AxoClient.Content
 
             // Herkunft der Dateien in content.json eintragen
             await _content.Sync(instanceId, job.Token);
-            var bySha1 = index.Files.Where(f => f.Hashes.ContainsKey("sha1"))
-                .ToDictionary(f => f.Hashes["sha1"], f => f, StringComparer.OrdinalIgnoreCase);
-            var identified = await _modrinth.Identify(bySha1.Keys.Select(h => new LocalFileHash(h, null)).ToList(), job.Token);
-            var projects = await _modrinth.GetProjects(identified.Values.Select(v => v.ProjectId), job.Token);
-            await _content.Change(instanceId, doc =>
+            var bySha1 = index.Files.Where(file => file.Hashes.ContainsKey("sha1"))
+                .ToDictionary(file => file.Hashes["sha1"], file => file, StringComparer.OrdinalIgnoreCase);
+            var identified = await _modrinth.Identify(bySha1.Keys.Select(key => new LocalFileHash(key, null)).ToList(), job.Token);
+            var projects = await _modrinth.GetProjects(identified.Values.Select(value => value.ProjectId), job.Token);
+            await _content.Change(instanceId, document =>
             {
-                foreach (var entry in Enum.GetValues<ContentType>().SelectMany(doc.ListOf))
+                foreach (var entry in Enum.GetValues<ContentType>().SelectMany(document.ListOf))
                 {
                     if (entry.Hashes.Sha1 is not { } sha1 || !identified.TryGetValue(sha1, out var version))
                     {
@@ -228,12 +228,12 @@ namespace AxoClient.Content
                 throw new AxoException("errors.invalidInput");
             }
 
-            var file = version.Files.FirstOrDefault(f => f.FileName.EndsWith(".mrpack")) ?? throw new AxoException("content.noFile");
+            var file = version.Files.FirstOrDefault(candidateFile => candidateFile.FileName.EndsWith(".mrpack")) ?? throw new AxoException("content.noFile");
             var packPath = Path.Combine(_paths.Tmp, $"{Guid.NewGuid():N}.mrpack");
             await _downloads.Download(new DownloadRequest(file.Url, packPath, file.Sha1, file.Sha512), job.Range(0, 0.1), job.Token);
             // Mod-Schutz gilt für Nutzer, nicht für das Pack-Update selbst: kurz lösen, danach mit den neuen Pack-Mods wieder setzen
             var lockLevel = instance.ModLock.Level;
-            var ownMods = (await _content.Sync(instanceId, job.Token)).Mods.Where(m => !instance.ModLock.IsLocked(m)).Select(instance.ModLock.KeyOf).ToHashSet();
+            var ownMods = (await _content.Sync(instanceId, job.Token)).Mods.Where(mod => !instance.ModLock.IsLocked(mod)).Select(instance.ModLock.KeyOf).ToHashSet();
             if (lockLevel != ModLockLevel.Off)
             {
                 instance.ModLock = new ModLock();
@@ -243,17 +243,17 @@ namespace AxoClient.Content
             {
                 using var zip = ZipFile.OpenRead(packPath);
                 var index = ReadIndex(zip);
-                var (mc, loader, loaderVersion) = ParseDependencies(index.Dependencies);
+                var (minecraftVersion, loader, loaderVersion) = ParseDependencies(index.Dependencies);
 
                 // Mods der alten Pack-Version entfernen, eigene behalten
-                var doc = await _content.Sync(instanceId, job.Token);
-                var oldPackFiles = doc.Mods.Where(m => m.Source == ContentSource.Modrinth).Select(m => m.File).ToList();
+                var document = await _content.Sync(instanceId, job.Token);
+                var oldPackFiles = document.Mods.Where(mod => mod.Source == ContentSource.Modrinth).Select(mod => mod.File).ToList();
                 if (oldPackFiles.Count > 0)
                 {
                     await _content.Remove(instanceId, ContentType.Mod, oldPackFiles, job.Token);
                 }
 
-                await _instances.Update(instanceId, new InstanceUpdate(MinecraftVersion: mc, Loader: loader, LoaderVersion: loaderVersion),
+                await _instances.Update(instanceId, new InstanceUpdate(MinecraftVersion: minecraftVersion, Loader: loader, LoaderVersion: loaderVersion),
                     job.Token);
                 await applyPack(instanceId, zip, index, job, replaceExisting: true);
                 instance = await _instances.Get(instanceId, job.Token);
@@ -270,7 +270,7 @@ namespace AxoClient.Content
                     if (lockLevel == ModLockLevel.Pack)
                     {
                         var current = await _instances.Get(instanceId, CancellationToken.None);
-                        current.ModLock.PackMods = locked.PackMods.Where(k => !ownMods.Contains(k)).ToList();
+                        current.ModLock.PackMods = locked.PackMods.Where(packMod => !ownMods.Contains(packMod)).ToList();
                         await _instances.Save(current, CancellationToken.None);
                     }
                 }
@@ -284,14 +284,14 @@ namespace AxoClient.Content
         public async Task ExportMrpack(string instanceId, string targetPath, JobContext job)
         {
             var instance = await _instances.Get(instanceId, job.Token);
-            var doc = await _content.Sync(instanceId, job.Token);
-            var gameDir = _instances.GameDir(instanceId);
+            var document = await _content.Sync(instanceId, job.Token);
+            var gameDirectory = _instances.GameDirectory(instanceId);
 
             var modrinthEntries = Enum.GetValues<ContentType>()
-                .SelectMany(t => doc.ListOf(t).Select(e => (Type: t, Entry: e)))
-                .Where(x => x.Entry.Enabled && x.Entry.Source == ContentSource.Modrinth && x.Entry.VersionId != null)
+                .SelectMany(value => document.ListOf(value).Select(entry => (Type: value, Entry: entry)))
+                .Where(contentItem => contentItem.Entry.Enabled && contentItem.Entry.Source == ContentSource.Modrinth && contentItem.Entry.VersionId != null)
                 .ToList();
-            var versions = await _modrinth.GetVersionsByIds(modrinthEntries.Select(x => x.Entry.VersionId!), job.Token);
+            var versions = await _modrinth.GetVersionsByIds(modrinthEntries.Select(modrinthEntry => modrinthEntry.Entry.VersionId!), job.Token);
 
             var index = new MrpackIndex
             {
@@ -303,7 +303,7 @@ namespace AxoClient.Content
             var referenced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (type, entry) in modrinthEntries)
             {
-                if (!versions.TryGetValue(entry.VersionId!, out var version) || version.Files.FirstOrDefault(f => f.FileName == entry.File) is not { } file)
+                if (!versions.TryGetValue(entry.VersionId!, out var version) || version.Files.FirstOrDefault(candidateFile => candidateFile.FileName == entry.File) is not { } file)
                 {
                     continue;
                 }
@@ -320,8 +320,8 @@ namespace AxoClient.Content
                 referenced.Add(relative);
             }
 
-            var tmp = targetPath + ".tmp";
-            await using (var stream = File.Create(tmp))
+            var temporary = targetPath + ".tmp";
+            await using (var stream = File.Create(temporary))
             using (var zip = new ZipArchive(stream, ZipArchiveMode.Create))
             {
                 var indexEntry = zip.CreateEntry("modrinth.index.json");
@@ -333,36 +333,36 @@ namespace AxoClient.Content
                 var overrideFiles = new List<string>();
                 foreach (var type in Enum.GetValues<ContentType>())
                 {
-                    foreach (var entry in doc.ListOf(type).Where(e => e.Enabled && e.Source != ContentSource.AxoClient))
+                    foreach (var entry in document.ListOf(type).Where(entry => entry.Enabled && entry.Source != ContentSource.AxoClient))
                     {
                         var relative = $"{_contentFolders.Of(type)}/{entry.File}";
-                        if (!referenced.Contains(relative) && File.Exists(Path.Combine(gameDir, relative)))
+                        if (!referenced.Contains(relative) && File.Exists(Path.Combine(gameDirectory, relative)))
                         {
                             overrideFiles.Add(relative);
                         }
                     }
                 }
 
-                if (Directory.Exists(Path.Combine(gameDir, "config")))
+                if (Directory.Exists(Path.Combine(gameDirectory, "config")))
                 {
-                    overrideFiles.AddRange(Directory.EnumerateFiles(Path.Combine(gameDir, "config"), "*", SearchOption.AllDirectories)
-                        .Where(f => !Path.GetFileName(f).StartsWith("axoclient", StringComparison.OrdinalIgnoreCase))
-                        .Select(f => Path.GetRelativePath(gameDir, f).Replace('\\', '/')));
+                    overrideFiles.AddRange(Directory.EnumerateFiles(Path.Combine(gameDirectory, "config"), "*", SearchOption.AllDirectories)
+                        .Where(file => !Path.GetFileName(file).StartsWith("axoclient", StringComparison.OrdinalIgnoreCase))
+                        .Select(file => Path.GetRelativePath(gameDirectory, file).Replace('\\', '/')));
                 }
 
-                if (File.Exists(Path.Combine(gameDir, "options.txt")))
+                if (File.Exists(Path.Combine(gameDirectory, "options.txt")))
                 {
                     overrideFiles.Add("options.txt");
                 }
 
-                for (var i = 0; i < overrideFiles.Count; i++)
+                for (var fileIndex = 0; fileIndex < overrideFiles.Count; fileIndex++)
                 {
                     job.Token.ThrowIfCancellationRequested();
-                    zip.CreateEntryFromFile(Path.Combine(gameDir, overrideFiles[i]), "overrides/" + overrideFiles[i], CompressionLevel.Optimal);
-                    job.Report((double)(i + 1) / overrideFiles.Count);
+                    zip.CreateEntryFromFile(Path.Combine(gameDirectory, overrideFiles[fileIndex]), "overrides/" + overrideFiles[fileIndex], CompressionLevel.Optimal);
+                    job.Report((double)(fileIndex + 1) / overrideFiles.Count);
                 }
             }
-            File.Move(tmp, targetPath, overwrite: true);
+            File.Move(temporary, targetPath, overwrite: true);
         }
 
         internal MrpackIndex ReadIndex(ZipArchive zip)
@@ -383,10 +383,10 @@ namespace AxoClient.Content
             return index;
         }
 
-        internal (string Mc, LoaderType Loader, string? LoaderVersion) ParseDependencies(Dictionary<string, string> deps)
+        internal (string Mc, LoaderType Loader, string? LoaderVersion) ParseDependencies(Dictionary<string, string> dependencies)
         {
-            var mc = deps.GetValueOrDefault("minecraft") ?? throw new AxoException("modpacks.invalidPack");
-            if (!_gameVersionHelper.IsSafeVersion(mc))
+            var minecraftVersion = dependencies.GetValueOrDefault("minecraft") ?? throw new AxoException("modpacks.invalidPack");
+            if (!_gameVersionHelper.IsSafeVersion(minecraftVersion))
             {
                 throw new AxoException("modpacks.invalidPack");
             }
@@ -397,18 +397,18 @@ namespace AxoClient.Content
                          ("neoforge", LoaderType.NeoForge)
                      })
             {
-                if (deps.TryGetValue(key, out var version) && _gameVersionHelper.IsSafeVersion(version))
+                if (dependencies.TryGetValue(key, out var version) && _gameVersionHelper.IsSafeVersion(version))
                 {
-                    return (mc, type, version);
+                    return (minecraftVersion, type, version);
                 }
             }
 
-            return (mc, LoaderType.Vanilla, null);
+            return (minecraftVersion, LoaderType.Vanilla, null);
         }
 
         private Dictionary<string, string> buildDependencies(Instance instance)
         {
-            var deps = new Dictionary<string, string> { ["minecraft"] = instance.Minecraft.Version };
+            var dependencies = new Dictionary<string, string> { ["minecraft"] = instance.Minecraft.Version };
             var key = instance.Loader.Type switch
             {
                 LoaderType.Fabric => "fabric-loader",
@@ -419,39 +419,39 @@ namespace AxoClient.Content
             };
             if (key != null && instance.Loader.Version != null)
             {
-                deps[key] = instance.Loader.Version;
+                dependencies[key] = instance.Loader.Version;
             }
 
-            return deps;
+            return dependencies;
         }
 
         private bool isAllowedDownload(string url) =>
             Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && _allowedHosts.Contains(uri.Host);
 
-        private async Task trySetIcon(string instanceId, string url, CancellationToken ct)
+        private async Task trySetIcon(string instanceId, string url, CancellationToken cancellationToken)
         {
             try
             {
-                using var response = await _api.Send(() => new HttpRequestMessage(HttpMethod.Get, url), ct);
+                using var response = await _api.Send(() => new HttpRequestMessage(HttpMethod.Get, url), cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
                     return;
                 }
 
-                var bytes = await response.Content.ReadAsByteArrayAsync(ct);
+                var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                 if (_imageFormats.IsPngOrJpeg(bytes))
                 {
-                    await _instances.SetImage(instanceId, false, bytes, ct);
+                    await _instances.SetImage(instanceId, false, bytes, cancellationToken);
                 }
             }
-            catch (Exception ex) when (ex is HttpRequestException or AxoException or IOException)
+            catch (Exception exception) when (exception is HttpRequestException or AxoException or IOException)
             {
-                _appLog.Warn("Modpack-Icon konnte nicht geladen werden", ex);
+                _appLog.Warn("Modpack-Icon konnte nicht geladen werden", exception);
             }
         }
 
         /// <summary>Für die Modpack-Seite: verfügbare Versionen eines Packs.</summary>
-        public Task<IReadOnlyList<ContentVersion>> Versions(string source, string projectId, CancellationToken ct) =>
-            _providers.Get(source).GetVersions(projectId, null, null, ProjectKind.Modpack, ct);
+        public Task<IReadOnlyList<ContentVersion>> Versions(string source, string projectId, CancellationToken cancellationToken) =>
+            _providers.Get(source).GetVersions(projectId, null, null, ProjectKind.Modpack, cancellationToken);
     }
 }

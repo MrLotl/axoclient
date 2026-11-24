@@ -19,21 +19,21 @@ namespace AxoClient.Social
         private readonly ISkinFiles _skinFiles;
         private readonly IUuidHelper _uuidHelper;
 
-        public async Task<IReadOnlyList<OfficialCape>> Official(CancellationToken ct) =>
-            await _client.Send<List<OfficialCape>>(HttpMethod.Get, "/capes", ct: ct) ?? [];
+        public async Task<IReadOnlyList<OfficialCape>> Official(CancellationToken cancellationToken) =>
+            await _client.Send<List<OfficialCape>>(HttpMethod.Get, "/capes", cancellationToken: cancellationToken) ?? [];
 
         /// <summary>Axo-Cape setzen (offiziell oder eigenes freigegebenes) oder mit <c>null</c> ablegen.</summary>
-        public async Task SetActive(AxoCapeChoice? choice, CancellationToken ct)
+        public async Task SetActive(AxoCapeChoice? choice, CancellationToken cancellationToken)
         {
             // Der Dienst antwortet mit der öffentlichen Bild-ID (bei eigenen Capes nicht die ID im Launcher)
             var result = await _client.Send<ActiveCapeResponse>(HttpMethod.Put, "/capes/active", new
             {
                 kind = choice?.Source.ToString().ToLowerInvariant(),
                 id = choice?.Id
-            }, ct);
+            }, cancellationToken);
             if (_accounts.Active is { } account)
             {
-                await _accounts.UpdateEntry(account.Uuid, a => a.Capes.Axo = choice);
+                await _accounts.UpdateEntry(account.Uuid, accountEntry => accountEntry.Capes.Axo = choice);
                 ActiveChanged?.Invoke(account.Uuid, choice == null ? null : result?.Cape ?? choice.Id);
             }
         }
@@ -60,10 +60,10 @@ namespace AxoClient.Social
         }
 
         /// <summary>Eigenes Cape zur Veröffentlichung einreichen (ersetzt eine frühere Einreichung).</summary>
-        public async Task Submit(string capeId, CancellationToken ct)
+        public async Task Submit(string capeId, CancellationToken cancellationToken)
         {
-            var view = (await _capes.List(ct)).FirstOrDefault(c => c.Id == capeId) ?? throw new AxoException("errors.notFound");
-            var png = await _capes.Read(capeId, ct);
+            var view = (await _capes.List(cancellationToken)).FirstOrDefault(capeView => capeView.Id == capeId) ?? throw new AxoException("errors.notFound");
+            var png = await _capes.Read(capeId, cancellationToken);
             if (!_skinFiles.IsValidCape(png))
             {
                 throw new AxoException("capes.invalidImage");
@@ -75,41 +75,41 @@ namespace AxoClient.Social
             var file = new ByteArrayContent(png);
             file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
             form.Add(file, "file", "cape.png");
-            using var _ = await _client.SendRaw(HttpMethod.Post, "/capes/submissions", form, ct);
+            using var _ = await _client.SendRaw(HttpMethod.Post, "/capes/submissions", form, cancellationToken);
             // Es gibt höchstens eine Einreichung: alle anderen gelten wieder als lokal
-            foreach (var other in (await _capes.List(ct)).Where(c => c.Status == CapeStatus.Pending && c.Id != capeId))
+            foreach (var other in (await _capes.List(cancellationToken)).Where(capeView => capeView.Status == CapeStatus.Pending && capeView.Id != capeId))
             {
-                await _capes.SetStatus(other.Id, CapeStatus.Local, null, ct);
+                await _capes.SetStatus(other.Id, CapeStatus.Local, null, cancellationToken);
             }
 
-            await _capes.SetStatus(capeId, CapeStatus.Pending, null, ct);
+            await _capes.SetStatus(capeId, CapeStatus.Pending, null, cancellationToken);
         }
 
-        public async Task Withdraw(string capeId, CancellationToken ct)
+        public async Task Withdraw(string capeId, CancellationToken cancellationToken)
         {
-            await _client.Send(HttpMethod.Delete, "/capes/submissions", ct: ct);
-            await _capes.SetStatus(capeId, CapeStatus.Local, null, ct);
+            await _client.Send(HttpMethod.Delete, "/capes/submissions", cancellationToken: cancellationToken);
+            await _capes.SetStatus(capeId, CapeStatus.Local, null, cancellationToken);
         }
 
         /// <summary>Ergebnis einer Freigabe aus einer Benachrichtigung übernehmen.</summary>
-        public async Task ApplyReview(string localId, bool approved, string? reason, CancellationToken ct)
+        public async Task ApplyReview(string localId, bool approved, string? reason, CancellationToken cancellationToken)
         {
             if (_textHelper.IsValidId(localId))
             {
-                await _capes.SetStatus(localId, approved ? CapeStatus.Approved : CapeStatus.Rejected, reason, ct);
+                await _capes.SetStatus(localId, approved ? CapeStatus.Approved : CapeStatus.Rejected, reason, cancellationToken);
             }
         }
 
         // ---- Admin ----
 
-        public async Task<IReadOnlyList<CapeSubmission>> Submissions(CancellationToken ct) =>
-            await _client.Send<List<CapeSubmission>>(HttpMethod.Get, "/admin/submissions", ct: ct) ?? [];
+        public async Task<IReadOnlyList<CapeSubmission>> Submissions(CancellationToken cancellationToken) =>
+            await _client.Send<List<CapeSubmission>>(HttpMethod.Get, "/admin/submissions", cancellationToken: cancellationToken) ?? [];
 
-        public Task Review(string submissionId, bool approve, string? reason, CancellationToken ct) =>
+        public Task Review(string submissionId, bool approve, string? reason, CancellationToken cancellationToken) =>
             _client.Send(HttpMethod.Post, $"/admin/submissions/{Uri.EscapeDataString(submissionId)}",
-                new { approve, reason = reason == null ? null : _textHelper.Clean(reason, 200) }, ct);
+                new { approve, reason = reason == null ? null : _textHelper.Clean(reason, 200) }, cancellationToken);
 
-        public async Task UploadOfficial(string name, byte[] png, CancellationToken ct)
+        public async Task UploadOfficial(string name, byte[] png, CancellationToken cancellationToken)
         {
             if (!_skinFiles.IsValidCape(png))
             {
@@ -121,16 +121,16 @@ namespace AxoClient.Social
             var file = new ByteArrayContent(png);
             file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
             form.Add(file, "file", "cape.png");
-            using var _ = await _client.SendRaw(HttpMethod.Post, "/admin/capes", form, ct);
+            using var _ = await _client.SendRaw(HttpMethod.Post, "/admin/capes", form, cancellationToken);
         }
 
-        public Task DeleteOfficial(string id, CancellationToken ct) =>
-            _client.Send(HttpMethod.Delete, $"/admin/capes/{Uri.EscapeDataString(id)}", ct: ct);
+        public Task DeleteOfficial(string id, CancellationToken cancellationToken) =>
+            _client.Send(HttpMethod.Delete, $"/admin/capes/{Uri.EscapeDataString(id)}", cancellationToken: cancellationToken);
 
-        public async Task<IReadOnlyList<AdminEntry>> Admins(CancellationToken ct) =>
-            await _client.Send<List<AdminEntry>>(HttpMethod.Get, "/admin/admins", ct: ct) ?? [];
+        public async Task<IReadOnlyList<AdminEntry>> Admins(CancellationToken cancellationToken) =>
+            await _client.Send<List<AdminEntry>>(HttpMethod.Get, "/admin/admins", cancellationToken: cancellationToken) ?? [];
 
-        public Task SetAdmin(string uuid, bool admin, CancellationToken ct) =>
-            _client.Send(admin ? HttpMethod.Put : HttpMethod.Delete, $"/admin/admins/{_uuidHelper.RequireUuid(uuid)}", ct: ct);
+        public Task SetAdmin(string uuid, bool admin, CancellationToken cancellationToken) =>
+            _client.Send(admin ? HttpMethod.Put : HttpMethod.Delete, $"/admin/admins/{_uuidHelper.RequireUuid(uuid)}", cancellationToken: cancellationToken);
     }
 }

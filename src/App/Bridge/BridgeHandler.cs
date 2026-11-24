@@ -16,16 +16,16 @@ namespace AxoClient.App.Bridge
         protected ITextHelper TextHelper { get; }
 
         /// <summary>Meldet alle Nachrichtentypen dieses Bereichs an (feste Liste).</summary>
-        public abstract void Register(MessageRouter r, MainWindow window);
+        public abstract void Register(MessageRouter router, MainWindow window);
 
         /// <summary>Langer Vorgang als Job: die UI bekommt sofort die Job-ID, Fortschritt kommt per Ereignis.</summary>
         protected object StartJob(Task task)
         {
-            _ = task.ContinueWith(t =>
+            _ = task.ContinueWith(finishedTask =>
             {
-                if (t.Exception?.InnerException is { } ex and not AxoException and not OperationCanceledException)
+                if (finishedTask.Exception?.InnerException is { } exception and not AxoException and not OperationCanceledException)
                 {
-                    AppLog.Error("Job fehlgeschlagen", ex);
+                    AppLog.Error("Job fehlgeschlagen", exception);
                 }
             }, TaskScheduler.Default);
             return new { started = true };

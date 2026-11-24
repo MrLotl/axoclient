@@ -55,6 +55,8 @@ Klassen bekommen ihre Abhängigkeiten über den Konstruktor. Statische Klassen u
 
 Code-Stil (über `.editorconfig`, wird beim Bauen geprüft): `if`, `else`, Schleifen immer mit geschweiften Klammern,
 Namespaces als Block, private Methoden `lowerCamelCase`, private Felder `_camelCase`, keine Methodennamen mit `Async`.
+Variablen, Parameter und Methoden heißen so, dass man ohne Nachschlagen versteht, was sie enthalten bzw. tun
+(`cancellationToken` statt `ct`, `mod` statt `m`, `exception` statt `ex`); einbuchstabige Namen gibt es nur für Koordinaten (`x`, `y`).
 
 ## Module
 

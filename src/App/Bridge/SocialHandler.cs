@@ -25,87 +25,87 @@ namespace AxoClient.App.Bridge
             _notifications = notifications;
         }
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
             ISocialService social = _social;
 
-            r.On("social.state", () => new { friends = social.Friends, inbox = social.Inbox, me = social.Me, available = social.Available });
-            r.On("social.sync", async ct =>
+            router.On("social.state", () => new { friends = social.Friends, inbox = social.Inbox, me = social.Me, available = social.Available });
+            router.On("social.sync", async cancellationToken =>
             {
-                await social.SyncNow(ct);
+                await social.SyncNow(cancellationToken);
                 return new { friends = social.Friends, inbox = social.Inbox, me = social.Me, available = social.Available };
             });
-            r.On<NameData>("social.request", async (d, ct) =>
+            router.On<NameData>("social.request", async (request, cancellationToken) =>
             {
-                await social.SendRequest(d.Name, ct);
+                await social.SendRequest(request.Name, cancellationToken);
                 return social.Friends;
             });
-            r.On<UuidData>("social.accept", async (d, ct) =>
+            router.On<UuidData>("social.accept", async (request, cancellationToken) =>
             {
-                await social.Accept(d.Uuid, ct);
+                await social.Accept(request.Uuid, cancellationToken);
                 return social.Friends;
             });
-            r.On<UuidData>("social.decline", async (d, ct) =>
+            router.On<UuidData>("social.decline", async (request, cancellationToken) =>
             {
-                await social.Decline(d.Uuid, ct);
+                await social.Decline(request.Uuid, cancellationToken);
                 return social.Friends;
             });
-            r.On<UuidData>("social.remove", async (d, ct) =>
+            router.On<UuidData>("social.remove", async (request, cancellationToken) =>
             {
-                await social.Remove(d.Uuid, ct);
+                await social.Remove(request.Uuid, cancellationToken);
                 return social.Friends;
             });
-            r.On<BlockData>("social.block", async (d, ct) =>
+            router.On<BlockData>("social.block", async (request, cancellationToken) =>
             {
-                await social.Block(d.Uuid, d.Block, ct);
+                await social.Block(request.Uuid, request.Block, cancellationToken);
                 return social.Friends;
             });
-            r.On("social.blocked", async ct => await social.LoadBlocked(ct));
-            r.On("social.deleteAccount", async ct =>
+            router.On("social.blocked", async cancellationToken => await social.LoadBlocked(cancellationToken));
+            router.On("social.deleteAccount", async cancellationToken =>
             {
-                await social.DeleteAccount(ct);
+                await social.DeleteAccount(cancellationToken);
                 return null;
             });
 
             // ---- Postfach ----
-            r.On<SendInstanceData>("inbox.sendInstance", async (d, ct) =>
+            router.On<SendInstanceData>("inbox.sendInstance", async (request, cancellationToken) =>
             {
-                await _inbox.SendInstance(d.InstanceId, d.Recipients, d.Servers, d.Options, d.ModLock, ct);
+                await _inbox.SendInstance(request.InstanceId, request.Recipients, request.Servers, request.Options, request.ModLock, cancellationToken);
                 return null;
             });
-            r.On<SendModData>("inbox.sendMod", async (d, ct) =>
+            router.On<SendModData>("inbox.sendMod", async (request, cancellationToken) =>
             {
-                await _inbox.SendMod(d.Title, new RecipeContent(d.Type, d.Source, d.ProjectId, d.VersionId), d.Recipients, ct);
+                await _inbox.SendMod(request.Title, new RecipeContent(request.Type, request.Source, request.ProjectId, request.VersionId), request.Recipients, cancellationToken);
                 return null;
             });
-            r.On<SendServerData>("inbox.sendServer", async (d, ct) =>
+            router.On<SendServerData>("inbox.sendServer", async (request, cancellationToken) =>
             {
-                await _inbox.SendServer(d.Name, d.Address, d.Recipients, ct);
+                await _inbox.SendServer(request.Name, request.Address, request.Recipients, cancellationToken);
                 return null;
             });
-            r.On<InviteData>("inbox.invite", async (d, ct) =>
+            router.On<InviteData>("inbox.invite", async (request, cancellationToken) =>
             {
-                await _inbox.SendInvite(d.Address, d.InstanceName, d.Minecraft, d.Recipients, ct);
+                await _inbox.SendInvite(request.Address, request.InstanceName, request.Minecraft, request.Recipients, cancellationToken);
                 return null;
             });
-            r.On<IdData>("inbox.preview", async (d, ct) => await _inbox.Fetch(d.Id, ct));
-            r.On<AcceptData>("inbox.accept", async (d, ct) => await _inbox.Accept(d.Id, d.InstanceId, ct));
-            r.On<IdData>("inbox.discard", async (d, ct) =>
+            router.On<IdData>("inbox.preview", async (request, cancellationToken) => await _inbox.Fetch(request.Id, cancellationToken));
+            router.On<AcceptData>("inbox.accept", async (request, cancellationToken) => await _inbox.Accept(request.Id, request.InstanceId, cancellationToken));
+            router.On<IdData>("inbox.discard", async (request, cancellationToken) =>
             {
-                await _inbox.Discard(d.Id, ct);
+                await _inbox.Discard(request.Id, cancellationToken);
                 return social.Inbox;
             });
 
             // ---- Benachrichtigungen ----
-            r.On("notifications.list", () => new { items = _notifications.All, unread = _notifications.UnreadCount });
-            r.On("notifications.read", async ct =>
+            router.On("notifications.list", () => new { items = _notifications.All, unread = _notifications.UnreadCount });
+            router.On("notifications.read", async cancellationToken =>
             {
-                await social.MarkNotificationsRead(ct);
+                await social.MarkNotificationsRead(cancellationToken);
                 return null;
             });
-            r.On<IdData>("notifications.remove", (d, _) =>
+            router.On<IdData>("notifications.remove", (request, _) =>
             {
-                _notifications.Remove(d.Id);
+                _notifications.Remove(request.Id);
                 return Task.FromResult<object?>(null);
             });
         }

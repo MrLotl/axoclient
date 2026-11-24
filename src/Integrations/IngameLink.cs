@@ -115,7 +115,7 @@ namespace AxoClient.Integrations
         {
             _bridge.MessageReceived += (instance, type, data) => _ = handle(instance, type, data);
             _events.Published += onEvent;
-            _live.EmoteReceived += e => _ = _bridge.Send(null, "emote", new { uuid = e.Uuid, emote = e.Emote, anim = e.Anim, animation = e.Animation });
+            _live.EmoteReceived += remoteEmote => _ = _bridge.Send(null, "emote", new { uuid = remoteEmote.Uuid, emote = remoteEmote.Emote, anim = remoteEmote.Anim, animation = remoteEmote.Animation });
             _activity.JoinAddressChanged += address =>
             {
                 // Neuer Ort: alte Einladungen gelten nicht mehr
@@ -161,7 +161,7 @@ namespace AxoClient.Integrations
                         await inviteUndo(instance, uuid(data));
                         break;
                     case "inviteDecline":
-                        await _inbox.Discard(str(data, "id") ?? "", CancellationToken.None);
+                        await _inbox.Discard(readString(data, "id") ?? "", CancellationToken.None);
                         break;
                     case "joinCheck":
                         await _bridge.Send(instance, "joinPlan", await plan(instance, data));
@@ -170,32 +170,32 @@ namespace AxoClient.Integrations
                         await join(instance, data);
                         break;
                     case "capeWear":
-                        await wearCape(str(data, "key") ?? "none");
+                        await wearCape(readString(data, "key") ?? "none");
                         await pushCapes(null);
                         break;
                     case "emoteSlots":
                         if (data.ValueKind == JsonValueKind.Object && data.TryGetProperty("slots", out var slots) && slots.ValueKind == JsonValueKind.Array)
                         {
-                            await _emotes.SetSlots(slots.EnumerateArray().Select(s => s.ValueKind == JsonValueKind.String ? s.GetString() : null).ToList());
+                            await _emotes.SetSlots(slots.EnumerateArray().Select(slot => slot.ValueKind == JsonValueKind.String ? slot.GetString() : null).ToList());
                         }
 
                         break;
                     case "emote":
-                        await sendEmote(str(data, "emote"));
+                        await sendEmote(readString(data, "emote"));
                         break;
                     case "openLauncher":
                         _events.Publish("app.focus");
                         break;
                 }
             }
-            catch (Exception ex) when (ex is AxoException or HttpRequestException or IOException or JsonException or InvalidOperationException
+            catch (Exception exception) when (exception is AxoException or HttpRequestException or IOException or JsonException or InvalidOperationException
                                            or KeyNotFoundException or TaskCanceledException)
             {
-                _appLog.Info($"Ingame-Menü: {type} fehlgeschlagen: {ex.Message}");
-                var code = ex is AxoException axo ? axo.Text.Code : "errors.unknown";
+                _appLog.Info($"Ingame-Menü: {type} fehlgeschlagen: {exception.Message}");
+                var code = exception is AxoException axoException ? axoException.Text.Code : "errors.unknown";
                 if (type == "join" || type == "joinCheck")
                 {
-                    await _bridge.Send(instance, "joinState", new { uuid = str(data, "uuid"), phase = "error", code });
+                    await _bridge.Send(instance, "joinState", new { uuid = readString(data, "uuid"), phase = "error", code });
                 }
                 else
                 {
@@ -239,9 +239,9 @@ namespace AxoClient.Integrations
             {
                 await _social.LoadBlocked(CancellationToken.None);
             }
-            catch (Exception ex) when (ex is AxoException or HttpRequestException or IOException or JsonException or TaskCanceledException)
+            catch (Exception exception) when (exception is AxoException or HttpRequestException or IOException or JsonException or TaskCanceledException)
             {
-                _appLog.Info($"Ingame-Menü: Blockliste nicht geladen: {ex.Message}");
+                _appLog.Info($"Ingame-Menü: Blockliste nicht geladen: {exception.Message}");
             }
         }
 
@@ -251,8 +251,8 @@ namespace AxoClient.Integrations
             {
                 var friends = _social.Friends;
                 var blocked = _social.Blocked;
-                var invites = _social.Inbox.Where(i => i.Kind == "invite" && i.Expires > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-                    .Select(i => new { id = i.Id, uuid = i.Sender.Uuid, name = i.Sender.Name, address = i.Title, created = i.Created })
+                var invites = _social.Inbox.Where(inboxItem => inboxItem.Kind == "invite" && inboxItem.Expires > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                    .Select(inboxItem => new { id = inboxItem.Id, uuid = inboxItem.Sender.Uuid, name = inboxItem.Sender.Name, address = inboxItem.Title, created = inboxItem.Created })
                     .ToList();
                 await _bridge.Send(instance, "social", new
                 {
@@ -261,21 +261,21 @@ namespace AxoClient.Integrations
                     here = await here(instance),
                     invited = _invited.Keys.ToList(),
                     invites,
-                    blocked = blocked.Select(b => new { uuid = b.Uuid, name = b.Name }).ToList(),
-                    friends = friends.Select(f => new
+                    blocked = blocked.Select(blockedPlayer => new { uuid = blockedPlayer.Uuid, name = blockedPlayer.Name }).ToList(),
+                    friends = friends.Select(friend => new
                     {
-                        uuid = f.Uuid,
-                        name = f.Name,
-                        relation = f.Relation switch { Relation.Pending => "pending", Relation.Incoming => "incoming", _ => "friends" },
-                        state = f.State switch { PresenceState.Ingame => "ingame", PresenceState.Launcher => "launcher", _ => "offline" },
-                        since = f.Since,
-                        join = f.Join,
-                        joinKind = f.Join == null ? null : IsRelay(f.Join) ? "world" : "server"
+                        uuid = friend.Uuid,
+                        name = friend.Name,
+                        relation = friend.Relation switch { Relation.Pending => "pending", Relation.Incoming => "incoming", _ => "friends" },
+                        state = friend.State switch { PresenceState.Ingame => "ingame", PresenceState.Launcher => "launcher", _ => "offline" },
+                        since = friend.Since,
+                        join = friend.Join,
+                        joinKind = friend.Join == null ? null : IsRelay(friend.Join) ? "world" : "server"
                     }).ToList()
                 });
                 // Auch der eigene Skin: das Menü zeigt damit die Cape-Vorschau
                 var own = _accounts.Active?.Uuid.Replace("-", "").ToLowerInvariant();
-                _ = sendSkins(instance, friends.Select(f => f.Uuid).Concat(invites.Select(i => i.uuid)).Concat(blocked.Select(b => b.Uuid))
+                _ = sendSkins(instance, friends.Select(friend => friend.Uuid).Concat(invites.Select(pendingInvite => pendingInvite.uuid)).Concat(blocked.Select(blockedPlayer => blockedPlayer.Uuid))
                     .Concat(own is { Length: 32 } ? [own] : []));
             }
         }
@@ -295,7 +295,7 @@ namespace AxoClient.Integrations
             }
 
             var normalized = _serverPing.Normalize(address);
-            var entry = _serverLists.List(instanceId).FirstOrDefault(s => _serverPing.IsValidAddress(s.Address) && _serverPing.Normalize(s.Address) == normalized);
+            var entry = _serverLists.List(instanceId).FirstOrDefault(server => _serverPing.IsValidAddress(server.Address) && _serverPing.Normalize(server.Address) == normalized);
             string? icon = null;
             if (entry != null && _serverLists.Icon(instanceId, entry.Index) is { Length: > 0 and < 64 * 1024 } bytes)
             {
@@ -330,7 +330,7 @@ namespace AxoClient.Integrations
                             await _bridge.Send(instance, "skin", new { uuid, png = Convert.ToBase64String(png) });
                         }
                     }
-                    catch (Exception ex) when (ex is HttpRequestException or AxoException or IOException or TaskCanceledException)
+                    catch (Exception exception) when (exception is HttpRequestException or AxoException or IOException or TaskCanceledException)
                     {
                         lock (sent)
                         {
@@ -355,14 +355,14 @@ namespace AxoClient.Integrations
 
         private async Task inviteUndo(string instance, string uuid)
         {
-            await _online.Send(HttpMethod.Delete, $"/invites/{uuid}", ct: CancellationToken.None);
+            await _online.Send(HttpMethod.Delete, $"/invites/{uuid}", cancellationToken: CancellationToken.None);
             _invited.TryRemove(uuid, out _);
             await _bridge.Send(instance, "inviteState", new { uuid, invited = false });
         }
 
         private async Task toast(NotificationItem item)
         {
-            string P(string key) => item.Text.Params?.GetValueOrDefault(key)?.ToString() ?? "";
+            string parameter(string key) => item.Text.Params?.GetValueOrDefault(key)?.ToString() ?? "";
             var kind = item.Type switch
             {
                 "friendRequest" => "request",
@@ -379,15 +379,15 @@ namespace AxoClient.Integrations
                 return;
             }
 
-            var name = P("name");
-            var uuid = _social.Friends.FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Uuid;
+            var name = parameter("name");
+            var uuid = _social.Friends.FirstOrDefault(friend => friend.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Uuid;
             await _bridge.Send(null, "toast", new
             {
                 kind,
                 name,
                 uuid,
-                server = P("server") is { Length: > 0 } s ? s : null,
-                title = P("title") is { Length: > 0 } t ? t : null
+                server = parameter("server") is { Length: > 0 } serverName ? serverName : null,
+                title = parameter("title") is { Length: > 0 } toastTitle ? toastTitle : null
             });
             if (uuid != null)
             {
@@ -439,7 +439,7 @@ namespace AxoClient.Integrations
                 rightColor = plan.RightColor,
                 now = new { name = plan.Now.Name, minecraft = plan.Now.Minecraft, loader = plan.Now.Loader },
                 next = plan.Next == null ? null : new { name = plan.Next.Name, minecraft = plan.Next.Minecraft, loader = plan.Next.Loader },
-                mods = plan.Mods.Select(m => new { name = m.Name, meta = m.Meta }).ToList(),
+                mods = plan.Mods.Select(mod => new { name = mod.Name, meta = mod.Meta }).ToList(),
                 version = plan.Version,
                 reason = plan.Reason,
                 here = _activity.JoinAddress
@@ -448,25 +448,25 @@ namespace AxoClient.Integrations
 
         private async Task<JoinPlan> buildPlan(string instanceId, JsonElement data)
         {
-            var uuid = str(data, "uuid");
-            var inviteId = str(data, "inviteId");
+            var uuid = readString(data, "uuid");
+            var inviteId = readString(data, "inviteId");
             string? address = null;
             string? name = null;
             if (inviteId != null)
             {
-                var invite = _social.Inbox.FirstOrDefault(i => i.Id == inviteId) ?? throw new AxoException("ingame.inviteGone");
+                var invite = _social.Inbox.FirstOrDefault(inboxItem => inboxItem.Id == inviteId) ?? throw new AxoException("ingame.inviteGone");
                 name = invite.Sender.Name;
                 uuid ??= invite.Sender.Uuid;
                 var item = await _inbox.Fetch(inviteId, CancellationToken.None);
                 if (item.TryGetProperty("payload", out var payload) && payload.ValueKind == JsonValueKind.String)
                 {
-                    using var doc = JsonDocument.Parse(payload.GetString()!);
-                    address = str(doc.RootElement, "address");
+                    using var document = JsonDocument.Parse(payload.GetString()!);
+                    address = readString(document.RootElement, "address");
                 }
             }
             else if (uuid != null)
             {
-                var friend = _social.Friends.FirstOrDefault(f => f.Uuid == uuid) ?? throw new AxoException("ingame.friendGone");
+                var friend = _social.Friends.FirstOrDefault(knownFriend => knownFriend.Uuid == uuid) ?? throw new AxoException("ingame.friendGone");
                 name = friend.Name;
                 address = friend.Join;
             }
@@ -484,10 +484,10 @@ namespace AxoClient.Integrations
             var worldTask = world ? _live.PeekWorld(address, TimeSpan.FromSeconds(2.5), CancellationToken.None) : Task.FromResult<JsonElement?>(null);
             await Task.WhenAll(pingTask, worldTask);
             var ping = await pingTask;
-            var info = await worldTask;
+            var hostWorldInfo = await worldTask;
 
-            var hostVersion = info is { } i ? str(i, "minecraft") : null;
-            var hostLoader = info is { } j ? str(j, "loader") : null;
+            var hostVersion = hostWorldInfo is { } infoForVersion ? readString(infoForVersion, "minecraft") : null;
+            var hostLoader = hostWorldInfo is { } infoForLoader ? readString(infoForLoader, "loader") : null;
             bool Fits(Instance inst)
             {
                 if (hostVersion != null)
@@ -505,19 +505,19 @@ namespace AxoClient.Integrations
             if (world)
             {
                 title = $"Offene Welt von {name}";
-                meta = string.Join(" · ", new[] { "Offene Welt", hostVersion, hostLoader is { Length: > 0 } l ? char.ToUpperInvariant(l[0]) + l[1..] : null,
-                    ping is { Online: true } ? $"{ping.Players} Spieler" : null }.Where(s => s != null));
+                meta = string.Join(" · ", new[] { "Offene Welt", hostVersion, hostLoader is { Length: > 0 } loaderName ? char.ToUpperInvariant(loaderName[0]) + loaderName[1..] : null,
+                    ping is { Online: true } ? $"{ping.Players} Spieler" : null }.Where(part => part != null));
                 right = "e4mc";
                 rightColor = "#bdbdbd";
             }
             else
             {
                 var normalized = _serverPing.Normalize(address);
-                title = _serverLists.List(instanceId).FirstOrDefault(s => _serverPing.IsValidAddress(s.Address) && _serverPing.Normalize(s.Address) == normalized)?.Name
+                title = _serverLists.List(instanceId).FirstOrDefault(server => _serverPing.IsValidAddress(server.Address) && _serverPing.Normalize(server.Address) == normalized)?.Name
                         ?? firstLine(ping?.Motd) ?? address;
                 meta = players == null ? address : $"{address} · {players}";
-                right = ping?.LatencyMs is { } ms ? $"{ms} ms" : ping is { Online: false } ? "offline" : null;
-                rightColor = ping?.LatencyMs is { } l2 ? l2 < 80 ? "#3fb950" : l2 < 150 ? "#bdbdbd" : "#e3b341" : "#e3b341";
+                right = ping?.LatencyMs is { } latency ? $"{latency} ms" : ping is { Online: false } ? "offline" : null;
+                rightColor = ping?.LatencyMs is { } latencyForColor ? latencyForColor < 80 ? "#3fb950" : latencyForColor < 150 ? "#bdbdbd" : "#e3b341" : "#e3b341";
             }
 
             if (!Fits(current))
@@ -525,13 +525,13 @@ namespace AxoClient.Integrations
                 // Andere Instanz nötig: erst eine, die den Server schon kennt, sonst die zuletzt gespielte passende
                 var all = await _instances.LoadAll();
                 var candidates = new List<(Instance Instance, bool KnowsServer, DateTimeOffset LastPlayed)>();
-                foreach (var inst in all.Where(x => x.Id != instanceId && Fits(x)))
+                foreach (var inst in all.Where(instance => instance.Id != instanceId && Fits(instance)))
                 {
                     var knows = !world && _serverLists.NormalizedAddresses(inst.Id).Contains(_serverPing.Normalize(address));
                     var summary = await _instances.Summary(inst);
                     candidates.Add((inst, knows, summary.LastPlayed ?? inst.CreatedAt));
                 }
-                var best = candidates.OrderByDescending(c => c.KnowsServer).ThenByDescending(c => c.LastPlayed).FirstOrDefault();
+                var best = candidates.OrderByDescending(candidate => candidate.KnowsServer).ThenByDescending(candidate => candidate.LastPlayed).FirstOrDefault();
                 var version = hostVersion ?? versionText(ping?.Version);
                 if (best.Instance == null)
                 {
@@ -541,7 +541,7 @@ namespace AxoClient.Integrations
                 return new JoinPlan(key, "instance", address, uuid, name, inviteId, title, meta, right, rightColor, now, getInfo(best.Instance), [], version, null);
             }
 
-            if (info is { } worldInfo && worldInfo.TryGetProperty("mods", out var modsElement) && modsElement.ValueKind == JsonValueKind.Array)
+            if (hostWorldInfo is { } worldInfo && worldInfo.TryGetProperty("mods", out var modsElement) && modsElement.ValueKind == JsonValueKind.Array)
             {
                 var missing = await missingMods(instanceId, current, modsElement);
                 if (missing.Count > 0)
@@ -555,14 +555,14 @@ namespace AxoClient.Integrations
         /// <summary>Mods des Gastgebers (Modrinth), die in der eigenen Instanz fehlen – ohne reine Client-Mods.</summary>
         private async Task<IReadOnlyList<MissingMod>> missingMods(string instanceId, Instance current, JsonElement mods)
         {
-            var have = (await _content.Sync(instanceId)).Mods.Where(m => m.ProjectId != null).Select(m => m.ProjectId!).ToHashSet();
+            var have = (await _content.Sync(instanceId)).Mods.Where(mod => mod.ProjectId != null).Select(mod => mod.ProjectId!).ToHashSet();
             var wanted = mods.EnumerateArray()
-                .Where(m => m.ValueKind == JsonValueKind.Object && str(m, "source") == "modrinth" && str(m, "project") is { } p && projectIdPattern().IsMatch(p))
-                .Select(m => new MissingMod(_textHelper.Clean(str(m, "name"), 60) is { Length: > 0 } n ? n : str(m, "project")!, "modrinth", str(m, "project")!,
-                    str(m, "version") is { } v && projectIdPattern().IsMatch(v) ? v : null,
-                    $"{_textHelper.Clean(str(m, "modVersion"), 24)} · {current.Loader.Type}".TrimStart(' ', '·')))
-                .Where(m => !have.Contains(m.ProjectId))
-                .DistinctBy(m => m.ProjectId)
+                .Where(mod => mod.ValueKind == JsonValueKind.Object && readString(mod, "source") == "modrinth" && readString(mod, "project") is { } project && projectIdPattern().IsMatch(project))
+                .Select(mod => new MissingMod(_textHelper.Clean(readString(mod, "name"), 60) is { Length: > 0 } modName ? modName : readString(mod, "project")!, "modrinth", readString(mod, "project")!,
+                    readString(mod, "version") is { } version && projectIdPattern().IsMatch(version) ? version : null,
+                    $"{_textHelper.Clean(readString(mod, "modVersion"), 24)} · {current.Loader.Type}".TrimStart(' ', '·')))
+                .Where(missingMod => !have.Contains(missingMod.ProjectId))
+                .DistinctBy(missingMod => missingMod.ProjectId)
                 .Take(60)
                 .ToList();
             if (wanted.Count == 0)
@@ -572,10 +572,10 @@ namespace AxoClient.Integrations
 
             try
             {
-                var sides = await _modrinth.ServerSides(wanted.Select(m => m.ProjectId), CancellationToken.None);
-                return wanted.Where(m => sides.GetValueOrDefault(m.ProjectId) != "unsupported").ToList();
+                var sides = await _modrinth.ServerSides(wanted.Select(missingMod => missingMod.ProjectId), CancellationToken.None);
+                return wanted.Where(missingMod => sides.GetValueOrDefault(missingMod.ProjectId) != "unsupported").ToList();
             }
-            catch (Exception ex) when (ex is HttpRequestException or AxoException or JsonException or TaskCanceledException)
+            catch (Exception exception) when (exception is HttpRequestException or AxoException or JsonException or TaskCanceledException)
             {
                 return wanted;
             }
@@ -583,7 +583,7 @@ namespace AxoClient.Integrations
 
         private async Task join(string instanceId, JsonElement data)
         {
-            var key = str(data, "inviteId") ?? str(data, "uuid") ?? "";
+            var key = readString(data, "inviteId") ?? readString(data, "uuid") ?? "";
             if (!_plans.TryGetValue(instanceId + "|" + key, out var plan))
             {
                 plan = await buildPlan(instanceId, data);
@@ -610,7 +610,7 @@ namespace AxoClient.Integrations
                         friend = plan.Name,
                         address = plan.Address,
                         title = plan.Title,
-                        mods = plan.Mods.Select(m => new { name = m.Name, source = m.Source, projectId = m.ProjectId, versionId = m.VersionId, meta = m.Meta })
+                        mods = plan.Mods.Select(mod => new { name = mod.Name, source = mod.Source, projectId = mod.ProjectId, versionId = mod.VersionId, meta = mod.Meta })
                     });
                     _events.Publish("app.focus");
                     await _bridge.Send(instanceId, "joinState", new { state.uuid, state.key, phase = "launcher" });
@@ -631,7 +631,7 @@ namespace AxoClient.Integrations
                 {
                     await _inbox.Discard(plan.InviteId, CancellationToken.None);
                 }
-                catch (Exception ex) when (ex is AxoException or HttpRequestException)
+                catch (Exception exception) when (exception is AxoException or HttpRequestException)
                 {
                 }
             }
@@ -657,9 +657,9 @@ namespace AxoClient.Integrations
                 await Task.Delay(500);
                 await _games.Launch(nextId, new QuickPlay(Server: address));
             }
-            catch (Exception ex) when (ex is AxoException or IOException or InvalidOperationException)
+            catch (Exception exception) when (exception is AxoException or IOException or InvalidOperationException)
             {
-                _appLog.Info($"Nachjoinen mit anderer Instanz fehlgeschlagen: {ex.Message}");
+                _appLog.Info($"Nachjoinen mit anderer Instanz fehlgeschlagen: {exception.Message}");
                 _events.Publish("app.focus");
             }
         }
@@ -719,15 +719,15 @@ namespace AxoClient.Integrations
                 }
 
                 var inst = await _instances.Get(running.InstanceId);
-                var doc = await _content.Sync(inst.Id);
-                var mods = doc.Mods.Where(m => m.Enabled && m.Source == ContentSource.Modrinth && m.ProjectId != null)
-                    .Select(m => new { name = m.Name, source = "modrinth", project = m.ProjectId, version = m.VersionId, modVersion = m.Version })
+                var document = await _content.Sync(inst.Id);
+                var mods = document.Mods.Where(mod => mod.Enabled && mod.Source == ContentSource.Modrinth && mod.ProjectId != null)
+                    .Select(mod => new { name = mod.Name, source = "modrinth", project = mod.ProjectId, version = mod.VersionId, modVersion = mod.Version })
                     .Take(300).ToList();
                 await _live.SendWorld(new { minecraft = inst.Minecraft.Version, loader = inst.Loader.Type.ToString().ToLowerInvariant(), mods });
             }
-            catch (Exception ex) when (ex is AxoException or IOException or JsonException)
+            catch (Exception exception) when (exception is AxoException or IOException or JsonException)
             {
-                _appLog.Info($"Welt-Infos nicht gesendet: {ex.Message}");
+                _appLog.Info($"Welt-Infos nicht gesendet: {exception.Message}");
             }
         }
 
@@ -762,7 +762,7 @@ namespace AxoClient.Integrations
                     }
                 }
             }
-            catch (Exception ex) when (ex is AxoException or HttpRequestException or JsonException or TaskCanceledException)
+            catch (Exception exception) when (exception is AxoException or HttpRequestException or JsonException or TaskCanceledException)
             {
             }
             try
@@ -774,17 +774,17 @@ namespace AxoClient.Integrations
                     images.Add((key, () => downloadServiceImage(cape.Url)));
                 }
             }
-            catch (Exception ex) when (ex is AxoException or HttpRequestException or JsonException or TaskCanceledException)
+            catch (Exception exception) when (exception is AxoException or HttpRequestException or JsonException or TaskCanceledException)
             {
             }
-            foreach (var cape in (await _capes.List()).Where(c => c.Status == CapeStatus.Approved))
+            foreach (var cape in (await _capes.List()).Where(capeView => capeView.Status == CapeStatus.Approved))
             {
                 var key = "custom:" + cape.Id;
                 list.Add(new { key, name = cape.Name, kind = "custom" });
                 images.Add((key, async () => await _capes.Read(cape.Id, CancellationToken.None)));
             }
-            var worn = account.Capes.Axo is { } axo
-                ? (axo.Source == AxoCapeSource.Official ? "official:" : "custom:") + axo.Id
+            var worn = account.Capes.Axo is { } axoCape
+                ? (axoCape.Source == AxoCapeSource.Official ? "official:" : "custom:") + axoCape.Id
                 : mojangActive ?? "none";
 
             foreach (var instance in targets(onlyInstance))
@@ -801,7 +801,7 @@ namespace AxoClient.Integrations
                                 _capeImages[key] = png = Convert.ToBase64String(bytes);
                             }
                         }
-                        catch (Exception ex) when (ex is AxoException or HttpRequestException or IOException or TaskCanceledException)
+                        catch (Exception exception) when (exception is AxoException or HttpRequestException or IOException or TaskCanceledException)
                         {
                         }
                     }
@@ -857,7 +857,7 @@ namespace AxoClient.Integrations
         {
             var slots = await _emotes.Slots();
             var all = await _emotes.AllWithAnimations();
-            var list = all.Select(e => new { id = e.Item.Id, name = e.Item.Name, source = "imported", loop = e.Item.Loop, moving = e.Item.Moving }).ToList();
+            var list = all.Select(imported => new { id = imported.Item.Id, name = imported.Item.Name, source = "imported", loop = imported.Item.Loop, moving = imported.Item.Moving }).ToList();
             foreach (var instance in targets(onlyInstance))
             {
                 await _bridge.Send(instance, "emotes", new { slots, list });
@@ -873,9 +873,9 @@ namespace AxoClient.Integrations
         {
             if (emote != null && emote.StartsWith("c_", StringComparison.Ordinal))
             {
-                if (await _emotes.Animation(emote) is { } anim)
+                if (await _emotes.Animation(emote) is { } animation)
                 {
-                    await _live.SendEmote(emote, anim.Json, anim.Animation);
+                    await _live.SendEmote(emote, animation.Json, animation.Animation);
                 }
 
                 return;
@@ -896,7 +896,7 @@ namespace AxoClient.Integrations
             {
                 return await _serverPing.Ping(address, 3000);
             }
-            catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or TimeoutException or OperationCanceledException
+            catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException or TimeoutException or OperationCanceledException
                                            or AxoException or JsonException or InvalidOperationException)
             {
                 return null;
@@ -908,7 +908,7 @@ namespace AxoClient.Integrations
             _serverPing.ParseAddress(address).Host.EndsWith(".e4mc.link", StringComparison.OrdinalIgnoreCase);
 
         private string? firstLine(string? text) =>
-            text?.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) is { } line ? _textHelper.Clean(line, 40) : null;
+            text?.Split('\n').Select(textLine => textLine.Trim()).FirstOrDefault(textLine => textLine.Length > 0) is { } line ? _textHelper.Clean(line, 40) : null;
 
         /// <summary>
         /// Passt die Server-Version (Text aus dem Ping, z. B. "Paper 1.21.4", "1.8.x-1.21.x") zur Minecraft-Version? <c>null</c> = unklar.
@@ -920,57 +920,57 @@ namespace AxoClient.Integrations
                 return null;
             }
 
-            var found = versionNumber().Matches(serverVersion).Select(m => m.Value).ToList();
+            var found = versionNumber().Matches(serverVersion).Select(match => match.Value).ToList();
             if (found.Count == 0)
             {
                 return null;
             }
 
-            if (found.Any(v => compare(v, minecraft) == 0))
+            if (found.Any(version => compare(version, minecraft) == 0))
             {
                 return true;
             }
 
             if (found.Count >= 2)
             {
-                var low = found.MinBy(v => v, Comparer<string>.Create(compare))!;
-                var high = found.MaxBy(v => v, Comparer<string>.Create(compare))!;
+                var low = found.MinBy(version => version, Comparer<string>.Create(compare))!;
+                var high = found.MaxBy(version => version, Comparer<string>.Create(compare))!;
                 return compare(minecraft, low) >= 0 && compare(minecraft, high) <= 0;
             }
             return false;
         }
 
         private string? versionText(string? serverVersion) =>
-            serverVersion == null ? null : versionNumber().Matches(serverVersion).Select(m => m.Value).LastOrDefault();
+            serverVersion == null ? null : versionNumber().Matches(serverVersion).Select(match => match.Value).LastOrDefault();
 
         /// <summary>Vergleicht "1.21.4" mit "1.21.x" usw.; "x" passt auf alles.</summary>
-        private int compare(string a, string b)
+        private int compare(string firstVersion, string secondVersion)
         {
-            var pa = a.Split('.');
-            var pb = b.Split('.');
-            for (var i = 0; i < Math.Max(pa.Length, pb.Length); i++)
+            var firstParts = firstVersion.Split('.');
+            var secondParts = secondVersion.Split('.');
+            for (var index = 0; index < Math.Max(firstParts.Length, secondParts.Length); index++)
             {
-                var x = i < pa.Length ? pa[i] : "0";
-                var y = i < pb.Length ? pb[i] : "0";
-                if (x == "x" || y == "x")
+                var firstPart = index < firstParts.Length ? firstParts[index] : "0";
+                var secondPart = index < secondParts.Length ? secondParts[index] : "0";
+                if (firstPart == "x" || secondPart == "x")
                 {
                     return 0;
                 }
 
-                var c = (int.TryParse(x, out var nx) ? nx : 0).CompareTo(int.TryParse(y, out var ny) ? ny : 0);
-                if (c != 0)
+                var comparison = (int.TryParse(firstPart, out var firstNumber) ? firstNumber : 0).CompareTo(int.TryParse(secondPart, out var secondNumber) ? secondNumber : 0);
+                if (comparison != 0)
                 {
-                    return c;
+                    return comparison;
                 }
             }
             return 0;
         }
 
         private string uuid(JsonElement data) =>
-            str(data, "uuid") is { Length: 32 } u && u.All(Uri.IsHexDigit) ? u.ToLowerInvariant() : throw new AxoException("errors.invalidInput");
+            readString(data, "uuid") is { Length: 32 } candidateUuid && candidateUuid.All(Uri.IsHexDigit) ? candidateUuid.ToLowerInvariant() : throw new AxoException("errors.invalidInput");
 
-        private string? str(JsonElement e, string name) =>
-            e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+        private string? readString(JsonElement element, string name) =>
+            element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var valueElement) && valueElement.ValueKind == JsonValueKind.String ? valueElement.GetString() : null;
 
         [GeneratedRegex(@"\d+\.\d+(?:\.(?:\d+|x))?")]
         private partial Regex versionNumber();

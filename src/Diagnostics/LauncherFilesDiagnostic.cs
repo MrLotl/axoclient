@@ -16,16 +16,16 @@ namespace AxoClient.Diagnostics
 
         public string Area => "launcher";
 
-        public Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken ct)
+        public Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken cancellationToken)
         {
             var items = new List<DiagnosticItem>();
             var jsonFiles = new[] { _paths.LauncherJson, _paths.AccountsJson, _paths.StateJson, _paths.SkinLibrary, _paths.CapeLibrary }
                 .Concat(Directory.Exists(_paths.Instances)
-                    ? Directory.EnumerateDirectories(_paths.Instances).SelectMany(d => new[]
-                        { Path.Combine(d, "instance.json"), Path.Combine(d, "content.json"), Path.Combine(d, "playtime.json") })
+                    ? Directory.EnumerateDirectories(_paths.Instances).SelectMany(directory => new[]
+                        { Path.Combine(directory, "instance.json"), Path.Combine(directory, "content.json"), Path.Combine(directory, "playtime.json") })
                     : [])
                 .Concat(Directory.Exists(_paths.Servers)
-                    ? Directory.EnumerateDirectories(_paths.Servers).SelectMany(d => new[] { Path.Combine(d, "server.json"), Path.Combine(d, "uptime.json") })
+                    ? Directory.EnumerateDirectories(_paths.Servers).SelectMany(directory => new[] { Path.Combine(directory, "server.json"), Path.Combine(directory, "uptime.json") })
                     : [])
                 .Where(File.Exists)
                 .ToList();
@@ -40,7 +40,7 @@ namespace AxoClient.Diagnostics
                         broken.Add(Path.GetRelativePath(_paths.Root, file));
                     }
                 }
-                catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException or InvalidOperationException or FormatException)
+                catch (Exception exception) when (exception is System.Text.Json.JsonException or IOException or InvalidOperationException or FormatException)
                 {
                     broken.Add(Path.GetRelativePath(_paths.Root, file));
                 }

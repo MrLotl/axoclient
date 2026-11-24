@@ -55,22 +55,22 @@ namespace AxoClient.Game
         {
             // Quilt nutzt den Fabric-Build
             var effective = loader == LoaderType.Quilt ? LoaderType.Fabric : loader;
-            return _manifest.Entries.FirstOrDefault(e => e.Minecraft.Contains(minecraftVersion) && e.Loaders.Contains(effective)
-                                                         && _assembly.GetManifestResourceInfo(ResourcePrefix + e.File) != null);
+            return _manifest.Entries.FirstOrDefault(zipEntry => zipEntry.Minecraft.Contains(minecraftVersion) && zipEntry.Loaders.Contains(effective)
+                                                         && _assembly.GetManifestResourceInfo(ResourcePrefix + zipEntry.File) != null);
         }
 
         public bool IsSupported(string minecraftVersion, LoaderType loader) => Find(minecraftVersion, loader) != null;
 
         public IReadOnlyList<string> SupportedMinecraftVersions =>
-            _manifest.Entries.Where(e => _assembly.GetManifestResourceInfo(ResourcePrefix + e.File) != null)
-                .SelectMany(e => e.Minecraft).Distinct().ToList();
+            _manifest.Entries.Where(zipEntry => _assembly.GetManifestResourceInfo(ResourcePrefix + zipEntry.File) != null)
+                .SelectMany(zipEntry => zipEntry.Minecraft).Distinct().ToList();
 
-        public async Task<byte[]> ReadJar(AxoModEntry entry, CancellationToken ct)
+        public async Task<byte[]> ReadJar(AxoModEntry entry, CancellationToken cancellationToken)
         {
             await using var stream = _assembly.GetManifestResourceStream(ResourcePrefix + entry.File)
                                      ?? throw new AxoException("axomod.missing");
             using var buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer, ct);
+            await stream.CopyToAsync(buffer, cancellationToken);
             var bytes = buffer.ToArray();
             if (entry.Sha256 is { Length: > 0 } expected
                 && !Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).Equals(expected, StringComparison.OrdinalIgnoreCase))
@@ -108,12 +108,12 @@ namespace AxoClient.Game
         }
 
         /// <summary>Legt die richtige Jar in <c>mods/</c> und entfernt alte AxoMod-Jars.</summary>
-        public async Task<ContentEntry?> Sync(string modsDir, string minecraftVersion, LoaderType loader, bool enabled,
-            CancellationToken ct)
+        public async Task<ContentEntry?> Sync(string modsDirectory, string minecraftVersion, LoaderType loader, bool enabled,
+            CancellationToken cancellationToken)
         {
-            Directory.CreateDirectory(modsDir);
+            Directory.CreateDirectory(modsDirectory);
             var entry = enabled ? Find(minecraftVersion, loader) : null;
-            foreach (var old in Directory.EnumerateFiles(modsDir, FilePrefix + "*"))
+            foreach (var old in Directory.EnumerateFiles(modsDirectory, FilePrefix + "*"))
             {
                 if (entry == null || !Path.GetFileName(old).Equals(entry.File, StringComparison.OrdinalIgnoreCase))
                 {
@@ -126,15 +126,15 @@ namespace AxoClient.Game
                 return null;
             }
 
-            var bytes = await ReadJar(entry, ct);
-            var target = Path.Combine(modsDir, entry.File);
+            var bytes = await ReadJar(entry, cancellationToken);
+            var target = Path.Combine(modsDirectory, entry.File);
             var hash = Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(bytes)).ToLowerInvariant();
-            if (!File.Exists(target) || !_textHelper.Sha1Hex(new MemoryStream(await File.ReadAllBytesAsync(target, ct))).Equals(hash))
+            if (!File.Exists(target) || !_textHelper.Sha1Hex(new MemoryStream(await File.ReadAllBytesAsync(target, cancellationToken))).Equals(hash))
             {
-                await File.WriteAllBytesAsync(target, bytes, ct);
+                await File.WriteAllBytesAsync(target, bytes, cancellationToken);
             }
 
-            var info = new FileInfo(target);
+            var file = new FileInfo(target);
             return new ContentEntry
             {
                 File = entry.File,
@@ -143,7 +143,7 @@ namespace AxoClient.Game
                 Source = ContentSource.AxoClient,
                 Hashes = new ContentHashes(hash, null),
                 Size = bytes.Length,
-                Modified = info.LastWriteTimeUtc
+                Modified = file.LastWriteTimeUtc
             };
         }
 

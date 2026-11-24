@@ -31,12 +31,12 @@ namespace AxoClient.App
         }
 
         /// <summary>Erledigt Setup-, Deinstallations- und Update-Aufgaben; <c>true</c> heißt: Programm beenden.</summary>
-        public bool Handle(string[] args, out int exitCode)
+        public bool Handle(string[] arguments, out int exitCode)
         {
             exitCode = 0;
             try
             {
-                if (args.Contains("--uninstall"))
+                if (arguments.Contains("--uninstall"))
                 {
                     exitCode = uninstall();
                     return true;
@@ -46,19 +46,19 @@ namespace AxoClient.App
                     exitCode = install();
                     return true;
                 }
-                waitForPreviousVersion(args);
+                waitForPreviousVersion(arguments);
                 if (_installLocation.IsInstalled)
                 {
                     _installLocation.TryDeleteOld();
                     registerUninstall();
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or COMException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Security.SecurityException or COMException)
             {
-                _appLog.Warn("Installation", ex);
-                if (args.Contains("--uninstall") || (_installLocation.IsSingleFile && !_installLocation.IsInstalled))
+                _appLog.Warn("Installation", exception);
+                if (arguments.Contains("--uninstall") || (_installLocation.IsSingleFile && !_installLocation.IsInstalled))
                 {
-                    _nativeMessage.Show("AxoClient konnte nicht installiert werden", ex.Message);
+                    _nativeMessage.Show("AxoClient konnte nicht installiert werden", exception.Message);
                     exitCode = 1;
                     return true;
                 }
@@ -78,12 +78,12 @@ namespace AxoClient.App
             }
 
             _installLocation.ReplaceExe(Environment.ProcessPath!, copy: true);
-            var exe = _installLocation.ExePath;
-            createShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "AxoClient.lnk"), exe);
-            createShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "AxoClient.lnk"), exe);
+            var exePath = _installLocation.ExePath;
+            createShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "AxoClient.lnk"), exePath);
+            createShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "AxoClient.lnk"), exePath);
             registerUninstall();
             removeOldVelopackInstall();
-            Process.Start(new ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = _installLocation.Directory });
+            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = false, WorkingDirectory = _installLocation.Directory });
             return 0;
         }
 
@@ -119,17 +119,17 @@ namespace AxoClient.App
         }
 
         /// <summary>Nach einem Update startet die neue Version mit <c>--after &lt;pid&gt;</c> und wartet auf die alte.</summary>
-        private void waitForPreviousVersion(string[] args)
+        private void waitForPreviousVersion(string[] arguments)
         {
-            var i = Array.IndexOf(args, "--after");
-            if (i < 0 || i + 1 >= args.Length || !int.TryParse(args[i + 1], out var pid))
+            var afterIndex = Array.IndexOf(arguments, "--after");
+            if (afterIndex < 0 || afterIndex + 1 >= arguments.Length || !int.TryParse(arguments[afterIndex + 1], out var processId))
             {
                 return;
             }
 
             try
             {
-                using var previous = Process.GetProcessById(pid);
+                using var previous = Process.GetProcessById(processId);
                 previous.WaitForExit(TimeSpan.FromSeconds(30));
             }
             catch (ArgumentException)
@@ -152,7 +152,7 @@ namespace AxoClient.App
         /// <summary>Eintrag unter "Apps" bzw. "Programme und Features" (pro Benutzer).</summary>
         private void registerUninstall()
         {
-            var exe = _installLocation.ExePath;
+            var exePath = _installLocation.ExePath;
             using var key = Registry.CurrentUser.CreateSubKey(UninstallKey);
             if (key.GetValue("DisplayVersion") as string == _appInfo.Version && key.GetValue("InstallLocation") as string == _installLocation.Directory)
             {
@@ -162,16 +162,16 @@ namespace AxoClient.App
             key.SetValue("DisplayName", "AxoClient");
             key.SetValue("DisplayVersion", _appInfo.Version);
             key.SetValue("Publisher", "AxoClient");
-            key.SetValue("DisplayIcon", $"\"{exe}\",0");
+            key.SetValue("DisplayIcon", $"\"{exePath}\",0");
             key.SetValue("InstallLocation", _installLocation.Directory);
-            key.SetValue("UninstallString", $"\"{exe}\" --uninstall");
-            key.SetValue("QuietUninstallString", $"\"{exe}\" --uninstall");
+            key.SetValue("UninstallString", $"\"{exePath}\" --uninstall");
+            key.SetValue("QuietUninstallString", $"\"{exePath}\" --uninstall");
             key.SetValue("URLInfoAbout", AppInfo.Repository);
             key.SetValue("NoModify", 1, RegistryValueKind.DWord);
             key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
-            if (File.Exists(exe))
+            if (File.Exists(exePath))
             {
-                key.SetValue("EstimatedSize", (int)(new FileInfo(exe).Length / 1024), RegistryValueKind.DWord);
+                key.SetValue("EstimatedSize", (int)(new FileInfo(exePath).Length / 1024), RegistryValueKind.DWord);
             }
         }
 
@@ -204,9 +204,9 @@ namespace AxoClient.App
                 Set("Description", "AxoClient");
                 linkType.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, link, null);
             }
-            catch (Exception ex) when (ex is COMException or System.Reflection.TargetInvocationException or IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is COMException or System.Reflection.TargetInvocationException or IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn($"Verknüpfung {path}", ex);
+                _appLog.Warn($"Verknüpfung {path}", exception);
             }
             finally
             {
@@ -228,25 +228,25 @@ namespace AxoClient.App
         /// </summary>
         private void removeOldVelopackInstall()
         {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AxoClient");
-            if (!Directory.Exists(dir))
+            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AxoClient");
+            if (!Directory.Exists(directory))
             {
                 return;
             }
 
-            if (!File.Exists(Path.Combine(dir, "Update.exe")) && !Directory.Exists(Path.Combine(dir, "current"))
-                                                               && !Directory.Exists(Path.Combine(dir, "packages")))
+            if (!File.Exists(Path.Combine(directory, "Update.exe")) && !Directory.Exists(Path.Combine(directory, "current"))
+                                                               && !Directory.Exists(Path.Combine(directory, "packages")))
             {
                 return;
             }
 
             try
             {
-                Directory.Delete(dir, recursive: true);
+                Directory.Delete(directory, recursive: true);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn("Alte Velopack-Installation entfernen", ex);
+                _appLog.Warn("Alte Velopack-Installation entfernen", exception);
             }
         }
 
@@ -259,9 +259,9 @@ namespace AxoClient.App
                     File.Delete(path);
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn($"{path} löschen", ex);
+                _appLog.Warn($"{path} löschen", exception);
             }
         }
     }

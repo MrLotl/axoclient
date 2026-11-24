@@ -22,39 +22,39 @@ namespace AxoClient.Launch.Checks
         public override string Id => "memory";
         public override LaunchPhase Phase => LaunchPhase.Resources;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
             var (total, free) = (_memory ?? _systemInfo.Memory)();
-            var mb = ctx.MemoryMb;
-            var mods = ctx.Content.Mods.Count(m => m.Enabled);
+            var memoryMb = context.MemoryMb;
+            var mods = context.Content.Mods.Count(mod => mod.Enabled);
             var recommended = _systemInfo.RecommendedMemoryMb(mods, total);
             var setRecommended = new CheckAction("setRecommended", new TextRef("pipeline.action.setRam", ("mb", recommended)),
-                async (c, job) =>
+                async (launchContext, job) =>
                 {
-                    c.Instance = await _instances.Update(c.Instance.Id, new InstanceUpdate(MemoryMb: recommended), job.Token);
+                    launchContext.Instance = await _instances.Update(launchContext.Instance.Id, new InstanceUpdate(MemoryMb: recommended), job.Token);
                 }, true);
 
             var results = new List<CheckResult>();
-            if (mb > total - 512)
+            if (memoryMb > total - 512)
             {
-                results.Add(new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.ram.tooHigh", ("mb", mb), ("totalMb", total)),
+                results.Add(new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.ram.tooHigh", ("mb", memoryMb), ("totalMb", total)),
                     [setRecommended], CanSilence: false));
             }
             else
             {
-                if (mb > free)
+                if (memoryMb > free)
                 {
-                    results.Add(new CheckResult(Id, Severity.Warning, new TextRef("pipeline.ram.notFree", ("mb", mb), ("freeMb", free)),
+                    results.Add(new CheckResult(Id, Severity.Warning, new TextRef("pipeline.ram.notFree", ("mb", memoryMb), ("freeMb", free)),
                         [
                             new CheckAction("lessRam", new TextRef("pipeline.action.lessRam", ("mb", Math.Max(1024, free / 512 * 512))),
-                                async (c, job) => c.Instance = await _instances.Update(c.Instance.Id,
+                                async (launchContext, job) => launchContext.Instance = await _instances.Update(launchContext.Instance.Id,
                                     new InstanceUpdate(MemoryMb: (int)Math.Max(1024, free / 512 * 512)), job.Token))
                         ], Key: "ram-not-free"));
                 }
 
-                if (mb < _systemInfo.MinimumMemoryMb(mods))
+                if (memoryMb < _systemInfo.MinimumMemoryMb(mods))
                 {
-                    results.Add(new CheckResult(Id, Severity.Warning, new TextRef("pipeline.ram.tooLow", ("mb", mb), ("mods", mods)),
+                    results.Add(new CheckResult(Id, Severity.Warning, new TextRef("pipeline.ram.tooLow", ("mb", memoryMb), ("mods", mods)),
                         [setRecommended], Key: $"ram-low:{mods / 25}"));
                 }
             }

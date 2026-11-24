@@ -48,7 +48,7 @@ namespace AxoClient.Instances
         public JsonStore<Instance> StoreOf(string id) => _jsonStoreFactory.Create<Instance>(_paths.Fs, _paths.InstanceJson(_textHelper.RequireId(id)));
         public JsonStore<ContentDocument> ContentOf(string id) => _jsonStoreFactory.Create<ContentDocument>(_paths.Fs, _paths.ContentJson(_textHelper.RequireId(id)));
 
-        public string GameDir(string id) => _paths.GameDir(_textHelper.RequireId(id));
+        public string GameDirectory(string id) => _paths.GameDirectory(_textHelper.RequireId(id));
 
         public string ProcessKey(string id) => "instance:" + id;
 
@@ -58,7 +58,7 @@ namespace AxoClient.Instances
                     .Where(id => _textHelper.IsValidId(id) && File.Exists(_paths.InstanceJson(id))).ToList()
                 : [];
 
-        public async Task<IReadOnlyList<Instance>> LoadAll(CancellationToken ct = default)
+        public async Task<IReadOnlyList<Instance>> LoadAll(CancellationToken cancellationToken = default)
         {
             if (!Directory.Exists(_paths.Instances))
             {
@@ -66,9 +66,9 @@ namespace AxoClient.Instances
             }
 
             var result = new List<Instance>();
-            foreach (var dir in Directory.EnumerateDirectories(_paths.Instances))
+            foreach (var directory in Directory.EnumerateDirectories(_paths.Instances))
             {
-                var id = Path.GetFileName(dir);
+                var id = Path.GetFileName(directory);
                 if (!_textHelper.IsValidId(id) || !File.Exists(_paths.InstanceJson(id)))
                 {
                     continue;
@@ -76,20 +76,20 @@ namespace AxoClient.Instances
 
                 try
                 {
-                    var instance = await StoreOf(id).Load(ct);
+                    var instance = await StoreOf(id).Load(cancellationToken);
                     instance.Id = id;
                     _cache[id] = instance;
                     result.Add(instance);
                 }
-                catch (Exception ex) when (ex is IOException or AxoException)
+                catch (Exception exception) when (exception is IOException or AxoException)
                 {
-                    _appLog.Warn($"Instanz {id} konnte nicht gelesen werden", ex);
+                    _appLog.Warn($"Instanz {id} konnte nicht gelesen werden", exception);
                 }
             }
             return result;
         }
 
-        public async Task<Instance> Get(string id, CancellationToken ct = default)
+        public async Task<Instance> Get(string id, CancellationToken cancellationToken = default)
         {
             _textHelper.RequireId(id);
             if (_cache.TryGetValue(id, out var cached))
@@ -102,31 +102,31 @@ namespace AxoClient.Instances
                 throw new AxoException("instances.notFound");
             }
 
-            var instance = await StoreOf(id).Load(ct);
+            var instance = await StoreOf(id).Load(cancellationToken);
             instance.Id = id;
             _cache[id] = instance;
             return instance;
         }
 
-        public async Task<IReadOnlyList<InstanceSummary>> List(CancellationToken ct = default)
+        public async Task<IReadOnlyList<InstanceSummary>> List(CancellationToken cancellationToken = default)
         {
-            var all = await LoadAll(ct);
+            var all = await LoadAll(cancellationToken);
             var summaries = new List<InstanceSummary>();
             foreach (var instance in all)
             {
-                summaries.Add(await Summary(instance, ct));
+                summaries.Add(await Summary(instance, cancellationToken));
             }
 
-            return summaries.OrderByDescending(s => s.LastPlayed ?? s.CreatedAt).ToList();
+            return summaries.OrderByDescending(summary => summary.LastPlayed ?? summary.CreatedAt).ToList();
         }
 
-        public async Task<InstanceSummary> Summary(Instance instance, CancellationToken ct = default)
+        public async Task<InstanceSummary> Summary(Instance instance, CancellationToken cancellationToken = default)
         {
-            var playtime = await _jsonStoreFactory.Create<ActivityLog>(_paths.Fs, _paths.PlaytimeJson(instance.Id)).Load(ct);
+            var playtime = await _jsonStoreFactory.Create<ActivityLog>(_paths.Fs, _paths.PlaytimeJson(instance.Id)).Load(cancellationToken);
             var modCount = 0;
             if (File.Exists(_paths.ContentJson(instance.Id)))
             {
-                modCount = (await ContentOf(instance.Id).Load(ct)).Mods.Count(m => m.Source != ContentSource.AxoClient);
+                modCount = (await ContentOf(instance.Id).Load(cancellationToken)).Mods.Count(mod => mod.Source != ContentSource.AxoClient);
             }
 
             var hasIcon = instance.Images.Icon != null && File.Exists(Path.Combine(_paths.Instance(instance.Id), instance.Images.Icon));
@@ -141,7 +141,7 @@ namespace AxoClient.Instances
         }
 
         private bool isSafeSeed(string? seed) =>
-            seed is { Length: > 0 and <= 64 } && seed.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
+            seed is { Length: > 0 and <= 64 } && seed.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
 
         private long imageVersion(string id)
         {
@@ -152,7 +152,7 @@ namespace AxoClient.Instances
         }
 
         public async Task<Instance> Create(CreateInstanceRequest request, OriginType origin = OriginType.Empty,
-            CancellationToken ct = default)
+            CancellationToken cancellationToken = default)
         {
             var name = _instanceRules.CleanName(request.Name);
             if (!_gameVersionHelper.IsSafeVersion(request.MinecraftVersion))
@@ -165,7 +165,7 @@ namespace AxoClient.Instances
                 throw new AxoException("errors.invalidInput");
             }
 
-            await _lock.WaitAsync(ct);
+            await _lock.WaitAsync(cancellationToken);
             try
             {
                 var id = _textHelper.NewId(name);
@@ -180,25 +180,25 @@ namespace AxoClient.Instances
                     Name = name,
                     Minecraft = new MinecraftVersionRef(request.MinecraftVersion, VersionType.Release),
                     Loader = new LoaderRef(request.Loader, request.Loader == LoaderType.Vanilla ? null : request.LoaderVersion),
-                    MemoryMb = request.MemoryMb is { } mb ? Math.Clamp(mb, 512, 65536) : null,
+                    MemoryMb = request.MemoryMb is { } memoryMb ? Math.Clamp(memoryMb, 512, 65536) : null,
                     Origin = new InstanceOrigin { Type = origin },
                     CreatedAt = DateTimeOffset.UtcNow,
                     // Farbverlauf so, wie er beim Erstellen zu sehen war (nur harmlose Zeichen, sonst aus der ID)
                     Images = new InstanceImages { ArtSeed = isSafeSeed(request.ArtSeed) ? request.ArtSeed : null }
                 };
 
-                var dir = _paths.Instance(id);
-                Directory.CreateDirectory(dir);
-                Directory.CreateDirectory(_paths.GameDir(id));
+                var directory = _paths.Instance(id);
+                Directory.CreateDirectory(directory);
+                Directory.CreateDirectory(_paths.GameDirectory(id));
                 foreach (var sub in new[] { "mods", "resourcepacks", "shaderpacks", "saves", "screenshots", "config" })
                 {
-                    Directory.CreateDirectory(Path.Combine(_paths.GameDir(id), sub));
+                    Directory.CreateDirectory(Path.Combine(_paths.GameDirectory(id), sub));
                 }
 
                 Directory.CreateDirectory(_paths.InstanceBackups(id));
 
-                await StoreOf(id).Save(instance, ct);
-                await ContentOf(id).Save(new ContentDocument(), ct);
+                await StoreOf(id).Save(instance, cancellationToken);
+                await ContentOf(id).Save(new ContentDocument(), cancellationToken);
                 _cache[id] = instance;
                 publish();
                 return instance;
@@ -221,19 +221,19 @@ namespace AxoClient.Instances
             copy.ModLock = new ModLock { Level = source.ModLock.Level, PackMods = [.. source.ModLock.PackMods] };
             copy.Origin.CopiedFrom = sourceId;
 
-            var from = _paths.GameDir(sourceId);
-            var to = _paths.GameDir(copy.Id);
+            var from = _paths.GameDirectory(sourceId);
+            var to = _paths.GameDirectory(copy.Id);
             var files = Directory.Exists(from)
                 ? Directory.EnumerateFiles(from, "*", SearchOption.AllDirectories)
-                    .Where(f => !IsTransient(Path.GetRelativePath(from, f))).ToList()
+                    .Where(file => !IsTransient(Path.GetRelativePath(from, file))).ToList()
                 : [];
-            for (var i = 0; i < files.Count; i++)
+            for (var index = 0; index < files.Count; index++)
             {
                 job.Token.ThrowIfCancellationRequested();
-                var target = Path.Combine(to, Path.GetRelativePath(from, files[i]));
+                var target = Path.Combine(to, Path.GetRelativePath(from, files[index]));
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                File.Copy(files[i], target, overwrite: true);
-                job.Report((double)(i + 1) / files.Count);
+                File.Copy(files[index], target, overwrite: true);
+                job.Report((double)(index + 1) / files.Count);
             }
             foreach (var image in new[] { "icon.png", "banner.png" })
             {
@@ -268,9 +268,9 @@ namespace AxoClient.Instances
                    || Path.GetFileName(relative).StartsWith("hs_err_pid");
         }
 
-        public async Task<Instance> Update(string id, InstanceUpdate update, CancellationToken ct = default)
+        public async Task<Instance> Update(string id, InstanceUpdate update, CancellationToken cancellationToken = default)
         {
-            var instance = await Get(id, ct);
+            var instance = await Get(id, cancellationToken);
             if (update.Name != null)
             {
                 instance.Name = _instanceRules.CleanName(update.Name);
@@ -301,9 +301,9 @@ namespace AxoClient.Instances
             {
                 instance.MemoryMb = null;
             }
-            else if (update.MemoryMb is { } mb)
+            else if (update.MemoryMb is { } memoryMb)
             {
-                instance.MemoryMb = Math.Clamp(mb, 512, 65536);
+                instance.MemoryMb = Math.Clamp(memoryMb, 512, 65536);
             }
 
             if (update.JavaArgs != null)
@@ -316,24 +316,24 @@ namespace AxoClient.Instances
                 instance.Images.BannerAuto = auto;
             }
 
-            if (update.AxoMod is { } axo)
+            if (update.AxoMod is { } axoMod)
             {
-                instance.AxoMod = axo;
+                instance.AxoMod = axoMod;
             }
 
-            await Save(instance, ct);
+            await Save(instance, cancellationToken);
             return instance;
         }
 
-        public async Task Save(Instance instance, CancellationToken ct = default)
+        public async Task Save(Instance instance, CancellationToken cancellationToken = default)
         {
-            await StoreOf(instance.Id).Save(instance, ct);
+            await StoreOf(instance.Id).Save(instance, cancellationToken);
             _cache[instance.Id] = instance;
             publish();
         }
 
         /// <summary>Löschen landet im Papierkorb, damit nichts unwiderruflich weg ist.</summary>
-        public async Task Delete(string id, CancellationToken ct = default)
+        public async Task Delete(string id, CancellationToken cancellationToken = default)
         {
             _textHelper.RequireId(id);
             if (_processes.Get(ProcessKey(id)) != null)
@@ -341,15 +341,15 @@ namespace AxoClient.Instances
                 throw new AxoException("instances.running");
             }
 
-            var dir = _paths.Instance(id);
-            if (!Directory.Exists(dir))
+            var directory = _paths.Instance(id);
+            if (!Directory.Exists(directory))
             {
                 return;
             }
 
-            await Task.Run(() => Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(dir,
+            await Task.Run(() => Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(directory,
                 Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
-                Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin), ct);
+                Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin), cancellationToken);
             _cache.TryRemove(id, out _);
             publish();
         }
@@ -358,9 +358,9 @@ namespace AxoClient.Instances
         /// Hintergrund ohne eigenes Bild: Panorama der Version (Blickrichtung 0–3) oder nur Farbverlauf.
         /// Ein eigenes Hintergrundbild wird dabei entfernt.
         /// </summary>
-        public async Task SetBackdrop(string id, bool gradientOnly, int panoramaView, CancellationToken ct = default)
+        public async Task SetBackdrop(string id, bool gradientOnly, int panoramaView, CancellationToken cancellationToken = default)
         {
-            var instance = await Get(id, ct);
+            var instance = await Get(id, cancellationToken);
             var banner = Path.Combine(_paths.Instance(id), "banner.png");
             if (File.Exists(banner))
             {
@@ -371,13 +371,13 @@ namespace AxoClient.Instances
             instance.Images.BannerAuto = true;
             instance.Images.GradientOnly = gradientOnly;
             instance.Images.PanoramaView = Math.Clamp(panoramaView, 0, 3);
-            await Save(instance, ct);
+            await Save(instance, cancellationToken);
         }
 
         /// <summary>Speichert Instanzbild oder eigenes Hintergrundbild (intern „banner“). Nur PNG und JPEG, höchstens 5 MB.</summary>
-        public async Task SetImage(string id, bool banner, byte[]? data, CancellationToken ct = default)
+        public async Task SetImage(string id, bool banner, byte[]? data, CancellationToken cancellationToken = default)
         {
-            var instance = await Get(id, ct);
+            var instance = await Get(id, cancellationToken);
             var file = banner ? "banner.png" : "icon.png";
             var path = Path.Combine(_paths.Instance(id), file);
             if (data == null)
@@ -404,7 +404,7 @@ namespace AxoClient.Instances
                     throw new AxoException("errors.invalidImage");
                 }
 
-                await File.WriteAllBytesAsync(path, data, ct);
+                await File.WriteAllBytesAsync(path, data, cancellationToken);
                 if (banner)
                 {
                     instance.Images.Banner = file;
@@ -415,7 +415,7 @@ namespace AxoClient.Instances
                     instance.Images.Icon = file;
                 }
             }
-            await Save(instance, ct);
+            await Save(instance, cancellationToken);
         }
 
         public string? ImagePath(string id, bool banner)

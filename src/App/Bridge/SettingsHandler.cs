@@ -47,60 +47,60 @@ namespace AxoClient.App.Bridge
             _appearance = appearance;
         }
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            r.On("settings.get", () => _settings.Current);
+            router.On("settings.get", () => _settings.Current);
 
-            r.On<SettingsData>("settings.save", async (d, _) =>
+            router.On<SettingsData>("settings.save", async (request, _) =>
             {
-                await _settings.Save(d.Settings);
-                applyAutostart(d.Settings.Autostart);
+                await _settings.Save(request.Settings);
+                applyAutostart(request.Settings.Autostart);
                 return _settings.Current;
             });
 
-            r.On<StateData>("state.update", async (d, _) =>
+            router.On<StateData>("state.update", async (request, _) =>
             {
-                string? View(string? v) => v is "grid" or "list" ? v : null;
-                string? Sort(string? v) => v is "popular" or "relevance" or "newest" or "updated" ? v : null;
-                double? Size(double? v) => v is { } n && double.IsFinite(n) ? Math.Clamp(n, 0, 1) : null;
-                string? InstanceSort(string? v) => v is "recent" or "name" or "playtime" or "mods" or "custom" ? v : null;
-                await _settings.UpdateState(s =>
+                string? View(string? viewMode) => viewMode is "grid" or "list" ? viewMode : null;
+                string? Sort(string? sortMode) => sortMode is "popular" or "relevance" or "newest" or "updated" ? sortMode : null;
+                double? Size(double? requestedSize) => requestedSize is { } finiteSize && double.IsFinite(finiteSize) ? Math.Clamp(finiteSize, 0, 1) : null;
+                string? InstanceSort(string? sortMode) => sortMode is "recent" or "name" or "playtime" or "mods" or "custom" ? sortMode : null;
+                await _settings.UpdateState(state =>
                 {
-                    s.Views.Instances = View(d.Instances) ?? s.Views.Instances;
-                    s.Views.LocalServers = View(d.LocalServers) ?? s.Views.LocalServers;
-                    s.Views.Modpacks = View(d.Modpacks) ?? s.Views.Modpacks;
-                    s.Views.Content = View(d.Content) ?? s.Views.Content;
-                    s.Views.ContentGridSize = Size(d.ContentGridSize) ?? s.Views.ContentGridSize;
-                    s.Views.ContentListSize = Size(d.ContentListSize) ?? s.Views.ContentListSize;
-                    s.Sort.Modpacks = Sort(d.SortModpacks) ?? s.Sort.Modpacks;
-                    s.Sort.AddMods = Sort(d.SortAddMods) ?? s.Sort.AddMods;
-                    s.Views.InstancesSize = Size(d.InstancesSize) ?? s.Views.InstancesSize;
-                    s.Sort.Instances = InstanceSort(d.SortInstances) ?? s.Sort.Instances;
+                    state.Views.Instances = View(request.Instances) ?? state.Views.Instances;
+                    state.Views.LocalServers = View(request.LocalServers) ?? state.Views.LocalServers;
+                    state.Views.Modpacks = View(request.Modpacks) ?? state.Views.Modpacks;
+                    state.Views.Content = View(request.Content) ?? state.Views.Content;
+                    state.Views.ContentGridSize = Size(request.ContentGridSize) ?? state.Views.ContentGridSize;
+                    state.Views.ContentListSize = Size(request.ContentListSize) ?? state.Views.ContentListSize;
+                    state.Sort.Modpacks = Sort(request.SortModpacks) ?? state.Sort.Modpacks;
+                    state.Sort.AddMods = Sort(request.SortAddMods) ?? state.Sort.AddMods;
+                    state.Views.InstancesSize = Size(request.InstancesSize) ?? state.Views.InstancesSize;
+                    state.Sort.Instances = InstanceSort(request.SortInstances) ?? state.Sort.Instances;
                     // Favorit umschalten; nur echte Instanz-IDs, höchstens 200 Einträge
-                    if (d.Favorite is { Length: > 0 and <= 64 } fav)
+                    if (request.Favorite is { Length: > 0 and <= 64 } fav)
                     {
-                        if (!s.Favorites.Remove(fav) && s.Favorites.Count < 200)
+                        if (!state.Favorites.Remove(fav) && state.Favorites.Count < 200)
                         {
-                            s.Favorites.Add(fav);
+                            state.Favorites.Add(fav);
                         }
                     }
                     // Eigene Reihenfolge: nur plausible IDs, ohne Doppelte, höchstens 500
-                    if (d.Order is { Length: <= 500 } order)
+                    if (request.Order is { Length: <= 500 } order)
                     {
-                        s.InstanceOrder = order.Where(id => id is { Length: > 0 and <= 64 }).Distinct().ToList();
+                        state.InstanceOrder = order.Where(id => id is { Length: > 0 and <= 64 }).Distinct().ToList();
                     }
                 });
                 return _settings.State;
             });
 
-            r.On<AccentData>("appearance.contrast", (d, _) =>
+            router.On<AccentData>("appearance.contrast", (request, _) =>
             {
-                if (!_appearance.IsColor(d.From) || !_appearance.IsColor(d.To))
+                if (!_appearance.IsColor(request.From) || !_appearance.IsColor(request.To))
                 {
                     throw new AxoException("errors.invalidInput");
                 }
 
-                var accent = new AccentGradient(d.From, d.To, d.Angle);
+                var accent = new AccentGradient(request.From, request.To, request.Angle);
                 return Task.FromResult<object?>(new
                 {
                     ratio = Math.Round(_appearance.MinContrastWithWhite(accent), 2),
@@ -108,37 +108,37 @@ namespace AxoClient.App.Bridge
                 });
             });
 
-            r.On<JavaRefData>("settings.checkJava", async (d, ct) =>
+            router.On<JavaRefData>("settings.checkJava", async (request, cancellationToken) =>
             {
-                var path = _files.Resolve(d.FileRef);
-                var major = await _java.ReadMajor(path, ct);
+                var path = _files.Resolve(request.FileRef);
+                var major = await _java.ReadMajor(path, cancellationToken);
                 return new { path, major };
             });
 
-            r.On("java.list", async ct => await _java.FindAll(ct));
+            router.On("java.list", async cancellationToken => await _java.FindAll(cancellationToken));
 
             // ---- Updates ----
-            r.On("update.state", () => new { available = _launcherUpdates.Available, installed = _launcherUpdates.IsInstalled });
-            r.On("update.check", async ct => await _launcherUpdates.Check(ct));
-            r.On("update.apply", () => StartJob(_jobs.Run("launcher.update", new TextRef("updates.installing"),
+            router.On("update.state", () => new { available = _launcherUpdates.Available, installed = _launcherUpdates.IsInstalled });
+            router.On("update.check", async cancellationToken => await _launcherUpdates.Check(cancellationToken));
+            router.On("update.apply", () => StartJob(_jobs.Run("launcher.update", new TextRef("updates.installing"),
                 job => _launcherUpdates.ApplyAndRestart(job))));
 
             // ---- Diagnose und Speicher ----
-            r.On("diagnostics.run", async _ => await _jobs.Run("diagnostics", new TextRef("diagnostics.title"), job => _diagnostics.Run(job)));
+            router.On("diagnostics.run", async _ => await _jobs.Run("diagnostics", new TextRef("diagnostics.title"), job => _diagnostics.Run(job)));
 
-            r.On("storage.scan", async ct => await _storage.Scan(ct));
-            r.On<CleanData>("storage.clean", async (d, ct) =>
+            router.On("storage.scan", async cancellationToken => await _storage.Scan(cancellationToken));
+            router.On<CleanData>("storage.clean", async (request, cancellationToken) =>
             {
-                var freed = d.Area switch
+                var freed = request.Area switch
                 {
                     "backups" => _storage.CleanBackups(),
-                    "game" => await _storage.CleanVersions(ct),
+                    "game" => await _storage.CleanVersions(cancellationToken),
                     "java" => _processes.AnyRunning() ? throw new AxoException("storage.busy") : _storage.CleanJava(),
                     "cache" => _storage.CleanCache(),
                     "logs" => _storage.CleanLogs(),
                     _ => throw new AxoException("errors.invalidInput")
                 };
-                return new { freed, overview = await _storage.Scan(ct) };
+                return new { freed, overview = await _storage.Scan(cancellationToken) };
             });
         }
 
@@ -153,18 +153,18 @@ namespace AxoClient.App.Bridge
                     return;
                 }
 
-                if (enabled && Environment.ProcessPath is { } exe)
+                if (enabled && Environment.ProcessPath is { } exePath)
                 {
-                    key.SetValue("AxoClient", $"\"{exe}\" --minimized");
+                    key.SetValue("AxoClient", $"\"{exePath}\" --minimized");
                 }
                 else
                 {
                     key.DeleteValue("AxoClient", throwOnMissingValue: false);
                 }
             }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+            catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or System.Security.SecurityException)
             {
-                AppLog.Warn("Autostart setzen", ex);
+                AppLog.Warn("Autostart setzen", exception);
             }
         }
     }

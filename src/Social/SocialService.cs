@@ -68,8 +68,8 @@ namespace AxoClient.Social
         }
 
         public Me? Me { get; private set; }
-        public IReadOnlyList<Friend> Friends => _friends.Values.OrderBy(f => f.Relation).ThenByDescending(f => f.State)
-            .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        public IReadOnlyList<Friend> Friends => _friends.Values.OrderBy(value => value.Relation).ThenByDescending(value => value.State)
+            .ThenBy(friend => friend.Name, StringComparer.OrdinalIgnoreCase).ToList();
         public IReadOnlyList<InboxItem> Inbox { get; private set; } = [];
 
         /// <summary>Zuletzt geladene Blockliste (leer, bis <see cref="LoadBlocked"/> lief).</summary>
@@ -90,14 +90,14 @@ namespace AxoClient.Social
         }
 
         /// <summary>Sofort synchronisieren (z. B. nach dem Senden einer Anfrage).</summary>
-        public async Task SyncNow(CancellationToken ct = default)
+        public async Task SyncNow(CancellationToken cancellationToken = default)
         {
             if (!_client.CanUse)
             {
                 return;
             }
 
-            var sync = await _client.Send<SyncResponse>(HttpMethod.Get, "/sync", ct: ct);
+            var sync = await _client.Send<SyncResponse>(HttpMethod.Get, "/sync", cancellationToken: cancellationToken);
             if (sync == null)
             {
                 return;
@@ -105,38 +105,38 @@ namespace AxoClient.Social
 
             Me = sync.Me;
             var previous = _friends;
-            _friends = sync.Friends.ToDictionary(f => f.Uuid);
+            _friends = sync.Friends.ToDictionary(friend => friend.Uuid);
             Inbox = sync.Inbox;
             _notifications.ApplyRemote(sync.Notifications);
-            foreach (var n in sync.Notifications.Where(n => _seenRemote.Add(n.Id)))
+            foreach (var notification in sync.Notifications.Where(notification => _seenRemote.Add(notification.Id)))
             {
-                RemoteNotification?.Invoke(n);
+                RemoteNotification?.Invoke(notification);
             }
 
             detectLocalNotifications(previous);
             _events.Publish("social.changed", new { friends = Friends, inbox = Inbox, me = Me, available = true });
         }
 
-        private async Task loop(CancellationToken ct)
+        private async Task loop(CancellationToken cancellationToken)
         {
-            while (!ct.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    await SyncNow(ct);
-                    await heartbeat(ct);
+                    await SyncNow(cancellationToken);
+                    await heartbeat(cancellationToken);
                 }
-                catch (AxoException ex) when (ex.Code is "service.unavailable" or "service.notSignedIn")
+                catch (AxoException exception) when (exception.Code is "service.unavailable" or "service.notSignedIn")
                 {
                     _events.Publish("social.changed", new { friends = Array.Empty<Friend>(), inbox = Array.Empty<InboxItem>(), me = (Me?)null, available = false });
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    _appLog.Warn("Abgleich mit dem Online-Service fehlgeschlagen", ex);
+                    _appLog.Warn("Abgleich mit dem Online-Service fehlgeschlagen", exception);
                 }
                 try
                 {
-                    await Task.Delay(_interval, ct);
+                    await Task.Delay(_interval, cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -145,12 +145,12 @@ namespace AxoClient.Social
             }
         }
 
-        private async Task heartbeat(CancellationToken ct)
+        private async Task heartbeat(CancellationToken cancellationToken)
         {
             var social = _settings.Current.Social;
             if (!social.ShowOnline)
             {
-                await _client.Send(HttpMethod.Put, "/status", new { state = "offline", since = _since, join = (string?)null }, ct);
+                await _client.Send(HttpMethod.Put, "/status", new { state = "offline", since = _since, join = (string?)null }, cancellationToken);
                 return;
             }
             await _client.Send(HttpMethod.Put, "/status", new
@@ -158,7 +158,7 @@ namespace AxoClient.Social
                 state = _state.ToString().ToLowerInvariant(),
                 since = _since,
                 join = social.AllowJoin && !_settings.Current.Integrations.StreamerMode ? _join : null
-            }, ct);
+            }, cancellationToken);
         }
 
         /// <summary>Wo man gerade spielt (Server-Adresse oder e4mc-Adresse der offenen Welt), damit Freunde nachjoinen können.</summary>
@@ -168,17 +168,17 @@ namespace AxoClient.Social
             _ = heartbeatSafe();
         }
 
-        void IGameLaunchHook.OnStarted(LaunchContext ctx, RunningProcess process)
+        void IGameLaunchHook.OnStarted(LaunchContext context, RunningProcess process)
         {
             _state = PresenceState.Ingame;
             _since = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            _activeInstance = ctx.Instance.Id;
-            _join = ctx.QuickPlay?.Server;
+            _activeInstance = context.Instance.Id;
+            _join = context.QuickPlay?.Server;
             _onServerNotified.Clear();
             _ = heartbeatSafe();
         }
 
-        void IGameLaunchHook.OnExited(LaunchContext ctx, RunningProcess process, int exitCode, bool crashed)
+        void IGameLaunchHook.OnExited(LaunchContext context, RunningProcess process, int exitCode, bool crashed)
         {
             if (_games.AnyRunning)
             {
@@ -210,7 +210,7 @@ namespace AxoClient.Social
         {
             var scope = _settings.Current.Notifications.FriendOnServerScope;
             HashSet<string>? myServers = null;
-            foreach (var friend in _friends.Values.Where(f => f.Relation == Relation.Friends))
+            foreach (var friend in _friends.Values.Where(value => value.Relation == Relation.Friends))
             {
                 previous.TryGetValue(friend.Uuid, out var before);
                 if (before != null && before.State == PresenceState.Offline && friend.State != PresenceState.Offline)
@@ -253,7 +253,7 @@ namespace AxoClient.Social
                     result.UnionWith(_serverLists.NormalizedAddresses(id));
                 }
             }
-            catch (Exception ex) when (ex is IOException or AxoException)
+            catch (Exception exception) when (exception is IOException or AxoException)
             {
             }
             return result;
@@ -261,67 +261,67 @@ namespace AxoClient.Social
 
         // ---- Freunde ----
 
-        public async Task SendRequest(string name, CancellationToken ct)
+        public async Task SendRequest(string name, CancellationToken cancellationToken)
         {
-            await _client.Send(HttpMethod.Post, "/friends/requests", new { name = _textHelper.Clean(name, 16) }, ct);
-            await SyncNow(ct);
+            await _client.Send(HttpMethod.Post, "/friends/requests", new { name = _textHelper.Clean(name, 16) }, cancellationToken);
+            await SyncNow(cancellationToken);
         }
 
-        public async Task Accept(string uuid, CancellationToken ct)
+        public async Task Accept(string uuid, CancellationToken cancellationToken)
         {
-            await _client.Send(HttpMethod.Post, $"/friends/{_uuidHelper.RequireUuid(uuid)}", ct: ct);
-            await SyncNow(ct);
+            await _client.Send(HttpMethod.Post, $"/friends/{_uuidHelper.RequireUuid(uuid)}", cancellationToken: cancellationToken);
+            await SyncNow(cancellationToken);
         }
 
         /// <summary>Anfrage zurückziehen oder ablehnen.</summary>
-        public async Task Decline(string uuid, CancellationToken ct)
+        public async Task Decline(string uuid, CancellationToken cancellationToken)
         {
-            await _client.Send(HttpMethod.Delete, $"/friends/requests/{_uuidHelper.RequireUuid(uuid)}", ct: ct);
-            await SyncNow(ct);
+            await _client.Send(HttpMethod.Delete, $"/friends/requests/{_uuidHelper.RequireUuid(uuid)}", cancellationToken: cancellationToken);
+            await SyncNow(cancellationToken);
         }
 
-        public async Task Remove(string uuid, CancellationToken ct)
+        public async Task Remove(string uuid, CancellationToken cancellationToken)
         {
-            await _client.Send(HttpMethod.Delete, $"/friends/{_uuidHelper.RequireUuid(uuid)}", ct: ct);
-            await SyncNow(ct);
+            await _client.Send(HttpMethod.Delete, $"/friends/{_uuidHelper.RequireUuid(uuid)}", cancellationToken: cancellationToken);
+            await SyncNow(cancellationToken);
         }
 
-        public async Task Block(string uuid, bool block, CancellationToken ct)
+        public async Task Block(string uuid, bool block, CancellationToken cancellationToken)
         {
-            await _client.Send(block ? HttpMethod.Post : HttpMethod.Delete, $"/blocks/{_uuidHelper.RequireUuid(uuid)}", ct: ct);
+            await _client.Send(block ? HttpMethod.Post : HttpMethod.Delete, $"/blocks/{_uuidHelper.RequireUuid(uuid)}", cancellationToken: cancellationToken);
             try
             {
-                await LoadBlocked(ct);
+                await LoadBlocked(cancellationToken);
             }
-            catch (Exception ex) when (ex is AxoException or HttpRequestException or IOException)
+            catch (Exception exception) when (exception is AxoException or HttpRequestException or IOException)
             {
                 // Blockieren hat geklappt; die Liste kommt beim nächsten Öffnen
-                _appLog.Info($"Blockliste nicht geladen: {ex.Message}");
+                _appLog.Info($"Blockliste nicht geladen: {exception.Message}");
             }
-            await SyncNow(ct);
+            await SyncNow(cancellationToken);
         }
 
         /// <summary>Eigene Blockliste vom Service holen; meldet sie als <c>social.blocked</c>.</summary>
-        public async Task<IReadOnlyList<BlockedPlayer>> LoadBlocked(CancellationToken ct)
+        public async Task<IReadOnlyList<BlockedPlayer>> LoadBlocked(CancellationToken cancellationToken)
         {
-            var response = await _client.Send<BlocksResponse>(HttpMethod.Get, "/blocks", ct: ct);
+            var response = await _client.Send<BlocksResponse>(HttpMethod.Get, "/blocks", cancellationToken: cancellationToken);
             Blocked = response?.Blocks ?? [];
             _events.Publish("social.blocked", Blocked);
             return Blocked;
         }
 
-        public async Task MarkNotificationsRead(CancellationToken ct)
+        public async Task MarkNotificationsRead(CancellationToken cancellationToken)
         {
             _notifications.MarkAllRead();
             if (_client.CanUse && _client.Available)
             {
-                await _client.Send(HttpMethod.Post, "/notifications/read", new { all = true }, ct);
+                await _client.Send(HttpMethod.Post, "/notifications/read", new { all = true }, cancellationToken);
             }
         }
 
-        public async Task DeleteAccount(CancellationToken ct)
+        public async Task DeleteAccount(CancellationToken cancellationToken)
         {
-            await _client.Send(HttpMethod.Delete, "/me", ct: ct);
+            await _client.Send(HttpMethod.Delete, "/me", cancellationToken: cancellationToken);
             _friends = new();
             Inbox = [];
             Blocked = [];

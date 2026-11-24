@@ -11,9 +11,9 @@ namespace AxoClient.Servers.Contract
         /// <summary>Proxy statt Minecraft-Server (Velocity: keine EULA, keine Welten).</summary>
         bool IsProxy { get; }
 
-        Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken ct);
+        Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken cancellationToken);
 
-        Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken ct);
+        Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken cancellationToken);
 
         int RequiredJava(string version);
     }

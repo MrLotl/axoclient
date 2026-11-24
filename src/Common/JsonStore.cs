@@ -18,19 +18,19 @@ namespace AxoClient.Common
         private readonly SemaphoreSlim _lock = new(1, 1);
 
         public JsonStore(
-            IFileSystem fs,
+            IFileSystem fileSystem,
             string path,
             IJsonHelper jsonHelper,
             IAppLog appLog,
             int currentVersion = 1,
             IEnumerable<JsonMigration>? migrations = null)
         {
-            _fs = fs;
+            _fs = fileSystem;
             _jsonHelper = jsonHelper;
             _appLog = appLog;
             Path = path;
             CurrentVersion = currentVersion;
-            _migrations = (migrations ?? []).OrderBy(m => m.From).ToList();
+            _migrations = (migrations ?? []).OrderBy(jsonMigration => jsonMigration.From).ToList();
         }
 
         public string Path { get; }
@@ -41,12 +41,12 @@ namespace AxoClient.Common
 
         public bool Exists => _fs.File.Exists(Path);
 
-        public async Task<T> Load(CancellationToken ct = default)
+        public async Task<T> Load(CancellationToken cancellationToken = default)
         {
-            await _lock.WaitAsync(ct);
+            await _lock.WaitAsync(cancellationToken);
             try
             {
-                return await loadUnlocked(ct);
+                return await loadUnlocked(cancellationToken);
             }
             finally
             {
@@ -54,12 +54,12 @@ namespace AxoClient.Common
             }
         }
 
-        public async Task Save(T value, CancellationToken ct = default)
+        public async Task Save(T value, CancellationToken cancellationToken = default)
         {
-            await _lock.WaitAsync(ct);
+            await _lock.WaitAsync(cancellationToken);
             try
             {
-                await saveUnlocked(value, ct);
+                await saveUnlocked(value, cancellationToken);
             }
             finally
             {
@@ -68,14 +68,14 @@ namespace AxoClient.Common
         }
 
         /// <summary>Liest, ändert und schreibt unter einer Sperre, damit sich gleichzeitige Änderungen nicht überschreiben.</summary>
-        public async Task<T> Update(Action<T> change, CancellationToken ct = default)
+        public async Task<T> Update(Action<T> change, CancellationToken cancellationToken = default)
         {
-            await _lock.WaitAsync(ct);
+            await _lock.WaitAsync(cancellationToken);
             try
             {
-                var value = await loadUnlocked(ct);
+                var value = await loadUnlocked(cancellationToken);
                 change(value);
-                await saveUnlocked(value, ct);
+                await saveUnlocked(value, cancellationToken);
                 return value;
             }
             finally
@@ -84,7 +84,7 @@ namespace AxoClient.Common
             }
         }
 
-        private async Task<T> loadUnlocked(CancellationToken ct)
+        private async Task<T> loadUnlocked(CancellationToken cancellationToken)
         {
             RecoveredFromBrokenFile = false;
             if (!_fs.File.Exists(Path))
@@ -95,13 +95,13 @@ namespace AxoClient.Common
             string text;
             try
             {
-                text = await _fs.File.ReadAllTextAsync(Path, ct);
+                text = await _fs.File.ReadAllTextAsync(Path, cancellationToken);
             }
             catch (IOException)
             {
                 // Datei kurz gesperrt (z. B. Virenscanner): einmal kurz warten und erneut lesen
-                await Task.Delay(150, ct);
-                text = await _fs.File.ReadAllTextAsync(Path, ct);
+                await Task.Delay(150, cancellationToken);
+                text = await _fs.File.ReadAllTextAsync(Path, cancellationToken);
             }
 
             try
@@ -118,7 +118,7 @@ namespace AxoClient.Common
                     throw new AxoException("errors.json.tooNew", new() { ["file"] = _fs.Path.GetFileName(Path) });
                 }
 
-                foreach (var migration in _migrations.Where(m => m.From >= version && m.From < CurrentVersion))
+                foreach (var migration in _migrations.Where(migration => migration.From >= version && migration.From < CurrentVersion))
                 {
                     migration.Apply(node);
                     node["formatVersion"] = migration.From + 1;
@@ -127,28 +127,28 @@ namespace AxoClient.Common
 
                 return node.Deserialize<T>(_jsonHelper.Options) ?? new T { FormatVersion = CurrentVersion };
             }
-            catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
+            catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException)
             {
                 var broken = Path + ".broken";
                 _fs.File.Copy(Path, broken, overwrite: true);
                 RecoveredFromBrokenFile = true;
-                _appLog.Warn($"{_fs.Path.GetFileName(Path)} war beschädigt und wurde nach .broken verschoben", ex);
+                _appLog.Warn($"{_fs.Path.GetFileName(Path)} war beschädigt und wurde nach .broken verschoben", exception);
                 return new T { FormatVersion = CurrentVersion };
             }
         }
 
-        private async Task saveUnlocked(T value, CancellationToken ct)
+        private async Task saveUnlocked(T value, CancellationToken cancellationToken)
         {
             value.FormatVersion = CurrentVersion;
-            var dir = _fs.Path.GetDirectoryName(Path);
-            if (!string.IsNullOrEmpty(dir))
+            var directory = _fs.Path.GetDirectoryName(Path);
+            if (!string.IsNullOrEmpty(directory))
             {
-                _fs.Directory.CreateDirectory(dir);
+                _fs.Directory.CreateDirectory(directory);
             }
 
-            var tmp = Path + ".tmp";
-            await _fs.File.WriteAllTextAsync(tmp, _jsonHelper.Serialize(value), ct);
-            _fs.File.Move(tmp, Path, overwrite: true);
+            var temporary = Path + ".tmp";
+            await _fs.File.WriteAllTextAsync(temporary, _jsonHelper.Serialize(value), cancellationToken);
+            _fs.File.Move(temporary, Path, overwrite: true);
         }
     }
 }

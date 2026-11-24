@@ -54,24 +54,24 @@ namespace AxoClient.Import
         public async Task<IReadOnlyList<ForeignImportResult>> Import(IReadOnlyList<ForeignImportChoice> choices, JobContext job)
         {
             var results = new List<ForeignImportResult>();
-            for (var i = 0; i < choices.Count; i++)
+            for (var index = 0; index < choices.Count; index++)
             {
                 job.Token.ThrowIfCancellationRequested();
-                var choice = choices[i];
-                job.Status("import.importing", ("name", choice.Name), ("index", i + 1), ("count", choices.Count));
+                var choice = choices[index];
+                job.Status("import.importing", ("name", choice.Name), ("index", index + 1), ("count", choices.Count));
                 try
                 {
-                    results.Add(await importOne(choice, job.Sub((double)i / choices.Count, (double)(i + 1) / choices.Count)));
+                    results.Add(await importOne(choice, job.Sub((double)index / choices.Count, (double)(index + 1) / choices.Count)));
                 }
                 catch (OperationCanceledException)
                 {
                     throw;
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    _appLog.Warn($"Import von \"{choice.Name}\" fehlgeschlagen", ex);
+                    _appLog.Warn($"Import von \"{choice.Name}\" fehlgeschlagen", exception);
                     results.Add(new ForeignImportResult(choice.Name, null, [],
-                        ex is AxoException axo ? axo.Text : new TextRef("errors.unexpected", ("detail", ex.GetType().Name))));
+                        exception is AxoException axoException ? axoException.Text : new TextRef("errors.unexpected", ("detail", exception.GetType().Name))));
                 }
             }
             job.Report(1);
@@ -100,7 +100,7 @@ namespace AxoClient.Import
             var notes = new List<TextRef>();
             try
             {
-                var target = _instances.GameDir(instance.Id);
+                var target = _instances.GameDirectory(instance.Id);
                 var parts = choice.Parts with { Mods = modsFit };
                 job.Status("import.copying", ("name", instance.Name));
                 var failed = await Task.Run(() => copy(source, target, parts, job.Sub(0, 0.7)), job.Token);
@@ -123,10 +123,10 @@ namespace AxoClient.Import
                 {
                     await _content.IdentifyLocal(instance.Id, job.Token);
                 }
-                catch (Exception ex) when (ex is HttpRequestException or AxoException or TaskCanceledException && !job.Token.IsCancellationRequested)
+                catch (Exception exception) when (exception is HttpRequestException or AxoException or TaskCanceledException && !job.Token.IsCancellationRequested)
                 {
                     // Ohne Internet bleiben die Mods einfach "lokal"
-                    _appLog.Warn("Importierte Mods konnten nicht zugeordnet werden", ex);
+                    _appLog.Warn("Importierte Mods konnten nicht zugeordnet werden", exception);
                 }
             }
             if (modsFit && source.ModrinthMods.Count > 0)
@@ -148,21 +148,21 @@ namespace AxoClient.Import
         private async Task installModrinthMods(string instanceId, List<ForeignModrinthMod> mods, JobContext job, List<TextRef> notes)
         {
             var failed = new List<string>();
-            for (var i = 0; i < mods.Count; i++)
+            for (var index = 0; index < mods.Count; index++)
             {
                 job.Token.ThrowIfCancellationRequested();
-                var mod = mods[i];
-                job.Status("import.downloadingMods", ("index", i + 1), ("count", mods.Count));
+                var mod = mods[index];
+                job.Status("import.downloadingMods", ("index", index + 1), ("count", mods.Count));
                 try
                 {
                     var files = await _content.Install(instanceId, ContentType.Mod, new InstallRequest("modrinth", mod.ProjectId, mod.VersionId),
-                        job.Sub((double)i / mods.Count, (double)(i + 1) / mods.Count));
+                        job.Sub((double)index / mods.Count, (double)(index + 1) / mods.Count));
                     if (!mod.Enabled && files.Count > 0)
                     {
                         await _content.SetEnabled(instanceId, ContentType.Mod, files[0], false, job.Token);
                     }
                 }
-                catch (Exception ex) when (ex is AxoException or HttpRequestException)
+                catch (Exception exception) when (exception is AxoException or HttpRequestException)
                 {
                     failed.Add(mod.ProjectId);
                 }
@@ -200,40 +200,40 @@ namespace AxoClient.Import
         private int copy(ForeignInstance source, string target, ForeignImportParts parts, JobContext job)
         {
             var failed = 0;
-            var modsDir = source.ModsDir;
+            var modsDirectory = source.ModsDir;
             if (source.Shared)
             {
                 var items = _sharedItems.Where(item => wanted(item, parts)).ToList();
-                foreach (var dir in new[] { source.ExtraDataDir, source.GameDir }.OfType<string>())
+                foreach (var directory in new[] { source.ExtraDataDir, source.GameDir }.OfType<string>())
                 {
                     foreach (var item in items)
                     {
-                        failed += copyEntry(Path.Combine(dir, item), Path.Combine(target, item), job);
+                        failed += copyEntry(Path.Combine(directory, item), Path.Combine(target, item), job);
                     }
                 }
 
-                if (parts.Mods && modsDir != null)
+                if (parts.Mods && modsDirectory != null)
                 {
                     failed += source.ExtraModsDir != null
-                        ? copyModFiles(modsDir, Path.Combine(target, "mods"))
-                        : copyEntry(modsDir, Path.Combine(target, "mods"), job);
+                        ? copyModFiles(modsDirectory, Path.Combine(target, "mods"))
+                        : copyEntry(modsDirectory, Path.Combine(target, "mods"), job);
                     failed += copyEntry(source.ExtraConfigDir ?? Path.Combine(source.GameDir, "config"), Path.Combine(target, "config"), job);
                 }
                 return failed;
             }
 
             var entries = Directory.EnumerateFileSystemEntries(source.GameDir).ToList();
-            for (var i = 0; i < entries.Count; i++)
+            for (var index = 0; index < entries.Count; index++)
             {
-                var name = Path.GetFileName(entries[i]);
-                job.Report((double)i / Math.Max(1, entries.Count));
+                var name = Path.GetFileName(entries[index]);
+                job.Report((double)index / Math.Max(1, entries.Count));
                 if (_skipped.Contains(name) || name.EndsWith(".log", StringComparison.OrdinalIgnoreCase) || !wanted(name, parts)
                     || (name.Equals("mods", StringComparison.OrdinalIgnoreCase) && !source.GameDirMods))
                 {
                     continue;
                 }
 
-                failed += copyEntry(entries[i], Path.Combine(target, name), job);
+                failed += copyEntry(entries[index], Path.Combine(target, name), job);
             }
             if (parts.Mods && source.ExtraModsDir != null)
             {
@@ -281,9 +281,9 @@ namespace AxoClient.Import
                 }
             }
             // Verknüpfungen (Junctions) nicht verfolgen – sonst landet womöglich ein ganz anderer Ordner in der Instanz
-            foreach (var dir in Directory.EnumerateDirectories(from).Where(d => new DirectoryInfo(d).LinkTarget == null))
+            foreach (var directory in Directory.EnumerateDirectories(from).Where(directory => new DirectoryInfo(directory).LinkTarget == null))
             {
-                failed += copyEntry(dir, Path.Combine(to, Path.GetFileName(dir)), job);
+                failed += copyEntry(directory, Path.Combine(to, Path.GetFileName(directory)), job);
             }
 
             return failed;
@@ -304,9 +304,9 @@ namespace AxoClient.Import
                 input.CopyTo(output);
                 return true;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn($"Beim Import nicht kopierbar: {Path.GetFileName(from)}", ex);
+                _appLog.Warn($"Beim Import nicht kopierbar: {Path.GetFileName(from)}", exception);
                 return false;
             }
         }

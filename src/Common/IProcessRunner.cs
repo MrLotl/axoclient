@@ -8,7 +8,7 @@ namespace AxoClient.Common
 
         event Action<RunningProcess, int>? Exited;
 
-        RunningProcess Start(string key, ProcessStartInfo info);
+        RunningProcess Start(string key, ProcessStartInfo processStartInfo);
 
         RunningProcess? Get(string key);
 

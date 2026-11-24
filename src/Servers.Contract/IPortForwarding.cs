@@ -6,7 +6,7 @@ namespace AxoClient.Servers.Contract
     {
         string? LanIp();
 
-        Task<PortMapping> Open(int port, string description, CancellationToken ct);
+        Task<PortMapping> Open(int port, string description, CancellationToken cancellationToken);
 
         Task Close(PortMapping mapping);
     }

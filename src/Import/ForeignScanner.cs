@@ -75,16 +75,16 @@ namespace AxoClient.Import
                 job.Report((double)Interlocked.Increment(ref done) / sources.Count);
                 return result;
             }, job.Token)));
-            foreach (var instance in launchers.SelectMany(l => l.Instances))
+            foreach (var instance in launchers.SelectMany(launcher => launcher.Instances))
             {
                 _known[instance.Id] = instance;
             }
 
             return launchers
-                .OrderByDescending(l => l.Instances.Count > 0)
-                .ThenByDescending(l => l.Installed)
-                .Select(l => new ForeignLauncherView(l.Source.Id, l.Source.Name, l.Installed,
-                    l.Instances.Select(i => i.ToView()).ToList(), l.Problem))
+                .OrderByDescending(launcher => launcher.Instances.Count > 0)
+                .ThenByDescending(launcher => launcher.Installed)
+                .Select(scanned => new ForeignLauncherView(scanned.Source.Id, scanned.Source.Name, scanned.Installed,
+                    scanned.Instances.Select(instance => instance.ToView()).ToList(), scanned.Problem))
                 .ToList();
         }
 
@@ -114,11 +114,11 @@ namespace AxoClient.Import
                     complete(instance);
                 }
 
-                return new Scanned(source, true, instances.OrderBy(i => i.Problem != null).ThenBy(i => i.Name).ToList(), null);
+                return new Scanned(source, true, instances.OrderBy(instance => instance.Problem != null).ThenBy(instance => instance.Name).ToList(), null);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             {
-                _appLog.Warn($"Instanzen von {source.Name} konnten nicht gelesen werden", ex);
+                _appLog.Warn($"Instanzen von {source.Name} konnten nicht gelesen werden", exception);
                 return new Scanned(source, true, [], new TextRef("import.problem.readFailed"));
             }
         }
@@ -153,53 +153,53 @@ namespace AxoClient.Import
                 }
 
                 var rows = new Dictionary<string, string?[]>(StringComparer.OrdinalIgnoreCase);
-                foreach (var r in _sqliteReader.ReadCopy(Path.Combine(root, "app.db"),
+                foreach (var row in _sqliteReader.ReadCopy(Path.Combine(root, "app.db"),
                          [
                              "SELECT path, name, game_version, mod_loader, mod_loader_version FROM profiles",
                              "SELECT path, name, game_version, mod_loader, NULL FROM profiles"
                          ])[0])
                 {
-                    if (!string.IsNullOrEmpty(r[0]))
+                    if (!string.IsNullOrEmpty(row[0]))
                     {
-                        rows[r[0]!] = r;
+                        rows[row[0]!] = row;
                     }
                 }
 
-                foreach (var dir in Directory.EnumerateDirectories(profiles))
+                foreach (var directory in Directory.EnumerateDirectories(profiles))
                 {
-                    var folder = Path.GetFileName(dir);
+                    var folder = Path.GetFileName(directory);
                     if (rows.TryGetValue(folder, out var row))
                     {
                         yield return new ForeignInstance
                         {
                             Launcher = "modrinth",
                             Name = row[1] ?? folder,
-                            GameDir = dir,
+                            GameDir = directory,
                             Loader = parseLoader(row[3]),
                             MinecraftVersion = row[2],
                             LoaderVersion = row[4]
                         };
                     }
-                    else if (readJson(Path.Combine(dir, "profile.json")) is { } json && json.TryGetProperty("metadata", out var meta))
+                    else if (readJson(Path.Combine(directory, "profile.json")) is { } json && json.TryGetProperty("metadata", out var meta))
                     {
                         var instance = new ForeignInstance
                         {
                             Launcher = "modrinth",
-                            Name = str(meta, "name") ?? folder,
-                            GameDir = dir,
-                            Loader = parseLoader(str(meta, "loader")),
-                            MinecraftVersion = str(meta, "game_version")
+                            Name = readString(meta, "name") ?? folder,
+                            GameDir = directory,
+                            Loader = parseLoader(readString(meta, "loader")),
+                            MinecraftVersion = readString(meta, "game_version")
                         };
-                        if (meta.TryGetProperty("loader_version", out var lv) && lv.ValueKind == JsonValueKind.Object)
+                        if (meta.TryGetProperty("loader_version", out var loaderVersion) && loaderVersion.ValueKind == JsonValueKind.Object)
                         {
-                            instance.LoaderVersion = str(lv, "id");
+                            instance.LoaderVersion = readString(loaderVersion, "id");
                         }
 
                         yield return instance;
                     }
                     else
                     {
-                        yield return new ForeignInstance { Launcher = "modrinth", Name = folder, GameDir = dir };
+                        yield return new ForeignInstance { Launcher = "modrinth", Name = folder, GameDir = directory };
                     }
                 }
             }
@@ -217,25 +217,25 @@ namespace AxoClient.Import
         {
             foreach (var root in CurseForgeRoots.Where(Directory.Exists))
             {
-                foreach (var dir in Directory.EnumerateDirectories(root))
+                foreach (var directory in Directory.EnumerateDirectories(root))
                 {
-                    var json = readJson(Path.Combine(dir, "minecraftinstance.json"));
+                    var json = readJson(Path.Combine(directory, "minecraftinstance.json"));
                     var instance = new ForeignInstance
                     {
                         Launcher = "curseforge",
-                        Name = json is { } j ? str(j, "name") ?? Path.GetFileName(dir) : Path.GetFileName(dir),
-                        GameDir = dir
+                        Name = json is { } instanceJson ? readString(instanceJson, "name") ?? Path.GetFileName(directory) : Path.GetFileName(directory),
+                        GameDir = directory
                     };
                     if (json is { } data)
                     {
-                        instance.MinecraftVersion = str(data, "gameVersion");
+                        instance.MinecraftVersion = readString(data, "gameVersion");
                         if (data.TryGetProperty("baseModLoader", out var loader) && loader.ValueKind == JsonValueKind.Object)
                         {
-                            var name = str(loader, "name") ?? "";
+                            var name = readString(loader, "name") ?? "";
                             var dash = name.IndexOf('-');
                             instance.Loader = parseLoader(dash > 0 ? name[..dash] : name);
-                            instance.LoaderVersion = str(loader, "forgeVersion") ?? (dash > 0 ? name[(dash + 1)..].Split('-')[0] : null);
-                            instance.MinecraftVersion = str(loader, "minecraftVersion") ?? instance.MinecraftVersion;
+                            instance.LoaderVersion = readString(loader, "forgeVersion") ?? (dash > 0 ? name[(dash + 1)..].Split('-')[0] : null);
+                            instance.MinecraftVersion = readString(loader, "minecraftVersion") ?? instance.MinecraftVersion;
                         }
                         else if (instance.MinecraftVersion != null)
                         {
@@ -257,36 +257,36 @@ namespace AxoClient.Import
                 yield break;
             }
 
-            foreach (var dir in Directory.EnumerateDirectories(instances))
+            foreach (var directory in Directory.EnumerateDirectories(instances))
             {
-                if (File.Exists(Path.Combine(dir, "instance.cfg")))
+                if (File.Exists(Path.Combine(directory, "instance.cfg")))
                 {
-                    yield return multiMcInstance(launcher, dir, Path.GetFileName(dir));
+                    yield return multiMcInstance(launcher, directory, Path.GetFileName(directory));
                 }
             }
         }
 
-        private ForeignInstance multiMcInstance(string launcher, string dir, string fallbackName)
+        private ForeignInstance multiMcInstance(string launcher, string directory, string fallbackName)
         {
-            var cfg = Path.Combine(dir, "instance.cfg");
-            var name = File.Exists(cfg)
-                ? File.ReadLines(cfg).FirstOrDefault(l => l.StartsWith("name=", StringComparison.Ordinal))?[5..].Trim()
+            var configFile = Path.Combine(directory, "instance.cfg");
+            var name = File.Exists(configFile)
+                ? File.ReadLines(configFile).FirstOrDefault(line => line.StartsWith("name=", StringComparison.Ordinal))?[5..].Trim()
                 : null;
             var instance = new ForeignInstance
             {
                 Launcher = launcher,
                 Name = string.IsNullOrEmpty(name) ? fallbackName : name,
-                GameDir = new[] { ".minecraft", "minecraft" }.Select(d => Path.Combine(dir, d)).FirstOrDefault(Directory.Exists)
-                          ?? Path.Combine(dir, ".minecraft")
+                GameDir = new[] { ".minecraft", "minecraft" }.Select(folderName => Path.Combine(directory, folderName)).FirstOrDefault(Directory.Exists)
+                          ?? Path.Combine(directory, ".minecraft")
             };
-            if (readJson(Path.Combine(dir, "mmc-pack.json")) is { } pack && pack.TryGetProperty("components", out var parts)
+            if (readJson(Path.Combine(directory, "mmc-pack.json")) is { } pack && pack.TryGetProperty("components", out var parts)
                 && parts.ValueKind == JsonValueKind.Array)
             {
                 instance.Loader = LoaderType.Vanilla;
                 foreach (var part in parts.EnumerateArray())
                 {
-                    var version = str(part, "version");
-                    switch (str(part, "uid"))
+                    var version = readString(part, "version");
+                    switch (readString(part, "uid"))
                     {
                         case "net.minecraft":
                             instance.MinecraftVersion = version;
@@ -324,13 +324,13 @@ namespace AxoClient.Import
                 var instance = new ForeignInstance
                 {
                     Launcher = "file",
-                    Name = str(manifest, "name") ?? fallbackName,
-                    GameDir = _pathGuard.SafeCombine(root, str(manifest, "overrides") ?? "overrides") ?? root,
-                    MinecraftVersion = str(minecraft, "version"),
+                    Name = readString(manifest, "name") ?? fallbackName,
+                    GameDir = _pathGuard.SafeCombine(root, readString(manifest, "overrides") ?? "overrides") ?? root,
+                    MinecraftVersion = readString(minecraft, "version"),
                     Hint = new TextRef("import.hint.curseforgePack")
                 };
                 if (minecraft.TryGetProperty("modLoaders", out var loaders) && loaders.ValueKind == JsonValueKind.Array
-                    && loaders.EnumerateArray().Select(l => str(l, "id")).FirstOrDefault(id => id != null) is { } loaderId)
+                    && loaders.EnumerateArray().Select(loader => readString(loader, "id")).FirstOrDefault(id => id != null) is { } loaderId)
                 {
                     var dash = loaderId.IndexOf('-');
                     instance.Loader = parseLoader(dash > 0 ? loaderId[..dash] : loaderId);
@@ -338,8 +338,8 @@ namespace AxoClient.Import
                 }
                 return instance;
             }
-            var gameDir = new[] { ".minecraft", "minecraft" }.Select(d => Path.Combine(root, d)).FirstOrDefault(Directory.Exists) ?? root;
-            return new ForeignInstance { Launcher = "file", Name = fallbackName, GameDir = gameDir };
+            var gameDirectory = new[] { ".minecraft", "minecraft" }.Select(folderName => Path.Combine(root, folderName)).FirstOrDefault(Directory.Exists) ?? root;
+            return new ForeignInstance { Launcher = "file", Name = fallbackName, GameDir = gameDirectory };
         }
 
         // ---------- Offizieller Launcher ----------
@@ -354,14 +354,14 @@ namespace AxoClient.Import
 
             foreach (var profile in profiles.EnumerateObject())
             {
-                var p = profile.Value;
-                if (p.ValueKind != JsonValueKind.Object)
+                var profileElement = profile.Value;
+                if (profileElement.ValueKind != JsonValueKind.Object)
                 {
                     continue;
                 }
 
-                var type = str(p, "type");
-                var name = str(p, "name");
+                var type = readString(profileElement, "type");
+                var name = readString(profileElement, "name");
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     name = type switch
@@ -372,15 +372,15 @@ namespace AxoClient.Import
                     };
                 }
 
-                var gameDir = str(p, "gameDir");
+                var gameDirectory = readString(profileElement, "gameDir");
                 var instance = new ForeignInstance
                 {
                     Launcher = "official",
                     Name = name,
-                    GameDir = string.IsNullOrWhiteSpace(gameDir) ? DotMinecraft : gameDir,
-                    Shared = string.IsNullOrWhiteSpace(gameDir)
+                    GameDir = string.IsNullOrWhiteSpace(gameDirectory) ? DotMinecraft : gameDirectory,
+                    Shared = string.IsNullOrWhiteSpace(gameDirectory)
                 };
-                parseVersionId(instance, str(p, "lastVersionId"));
+                parseVersionId(instance, readString(profileElement, "lastVersionId"));
                 yield return instance;
             }
         }
@@ -392,26 +392,26 @@ namespace AxoClient.Import
                 return;
             }
 
-            Match m;
-            if ((m = fabricId().Match(id)).Success)
+            Match match;
+            if ((match = fabricId().Match(id)).Success)
             {
-                (instance.Loader, instance.LoaderVersion, instance.MinecraftVersion) = (LoaderType.Fabric, m.Groups[1].Value, m.Groups[2].Value);
+                (instance.Loader, instance.LoaderVersion, instance.MinecraftVersion) = (LoaderType.Fabric, match.Groups[1].Value, match.Groups[2].Value);
             }
-            else if ((m = quiltId().Match(id)).Success)
+            else if ((match = quiltId().Match(id)).Success)
             {
-                (instance.Loader, instance.LoaderVersion, instance.MinecraftVersion) = (LoaderType.Quilt, m.Groups[1].Value, m.Groups[2].Value);
+                (instance.Loader, instance.LoaderVersion, instance.MinecraftVersion) = (LoaderType.Quilt, match.Groups[1].Value, match.Groups[2].Value);
             }
-            else if ((m = forgeId().Match(id)).Success)
+            else if ((match = forgeId().Match(id)).Success)
             {
-                (instance.Loader, instance.MinecraftVersion, instance.LoaderVersion) = (LoaderType.Forge, m.Groups[1].Value, m.Groups[2].Value);
+                (instance.Loader, instance.MinecraftVersion, instance.LoaderVersion) = (LoaderType.Forge, match.Groups[1].Value, match.Groups[2].Value);
             }
-            else if ((m = neoForgeId().Match(id)).Success)
+            else if ((match = neoForgeId().Match(id)).Success)
             {
-                (instance.Loader, instance.LoaderVersion) = (LoaderType.NeoForge, m.Groups[1].Value);
+                (instance.Loader, instance.LoaderVersion) = (LoaderType.NeoForge, match.Groups[1].Value);
             }
-            else if ((m = optiFineId().Match(id)).Success)
+            else if ((match = optiFineId().Match(id)).Success)
             {
-                (instance.Loader, instance.MinecraftVersion) = (LoaderType.Vanilla, m.Groups[1].Value);
+                (instance.Loader, instance.MinecraftVersion) = (LoaderType.Vanilla, match.Groups[1].Value);
             }
             else if (plainVersionId().IsMatch(id))
             {
@@ -433,16 +433,16 @@ namespace AxoClient.Import
             foreach (var root in OldAxoRoots.Where(Directory.Exists))
             {
                 var found = new List<ForeignInstance>();
-                var instancesDir = Path.Combine(root, "instances");
-                if (Directory.Exists(instancesDir))
+                var instancesDirectory = Path.Combine(root, "instances");
+                if (Directory.Exists(instancesDirectory))
                 {
-                    foreach (var dir in Directory.EnumerateDirectories(instancesDir))
+                    foreach (var directory in Directory.EnumerateDirectories(instancesDirectory))
                     {
-                        if (readJson(Path.Combine(dir, "instance.json")) is { } json)
+                        if (readJson(Path.Combine(directory, "instance.json")) is { } json)
                         {
-                            found.Add(oldAxoInstance(root, str(json, "name") ?? Path.GetFileName(dir),
-                                str(json, "customGameDir") is { Length: > 0 } custom ? custom : Path.Combine(dir, ".minecraft"),
-                                str(json, "loader"), str(json, "minecraftVersion"), str(json, "loaderVersion")));
+                            found.Add(oldAxoInstance(root, readString(json, "name") ?? Path.GetFileName(directory),
+                                readString(json, "customGameDir") is { Length: > 0 } custom ? custom : Path.Combine(directory, ".minecraft"),
+                                readString(json, "loader"), readString(json, "minecraftVersion"), readString(json, "loaderVersion")));
                         }
                     }
                 }
@@ -454,10 +454,10 @@ namespace AxoClient.Import
                 {
                     foreach (var item in list.EnumerateArray())
                     {
-                        if (str(item, "GameDir") is { Length: > 0 } gameDir)
+                        if (readString(item, "GameDir") is { Length: > 0 } gameDirectory)
                         {
-                            found.Add(oldAxoInstance(root, str(item, "Name") ?? Path.GetFileName(gameDir.TrimEnd('\\', '/')), gameDir,
-                                str(item, "Loader"), str(item, "MinecraftVersion"), str(item, "LoaderVersion")));
+                            found.Add(oldAxoInstance(root, readString(item, "Name") ?? Path.GetFileName(gameDirectory.TrimEnd('\\', '/')), gameDirectory,
+                                readString(item, "Loader"), readString(item, "MinecraftVersion"), readString(item, "LoaderVersion")));
                         }
                     }
                 }
@@ -472,15 +472,15 @@ namespace AxoClient.Import
             }
         }
 
-        private ForeignInstance oldAxoInstance(string root, string name, string gameDir, string? loader, string? version,
+        private ForeignInstance oldAxoInstance(string root, string name, string gameDirectory, string? loader, string? version,
             string? loaderVersion) =>
             new()
             {
                 Launcher = "axoclient-old",
                 Name = name,
-                GameDir = gameDir,
+                GameDir = gameDirectory,
                 // Die erste Instanz nutzte den Launcher-Ordner selbst als Spielordner: nur Spielerdaten übernehmen
-                Shared = string.Equals(fullPath(gameDir), fullPath(root), StringComparison.OrdinalIgnoreCase),
+                Shared = string.Equals(fullPath(gameDirectory), fullPath(root), StringComparison.OrdinalIgnoreCase),
                 Loader = parseLoader(loader),
                 MinecraftVersion = version,
                 LoaderVersion = loaderVersion
@@ -492,7 +492,7 @@ namespace AxoClient.Import
             {
                 return Path.GetFullPath(path).TrimEnd('\\', '/');
             }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
             {
                 return path;
             }
@@ -526,14 +526,14 @@ namespace AxoClient.Import
         private ForeignInstance? lunarProfile(string root, string?[] row)
         {
             var (name, path, version, loaders) = (row[0], row[1], row[2], row[3]);
-            var profilesDir = Path.Combine(root, "profiles");
-            if (string.IsNullOrEmpty(path) || _pathGuard.ResolveInside(profilesDir, path) is not { } profileDir)
+            var profilesDirectory = Path.Combine(root, "profiles");
+            if (string.IsNullOrEmpty(path) || _pathGuard.ResolveInside(profilesDirectory, path) is not { } profileDirectory)
             {
                 return null;
             }
 
-            var gameDir = !string.IsNullOrWhiteSpace(row[4]) && Directory.Exists(row[4]) ? row[4]! : profileDir;
-            var shared = !string.Equals(Path.GetFullPath(gameDir).TrimEnd('\\'), Path.GetFullPath(profileDir).TrimEnd('\\'),
+            var gameDirectory = !string.IsNullOrWhiteSpace(row[4]) && Directory.Exists(row[4]) ? row[4]! : profileDirectory;
+            var shared = !string.Equals(Path.GetFullPath(gameDirectory).TrimEnd('\\'), Path.GetFullPath(profileDirectory).TrimEnd('\\'),
                 StringComparison.OrdinalIgnoreCase);
 
             LoaderType loader = LoaderType.Vanilla;
@@ -545,21 +545,21 @@ namespace AxoClient.Import
                 }
             }
 
-            var modsBase = !string.IsNullOrWhiteSpace(row[5]) ? row[5]! : Path.Combine(profileDir, "mods");
+            var modsBase = !string.IsNullOrWhiteSpace(row[5]) ? row[5]! : Path.Combine(profileDirectory, "mods");
             var mods = new[] { Path.Combine(modsBase, $"{loader.ToString().ToLowerInvariant()}-{version}"), modsBase }
-                .FirstOrDefault(d => Directory.Exists(d) && Directory.EnumerateFiles(d).Any(IsModFile));
-            var config = Path.Combine(profileDir, "config");
+                .FirstOrDefault(modsFolder => Directory.Exists(modsFolder) && Directory.EnumerateFiles(modsFolder).Any(IsModFile));
+            var config = Path.Combine(profileDirectory, "config");
             var client = row[6] == "1" ? "Badlion Client" : "Lunar Client";
             return new ForeignInstance
             {
                 Launcher = "lunar",
                 Name = string.IsNullOrWhiteSpace(name) ? path : name!,
-                GameDir = gameDir,
+                GameDir = gameDirectory,
                 Shared = shared,
                 GameDirMods = false,
                 ExtraModsDir = mods,
                 ExtraConfigDir = Directory.Exists(config) ? config : null,
-                ExtraDataDir = shared ? profileDir : null,
+                ExtraDataDir = shared ? profileDirectory : null,
                 Loader = loader,
                 MinecraftVersion = string.IsNullOrWhiteSpace(version) ? null : version,
                 Hint = new TextRef(mods != null ? "import.hint.clientWithMods" : "import.hint.clientBuiltIn", ("launcher", client))
@@ -574,23 +574,23 @@ namespace AxoClient.Import
         private IEnumerable<ForeignInstance> noRisk()
         {
             var root = Path.Combine(AppData, "norisk", "NoRiskClientV3");
-            var profilesDir = Path.Combine(root, "data", "profiles");
+            var profilesDirectory = Path.Combine(root, "data", "profiles");
             var tables = _sqliteReader.ReadCopy(Path.Combine(root, "meta", "app.db"),
                 ["SELECT id, name, path, game_version, loader, loader_version, group_name, use_shared_minecraft_folder, " +
                  "is_standard_version FROM profiles"],
                 ["SELECT profile_id, project_id, version_id, enabled FROM profile_mods " +
                  "WHERE source_type = 'modrinth' AND project_id IS NOT NULL"]);
             var profiles = new List<NoRiskProfile>();
-            foreach (var r in tables[0])
+            foreach (var row in tables[0])
             {
-                if (string.IsNullOrEmpty(r[0]) || string.IsNullOrEmpty(r[2]))
+                if (string.IsNullOrEmpty(row[0]) || string.IsNullOrEmpty(row[2]))
                 {
                     continue;
                 }
 
-                var mods = tables[1].Where(m => m[0] == r[0] && !string.IsNullOrEmpty(m[1]))
-                    .Select(m => new ForeignModrinthMod(m[1]!, m[2], m[3] != "0")).ToList();
-                profiles.Add(new NoRiskProfile(r[0]!, r[1], r[2]!, r[3], r[4], r[5], r[6], r[7] == "1", r[8] == "1", mods));
+                var mods = tables[1].Where(modRow => modRow[0] == row[0] && !string.IsNullOrEmpty(modRow[1]))
+                    .Select(modRow => new ForeignModrinthMod(modRow[1]!, modRow[2], modRow[3] != "0")).ToList();
+                profiles.Add(new NoRiskProfile(row[0]!, row[1], row[2]!, row[3], row[4], row[5], row[6], row[7] == "1", row[8] == "1", mods));
             }
             if (profiles.Count == 0)
             {
@@ -599,7 +599,7 @@ namespace AxoClient.Import
 
             foreach (var profile in profiles)
             {
-                if (noRiskInstance(profilesDir, profile) is { } instance)
+                if (noRiskInstance(profilesDirectory, profile) is { } instance)
                 {
                     yield return instance;
                 }
@@ -613,81 +613,81 @@ namespace AxoClient.Import
                 yield break;
             }
 
-            foreach (var p in list.EnumerateArray())
+            foreach (var profileElement in list.EnumerateArray())
             {
-                if (p.ValueKind != JsonValueKind.Object || str(p, "id") is not { } id || str(p, "path") is not { } path)
+                if (profileElement.ValueKind != JsonValueKind.Object || readString(profileElement, "id") is not { } id || readString(profileElement, "path") is not { } path)
                 {
                     continue;
                 }
 
                 var mods = new List<ForeignModrinthMod>();
-                if (p.TryGetProperty("mods", out var modList) && modList.ValueKind == JsonValueKind.Array)
+                if (profileElement.TryGetProperty("mods", out var modList) && modList.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var mod in modList.EnumerateArray())
                     {
                         if (mod.ValueKind == JsonValueKind.Object && mod.TryGetProperty("source", out var source)
-                            && source.ValueKind == JsonValueKind.Object && str(source, "type") == "modrinth"
-                            && str(source, "project_id") is { } project)
+                            && source.ValueKind == JsonValueKind.Object && readString(source, "type") == "modrinth"
+                            && readString(source, "project_id") is { } project)
                         {
-                            mods.Add(new ForeignModrinthMod(project, str(source, "version_id"),
+                            mods.Add(new ForeignModrinthMod(project, readString(source, "version_id"),
                                 !(mod.TryGetProperty("enabled", out var enabled) && enabled.ValueKind == JsonValueKind.False)));
                         }
                     }
                 }
 
-                yield return new NoRiskProfile(id, str(p, "name"), path, str(p, "game_version"), str(p, "loader"), str(p, "loader_version"),
-                    str(p, "group"),
-                    p.TryGetProperty("use_shared_minecraft_folder", out var sharedFolder) && sharedFolder.ValueKind == JsonValueKind.True,
-                    p.TryGetProperty("is_standard_version", out var standard) && standard.ValueKind == JsonValueKind.True,
+                yield return new NoRiskProfile(id, readString(profileElement, "name"), path, readString(profileElement, "game_version"), readString(profileElement, "loader"), readString(profileElement, "loader_version"),
+                    readString(profileElement, "group"),
+                    profileElement.TryGetProperty("use_shared_minecraft_folder", out var sharedFolder) && sharedFolder.ValueKind == JsonValueKind.True,
+                    profileElement.TryGetProperty("is_standard_version", out var standard) && standard.ValueKind == JsonValueKind.True,
                     mods);
             }
         }
 
-        private ForeignInstance? noRiskInstance(string profilesDir, NoRiskProfile profile)
+        private ForeignInstance? noRiskInstance(string profilesDirectory, NoRiskProfile profile)
         {
             var group = profile.Group?.Trim();
             var isolated = group != null && group.ToLowerInvariant() is "server" or "modpacks";
-            string? dir;
+            string? directory;
             if (profile.SharedFolder && !isolated && !string.IsNullOrEmpty(group))
             {
-                dir = group.ToLowerInvariant() is "nrc" or "noriskclient" or "norisk client"
-                    ? Path.Combine(profilesDir, "noriskclient", isLegacyMinecraft(profile.Version) ? "legacy" : "new")
-                    : _pathGuard.ResolveInside(Path.Combine(profilesDir, "groups"),
-                        string.Concat(group.ToLowerInvariant().Where(c => !Path.GetInvalidFileNameChars().Contains(c))));
+                directory = group.ToLowerInvariant() is "nrc" or "noriskclient" or "norisk client"
+                    ? Path.Combine(profilesDirectory, "noriskclient", isLegacyMinecraft(profile.Version) ? "legacy" : "new")
+                    : _pathGuard.ResolveInside(Path.Combine(profilesDirectory, "groups"),
+                        string.Concat(group.ToLowerInvariant().Where(character => !Path.GetInvalidFileNameChars().Contains(character))));
             }
             else
             {
-                dir = _pathGuard.ResolveInside(profilesDir, profile.Path);
+                directory = _pathGuard.ResolveInside(profilesDirectory, profile.Path);
             }
 
-            if (profile.Standard && (dir == null || !Directory.Exists(dir)))
+            if (profile.Standard && (directory == null || !Directory.Exists(directory)))
             {
                 return null;
             }
 
             var name = string.IsNullOrWhiteSpace(profile.Name) ? profile.Path : profile.Name!;
-            if (dir == null)
+            if (directory == null)
             {
-                return new ForeignInstance { Launcher = "norisk", Name = name, GameDir = profilesDir, Problem = new TextRef("import.problem.invalidPath") };
+                return new ForeignInstance { Launcher = "norisk", Name = name, GameDir = profilesDirectory, Problem = new TextRef("import.problem.invalidPath") };
             }
 
             var loader = parseLoader(profile.Loader);
             var loaderName = (loader ?? LoaderType.Vanilla).ToString().ToLowerInvariant();
             var idText = profile.Id.Replace("-", "");
             var shortId = idText.Length >= 4 ? idText[..2] + idText[^2..] : idText;
-            var modsDir = Path.Combine(dir, "mods");
+            var modsDirectory = Path.Combine(directory, "mods");
             var mods = new[]
                 {
-                    Path.Combine(modsDir, $"nrc-{profile.Version}-{loaderName}-{shortId}"),
-                    Path.Combine(modsDir, $"nrc-{profile.Version}-{loaderName}"),
-                    modsDir
+                    Path.Combine(modsDirectory, $"nrc-{profile.Version}-{loaderName}-{shortId}"),
+                    Path.Combine(modsDirectory, $"nrc-{profile.Version}-{loaderName}"),
+                    modsDirectory
                 }
-                .FirstOrDefault(d => Directory.Exists(d) && Directory.EnumerateFiles(d).Any(IsModFile));
+                .FirstOrDefault(modsFolder => Directory.Exists(modsFolder) && Directory.EnumerateFiles(modsFolder).Any(IsModFile));
             return new ForeignInstance
             {
                 Launcher = "norisk",
                 Name = name,
-                GameDir = dir,
+                GameDir = directory,
                 GameDirMods = false,
                 ExtraModsDir = mods,
                 ModrinthMods = profile.Mods,
@@ -736,10 +736,10 @@ namespace AxoClient.Import
             var any = false;
             if (Directory.Exists(userMods))
             {
-                foreach (var dir in Directory.EnumerateDirectories(userMods))
+                foreach (var directory in Directory.EnumerateDirectories(userMods))
                 {
-                    var m = featherFolder().Match(Path.GetFileName(dir));
-                    if (!m.Success || !Directory.EnumerateFiles(dir, "*.jar").Any())
+                    var match = featherFolder().Match(Path.GetFileName(directory));
+                    if (!match.Success || !Directory.EnumerateFiles(directory, "*.jar").Any())
                     {
                         continue;
                     }
@@ -748,13 +748,13 @@ namespace AxoClient.Import
                     yield return new ForeignInstance
                     {
                         Launcher = "feather",
-                        Name = $"Feather {m.Groups[1].Value}",
+                        Name = $"Feather {match.Groups[1].Value}",
                         GameDir = DotMinecraft,
                         Shared = true,
                         GameDirMods = false,
-                        ExtraModsDir = dir,
+                        ExtraModsDir = directory,
                         Loader = LoaderType.Fabric,
-                        MinecraftVersion = m.Groups[1].Value,
+                        MinecraftVersion = match.Groups[1].Value,
                         Hint = new TextRef("import.hint.clientWithMods", ("launcher", "Feather"))
                     };
                 }
@@ -790,16 +790,16 @@ namespace AxoClient.Import
             var any = false;
             if (Directory.Exists(fabric))
             {
-                foreach (var dir in Directory.EnumerateDirectories(fabric))
+                foreach (var directory in Directory.EnumerateDirectories(fabric))
                 {
-                    var mods = Path.Combine(dir, "mods");
+                    var mods = Path.Combine(directory, "mods");
                     if (!Directory.Exists(mods) || !Directory.EnumerateFiles(mods, "*.jar").Any())
                     {
                         continue;
                     }
 
                     any = true;
-                    var version = Path.GetFileName(dir);
+                    var version = Path.GetFileName(directory);
                     yield return new ForeignInstance
                     {
                         Launcher = "labymod",
@@ -826,7 +826,7 @@ namespace AxoClient.Import
 
         private ForeignInstance? labyModInstance(string launcherRoot, JsonElement entry)
         {
-            if (entry.ValueKind != JsonValueKind.Object || str(entry, "uid") is not { } uid || !_pathGuard.IsSafeFileName(uid))
+            if (entry.ValueKind != JsonValueKind.Object || readString(entry, "uid") is not { } uid || !_pathGuard.IsSafeFileName(uid))
             {
                 return null;
             }
@@ -835,20 +835,20 @@ namespace AxoClient.Import
             if (entry.TryGetProperty("components", out var components) && components.ValueKind == JsonValueKind.Array)
             {
                 version = components.EnumerateArray()
-                    .Where(c => c.ValueKind == JsonValueKind.Object && str(c, "uid") == "net.minecraft")
-                    .Select(c => str(c, "version"))
+                    .Where(component => component.ValueKind == JsonValueKind.Object && readString(component, "uid") == "net.minecraft")
+                    .Select(component => readString(component, "version"))
                     .FirstOrDefault();
             }
 
-            var instanceDir = Path.Combine(launcherRoot, "instances", uid);
+            var instanceDirectory = Path.Combine(launcherRoot, "instances", uid);
             var separate = entry.TryGetProperty("separateGameDirectory", out var sep) && sep.ValueKind == JsonValueKind.True;
-            var gameDir = separate
-                ? new[] { "gameDirectory", "game", "minecraft", ".minecraft" }.Select(d => Path.Combine(instanceDir, d)).FirstOrDefault(Directory.Exists)
+            var gameDirectory = separate
+                ? new[] { "gameDirectory", "game", "minecraft", ".minecraft" }.Select(folderName => Path.Combine(instanceDirectory, folderName)).FirstOrDefault(Directory.Exists)
                 : null;
             var candidates = new List<string>();
             if (version != null)
             {
-                candidates.Add(Path.Combine(instanceDir, "loader", "fabric", version, "mods"));
+                candidates.Add(Path.Combine(instanceDirectory, "loader", "fabric", version, "mods"));
             }
 
             candidates.Add(Path.Combine(DotMinecraft, "labymod-neo", "instances", uid, "mods"));
@@ -857,13 +857,13 @@ namespace AxoClient.Import
                 candidates.Add(Path.Combine(DotMinecraft, "labymod-neo", "fabric", version, "mods"));
             }
 
-            var mods = candidates.FirstOrDefault(d => Directory.Exists(d) && Directory.EnumerateFiles(d, "*.jar").Any());
+            var mods = candidates.FirstOrDefault(candidate => Directory.Exists(candidate) && Directory.EnumerateFiles(candidate, "*.jar").Any());
             return new ForeignInstance
             {
                 Launcher = "labymod",
-                Name = str(entry, "name") ?? $"LabyMod {version}",
-                GameDir = gameDir ?? DotMinecraft,
-                Shared = gameDir == null,
+                Name = readString(entry, "name") ?? $"LabyMod {version}",
+                GameDir = gameDirectory ?? DotMinecraft,
+                Shared = gameDirectory == null,
                 GameDirMods = false,
                 ExtraModsDir = mods,
                 ExtraConfigDir = mods != null ? Path.Combine(Path.GetDirectoryName(mods)!, "config") : null,
@@ -889,31 +889,31 @@ namespace AxoClient.Import
                 using var stream = new FileStream(log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(stream);
                 var head = new StringBuilder();
-                for (var i = 0; i < 300 && reader.ReadLine() is { } line; i++)
+                for (var index = 0; index < 300 && reader.ReadLine() is { } line; index++)
                 {
                     head.AppendLine(line);
                 }
 
                 var text = head.ToString();
-                Match m;
-                if ((m = fabricLog().Match(text)).Success)
+                Match match;
+                if ((match = fabricLog().Match(text)).Success)
                 {
-                    apply(instance, LoaderType.Fabric, m.Groups[1].Value, m.Groups[2].Value);
+                    apply(instance, LoaderType.Fabric, match.Groups[1].Value, match.Groups[2].Value);
                 }
-                else if ((m = quiltLog().Match(text)).Success)
+                else if ((match = quiltLog().Match(text)).Success)
                 {
-                    apply(instance, LoaderType.Quilt, m.Groups[1].Value, m.Groups[2].Value);
+                    apply(instance, LoaderType.Quilt, match.Groups[1].Value, match.Groups[2].Value);
                 }
-                else if ((m = neoForgeLog().Match(text)).Success)
+                else if ((match = neoForgeLog().Match(text)).Success)
                 {
-                    apply(instance, LoaderType.NeoForge, m.Groups[2].Value, m.Groups[1].Value);
+                    apply(instance, LoaderType.NeoForge, match.Groups[2].Value, match.Groups[1].Value);
                 }
-                else if ((m = forgeLog().Match(text)).Success)
+                else if ((match = forgeLog().Match(text)).Success)
                 {
-                    apply(instance, LoaderType.Forge, m.Groups[1].Value, m.Groups[2].Value);
+                    apply(instance, LoaderType.Forge, match.Groups[1].Value, match.Groups[2].Value);
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
             }
         }
@@ -948,16 +948,16 @@ namespace AxoClient.Import
             try
             {
                 using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                using var doc = JsonDocument.Parse(stream, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
-                return doc.RootElement.Clone();
+                using var document = JsonDocument.Parse(stream, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
+                return document.RootElement.Clone();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
             {
                 return null;
             }
         }
 
-        private string? str(JsonElement element, string name) =>
+        private string? readString(JsonElement element, string name) =>
             element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
                 ? value.GetString()
                 : null;
@@ -971,9 +971,9 @@ namespace AxoClient.Import
 
             try
             {
-                using var doc = JsonDocument.Parse(json);
-                return doc.RootElement.ValueKind == JsonValueKind.Array
-                    ? doc.RootElement.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).ToList()
+                using var document = JsonDocument.Parse(json);
+                return document.RootElement.ValueKind == JsonValueKind.Array
+                    ? document.RootElement.EnumerateArray().Where(element => element.ValueKind == JsonValueKind.String).Select(element => element.GetString()!).ToList()
                     : [];
             }
             catch (JsonException)

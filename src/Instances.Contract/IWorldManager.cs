@@ -5,13 +5,13 @@ namespace AxoClient.Instances.Contract
 {
     public interface IWorldManager
     {
-        Task<IReadOnlyList<WorldInfo>> List(string instanceId, CancellationToken ct = default);
+        Task<IReadOnlyList<WorldInfo>> List(string instanceId, CancellationToken cancellationToken = default);
 
-        int Count(string savesDir);
+        int Count(string savesDirectory);
 
         string? IconPath(string instanceId, string folder);
 
-        string WorldDir(string instanceId, string folder);
+        string WorldDirectory(string instanceId, string folder);
 
         /// <summary>Welt als ZIP in <c>backups/</c> sichern.</summary>
         Task<BackupInfo> Backup(string instanceId, string folder, JobContext job);
@@ -33,6 +33,6 @@ namespace AxoClient.Instances.Contract
         /// </summary>
         Task<string> Import(string instanceId, string zipPath, JobContext job);
 
-        Task Delete(string instanceId, string folder, CancellationToken ct = default);
+        Task Delete(string instanceId, string folder, CancellationToken cancellationToken = default);
     }
 }

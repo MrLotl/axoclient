@@ -25,11 +25,11 @@ namespace AxoClient.Launch.Checks
         public override string Id => "joinRelay";
         public override LaunchPhase Phase => LaunchPhase.Content;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            var wanted = ctx.Settings.Integrations.FriendJoinRelay
-                         && ctx.Instance.Loader.Type is LoaderType.Fabric or LoaderType.Quilt
-                         && !ctx.Content.Mods.Any(m => m.ProjectId == E4mcProject);
+            var wanted = context.Settings.Integrations.FriendJoinRelay
+                         && context.Instance.Loader.Type is LoaderType.Fabric or LoaderType.Quilt
+                         && !context.Content.Mods.Any(mod => mod.ProjectId == E4mcProject);
             IReadOnlyList<CheckResult> results = wanted
                 ? [new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.relay.install"),
                     [new CheckAction("install", new TextRef("pipeline.action.install"), install, true)])]
@@ -37,19 +37,19 @@ namespace AxoClient.Launch.Checks
             return Task.FromResult(results);
         }
 
-        private async Task install(LaunchContext ctx, JobContext job)
+        private async Task install(LaunchContext context, JobContext job)
         {
             try
             {
                 // e4mc gehört zur Launcher-Funktion "Nachjoinen" und ist vom Mod-Schutz ausgenommen
-                await _content.Install(ctx.Instance.Id, ContentType.Mod, new InstallRequest("modrinth", E4mcProject), job, ignoreModLock: true);
-                ctx.Content = await _content.Sync(ctx.Instance.Id, job.Token);
+                await _content.Install(context.Instance.Id, ContentType.Mod, new InstallRequest("modrinth", E4mcProject), job, ignoreModLock: true);
+                context.Content = await _content.Sync(context.Instance.Id, job.Token);
             }
-            catch (Exception e) when (e is not OperationCanceledException)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 // Ohne e4mc startet das Spiel trotzdem – nur das Nachjoinen in Einzelspieler-Welten fehlt.
-                _appLog.Warn($"e4mc konnte nicht installiert werden: {e.Message}");
-                ctx.Hints.Add(new TextRef("pipeline.relay.unavailable"));
+                _appLog.Warn($"e4mc konnte nicht installiert werden: {exception.Message}");
+                context.Hints.Add(new TextRef("pipeline.relay.unavailable"));
             }
         }
     }

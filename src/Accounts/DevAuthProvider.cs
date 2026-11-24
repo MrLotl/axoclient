@@ -26,7 +26,7 @@ namespace AxoClient.Accounts
 
         public string PendingName { get; set; } = "Entwickler";
 
-        public Task<GameSession> Login(CancellationToken ct)
+        public Task<GameSession> Login(CancellationToken cancellationToken)
         {
             if (!Enabled)
             {
@@ -37,10 +37,10 @@ namespace AxoClient.Accounts
             return Task.FromResult(new GameSession(OfflineUuid(name), name, "0", null, AccountType.Dev));
         }
 
-        public Task<GameSession> Refresh(string uuid, CancellationToken ct) =>
+        public Task<GameSession> Refresh(string uuid, CancellationToken cancellationToken) =>
             Task.FromException<GameSession>(new AxoException("auth.expired"));
 
-        public Task SignOut(string uuid, CancellationToken ct) => Task.CompletedTask;
+        public Task SignOut(string uuid, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public bool HasStoredLogin(string uuid) => Enabled;
 

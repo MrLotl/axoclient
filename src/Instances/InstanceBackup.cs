@@ -53,11 +53,11 @@ namespace AxoClient.Instances
             var instance = await _instances.Get(instanceId, job.Token);
             var root = _paths.Instance(instanceId);
             var files = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-                .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
-                .Where(r => !r.StartsWith("backups/") && !_instances.IsTransient(r.StartsWith("minecraft/") ? r["minecraft/".Length..] : r))
+                .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
+                .Where(relativePath => !relativePath.StartsWith("backups/") && !_instances.IsTransient(relativePath.StartsWith("minecraft/") ? relativePath["minecraft/".Length..] : relativePath))
                 .ToList();
-            var tmp = targetPath + ".tmp";
-            await using (var stream = File.Create(tmp))
+            var temporary = targetPath + ".tmp";
+            await using (var stream = File.Create(temporary))
             using (var zip = new ZipArchive(stream, ZipArchiveMode.Create))
             {
                 var manifest = zip.CreateEntry(ManifestName);
@@ -66,17 +66,17 @@ namespace AxoClient.Instances
                     await JsonSerializer.SerializeAsync(writer, new BackupManifest { InstanceName = instance.Name }, _jsonHelper.Options, job.Token);
                 }
 
-                for (var i = 0; i < files.Count; i++)
+                for (var index = 0; index < files.Count; index++)
                 {
                     job.Token.ThrowIfCancellationRequested();
-                    var entry = zip.CreateEntry(files[i], CompressionLevel.Fastest);
-                    await using var source = new FileStream(Path.Combine(root, files[i]), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    var entry = zip.CreateEntry(files[index], CompressionLevel.Fastest);
+                    await using var source = new FileStream(Path.Combine(root, files[index]), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     await using var target = entry.Open();
                     await source.CopyToAsync(target, job.Token);
-                    job.Report((double)(i + 1) / files.Count);
+                    job.Report((double)(index + 1) / files.Count);
                 }
             }
-            File.Move(tmp, targetPath, overwrite: true);
+            File.Move(temporary, targetPath, overwrite: true);
         }
 
         /// <summary>Erkennt AxoClient-Backup oder .mrpack und liest beides als neue Instanz ein.</summary>
@@ -99,27 +99,27 @@ namespace AxoClient.Instances
             }
             var instanceEntry = zip.GetEntry("instance.json") ?? throw new AxoException("import.unknownFormat");
             Instance source;
-            await using (var s = instanceEntry.Open())
+            await using (var stream = instanceEntry.Open())
             {
-                source = await JsonSerializer.DeserializeAsync<Instance>(s, _jsonHelper.Options, job.Token) ?? throw new AxoException("import.unknownFormat");
+                source = await JsonSerializer.DeserializeAsync<Instance>(stream, _jsonHelper.Options, job.Token) ?? throw new AxoException("import.unknownFormat");
             }
 
             var instance = await _instances.Create(new CreateInstanceRequest(_instanceRules.CleanName(source.Name), source.Minecraft.Version,
                 source.Loader.Type, _gameVersionHelper.IsSafeVersion(source.Loader.Version) ? source.Loader.Version : null,
                 source.MemoryMb), OriginType.Import, job.Token);
             var root = _paths.Instance(instance.Id);
-            var entries = zip.Entries.Where(e => !e.FullName.EndsWith('/') && e.FullName is not (ManifestName or "instance.json")).ToList();
+            var entries = zip.Entries.Where(zipEntry => !zipEntry.FullName.EndsWith('/') && zipEntry.FullName is not (ManifestName or "instance.json")).ToList();
             try
             {
-                for (var i = 0; i < entries.Count; i++)
+                for (var index = 0; index < entries.Count; index++)
                 {
                     job.Token.ThrowIfCancellationRequested();
-                    var target = _pathGuard.Combine(root, entries[i].FullName);
+                    var target = _pathGuard.Combine(root, entries[index].FullName);
                     Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                    await using var from = entries[i].Open();
+                    await using var from = entries[index].Open();
                     await using var to = File.Create(target);
                     await from.CopyToAsync(to, job.Token);
-                    job.Report((double)(i + 1) / entries.Count);
+                    job.Report((double)(index + 1) / entries.Count);
                 }
             }
             catch

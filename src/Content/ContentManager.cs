@@ -61,28 +61,28 @@ namespace AxoClient.Content
         {
             lock (_locks)
             {
-                if (!_locks.TryGetValue(id, out var l))
+                if (!_locks.TryGetValue(id, out var value))
                 {
-                    _locks[id] = l = new SemaphoreSlim(1, 1);
+                    _locks[id] = value = new SemaphoreSlim(1, 1);
                 }
 
-                return l;
+                return value;
             }
         }
 
         public string Folder(string instanceId, ContentType type) =>
-            Path.Combine(_instances.GameDir(instanceId), _contentFolders.Of(type));
+            Path.Combine(_instances.GameDirectory(instanceId), _contentFolders.Of(type));
 
-        public async Task<IReadOnlyList<ContentItem>> List(string instanceId, ContentType type, CancellationToken ct = default)
+        public async Task<IReadOnlyList<ContentItem>> List(string instanceId, ContentType type, CancellationToken cancellationToken = default)
         {
-            var doc = await Sync(instanceId, ct);
-            var modLock = (await _instances.Get(instanceId, ct)).ModLock;
-            return doc.ListOf(type)
-                .OrderBy(e => e.Source == ContentSource.AxoClient ? 0 : 1)
-                .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(e => new ContentItem(e.File, e.Name, e.Version, e.Enabled, e.Source, e.ProjectId, e.VersionId, e.IconUrl,
-                    e.Author, e.Size, e.AddedAt, e.Source == ContentSource.AxoClient, type == ContentType.Mod && modLock.IsLocked(e),
-                    e.Previous != null ? e.Previous.Version ?? e.Previous.File : null))
+            var document = await Sync(instanceId, cancellationToken);
+            var modLock = (await _instances.Get(instanceId, cancellationToken)).ModLock;
+            return document.ListOf(type)
+                .OrderBy(entry => entry.Source == ContentSource.AxoClient ? 0 : 1)
+                .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(entry => new ContentItem(entry.File, entry.Name, entry.Version, entry.Enabled, entry.Source, entry.ProjectId, entry.VersionId, entry.IconUrl,
+                    entry.Author, entry.Size, entry.AddedAt, entry.Source == ContentSource.AxoClient, type == ContentType.Mod && modLock.IsLocked(entry),
+                    entry.Previous != null ? entry.Previous.Version ?? entry.Previous.File : null))
                 .ToList();
         }
 
@@ -90,26 +90,26 @@ namespace AxoClient.Content
         /// Gleicht Ordner und content.json ab: unbekannte Dateien werden als <c>local</c> eingetragen, Einträge ohne
         /// Datei entfernt. Hashes werden nur neu berechnet, wenn sich Größe oder Änderungszeit geändert haben.
         /// </summary>
-        public async Task<ContentDocument> Sync(string instanceId, CancellationToken ct = default)
+        public async Task<ContentDocument> Sync(string instanceId, CancellationToken cancellationToken = default)
         {
             var gate = lockFor(instanceId);
-            await gate.WaitAsync(ct);
+            await gate.WaitAsync(cancellationToken);
             try
             {
                 var store = _instances.ContentOf(instanceId);
-                var doc = await store.Load(ct);
+                var document = await store.Load(cancellationToken);
                 var changed = false;
                 foreach (var type in Enum.GetValues<ContentType>())
                 {
-                    changed |= syncType(instanceId, type, doc);
+                    changed |= syncType(instanceId, type, document);
                 }
 
                 if (changed)
                 {
-                    doc.ChangedAt = DateTimeOffset.UtcNow;
-                    await store.Save(doc, ct);
+                    document.ChangedAt = DateTimeOffset.UtcNow;
+                    await store.Save(document, cancellationToken);
                 }
-                return doc;
+                return document;
             }
             finally
             {
@@ -117,22 +117,22 @@ namespace AxoClient.Content
             }
         }
 
-        private bool syncType(string instanceId, ContentType type, ContentDocument doc)
+        private bool syncType(string instanceId, ContentType type, ContentDocument document)
         {
-            var dir = Folder(instanceId, type);
-            Directory.CreateDirectory(dir);
-            var list = doc.ListOf(type);
+            var directory = Folder(instanceId, type);
+            Directory.CreateDirectory(directory);
+            var list = document.ListOf(type);
             var changed = false;
 
             var onDisk = new Dictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
-            foreach (var group in Directory.EnumerateFiles(dir).Select(f => new FileInfo(f)).Where(f => IsContentFile(type, f.Name))
-                         .GroupBy(f => BaseName(f.Name), StringComparer.OrdinalIgnoreCase))
+            foreach (var group in Directory.EnumerateFiles(directory).Select(file => new FileInfo(file)).Where(file => IsContentFile(type, file.Name))
+                         .GroupBy(file => BaseName(file.Name), StringComparer.OrdinalIgnoreCase))
             {
-                onDisk[group.Key] = group.Count() == 1 ? group.First() : resolveDouble(dir, group.Key, group.ToList(), list);
+                onDisk[group.Key] = group.Count() == 1 ? group.First() : resolveDouble(directory, group.Key, group.ToList(), list);
             }
 
-            var onDiskDirs = type != ContentType.Mod
-                ? Directory.EnumerateDirectories(dir).Select(d => new DirectoryInfo(d)).ToDictionary(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            var onDiskDirectories = type != ContentType.Mod
+                ? Directory.EnumerateDirectories(directory).Select(folderPath => new DirectoryInfo(folderPath)).ToDictionary(folder => folder.Name, StringComparer.OrdinalIgnoreCase)
                 : [];
 
             foreach (var entry in list.ToList())
@@ -154,9 +154,9 @@ namespace AxoClient.Content
                     }
                     onDisk.Remove(entry.File);
                 }
-                else if (onDiskDirs.ContainsKey(entry.File))
+                else if (onDiskDirectories.ContainsKey(entry.File))
                 {
-                    onDiskDirs.Remove(entry.File);
+                    onDiskDirectories.Remove(entry.File);
                 }
                 else
                 {
@@ -180,9 +180,9 @@ namespace AxoClient.Content
                 changed = true;
             }
             // Entpackte Ressourcepacks und Shader als Ordner
-            foreach (var (name, info) in onDiskDirs)
+            foreach (var (name, folderInfo) in onDiskDirectories)
             {
-                list.Add(new ContentEntry { File = name, Name = name, Source = ContentSource.Local, AddedAt = info.CreationTimeUtc });
+                list.Add(new ContentEntry { File = name, Name = name, Source = ContentSource.Local, AddedAt = folderInfo.CreationTimeUtc });
                 changed = true;
             }
             return changed;
@@ -192,11 +192,11 @@ namespace AxoClient.Content
         /// "x.jar" und "x.jar.disabled" liegen beide im Ordner (z. B. nach einem Pack-Update): Minecraft lädt dann die aktive
         /// trotz Deaktivierung. Die neuere Datei bleibt im Zustand, den content.json kennt (sonst aktiv), die andere fällt weg.
         /// </summary>
-        private FileInfo resolveDouble(string dir, string baseName, List<FileInfo> files, List<ContentEntry> list)
+        private FileInfo resolveDouble(string directory, string baseName, List<FileInfo> files, List<ContentEntry> list)
         {
-            var known = list.FirstOrDefault(e => e.File.Equals(baseName, StringComparison.OrdinalIgnoreCase));
-            var target = Path.Combine(dir, known is { Enabled: false } ? baseName + ".disabled" : baseName);
-            var newest = files.OrderByDescending(f => f.LastWriteTimeUtc).First();
+            var known = list.FirstOrDefault(entry => entry.File.Equals(baseName, StringComparison.OrdinalIgnoreCase));
+            var target = Path.Combine(directory, known is { Enabled: false } ? baseName + ".disabled" : baseName);
+            var newest = files.OrderByDescending(file => file.LastWriteTimeUtc).First();
             try
             {
                 if (!newest.FullName.Equals(target, StringComparison.OrdinalIgnoreCase))
@@ -204,18 +204,18 @@ namespace AxoClient.Content
                     File.Move(newest.FullName, target, overwrite: true);
                 }
 
-                foreach (var other in files.Where(f => !f.FullName.Equals(target, StringComparison.OrdinalIgnoreCase)
-                                                       && !f.FullName.Equals(newest.FullName, StringComparison.OrdinalIgnoreCase)))
+                foreach (var other in files.Where(file => !file.FullName.Equals(target, StringComparison.OrdinalIgnoreCase)
+                                                       && !file.FullName.Equals(newest.FullName, StringComparison.OrdinalIgnoreCase)))
                 {
                     File.Delete(other.FullName);
                 }
 
                 return new FileInfo(target);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn($"Doppelte Datei {baseName} konnte nicht bereinigt werden", ex);
-                return files.First(f => f.FullName.Equals(target, StringComparison.OrdinalIgnoreCase));
+                _appLog.Warn($"Doppelte Datei {baseName} konnte nicht bereinigt werden", exception);
+                return files.First(file => file.FullName.Equals(target, StringComparison.OrdinalIgnoreCase));
             }
         }
 
@@ -243,8 +243,8 @@ namespace AxoClient.Content
                     entry.Name = _textHelper.Clean(meta.Name, 100);
                 }
 
-                entry.Version ??= _textHelper.Clean(meta.Version, 60) is { Length: > 0 } v ? v : null;
-                entry.Author ??= _textHelper.Clean(meta.Author, 60) is { Length: > 0 } a ? a : null;
+                entry.Version ??= _textHelper.Clean(meta.Version, 60) is { Length: > 0 } cleanVersion ? cleanVersion : null;
+                entry.Author ??= _textHelper.Clean(meta.Author, 60) is { Length: > 0 } cleanAuthor ? cleanAuthor : null;
             }
         }
 
@@ -259,27 +259,27 @@ namespace AxoClient.Content
             name.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase) ? name[..^".disabled".Length] : name;
 
         /// <summary>Unbekannte lokale Dateien bei Modrinth erkennen, damit sie Name, Icon und Updates bekommen.</summary>
-        public async Task IdentifyLocal(string instanceId, CancellationToken ct = default)
+        public async Task IdentifyLocal(string instanceId, CancellationToken cancellationToken = default)
         {
-            var doc = await Sync(instanceId, ct);
-            var unknown = Enum.GetValues<ContentType>().SelectMany(doc.ListOf)
-                .Where(e => e.Source == ContentSource.Local && e.Hashes.Sha1 != null && e.ProjectId == null).ToList();
+            var document = await Sync(instanceId, cancellationToken);
+            var unknown = Enum.GetValues<ContentType>().SelectMany(document.ListOf)
+                .Where(entry => entry.Source == ContentSource.Local && entry.Hashes.Sha1 != null && entry.ProjectId == null).ToList();
             if (unknown.Count == 0)
             {
                 return;
             }
 
             var modrinth = _providers.Get("modrinth");
-            var found = await modrinth.Identify(unknown.Select(e => new LocalFileHash(e.Hashes.Sha1!, null)).ToList(), ct);
+            var found = await modrinth.Identify(unknown.Select(entry => new LocalFileHash(entry.Hashes.Sha1!, null)).ToList(), cancellationToken);
             if (found.Count == 0)
             {
                 return;
             }
 
-            var projects = await modrinth.GetProjects(found.Values.Select(v => v.ProjectId), ct);
-            await Change(instanceId, d =>
+            var projects = await modrinth.GetProjects(found.Values.Select(value => value.ProjectId), cancellationToken);
+            await Change(instanceId, content =>
             {
-                foreach (var entry in Enum.GetValues<ContentType>().SelectMany(d.ListOf))
+                foreach (var entry in Enum.GetValues<ContentType>().SelectMany(content.ListOf))
                 {
                     if (entry.Source != ContentSource.Local || entry.Hashes.Sha1 is not { } sha1 || !found.TryGetValue(sha1, out var version))
                     {
@@ -295,10 +295,10 @@ namespace AxoClient.Content
                         entry.Name = project.Title;
                         entry.IconUrl = project.IconUrl;
                     }
-                    entry.Dependencies = version.Dependencies.Where(x => x.Kind == DependencyKind.Required && x.ProjectId != null)
-                        .Select(x => x.ProjectId!).ToList();
+                    entry.Dependencies = version.Dependencies.Where(dependency => dependency.Kind == DependencyKind.Required && dependency.ProjectId != null)
+                        .Select(dependency => dependency.ProjectId!).ToList();
                 }
-            }, ct);
+            }, cancellationToken);
         }
 
         /// <summary>Installiert eine Version samt Pflicht-Abhängigkeiten. Gibt die installierten Dateinamen zurück.</summary>
@@ -310,7 +310,7 @@ namespace AxoClient.Content
             {
                 instance.ModLock.ThrowIfCannotAdd();
                 // Pack-Mods nicht durch eine andere Version ersetzen
-                var existing = (await Sync(instanceId, job.Token)).Mods.FirstOrDefault(m => m.ProjectId == request.ProjectId);
+                var existing = (await Sync(instanceId, job.Token)).Mods.FirstOrDefault(mod => mod.ProjectId == request.ProjectId);
                 if (existing != null)
                 {
                     instance.ModLock.ThrowIfLocked(existing);
@@ -318,12 +318,12 @@ namespace AxoClient.Content
             }
             var provider = _providers.Get(request.Source);
             var kind = ToKind(type);
-            var mc = instance.Minecraft.Version;
+            var minecraftVersion = instance.Minecraft.Version;
             var loader = instance.Loader.Type;
 
-            var doc = await Sync(instanceId, job.Token);
-            var installedProjects = Enum.GetValues<ContentType>().SelectMany(doc.ListOf)
-                .Where(e => e.ProjectId != null).Select(e => e.ProjectId!).ToHashSet();
+            var document = await Sync(instanceId, job.Token);
+            var installedProjects = Enum.GetValues<ContentType>().SelectMany(document.ListOf)
+                .Where(entry => entry.ProjectId != null).Select(entry => entry.ProjectId!).ToHashSet();
 
             // Abhängigkeiten auflösen (Breitensuche, höchstens 40 Projekte)
             var plan = new List<(ContentVersion Version, ContentType Type, bool IsDependency)>();
@@ -332,8 +332,8 @@ namespace AxoClient.Content
             var seen = new HashSet<string>();
             while (queue.Count > 0 && plan.Count < 40)
             {
-                var (projectId, versionId, itemType, isDep) = queue.Dequeue();
-                if (!seen.Add(projectId) || (isDep && installedProjects.Contains(projectId)))
+                var (projectId, versionId, itemType, isDependency) = queue.Dequeue();
+                if (!seen.Add(projectId) || (isDependency && installedProjects.Contains(projectId)))
                 {
                     continue;
                 }
@@ -341,28 +341,28 @@ namespace AxoClient.Content
                 job.Status("content.resolving");
                 var version = versionId != null
                     ? await provider.GetVersion(versionId, job.Token)
-                    : (await provider.GetVersions(projectId, mc, loader, ToKind(itemType), job.Token)).FirstOrDefault(v => v.Channel == "release")
-                      ?? (await provider.GetVersions(projectId, mc, loader, ToKind(itemType), job.Token)).FirstOrDefault();
+                    : (await provider.GetVersions(projectId, minecraftVersion, loader, ToKind(itemType), job.Token)).FirstOrDefault(candidateVersion => candidateVersion.Channel == "release")
+                      ?? (await provider.GetVersions(projectId, minecraftVersion, loader, ToKind(itemType), job.Token)).FirstOrDefault();
                 if (version == null)
                 {
-                    if (isDep)
+                    if (isDependency)
                     {
                         continue;
                     }
 
-                    throw new AxoException("content.noCompatibleVersion", new() { ["version"] = mc });
+                    throw new AxoException("content.noCompatibleVersion", new() { ["version"] = minecraftVersion });
                 }
-                plan.Add((version, itemType, isDep));
+                plan.Add((version, itemType, isDependency));
                 if (itemType == ContentType.Mod)
                 {
-                    foreach (var dep in version.Dependencies.Where(d => d.Kind == DependencyKind.Required && d.ProjectId != null))
+                    foreach (var dependency in version.Dependencies.Where(dependency => dependency.Kind == DependencyKind.Required && dependency.ProjectId != null))
                     {
-                        queue.Enqueue((dep.ProjectId!, dep.VersionId, ContentType.Mod, true));
+                        queue.Enqueue((dependency.ProjectId!, dependency.VersionId, ContentType.Mod, true));
                     }
                 }
             }
 
-            var projects = await provider.GetProjects(plan.Select(p => p.Version.ProjectId), job.Token);
+            var projects = await provider.GetProjects(plan.Select(plannedItem => plannedItem.Version.ProjectId), job.Token);
             var requests = new List<DownloadRequest>();
             var entries = new List<(ContentEntry Entry, ContentType Type)>();
             foreach (var (version, itemType, _) in plan)
@@ -391,24 +391,24 @@ namespace AxoClient.Content
                     VersionId = version.Id,
                     Hashes = new ContentHashes(file.Sha1, file.Sha512),
                     Size = file.Size,
-                    Dependencies = version.Dependencies.Where(d => d.Kind == DependencyKind.Required && d.ProjectId != null)
-                        .Select(d => d.ProjectId!).ToList(),
+                    Dependencies = version.Dependencies.Where(dependency => dependency.Kind == DependencyKind.Required && dependency.ProjectId != null)
+                        .Select(dependency => dependency.ProjectId!).ToList(),
                     IconUrl = project?.IconUrl,
-                    Author = project?.Author is { Length: > 0 } a ? a : null
+                    Author = project?.Author is { Length: > 0 } author ? author : null
                 }, itemType));
             }
 
             job.Status("content.downloading");
             await _downloads.DownloadAll(requests, job.Range(0.05, 0.95), job.Token);
 
-            await Change(instanceId, d =>
+            await Change(instanceId, content =>
             {
                 foreach (var (entry, itemType) in entries)
                 {
-                    var list = d.ListOf(itemType);
+                    var list = content.ListOf(itemType);
                     // Alte Datei desselben Projekts ersetzen (Update/Version ändern). Sie wandert nach previous/, damit sich
                     // das Update rückgängig machen lässt.
-                    foreach (var old in list.Where(e => e.ProjectId == entry.ProjectId && e.File != entry.File).ToList())
+                    foreach (var old in list.Where(existing => existing.ProjectId == entry.ProjectId && existing.File != entry.File).ToList())
                     {
                         entry.Previous = keepAsPrevious(instanceId, itemType, old) ? old : null;
                         if (entry.Previous == null)
@@ -418,11 +418,11 @@ namespace AxoClient.Content
 
                         list.Remove(old);
                     }
-                    list.RemoveAll(e => e.File.Equals(entry.File, StringComparison.OrdinalIgnoreCase));
+                    list.RemoveAll(existing => existing.File.Equals(entry.File, StringComparison.OrdinalIgnoreCase));
                     var path = Path.Combine(Folder(instanceId, itemType), entry.File);
-                    var info = new FileInfo(path);
-                    entry.Modified = info.LastWriteTimeUtc;
-                    entry.Size = info.Length;
+                    var file = new FileInfo(path);
+                    entry.Modified = file.LastWriteTimeUtc;
+                    entry.Size = file.Length;
                     if (itemType == ContentType.Mod)
                     {
                         entry.Meta = _modMetadataReader.Read(path)?.Meta;
@@ -431,11 +431,11 @@ namespace AxoClient.Content
                     list.Add(entry);
                 }
             }, job.Token);
-            return entries.Select(e => e.Entry.File).ToList();
+            return entries.Select(entry => entry.Entry.File).ToList();
         }
 
         /// <summary>Lokale Datei hinzufügen (Drag &amp; Drop). Gilt als "Lokal · eigene Mod".</summary>
-        public async Task<string> AddLocalFile(string instanceId, ContentType type, string sourcePath, CancellationToken ct = default)
+        public async Task<string> AddLocalFile(string instanceId, ContentType type, string sourcePath, CancellationToken cancellationToken = default)
         {
             var name = Path.GetFileName(sourcePath);
             if (!_pathGuard.IsSafeFileName(name) || !IsContentFile(type, name))
@@ -445,9 +445,9 @@ namespace AxoClient.Content
 
             if (type == ContentType.Mod)
             {
-                var modLock = (await _instances.Get(instanceId, ct)).ModLock;
+                var modLock = (await _instances.Get(instanceId, cancellationToken)).ModLock;
                 modLock.ThrowIfCannotAdd();
-                if ((await Sync(instanceId, ct)).Mods.FirstOrDefault(m => m.File.Equals(BaseName(name), StringComparison.OrdinalIgnoreCase)) is { } existing)
+                if ((await Sync(instanceId, cancellationToken)).Mods.FirstOrDefault(mod => mod.File.Equals(BaseName(name), StringComparison.OrdinalIgnoreCase)) is { } existing)
                 {
                     modLock.ThrowIfLocked(existing);
                 }
@@ -456,19 +456,19 @@ namespace AxoClient.Content
             await using (var source = File.OpenRead(sourcePath))
             await using (var dest = File.Create(target))
             {
-                await source.CopyToAsync(dest, ct);
+                await source.CopyToAsync(dest, cancellationToken);
             }
 
-            await Sync(instanceId, ct);
+            await Sync(instanceId, cancellationToken);
             return name;
         }
 
-        public async Task SetEnabled(string instanceId, ContentType type, string file, bool enabled, CancellationToken ct = default)
+        public async Task SetEnabled(string instanceId, ContentType type, string file, bool enabled, CancellationToken cancellationToken = default)
         {
-            var modLock = (await _instances.Get(instanceId, ct)).ModLock;
-            await Change(instanceId, doc =>
+            var modLock = (await _instances.Get(instanceId, cancellationToken)).ModLock;
+            await Change(instanceId, document =>
             {
-                var entry = find(doc, type, file);
+                var entry = find(document, type, file);
                 if (entry.Source == ContentSource.AxoClient)
                 {
                     throw new AxoException("content.locked");
@@ -480,8 +480,8 @@ namespace AxoClient.Content
                 }
                 // Nach dem tatsächlichen Stand auf der Platte richten, nicht nur nach content.json: sonst passiert nichts,
                 // wenn beide auseinanderlaufen, oder es liegen "x.jar" und "x.jar.disabled" nebeneinander und die aktive lädt weiter.
-                var dir = Folder(instanceId, type);
-                var on = Path.Combine(dir, entry.File);
+                var directory = Folder(instanceId, type);
+                var on = Path.Combine(directory, entry.File);
                 var off = on + ".disabled";
                 var to = enabled ? on : off;
                 var from = File.Exists(enabled ? off : on) ? (enabled ? off : on) : null;
@@ -491,26 +491,26 @@ namespace AxoClient.Content
                     {
                         File.Move(from, to, overwrite: true);
                     }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                     {
                         // Meist hält das laufende Spiel die Datei fest
-                        throw new AxoException("content.fileInUse", new() { ["name"] = entry.Name }, ex);
+                        throw new AxoException("content.fileInUse", new() { ["name"] = entry.Name }, exception);
                     }
                 }
                 entry.Enabled = enabled;
-            }, ct);
+            }, cancellationToken);
         }
 
-        public async Task Remove(string instanceId, ContentType type, IReadOnlyCollection<string> files, CancellationToken ct = default)
+        public async Task Remove(string instanceId, ContentType type, IReadOnlyCollection<string> files, CancellationToken cancellationToken = default)
         {
-            var modLock = (await _instances.Get(instanceId, ct)).ModLock;
-            await Change(instanceId, doc =>
+            var modLock = (await _instances.Get(instanceId, cancellationToken)).ModLock;
+            await Change(instanceId, document =>
             {
-                var list = doc.ListOf(type);
+                var list = document.ListOf(type);
                 // Erst alles prüfen, dann löschen: bei gemischter Auswahl nichts halb erledigen
                 foreach (var file in files)
                 {
-                    var entry = find(doc, type, file);
+                    var entry = find(document, type, file);
                     if (entry.Source == ContentSource.AxoClient)
                     {
                         throw new AxoException("content.locked");
@@ -523,7 +523,7 @@ namespace AxoClient.Content
                 }
                 foreach (var file in files)
                 {
-                    var entry = find(doc, type, file);
+                    var entry = find(document, type, file);
                     var path = Path.Combine(Folder(instanceId, type), entry.DiskName);
                     if (File.Exists(path))
                     {
@@ -538,39 +538,39 @@ namespace AxoClient.Content
 
                     if (entry.Previous != null)
                     {
-                        tryDelete(Path.Combine(previousDir(instanceId, type), entry.Previous.File));
+                        tryDelete(Path.Combine(previousDirectory(instanceId, type), entry.Previous.File));
                     }
 
                     list.Remove(entry);
                 }
-            }, ct);
+            }, cancellationToken);
         }
 
         /// <summary>Mod-Schutz umstellen. <paramref name="adoptCurrent"/>: alle jetzigen Mods zählen ab sofort zum Pack.</summary>
-        public async Task<ModLock> SetModLock(string instanceId, ModLockLevel level, bool adoptCurrent, CancellationToken ct = default)
+        public async Task<ModLock> SetModLock(string instanceId, ModLockLevel level, bool adoptCurrent, CancellationToken cancellationToken = default)
         {
-            var doc = await Sync(instanceId, ct);
-            var instance = await _instances.Get(instanceId, ct);
-            instance.ModLock.SetLevel(level, doc.Mods, adoptCurrent);
-            await _instances.Save(instance, ct);
+            var document = await Sync(instanceId, cancellationToken);
+            var instance = await _instances.Get(instanceId, cancellationToken);
+            instance.ModLock.SetLevel(level, document.Mods, adoptCurrent);
+            await _instances.Save(instance, cancellationToken);
             _events.Publish("content.changed", new { instanceId });
             return instance.ModLock;
         }
 
         /// <summary>Verfügbare Versionen für "Version ändern".</summary>
         public async Task<IReadOnlyList<ContentVersion>> VersionsFor(string instanceId, ContentType type, string file,
-            bool allMinecraftVersions, CancellationToken ct = default)
+            bool allMinecraftVersions, CancellationToken cancellationToken = default)
         {
-            var instance = await _instances.Get(instanceId, ct);
-            var doc = await Sync(instanceId, ct);
-            var entry = find(doc, type, file);
+            var instance = await _instances.Get(instanceId, cancellationToken);
+            var document = await Sync(instanceId, cancellationToken);
+            var entry = find(document, type, file);
             if (entry.ProjectId == null || entry.Source is not (ContentSource.Modrinth or ContentSource.CurseForge))
             {
                 throw new AxoException("content.noSource");
             }
 
             return await _providers.Get(entry.Source).GetVersions(entry.ProjectId,
-                allMinecraftVersions ? null : instance.Minecraft.Version, instance.Loader.Type, ToKind(type), ct);
+                allMinecraftVersions ? null : instance.Minecraft.Version, instance.Loader.Type, ToKind(type), cancellationToken);
         }
 
         /// <summary>
@@ -581,7 +581,7 @@ namespace AxoClient.Content
         public async Task<ModAdaptResult> AdaptMods(string instanceId, JobContext job)
         {
             var instance = await _instances.Get(instanceId, job.Token);
-            var mc = instance.Minecraft.Version;
+            var minecraftVersion = instance.Minecraft.Version;
             var loader = instance.Loader.Type;
             var result = new ModAdaptResult();
             if (loader == LoaderType.Vanilla)
@@ -590,25 +590,25 @@ namespace AxoClient.Content
             }
 
             var mods = (await Sync(instanceId, job.Token)).Mods
-                .Where(m => m.Enabled && m.Source != ContentSource.AxoClient && !instance.ModLock.IsLocked(m)).ToList();
-            for (var i = 0; i < mods.Count; i++)
+                .Where(mod => mod.Enabled && mod.Source != ContentSource.AxoClient && !instance.ModLock.IsLocked(mod)).ToList();
+            for (var index = 0; index < mods.Count; index++)
             {
                 job.Token.ThrowIfCancellationRequested();
-                var mod = mods[i];
-                job.Status("content.adapt.checking", ("index", i + 1), ("count", mods.Count));
-                job.Report((double)i / Math.Max(1, mods.Count));
+                var mod = mods[index];
+                job.Status("content.adapt.checking", ("index", index + 1), ("count", mods.Count));
+                job.Report((double)index / Math.Max(1, mods.Count));
                 try
                 {
                     if (mod.ProjectId != null && mod.Source is ContentSource.Modrinth or ContentSource.CurseForge)
                     {
                         var source = mod.Source == ContentSource.CurseForge ? "curseforge" : "modrinth";
-                        var versions = await _providers.Get(source).GetVersions(mod.ProjectId, mc, loader, ProjectKind.Mod, job.Token);
-                        if (versions.Any(v => v.Id == mod.VersionId))
+                        var versions = await _providers.Get(source).GetVersions(mod.ProjectId, minecraftVersion, loader, ProjectKind.Mod, job.Token);
+                        if (versions.Any(version => version.Id == mod.VersionId))
                         {
                             continue; // Die installierte Version passt schon
                         }
 
-                        var best = versions.FirstOrDefault(v => v.Channel == "release") ?? versions.FirstOrDefault();
+                        var best = versions.FirstOrDefault(version => version.Channel == "release") ?? versions.FirstOrDefault();
                         if (best == null)
                         {
                             await SetEnabled(instanceId, ContentType.Mod, mod.File, false, job.Token);
@@ -616,19 +616,19 @@ namespace AxoClient.Content
                             continue;
                         }
                         await Install(instanceId, ContentType.Mod, new InstallRequest(source, mod.ProjectId, best.Id),
-                            job.Sub((double)i / mods.Count, (double)(i + 1) / mods.Count));
+                            job.Sub((double)index / mods.Count, (double)(index + 1) / mods.Count));
                         result.Updated++;
                     }
-                    else if (mod.Meta is { } meta && !_modCompatibility.ModFits(meta, loader, mc))
+                    else if (mod.Meta is { } meta && !_modCompatibility.ModFits(meta, loader, minecraftVersion))
                     {
                         await SetEnabled(instanceId, ContentType.Mod, mod.File, false, job.Token);
                         result.Disabled.Add(mod.Name);
                     }
                 }
-                catch (Exception ex) when (ex is AxoException or HttpRequestException)
+                catch (Exception exception) when (exception is AxoException or HttpRequestException)
                 {
                     // Offline, Datei gerade in Benutzung o. Ä.: Mod bleibt unverändert, die Startprüfung meldet sie ggf.
-                    _appLog.Warn($"Mod nicht angepasst: {mod.Name}", ex);
+                    _appLog.Warn($"Mod nicht angepasst: {mod.Name}", exception);
                     result.Failed++;
                 }
             }
@@ -636,17 +636,17 @@ namespace AxoClient.Content
             return result;
         }
 
-        public async Task Change(string instanceId, Action<ContentDocument> change, CancellationToken ct = default)
+        public async Task Change(string instanceId, Action<ContentDocument> change, CancellationToken cancellationToken = default)
         {
             var gate = lockFor(instanceId);
-            await gate.WaitAsync(ct);
+            await gate.WaitAsync(cancellationToken);
             try
             {
-                await _instances.ContentOf(instanceId).Update(doc =>
+                await _instances.ContentOf(instanceId).Update(document =>
                 {
-                    change(doc);
-                    doc.ChangedAt = DateTimeOffset.UtcNow;
-                }, ct);
+                    change(document);
+                    document.ChangedAt = DateTimeOffset.UtcNow;
+                }, cancellationToken);
             }
             finally
             {
@@ -655,8 +655,8 @@ namespace AxoClient.Content
             _events.Publish("content.changed", new { instanceId });
         }
 
-        private ContentEntry find(ContentDocument doc, ContentType type, string file) =>
-            doc.ListOf(type).FirstOrDefault(e => e.File.Equals(file, StringComparison.OrdinalIgnoreCase))
+        private ContentEntry find(ContentDocument document, ContentType type, string file) =>
+            document.ListOf(type).FirstOrDefault(entry => entry.File.Equals(file, StringComparison.OrdinalIgnoreCase))
             ?? throw new AxoException("errors.notFound");
 
         public ProjectKind ToKind(ContentType type) => type switch
@@ -675,16 +675,16 @@ namespace AxoClient.Content
                     File.Delete(path);
                 }
             }
-            catch (IOException ex)
+            catch (IOException exception)
             {
-                _appLog.Warn($"Alte Datei konnte nicht gelöscht werden: {Path.GetFileName(path)}", ex);
+                _appLog.Warn($"Alte Datei konnte nicht gelöscht werden: {Path.GetFileName(path)}", exception);
             }
         }
 
         public bool SupportsMods(Instance instance) => _loaderNames.SupportsMods(instance.Loader.Type);
 
-        private string previousDir(string instanceId, ContentType type) =>
-            Path.Combine(Path.GetDirectoryName(_instances.GameDir(instanceId))!, "previous", _contentFolders.Of(type));
+        private string previousDirectory(string instanceId, ContentType type) =>
+            Path.Combine(Path.GetDirectoryName(_instances.GameDirectory(instanceId))!, "previous", _contentFolders.Of(type));
 
         /// <summary>Alte Datei nach <c>previous/</c> verschieben (eine Stufe: die davor verschwindet). False, wenn das nicht ging.</summary>
         private bool keepAsPrevious(string instanceId, ContentType type, ContentEntry old)
@@ -697,67 +697,67 @@ namespace AxoClient.Content
 
             try
             {
-                var dir = previousDir(instanceId, type);
-                Directory.CreateDirectory(dir);
+                var directory = previousDirectory(instanceId, type);
+                Directory.CreateDirectory(directory);
                 if (old.Previous != null)
                 {
-                    tryDelete(Path.Combine(dir, old.Previous.File));
+                    tryDelete(Path.Combine(directory, old.Previous.File));
                 }
 
-                File.Move(from, Path.Combine(dir, old.File), overwrite: true);
+                File.Move(from, Path.Combine(directory, old.File), overwrite: true);
                 old.Previous = null;
                 return true;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn($"Vorige Version nicht aufbewahrt: {old.File}", ex);
+                _appLog.Warn($"Vorige Version nicht aufbewahrt: {old.File}", exception);
                 return false;
             }
         }
 
         /// <summary>Letztes Update bzw. letzten Versionswechsel eines Inhalts zurücknehmen.</summary>
-        public async Task Rollback(string instanceId, ContentType type, string file, CancellationToken ct = default)
+        public async Task Rollback(string instanceId, ContentType type, string file, CancellationToken cancellationToken = default)
         {
-            var modLock = (await _instances.Get(instanceId, ct)).ModLock;
-            await Change(instanceId, doc =>
+            var modLock = (await _instances.Get(instanceId, cancellationToken)).ModLock;
+            await Change(instanceId, document =>
             {
-                var entry = find(doc, type, file);
+                var entry = find(document, type, file);
                 if (type == ContentType.Mod)
                 {
                     modLock.ThrowIfLocked(entry);
                 }
 
                 var previous = entry.Previous ?? throw new AxoException("content.noPrevious");
-                var stored = Path.Combine(previousDir(instanceId, type), previous.File);
+                var stored = Path.Combine(previousDirectory(instanceId, type), previous.File);
                 if (!File.Exists(stored))
                 {
                     entry.Previous = null;
                     throw new AxoException("content.noPrevious");
                 }
-                var dir = Folder(instanceId, type);
-                var target = Path.Combine(dir, previous.DiskName);
+                var directory = Folder(instanceId, type);
+                var target = Path.Combine(directory, previous.DiskName);
                 try
                 {
                     File.Move(stored, target, overwrite: true);
                     if (!previous.File.Equals(entry.File, StringComparison.OrdinalIgnoreCase))
                     {
-                        File.Delete(Path.Combine(dir, entry.File));
-                        File.Delete(Path.Combine(dir, entry.File + ".disabled"));
+                        File.Delete(Path.Combine(directory, entry.File));
+                        File.Delete(Path.Combine(directory, entry.File + ".disabled"));
                     }
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
-                    throw new AxoException("content.fileInUse", new() { ["name"] = entry.Name }, ex);
+                    throw new AxoException("content.fileInUse", new() { ["name"] = entry.Name }, exception);
                 }
-                var info = new FileInfo(target);
-                previous.Modified = info.LastWriteTimeUtc;
-                previous.Size = info.Length;
+                var fileInfo = new FileInfo(target);
+                previous.Modified = fileInfo.LastWriteTimeUtc;
+                previous.Size = fileInfo.Length;
                 previous.Previous = null;
-                var list = doc.ListOf(type);
+                var list = document.ListOf(type);
                 list[list.IndexOf(entry)] = previous;
                 // Mit der alten Version neu prüfen lassen
-                doc.CheckedAt = null;
-            }, ct);
+                document.CheckedAt = null;
+            }, cancellationToken);
         }
     }
 }

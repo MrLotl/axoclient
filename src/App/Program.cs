@@ -7,12 +7,12 @@ namespace AxoClient.App
     {
         /// <summary>Einstiegspunkt: der einzige statische Teil, er übergibt sofort an eine Instanz.</summary>
         [STAThread]
-        private static int Main(string[] args)
+        private static int Main(string[] arguments)
         {
-            return new Program().Run(args);
+            return new Program().Run(arguments);
         }
 
-        public int Run(string[] args)
+        public int Run(string[] arguments)
         {
             var paths = new AppPaths();
             var services = new ServiceCollection();
@@ -23,13 +23,13 @@ namespace AxoClient.App
             var nativeMessage = provider.GetRequiredService<NativeMessage>();
 
             // Ganz am Anfang: als Setup installieren, deinstallieren oder nach einem Update aufräumen
-            if (provider.GetRequiredService<Installer>().Handle(args, out var exitCode))
+            if (provider.GetRequiredService<Installer>().Handle(arguments, out var exitCode))
             {
                 return exitCode;
             }
 
             using var single = provider.GetRequiredService<SingleInstance>();
-            if (!single.TryAcquire(args))
+            if (!single.TryAcquire(arguments))
             {
                 return 0; // Ein anderer AxoClient läuft schon und holt sein Fenster nach vorn
             }
@@ -44,10 +44,10 @@ namespace AxoClient.App
                 host = provider.GetRequiredService<AppHost>();
                 window = provider.GetRequiredService<MainWindow>();
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                appLog.Error("Start fehlgeschlagen", ex);
-                nativeMessage.Show("AxoClient konnte nicht starten", ex.Message);
+                appLog.Error("Start fehlgeschlagen", exception);
+                nativeMessage.Show("AxoClient konnte nicht starten", exception.Message);
                 return 1;
             }
 
@@ -56,10 +56,10 @@ namespace AxoClient.App
             {
                 window.Run();
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                appLog.Error("Unerwarteter Fehler im Fenster", ex);
-                nativeMessage.Show("AxoClient wurde unerwartet beendet", ex.Message);
+                appLog.Error("Unerwarteter Fehler im Fenster", exception);
+                nativeMessage.Show("AxoClient wurde unerwartet beendet", exception.Message);
                 return 1;
             }
             finally

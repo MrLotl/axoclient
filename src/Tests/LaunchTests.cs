@@ -64,13 +64,13 @@ namespace AxoClient.Tests
         {
             ICrashAnalyzer analyzer = new TestServices().Get<ICrashAnalyzer>();
             Assert.NotEmpty(analyzer.Rules);
-            Assert.All(analyzer.Rules, r => Assert.False(string.IsNullOrEmpty(r.Cause)));
+            Assert.All(analyzer.Rules, crashRule => Assert.False(string.IsNullOrEmpty(crashRule.Cause)));
         }
 
         [Fact]
         public void ClientRuleIdsAreUnique()
         {
-            var ids = _crashAnalyzer.LoadEmbeddedRules().Rules.Where(r => !r.Server).Select(r => r.Id).ToList();
+            var ids = _crashAnalyzer.LoadEmbeddedRules().Rules.Where(rule => !rule.Server).Select(rule => rule.Id).ToList();
             Assert.Equal(ids.Count, ids.Distinct().Count());
         }
 
@@ -102,29 +102,29 @@ namespace AxoClient.Tests
         [Fact]
         public void SetupStepsAreNoRepair()
         {
-            var doc = new ContentDocument();
-            Assert.False(_pipeline.IsRepairIssue(result("joinRelay", Severity.AutoFix), doc));
-            Assert.False(_pipeline.IsRepairIssue(result("unknownFiles", Severity.AutoFix), doc));
-            Assert.False(_pipeline.IsRepairIssue(result("compat", Severity.AutoFix), doc));
-            Assert.False(_pipeline.IsRepairIssue(result("memory", Severity.Warning, "ram-not-free"), doc));
-            Assert.False(_pipeline.IsRepairIssue(result("compat", Severity.Ok), doc));
+            var document = new ContentDocument();
+            Assert.False(_pipeline.IsRepairIssue(result("joinRelay", Severity.AutoFix), document));
+            Assert.False(_pipeline.IsRepairIssue(result("unknownFiles", Severity.AutoFix), document));
+            Assert.False(_pipeline.IsRepairIssue(result("compat", Severity.AutoFix), document));
+            Assert.False(_pipeline.IsRepairIssue(result("memory", Severity.Warning, "ram-not-free"), document));
+            Assert.False(_pipeline.IsRepairIssue(result("compat", Severity.Ok), document));
         }
 
         [Fact]
         public void RealProblemsCount()
         {
-            var doc = new ContentDocument();
-            Assert.True(_pipeline.IsRepairIssue(result("contentFiles", Severity.AutoFix), doc));
-            Assert.True(_pipeline.IsRepairIssue(result("duplicate", Severity.Blocker), doc));
-            Assert.True(_pipeline.IsRepairIssue(result("compat", Severity.Warning, "version-mismatch:x@1"), doc));
+            var document = new ContentDocument();
+            Assert.True(_pipeline.IsRepairIssue(result("contentFiles", Severity.AutoFix), document));
+            Assert.True(_pipeline.IsRepairIssue(result("duplicate", Severity.Blocker), document));
+            Assert.True(_pipeline.IsRepairIssue(result("compat", Severity.Warning, "version-mismatch:x@1"), document));
         }
 
         [Fact]
         public void SilencedWarningsAreHidden()
         {
-            var doc = new ContentDocument();
-            doc.IgnoredWarnings.Add("version-mismatch:x@1");
-            Assert.False(_pipeline.IsRepairIssue(result("compat", Severity.Warning, "version-mismatch:x@1"), doc));
+            var document = new ContentDocument();
+            document.IgnoredWarnings.Add("version-mismatch:x@1");
+            Assert.False(_pipeline.IsRepairIssue(result("compat", Severity.Warning, "version-mismatch:x@1"), document));
         }
     }
 
@@ -166,9 +166,9 @@ namespace AxoClient.Tests
             {
                 foreach (var (name, data) in files)
                 {
-                    using (var s = zip.CreateEntry(name).Open())
+                    using (var stream = zip.CreateEntry(name).Open())
                     {
-                        s.Write(data);
+                        stream.Write(data);
                     }
                 }
             }
@@ -205,9 +205,9 @@ namespace AxoClient.Tests
             {
                 foreach (var (name, text) in files)
                 {
-                    using (var s = zip.CreateEntry(name).Open())
+                    using (var stream = zip.CreateEntry(name).Open())
                     {
-                        s.Write(System.Text.Encoding.UTF8.GetBytes(text));
+                        stream.Write(System.Text.Encoding.UTF8.GetBytes(text));
                     }
                 }
             }
@@ -231,9 +231,9 @@ namespace AxoClient.Tests
             Assert.Contains("fabric", fabricFirst.Meta.Loaders);
 
             using var again = createJar(files);
-            var neo = _modMetadataReader.Read(again, "neoforge")!;
-            Assert.Equal("neoforge", neo.Meta.Loaders[0]);
-            Assert.Equal("[1.21.1]", neo.Meta.MinecraftRange);
+            var neoForge = _modMetadataReader.Read(again, "neoforge")!;
+            Assert.Equal("neoforge", neoForge.Meta.Loaders[0]);
+            Assert.Equal("[1.21.1]", neoForge.Meta.MinecraftRange);
         }
 
         [Fact]
@@ -304,7 +304,7 @@ namespace AxoClient.Tests
             };
             var result = new TestServices().Get<ICrashAnalyzer>().Analyze(new CrashInput(1, null, null, log, null), content);
             Assert.Equal("mixin", result.RuleId);
-            Assert.Equal(["Sable", "Immersive Portals"], result.Suspects.Select(s => s.Name).ToArray());
+            Assert.Equal(["Sable", "Immersive Portals"], result.Suspects.Select(suspect => suspect.Name).ToArray());
             Assert.Equal("crash.cause.mixinConflict", result.Cause.Code);
         }
     }

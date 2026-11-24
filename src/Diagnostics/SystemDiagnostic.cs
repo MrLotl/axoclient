@@ -20,7 +20,7 @@ namespace AxoClient.Diagnostics
 
         public string Area => "system";
 
-        public Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken ct)
+        public Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken cancellationToken)
         {
             var (total, free) = _systemInfo.Memory();
             var disk = _systemInfo.FreeDiskBytes(_paths.Root);
@@ -51,7 +51,7 @@ namespace AxoClient.Diagnostics
                 yield break;
             }
 
-            foreach (var sub in key.GetSubKeyNames().Where(n => n.All(char.IsDigit)))
+            foreach (var sub in key.GetSubKeyNames().Where(subKeyName => subKeyName.All(char.IsDigit)))
             {
                 using var card = key.OpenSubKey(sub);
                 if (card?.GetValue("DriverDesc") is string name && card.GetValue("DriverVersion") is string version)

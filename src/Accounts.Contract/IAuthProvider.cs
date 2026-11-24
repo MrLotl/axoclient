@@ -8,12 +8,12 @@ namespace AxoClient.Accounts.Contract
         AccountType Type { get; }
 
         /// <summary>Neues Konto interaktiv anmelden (Browser/Anmeldefenster).</summary>
-        Task<GameSession> Login(CancellationToken ct);
+        Task<GameSession> Login(CancellationToken cancellationToken);
 
         /// <summary>Gespeicherte Anmeldung still erneuern. Wirft <c>auth.expired</c>, wenn der Nutzer neu anmelden muss.</summary>
-        Task<GameSession> Refresh(string uuid, CancellationToken ct);
+        Task<GameSession> Refresh(string uuid, CancellationToken cancellationToken);
 
-        Task SignOut(string uuid, CancellationToken ct);
+        Task SignOut(string uuid, CancellationToken cancellationToken);
 
         bool HasStoredLogin(string uuid);
     }

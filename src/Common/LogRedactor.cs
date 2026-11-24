@@ -33,9 +33,9 @@ namespace AxoClient.Common
                 return "";
             }
 
-            text = accessTokenArg().Replace(text, "$1 ***");
+            text = accessTokenArgumentPattern().Replace(text, "$1 ***");
             text = jsonToken().Replace(text, "$1\"***\"");
-            text = jwt().Replace(text, "***");
+            text = jwtPattern().Replace(text, "***");
             text = bearerToken().Replace(text, "Bearer ***");
             return text;
         }
@@ -45,14 +45,14 @@ namespace AxoClient.Common
         {
             text = Redact(text);
             text = uuid().Replace(text, "<uuid>");
-            text = ipv4().Replace(text, m => isLocalhost(m.Value) ? m.Value : "<ip>");
+            text = ipv4().Replace(text, match => isLocalhost(match.Value) ? match.Value : "<ip>");
             string[] names;
             lock (_namesLock)
             {
                 names = _names.ToArray();
             }
 
-            foreach (var name in names.OrderByDescending(n => n.Length))
+            foreach (var name in names.OrderByDescending(name => name.Length))
             {
                 text = Regex.Replace(text, $@"(?<![A-Za-z0-9_]){Regex.Escape(name)}(?![A-Za-z0-9_])", "<spieler>",
                     RegexOptions.IgnoreCase);
@@ -62,16 +62,16 @@ namespace AxoClient.Common
             return text;
         }
 
-        private bool isLocalhost(string ip) => ip.StartsWith("127.") || ip == "0.0.0.0";
+        private bool isLocalhost(string address) => address.StartsWith("127.") || address == "0.0.0.0";
 
         [GeneratedRegex(@"(--accessToken|--session|-Daxoclient\.token=?)\s*\S+", RegexOptions.IgnoreCase)]
-        private partial Regex accessTokenArg();
+        private partial Regex accessTokenArgumentPattern();
 
         [GeneratedRegex(@"(""(?:access_?token|refresh_?token|token|xuid|id_token)""\s*:\s*)""[^""]*""", RegexOptions.IgnoreCase)]
         private partial Regex jsonToken();
 
         [GeneratedRegex(@"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}")]
-        private partial Regex jwt();
+        private partial Regex jwtPattern();
 
         [GeneratedRegex(@"Bearer\s+[A-Za-z0-9._\-~+/=]{8,}", RegexOptions.IgnoreCase)]
         private partial Regex bearerToken();

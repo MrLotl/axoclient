@@ -6,20 +6,20 @@ namespace AxoClient.Common
     {
         HttpClient Http { get; }
 
-        Task<T> GetJson<T>(string url, TimeSpan? cacheFor = null, CancellationToken ct = default,
+        Task<T> GetJson<T>(string url, TimeSpan? cacheFor = null, CancellationToken cancellationToken = default,
         Action<HttpRequestMessage>? configure = null);
 
-        Task<string> GetString(string url, TimeSpan? cacheFor = null, CancellationToken ct = default,
+        Task<string> GetString(string url, TimeSpan? cacheFor = null, CancellationToken cancellationToken = default,
         Action<HttpRequestMessage>? configure = null);
 
-        Task<TResponse?> PostJson<TResponse>(string url, object body, CancellationToken ct = default,
+        Task<TResponse?> PostJson<TResponse>(string url, object body, CancellationToken cancellationToken = default,
         Action<HttpRequestMessage>? configure = null);
 
         /// <summary>Sendet mit Wiederholung bei 429/503 und folgt Weiterleitungen nur zu HTTPS.</summary>
-        Task<HttpResponseMessage> Send(Func<HttpRequestMessage> createRequest, CancellationToken ct,
+        Task<HttpResponseMessage> Send(Func<HttpRequestMessage> createRequest, CancellationToken cancellationToken,
         Action<HttpRequestMessage>? configure = null, HttpCompletionOption completion = HttpCompletionOption.ResponseContentRead);
 
-        Task EnsureSuccess(HttpResponseMessage response, CancellationToken ct);
+        Task EnsureSuccess(HttpResponseMessage response, CancellationToken cancellationToken);
 
         AuthenticationHeaderValue Bearer(string token);
     }

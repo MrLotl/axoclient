@@ -20,18 +20,18 @@ namespace AxoClient.Launch.Checks
         public override string Id => "java";
         public override LaunchPhase Phase => LaunchPhase.GameFiles;
 
-        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            var custom = ctx.Settings.Defaults.Java;
+            var custom = context.Settings.Defaults.Java;
             if (custom == "auto")
             {
-                ctx.JavaOverride = null;
+                context.JavaOverride = null;
                 return [Ok()];
             }
-            ctx.JavaOverride = custom;
-            var required = _java.RequiredMajor(ctx.VersionName ?? ctx.Instance.Minecraft.Version);
-            var major = File.Exists(custom) ? await _java.ReadMajor(custom, ct) : null;
-            if (major is { } m && _java.IsCompatible(m, required))
+            context.JavaOverride = custom;
+            var required = _java.RequiredMajor(context.VersionName ?? context.Instance.Minecraft.Version);
+            var major = File.Exists(custom) ? await _java.ReadMajor(custom, cancellationToken) : null;
+            if (major is { } majorVersion && _java.IsCompatible(majorVersion, required))
             {
                 return [Ok()];
             }
@@ -41,10 +41,10 @@ namespace AxoClient.Launch.Checks
                     ? new TextRef("pipeline.java.notFound", ("path", Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(custom))) ?? custom))
                     : new TextRef("pipeline.java.mismatch", ("have", major), ("need", required)),
                 [
-                    new CheckAction("auto", new TextRef("pipeline.action.javaAuto"), async (c, _) =>
+                    new CheckAction("auto", new TextRef("pipeline.action.javaAuto"), async (launchContext, _) =>
                     {
-                        c.JavaOverride = null;
-                        await _settings.Update(s => s.Defaults.Java = "auto");
+                        launchContext.JavaOverride = null;
+                        await _settings.Update(settings => settings.Defaults.Java = "auto");
                     }, true)
                 ], Key: $"java-mismatch:{required}")];
         }

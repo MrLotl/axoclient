@@ -19,40 +19,40 @@ namespace AxoClient.Launch.Checks
         public override string Id => "internet";
         public override LaunchPhase Phase => LaunchPhase.Environment;
 
-        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            if (await IsOnline(_api, ct))
+            if (await IsOnline(_api, cancellationToken))
             {
                 return [Ok()];
             }
 
-            ctx.Offline = true;
-            var installed = _installer.InstalledVersionName(ctx.Instance.Minecraft.Version, ctx.Instance.Loader.Type,
-                ctx.Instance.Loader.Version);
+            context.Offline = true;
+            var installed = _installer.InstalledVersionName(context.Instance.Minecraft.Version, context.Instance.Loader.Type,
+                context.Instance.Loader.Version);
             if (installed != null && _installer.IsVersionPresent(installed))
             {
-                ctx.VersionName = installed;
+                context.VersionName = installed;
                 return [Ok()];
             }
             return [new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.internet.missingFiles"),
-                [new CheckAction("retry", new TextRef("pipeline.action.retry"), (c, _) =>
+                [new CheckAction("retry", new TextRef("pipeline.action.retry"), (launchContext, _) =>
                 {
-                    c.Offline = false;
+                    launchContext.Offline = false;
                     return Task.CompletedTask;
                 }, true)], CanSilence: false)];
         }
 
-        public async Task<bool> IsOnline(IApiClient api, CancellationToken ct)
+        public async Task<bool> IsOnline(IApiClient api, CancellationToken cancellationToken)
         {
             try
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromSeconds(4));
                 using var response = await api.Http.SendAsync(
                     new HttpRequestMessage(HttpMethod.Head, "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"), timeout.Token);
                 return true;
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
             {
                 return false;
             }

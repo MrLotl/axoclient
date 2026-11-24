@@ -60,8 +60,8 @@ namespace AxoClient.Launch
             {
                 try
                 {
-                    var p = getParts(token.Value);
-                    if (p[0] == own[0] && p[1] == own[1])
+                    var tokenParts = getParts(token.Value);
+                    if (tokenParts[0] == own[0] && tokenParts[1] == own[1])
                     {
                         return true;
                     }
@@ -89,24 +89,24 @@ namespace AxoClient.Launch
                 return unknown;
             }
 
-            var op = match.Groups[1].Value;
+            var operation = match.Groups[1].Value;
             var target = match.Groups[2].Value;
 
             if (target.Contains('x') || target.Contains('X') || target.EndsWith(".*"))
             {
-                var prefix = target.Split('.').TakeWhile(p => p is not ("x" or "X" or "*")).ToArray();
+                var prefix = target.Split('.').TakeWhile(part => part is not ("x" or "X" or "*")).ToArray();
                 var parts = getParts(version);
-                return prefix.Select((p, i) => i < parts.Length && parts[i].ToString() == p).All(b => b);
+                return prefix.Select((prefixPart, index) => index < parts.Length && parts[index].ToString() == prefixPart).All(matches => matches);
             }
 
             var cmp = Compare(version, target);
-            return op switch
+            return operation switch
             {
                 ">=" => cmp >= 0,
                 ">" => cmp > 0,
                 "<=" => cmp <= 0,
                 "<" => cmp < 0,
-                "=" or "" => cmp == 0 || (op == "" && isPrefix(target, version)),
+                "=" or "" => cmp == 0 || (operation == "" && isPrefix(target, version)),
                 "~" => cmp >= 0 && sameMinor(version, target),
                 "^" => cmp >= 0 && getParts(version)[0] == getParts(target)[0],
                 _ => unknown
@@ -116,17 +116,17 @@ namespace AxoClient.Launch
         private bool isPrefix(string target, string version) =>
             version.StartsWith(target + ".", StringComparison.Ordinal) && getParts(target).Length < 3;
 
-        private bool sameMinor(string a, string b)
+        private bool sameMinor(string firstVersion, string secondVersion)
         {
-            var pa = getParts(a);
-            var pb = getParts(b);
-            return pa[0] == pb[0] && pa[1] == pb[1];
+            var firstParts = getParts(firstVersion);
+            var secondParts = getParts(secondVersion);
+            return firstParts[0] == secondParts[0] && firstParts[1] == secondParts[1];
         }
 
         private bool mavenSatisfies(string version, string range)
         {
             // Mehrere Bereiche: [1.0,1.1),[1.2,)
-            foreach (var part in mavenParts().Matches(range).Select(m => m.Value))
+            foreach (var part in mavenParts().Matches(range).Select(match => match.Value))
             {
                 var inclusiveLow = part[0] == '[';
                 var inclusiveHigh = part[^1] == ']';
@@ -152,27 +152,27 @@ namespace AxoClient.Launch
             return false;
         }
 
-        public int Compare(string a, string b)
+        public int Compare(string firstVersion, string secondVersion)
         {
-            var pa = getParts(a);
-            var pb = getParts(b);
-            for (var i = 0; i < 3; i++)
+            var firstParts = getParts(firstVersion);
+            var secondParts = getParts(secondVersion);
+            for (var index = 0; index < 3; index++)
             {
-                if (pa[i] != pb[i])
+                if (firstParts[index] != secondParts[index])
                 {
-                    return pa[i].CompareTo(pb[i]);
+                    return firstParts[index].CompareTo(secondParts[index]);
                 }
             }
             // Vorabversionen (-beta, -rc) sind kleiner als die fertige Version; nach "+" folgen nur Build-Angaben
-            var preA = a.Split('+')[0].Contains('-');
-            var preB = b.Split('+')[0].Contains('-');
+            var preA = firstVersion.Split('+')[0].Contains('-');
+            var preB = secondVersion.Split('+')[0].Contains('-');
             return preA == preB ? 0 : preA ? -1 : 1;
         }
 
         private int[] getParts(string version)
         {
             var core = version.Split('-', '+')[0];
-            var parts = core.Split('.').Select(p => int.TryParse(new string(p.TakeWhile(char.IsDigit).ToArray()), out var n) ? n : 0)
+            var parts = core.Split('.').Select(part => int.TryParse(new string(part.TakeWhile(char.IsDigit).ToArray()), out var parsed) ? parsed : 0)
                 .ToList();
             if (parts.Count == 0)
             {

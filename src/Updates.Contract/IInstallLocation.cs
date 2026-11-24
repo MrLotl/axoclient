@@ -16,7 +16,7 @@ namespace AxoClient.Updates.Contract
         bool IsSingleFile { get; }
 
         /// <summary>Neue EXE an ihren Platz: die alte (auch laufende) wird zu <c>.old</c> umbenannt.</summary>
-        void ReplaceExe(string newExe, bool copy);
+        void ReplaceExe(string newExePath, bool copy);
 
         void TryDeleteOld();
     }

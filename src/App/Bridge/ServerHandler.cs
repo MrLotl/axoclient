@@ -28,28 +28,28 @@ namespace AxoClient.App.Bridge
             _serverImport = serverImport;
         }
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            r.On("localServers.list", async ct => await _localServers.List(ct));
-            r.On<SoftwareData>("localServers.versions", async (d, ct) => await _localServers.Versions(d.Software, ct));
-            r.On("localServers.nextPort", async ct => await _localServers.NextFreePort(ct));
+            router.On("localServers.list", async cancellationToken => await _localServers.List(cancellationToken));
+            router.On<SoftwareData>("localServers.versions", async (request, cancellationToken) => await _localServers.Versions(request.Software, cancellationToken));
+            router.On("localServers.nextPort", async cancellationToken => await _localServers.NextFreePort(cancellationToken));
 
-            r.On<ServerSaveData>("localServers.save", async (d, ct) =>
+            router.On<ServerSaveData>("localServers.save", async (saveRequest, cancellationToken) =>
             {
-                var request = new ServerRequest(d.Name, d.Software, d.Version, d.Port, d.MaxPlayers, d.MemoryMb, d.OpenToInternet, d.EulaAccepted);
-                if (d.Id == null && d.ImportRef != null)
+                var request = new ServerRequest(saveRequest.Name, saveRequest.Software, saveRequest.Version, saveRequest.Port, saveRequest.MaxPlayers, saveRequest.MemoryMb, saveRequest.OpenToInternet, saveRequest.EulaAccepted);
+                if (saveRequest.Id == null && saveRequest.ImportRef != null)
                 {
-                    var folder = _files.Resolve(d.ImportRef);
+                    var folder = _files.Resolve(saveRequest.ImportRef);
                     return await _jobs.Run("server.import", new TextRef("localServers.import.title", ("name", request.Name)),
                         job => _localServers.Import(request, folder, job));
                 }
-                return d.Id == null
-                    ? await _localServers.Create(request, ct)
-                    : await _localServers.Update(d.Id, request, ct);
+                return saveRequest.Id == null
+                    ? await _localServers.Create(request, cancellationToken)
+                    : await _localServers.Update(saveRequest.Id, request, cancellationToken);
             });
 
             // Vorhandenen Server-Ordner wählen und auswerten; übernommen wird erst beim Speichern im Server-Dialog
-            r.On("localServers.inspectFolder", async _ =>
+            router.On("localServers.inspectFolder", async _ =>
             {
                 var folder = await window.OpenFolder("Server-Ordner wählen");
                 if (folder == null)
@@ -57,42 +57,42 @@ namespace AxoClient.App.Bridge
                     return null;
                 }
 
-                var info = _serverImport.Inspect(folder);
-                return new { folderRef = _files.Add(folder), info };
+                var serverImportInfo = _serverImport.Inspect(folder);
+                return new { folderRef = _files.Add(folder), info = serverImportInfo };
             });
 
-            r.On<ServerImageData>("localServers.setImage", async (d, ct) =>
+            router.On<ServerImageData>("localServers.setImage", async (request, cancellationToken) =>
             {
                 byte[]? bytes;
                 try
                 {
-                    bytes = d.Base64 == null ? null : Convert.FromBase64String(d.Base64);
+                    bytes = request.Base64 == null ? null : Convert.FromBase64String(request.Base64);
                 }
                 catch (FormatException)
                 {
                     throw new AxoException("errors.invalidImage");
                 }
-                await _localServers.SetImage(d.Id, d.Banner, bytes, ct);
+                await _localServers.SetImage(request.Id, request.Banner, bytes, cancellationToken);
                 return null;
             });
 
-            r.On<IdData>("localServers.delete", async (d, ct) =>
+            router.On<IdData>("localServers.delete", async (request, cancellationToken) =>
             {
-                await _localServers.Delete(d.Id, ct);
+                await _localServers.Delete(request.Id, cancellationToken);
                 return null;
             });
 
-            r.On<IdData>("localServers.start", (d, _) => Task.FromResult<object?>(StartJob(_localServers.Start(d.Id))));
+            router.On<IdData>("localServers.start", (request, _) => Task.FromResult<object?>(StartJob(_localServers.Start(request.Id))));
 
-            r.On<IdData>("localServers.stop", async (d, _) =>
+            router.On<IdData>("localServers.stop", async (request, _) =>
             {
-                await _localServers.Stop(d.Id);
+                await _localServers.Stop(request.Id);
                 return null;
             });
 
-            r.On<CrashActionData>("localServers.crashAction", async (d, _) =>
+            router.On<CrashActionData>("localServers.crashAction", async (request, _) =>
             {
-                await _localServers.RunCrashAction(d.Id, d.Action, d.File);
+                await _localServers.RunCrashAction(request.Id, request.Action, request.File);
                 return null;
             });
         }

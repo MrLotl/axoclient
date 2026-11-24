@@ -6,6 +6,6 @@ namespace AxoClient.Launch.Contract
     public interface ILaunchPrompt
     {
         Task<PromptDecision> Ask(string launchId, string instanceId, LaunchPhase phase, IReadOnlyList<IssueView> issues,
-            CancellationToken ct);
+            CancellationToken cancellationToken);
     }
 }

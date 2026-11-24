@@ -18,13 +18,13 @@ namespace AxoClient.Updates
 
         /// <summary>Läuft gerade die installierte EXE (und nicht z. B. ein Entwickler-Build)?</summary>
         public bool IsInstalled =>
-            Environment.ProcessPath is { } exe && string.Equals(Path.GetFullPath(exe), ExePath, StringComparison.OrdinalIgnoreCase);
+            Environment.ProcessPath is { } exePath && string.Equals(Path.GetFullPath(exePath), ExePath, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>Als Einzeldatei veröffentlicht (nur Release-Builds); Entwickler-Builds installieren sich nie selbst.</summary>
         public bool IsSingleFile => string.IsNullOrEmpty(typeof(InstallLocation).Assembly.Location);
 
         /// <summary>Neue EXE an ihren Platz: die alte (auch laufende) wird zu <c>.old</c> umbenannt.</summary>
-        public void ReplaceExe(string newExe, bool copy)
+        public void ReplaceExe(string newExePath, bool copy)
         {
             System.IO.Directory.CreateDirectory(Directory);
             TryDeleteOld();
@@ -37,11 +37,11 @@ namespace AxoClient.Updates
             {
                 if (copy)
                 {
-                    File.Copy(newExe, ExePath, overwrite: true);
+                    File.Copy(newExePath, ExePath, overwrite: true);
                 }
                 else
                 {
-                    File.Move(newExe, ExePath, overwrite: true);
+                    File.Move(newExePath, ExePath, overwrite: true);
                 }
             }
             catch
@@ -65,7 +65,7 @@ namespace AxoClient.Updates
                     File.Delete(OldExePath);
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 // Läuft noch (gerade ausgetauscht); beim nächsten Start
             }

@@ -21,61 +21,61 @@ namespace AxoClient.App.Bridge
             _files = files;
         }
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            object Builtin() => _emotes.BuiltIn.Select(b => new { id = b.Id, name = b.Name, source = "axoclient" }).ToList();
+            object Builtin() => _emotes.BuiltIn.Select(builtInEmote => new { id = builtInEmote.Id, name = builtInEmote.Name, source = "axoclient" }).ToList();
 
-            r.On("emotes.list", async ct => new
+            router.On("emotes.list", async cancellationToken => new
             {
                 builtin = Builtin(),
-                imported = await _emotes.List(ct),
-                slots = await _emotes.Slots(ct)
+                imported = await _emotes.List(cancellationToken),
+                slots = await _emotes.Slots(cancellationToken)
             });
-            r.On<EmoteImportData>("emotes.import", async (d, ct) =>
+            router.On<EmoteImportData>("emotes.import", async (request, cancellationToken) =>
             {
                 var added = new List<EmoteView>();
-                foreach (var fileRef in d.FileRefs.Take(20))
+                foreach (var fileReference in request.FileRefs.Take(20))
                 {
-                    added.AddRange(await _emotes.Import(_files.Resolve(fileRef), ct));
+                    added.AddRange(await _emotes.Import(_files.Resolve(fileReference), cancellationToken));
                 }
 
                 return added;
             });
-            r.On<EmoteRenameData>("emotes.rename", async (d, ct) =>
+            router.On<EmoteRenameData>("emotes.rename", async (request, cancellationToken) =>
             {
-                await _emotes.Rename(d.Id, d.Name, ct);
-                return await _emotes.List(ct);
+                await _emotes.Rename(request.Id, request.Name, cancellationToken);
+                return await _emotes.List(cancellationToken);
             });
-            r.On<EmoteOptionsData>("emotes.setOptions", async (d, ct) =>
+            router.On<EmoteOptionsData>("emotes.setOptions", async (request, cancellationToken) =>
             {
-                await _emotes.SetOptions(d.Id, d.Loop, d.Moving, ct);
-                return await _emotes.List(ct);
+                await _emotes.SetOptions(request.Id, request.Loop, request.Moving, cancellationToken);
+                return await _emotes.List(cancellationToken);
             });
-            r.On<IdData>("emotes.remove", async (d, ct) =>
+            router.On<IdData>("emotes.remove", async (request, cancellationToken) =>
             {
-                await _emotes.Remove(d.Id, ct);
-                return await _emotes.List(ct);
+                await _emotes.Remove(request.Id, cancellationToken);
+                return await _emotes.List(cancellationToken);
             });
             // Für die Vorschaubilder: Animation eines Emotes (eingebaut oder eigen) als JSON samt Name der Animation darin
-            r.On<IdData>("emotes.animation", async (d, ct) =>
+            router.On<IdData>("emotes.animation", async (request, cancellationToken) =>
             {
-                if (_emotes.BuiltIn.Any(b => b.Id == d.Id))
+                if (_emotes.BuiltIn.Any(builtInEmote => builtInEmote.Id == request.Id))
                 {
-                    return _emotes.BuiltInAnimations() is { } json ? new { json, animation = (string?)d.Id } : null;
+                    return _emotes.BuiltInAnimations() is { } json ? new { json, animation = (string?)request.Id } : null;
                 }
 
-                var own = await _emotes.Animation(d.Id, ct);
-                return own is { } a ? new { json = a.Json, animation = a.Animation } : null;
+                var own = await _emotes.Animation(request.Id, cancellationToken);
+                return own is { } ownAnimation ? new { json = ownAnimation.Json, animation = ownAnimation.Animation } : null;
             });
-            r.On<EmoteSlotsData>("emotes.setSlots", async (d, ct) =>
+            router.On<EmoteSlotsData>("emotes.setSlots", async (request, cancellationToken) =>
             {
-                await _emotes.SetSlots(d.Slots, ct);
-                return await _emotes.Slots(ct);
+                await _emotes.SetSlots(request.Slots, cancellationToken);
+                return await _emotes.Slots(cancellationToken);
             });
 
             // Aus dem Axo-Menü: fehlende Mods für die offene Welt eines Freundes installieren und neu starten
-            r.On<InstallMissingData>("ingame.installMissing", (d, _) => Task.FromResult<object?>(StartJob(
-                _ingame.InstallMissing(d.InstanceId, d.Address, d.Mods.Select(m => (m.Source, m.ProjectId, m.VersionId)).ToList()))));
+            router.On<InstallMissingData>("ingame.installMissing", (request, _) => Task.FromResult<object?>(StartJob(
+                _ingame.InstallMissing(request.InstanceId, request.Address, request.Mods.Select(mod => (mod.Source, mod.ProjectId, mod.VersionId)).ToList()))));
         }
     }
 }

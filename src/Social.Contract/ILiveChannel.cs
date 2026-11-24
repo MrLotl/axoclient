@@ -21,15 +21,15 @@ namespace AxoClient.Social.Contract
         /// Eigenes Emote an alle anderen im Raum (null = abbrechen). Eigene Emotes (<c>c_…</c>) schicken ihre Animation mit, damit
         /// andere sie ohne Import sehen. Ohne Verbindung passiert nichts.
         /// </summary>
-        Task SendEmote(string? emote, string? anim = null, string? animation = null);
+        Task SendEmote(string? emote, string? otherAnimation = null, string? animation = null);
 
         /// <summary>Eigene offene Welt bekannt machen (Version, Loader, Mods) oder mit <c>null</c> zurückziehen.</summary>
-        Task SendWorld(object? info);
+        Task SendWorld(object? worldInfo);
 
         /// <summary>
         /// Schaut kurz in den Raum einer Adresse (ohne selbst etwas zu senden) und liefert die Welt-Infos des Gastgebers, falls
         /// dort jemand eine offene Welt bekannt gemacht hat.
         /// </summary>
-        Task<JsonElement?> PeekWorld(string address, TimeSpan wait, CancellationToken ct);
+        Task<JsonElement?> PeekWorld(string address, TimeSpan wait, CancellationToken cancellationToken);
     }
 }

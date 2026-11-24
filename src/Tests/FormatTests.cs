@@ -24,10 +24,10 @@ namespace AxoClient.Tests
             modId = "forge"
             versionRange = "[47,)"
             """);
-            var mod = tables.First(t => t.Name == "mods");
+            var mod = tables.First(table => table.Name == "mods");
             Assert.Equal("examplemod", mod.Get("modId"));
             Assert.Equal("1.2.3", mod.Get("version"));
-            Assert.Equal("[47,)", tables.First(t => t.Name == "dependencies.examplemod").Get("versionRange"));
+            Assert.Equal("[47,)", tables.First(table => table.Name == "dependencies.examplemod").Get("versionRange"));
         }
     }
 
@@ -67,10 +67,10 @@ namespace AxoClient.Tests
         [Fact]
         public void IgnoresWhitespace()
         {
-            var a = _curseForge.Fingerprint(Encoding.ASCII.GetBytes("abc def\r\n"));
-            var b = _curseForge.Fingerprint(Encoding.ASCII.GetBytes("abcdef"));
-            Assert.Equal(a, b);
-            Assert.NotEqual(a, _curseForge.Fingerprint(Encoding.ASCII.GetBytes("abcdeg")));
+            var withWhitespace = _curseForge.Fingerprint(Encoding.ASCII.GetBytes("abc def\r\n"));
+            var withoutWhitespace = _curseForge.Fingerprint(Encoding.ASCII.GetBytes("abcdef"));
+            Assert.Equal(withWhitespace, withoutWhitespace);
+            Assert.NotEqual(withWhitespace, _curseForge.Fingerprint(Encoding.ASCII.GetBytes("abcdeg")));
         }
     }
 
@@ -86,31 +86,31 @@ namespace AxoClient.Tests
         private byte[] levelDat(bool gzip)
         {
             var raw = new MemoryStream();
-            var w = new BinaryWriter(raw);
+            var binaryWriter = new BinaryWriter(raw);
 
-            void Name(string s)
+            void Name(string text)
             {
-                var b = Encoding.UTF8.GetBytes(s);
-                w.Write((byte)(b.Length >> 8));
-                w.Write((byte)b.Length);
-                w.Write(b);
+                var bytes = Encoding.UTF8.GetBytes(text);
+                binaryWriter.Write((byte)(bytes.Length >> 8));
+                binaryWriter.Write((byte)bytes.Length);
+                binaryWriter.Write(bytes);
             }
 
-            w.Write((byte)10); Name("");
-            w.Write((byte)10); Name("Data");
-            w.Write((byte)8); Name("LevelName"); Name("Meine Welt");
-            w.Write((byte)3); Name("GameType"); w.Write(new byte[] { 0, 0, 0, 1 });
-            w.Write((byte)0);
-            w.Write((byte)0);
+            binaryWriter.Write((byte)10); Name("");
+            binaryWriter.Write((byte)10); Name("Data");
+            binaryWriter.Write((byte)8); Name("LevelName"); Name("Meine Welt");
+            binaryWriter.Write((byte)3); Name("GameType"); binaryWriter.Write(new byte[] { 0, 0, 0, 1 });
+            binaryWriter.Write((byte)0);
+            binaryWriter.Write((byte)0);
             if (!gzip)
             {
                 return raw.ToArray();
             }
 
             var packed = new MemoryStream();
-            using (var g = new GZipStream(packed, CompressionMode.Compress, true))
+            using (var gzipStream = new GZipStream(packed, CompressionMode.Compress, true))
             {
-                g.Write(raw.ToArray());
+                gzipStream.Write(raw.ToArray());
             }
 
             return packed.ToArray();

@@ -28,24 +28,24 @@ namespace AxoClient.Instances
             _serverPing = serverPing;
         }
 
-        private string getFile(string id) => Path.Combine(_paths.GameDir(_textHelper.RequireId(id)), "servers.dat");
+        private string getFile(string id) => Path.Combine(_paths.GameDirectory(_textHelper.RequireId(id)), "servers.dat");
 
         public IReadOnlyList<ServerEntry> List(string instanceId)
         {
             var list = readList(instanceId);
-            return list.Select((c, i) => toEntry(instanceId, i, (NbtCompound)c)).ToList();
+            return list.Select((tag, index) => toEntry(instanceId, index, (NbtCompound)tag)).ToList();
         }
 
         /// <summary>Normalisierte Adressen aller Server einer Instanz ("Freund spielt auf deinem Server").</summary>
         public IReadOnlySet<string> NormalizedAddresses(string instanceId) =>
-            List(instanceId).Select(s => _serverPing.Normalize(s.Address)).ToHashSet();
+            List(instanceId).Select(server => _serverPing.Normalize(server.Address)).ToHashSet();
 
-        private ServerEntry toEntry(string instanceId, int index, NbtCompound c)
+        private ServerEntry toEntry(string instanceId, int index, NbtCompound nbtCompound)
         {
-            var icon = c.Get<string>("icon");
-            return new ServerEntry(index, _textHelper.Clean(c.Get<string>("name"), 80), _textHelper.Clean(c.Get<string>("ip"), 255),
+            var icon = nbtCompound.Get<string>("icon");
+            return new ServerEntry(index, _textHelper.Clean(nbtCompound.Get<string>("name"), 80), _textHelper.Clean(nbtCompound.Get<string>("ip"), 255),
                 icon is { Length: > 0 } ? $"/axo/server-icon/{instanceId}/{index}" : null,
-                c.TryGetValue("acceptTextures", out var t) && t is sbyte b && b != 0);
+                nbtCompound.TryGetValue("acceptTextures", out var acceptTextures) && acceptTextures is sbyte flagValue && flagValue != 0);
         }
 
         /// <summary>Servericon als PNG (Base64 im NBT).</summary>
@@ -73,9 +73,9 @@ namespace AxoClient.Instances
             await change(instanceId, list =>
             {
                 var entry = new NbtCompound { ["name"] = _textHelper.Clean(name, 80), ["ip"] = address.Trim() };
-                if (atIndex is { } i && i >= 0 && i <= list.Count)
+                if (atIndex is { } insertIndex && insertIndex >= 0 && insertIndex <= list.Count)
                 {
-                    list.Insert(i, entry);
+                    list.Insert(insertIndex, entry);
                 }
                 else
                 {
@@ -141,9 +141,9 @@ namespace AxoClient.Instances
             {
                 return _nbtReader.ReadFile(file).Get<NbtList>("servers") ?? new NbtList(10);
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or EndOfStreamException)
             {
-                _appLog.Warn("servers.dat nicht lesbar", ex);
+                _appLog.Warn("servers.dat nicht lesbar", exception);
                 return new NbtList(10);
             }
         }
@@ -159,7 +159,7 @@ namespace AxoClient.Instances
                 {
                     root = System.IO.File.Exists(file) ? _nbtReader.ReadFile(file) : new NbtCompound();
                 }
-                catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException)
+                catch (Exception exception) when (exception is IOException or InvalidDataException or EndOfStreamException)
                 {
                     root = new NbtCompound();
                 }

@@ -30,12 +30,12 @@ namespace AxoClient.Accounts
             _logRedactor = logRedactor;
             _jsonStoreFactory = jsonStoreFactory;
             _store = _jsonStoreFactory.Create<AccountsDocument>(paths.Fs, paths.AccountsJson);
-            _providers = providers.ToDictionary(p => p.Type);
+            _providers = providers.ToDictionary(authProvider => authProvider.Type);
             _events = events;
         }
 
         public IReadOnlyList<AccountEntry> Accounts => _doc.Accounts;
-        public AccountEntry? Active => _doc.Accounts.FirstOrDefault(a => a.Uuid == _doc.Active);
+        public AccountEntry? Active => _doc.Accounts.FirstOrDefault(account => account.Uuid == _doc.Active);
 
         /// <summary>Ist die aktive Anmeldung kaputt (z. B. abgelaufen), damit die UI "Willkommen zurück" zeigt.</summary>
         public bool ActiveNeedsLogin { get; private set; }
@@ -55,34 +55,34 @@ namespace AxoClient.Accounts
                 _doc.Active = _doc.Accounts.FirstOrDefault()?.Uuid;
             }
 
-            ActiveNeedsLogin = Active is { } a && !provider(a.Type).HasStoredLogin(a.Uuid);
+            ActiveNeedsLogin = Active is { } activeAccount && !provider(activeAccount.Type).HasStoredLogin(activeAccount.Uuid);
         }
 
-        public IReadOnlyList<AccountView> Views() => _doc.Accounts.Select(a => new AccountView(
-            a.Uuid, a.Name, a.Type, a.Uuid == _doc.Active, $"/axo/head/{a.Uuid.Replace("-", "")}",
-            a.Uuid == _doc.Active ? ActiveNeedsLogin : !provider(a.Type).HasStoredLogin(a.Uuid))).ToList();
+        public IReadOnlyList<AccountView> Views() => _doc.Accounts.Select(account => new AccountView(
+            account.Uuid, account.Name, account.Type, account.Uuid == _doc.Active, $"/axo/head/{account.Uuid.Replace("-", "")}",
+            account.Uuid == _doc.Active ? ActiveNeedsLogin : !provider(account.Type).HasStoredLogin(account.Uuid))).ToList();
 
         /// <summary>Neues Konto hinzufügen (oder ein bestehendes neu anmelden) und aktiv setzen.</summary>
-        public async Task<AccountEntry> Login(AccountType type, CancellationToken ct)
+        public async Task<AccountEntry> Login(AccountType type, CancellationToken cancellationToken)
         {
-            var session = await provider(type).Login(ct);
-            await _sessionLock.WaitAsync(ct);
+            var session = await provider(type).Login(cancellationToken);
+            await _sessionLock.WaitAsync(cancellationToken);
             try
             {
-                _doc = await _store.Update(doc =>
+                _doc = await _store.Update(document =>
                 {
-                    var existing = doc.Accounts.FirstOrDefault(a => a.Uuid == session.Uuid);
+                    var existing = document.Accounts.FirstOrDefault(account => account.Uuid == session.Uuid);
                     if (existing == null)
                     {
-                        doc.Accounts.Add(new AccountEntry { Uuid = session.Uuid, Name = session.Name, Type = type });
+                        document.Accounts.Add(new AccountEntry { Uuid = session.Uuid, Name = session.Name, Type = type });
                     }
                     else
                     {
                         existing.Name = session.Name;
                     }
 
-                    doc.Active = session.Uuid;
-                }, ct);
+                    document.Active = session.Uuid;
+                }, cancellationToken);
                 setSession(session);
                 ActiveNeedsLogin = false;
             }
@@ -95,44 +95,44 @@ namespace AxoClient.Accounts
             return Active!;
         }
 
-        public async Task Switch(string uuid, CancellationToken ct)
+        public async Task Switch(string uuid, CancellationToken cancellationToken)
         {
-            if (_doc.Accounts.All(a => a.Uuid != uuid))
+            if (_doc.Accounts.All(account => account.Uuid != uuid))
             {
                 throw new AxoException("errors.notFound");
             }
 
-            _doc = await _store.Update(doc => doc.Active = uuid, ct);
+            _doc = await _store.Update(document => document.Active = uuid, cancellationToken);
             _session = null;
             ActiveNeedsLogin = false;
             try
             {
-                await GetSession(ct);
+                await GetSession(cancellationToken);
             }
-            catch (AxoException ex) when (ex.Code == "auth.expired")
+            catch (AxoException exception) when (exception.Code == "auth.expired")
             {
                 ActiveNeedsLogin = true;
             }
             raiseChanged();
         }
 
-        public async Task Remove(string uuid, CancellationToken ct)
+        public async Task Remove(string uuid, CancellationToken cancellationToken)
         {
-            var entry = _doc.Accounts.FirstOrDefault(a => a.Uuid == uuid);
+            var entry = _doc.Accounts.FirstOrDefault(account => account.Uuid == uuid);
             if (entry == null)
             {
                 return;
             }
 
-            await provider(entry.Type).SignOut(uuid, ct);
-            _doc = await _store.Update(doc =>
+            await provider(entry.Type).SignOut(uuid, cancellationToken);
+            _doc = await _store.Update(document =>
             {
-                doc.Accounts.RemoveAll(a => a.Uuid == uuid);
-                if (doc.Active == uuid)
+                document.Accounts.RemoveAll(account => account.Uuid == uuid);
+                if (document.Active == uuid)
                 {
-                    doc.Active = doc.Accounts.FirstOrDefault()?.Uuid;
+                    document.Active = document.Accounts.FirstOrDefault()?.Uuid;
                 }
-            }, ct);
+            }, cancellationToken);
             if (_session?.Uuid == uuid)
             {
                 _session = null;
@@ -142,10 +142,10 @@ namespace AxoClient.Accounts
         }
 
         /// <summary>Gültige Sitzung für den Spielstart. Erneuert still, wenn sie älter als 10 Minuten ist.</summary>
-        public async Task<GameSession> GetSession(CancellationToken ct, bool forceRefresh = false)
+        public async Task<GameSession> GetSession(CancellationToken cancellationToken, bool forceRefresh = false)
         {
             var active = Active ?? throw new AxoException("auth.noAccount");
-            await _sessionLock.WaitAsync(ct);
+            await _sessionLock.WaitAsync(cancellationToken);
             try
             {
                 if (!forceRefresh && _session?.Uuid == active.Uuid && DateTimeOffset.UtcNow - _sessionAt < TimeSpan.FromMinutes(10))
@@ -155,17 +155,17 @@ namespace AxoClient.Accounts
 
                 try
                 {
-                    var session = await provider(active.Type).Refresh(active.Uuid, ct);
+                    var session = await provider(active.Type).Refresh(active.Uuid, cancellationToken);
                     setSession(session);
                     if (session.Name != active.Name)
                     {
-                        _doc = await _store.Update(doc =>
+                        _doc = await _store.Update(document =>
                         {
-                            if (doc.Accounts.FirstOrDefault(a => a.Uuid == session.Uuid) is { } e)
+                            if (document.Accounts.FirstOrDefault(account => account.Uuid == session.Uuid) is { } existingAccount)
                             {
-                                e.Name = session.Name;
+                                existingAccount.Name = session.Name;
                             }
-                        }, ct);
+                        }, cancellationToken);
                         raiseChanged();
                     }
                     if (ActiveNeedsLogin)
@@ -175,7 +175,7 @@ namespace AxoClient.Accounts
                     }
                     return session;
                 }
-                catch (AxoException ex) when (ex.Code == "auth.expired")
+                catch (AxoException exception) when (exception.Code == "auth.expired")
                 {
                     ActiveNeedsLogin = true;
                     _events.Publish("notify", new { type = "authExpired", text = new TextRef("notifications.authExpired") });
@@ -194,11 +194,11 @@ namespace AxoClient.Accounts
 
         public async Task UpdateEntry(string uuid, Action<AccountEntry> change)
         {
-            _doc = await _store.Update(doc =>
+            _doc = await _store.Update(document =>
             {
-                if (doc.Accounts.FirstOrDefault(a => a.Uuid == uuid) is { } e)
+                if (document.Accounts.FirstOrDefault(account => account.Uuid == uuid) is { } existingAccount)
                 {
-                    change(e);
+                    change(existingAccount);
                 }
             });
             raiseChanged();
@@ -211,7 +211,7 @@ namespace AxoClient.Accounts
         }
 
         private IAuthProvider provider(AccountType type) =>
-            _providers.TryGetValue(type, out var p) ? p : throw new AxoException("auth.failed");
+            _providers.TryGetValue(type, out var value) ? value : throw new AxoException("auth.failed");
 
         private void raiseChanged()
         {

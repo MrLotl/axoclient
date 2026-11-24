@@ -20,22 +20,22 @@ namespace AxoClient.Servers
 
         public override ServerSoftware Type => ServerSoftware.Vanilla;
 
-        public override async Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken ct) =>
-            (await _versions.List(ct)).Where(v => v.Type != VersionType.Old)
-            .Select(v => new ServerVersionInfo(v.Id, v.Type == VersionType.Release)).ToList();
+        public override async Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken cancellationToken) =>
+            (await _versions.List(cancellationToken)).Where(gameVersion => gameVersion.Type != VersionType.Old)
+            .Select(gameVersion => new ServerVersionInfo(gameVersion.Id, gameVersion.Type == VersionType.Release)).ToList();
 
-        public override async Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken ct)
+        public override async Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken cancellationToken)
         {
             using var manifest = JsonDocument.Parse(await _api.GetString(
-                "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", TimeSpan.FromHours(1), ct));
+                "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json", TimeSpan.FromHours(1), cancellationToken));
             var entry = manifest.RootElement.GetProperty("versions").EnumerateArray()
-                .FirstOrDefault(v => v.GetProperty("id").GetString() == version);
+                .FirstOrDefault(versionElement => versionElement.GetProperty("id").GetString() == version);
             if (entry.ValueKind != JsonValueKind.Object)
             {
                 throw new AxoException("servers.versionUnknown", new() { ["version"] = version });
             }
 
-            using var details = JsonDocument.Parse(await _api.GetString(entry.GetProperty("url").GetString()!, TimeSpan.FromDays(7), ct));
+            using var details = JsonDocument.Parse(await _api.GetString(entry.GetProperty("url").GetString()!, TimeSpan.FromDays(7), cancellationToken));
             if (!details.RootElement.GetProperty("downloads").TryGetProperty("server", out var server))
             {
                 throw new AxoException("servers.noOfficialServer", new() { ["version"] = version });

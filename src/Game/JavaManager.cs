@@ -41,26 +41,26 @@ namespace AxoClient.Game
 
             try
             {
-                using var doc = JsonDocument.Parse(File.ReadAllText(file));
-                if (doc.RootElement.TryGetProperty("javaVersion", out var java)
+                using var document = JsonDocument.Parse(File.ReadAllText(file));
+                if (document.RootElement.TryGetProperty("javaVersion", out var java)
                     && java.TryGetProperty("majorVersion", out var major) && major.TryGetInt32(out var value))
                 {
                     return value;
                 }
 
-                if (doc.RootElement.TryGetProperty("inheritsFrom", out var parent) && parent.GetString() is { } parentId)
+                if (document.RootElement.TryGetProperty("inheritsFrom", out var parent) && parent.GetString() is { } parentId)
                 {
                     return readRequiredMajor(parentId, depth + 1);
                 }
             }
-            catch (Exception ex) when (ex is JsonException or IOException)
+            catch (Exception exception) when (exception is JsonException or IOException)
             {
             }
             return null;
         }
 
         /// <summary>Alle gefundenen Runtimes: mitgelieferte zuerst, dann installierte.</summary>
-        public async Task<IReadOnlyList<JavaRuntime>> FindAll(CancellationToken ct = default)
+        public async Task<IReadOnlyList<JavaRuntime>> FindAll(CancellationToken cancellationToken = default)
         {
             var candidates = new List<(string Path, string Source)>();
             if (Directory.Exists(_paths.Java))
@@ -70,7 +70,7 @@ namespace AxoClient.Game
                     RecurseSubdirectories = true,
                     MaxRecursionDepth = 6,
                     IgnoreInaccessible = true
-                }).Select(p => (p, "bundled")));
+                }).Select(file => (file, "bundled")));
             }
 
             if (Environment.GetEnvironmentVariable("JAVA_HOME") is { Length: > 0 } home)
@@ -82,59 +82,59 @@ namespace AxoClient.Game
                      {
                          Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                          Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
-                     }.Where(r => r.Length > 0).Distinct())
+                     }.Where(programFolder => programFolder.Length > 0).Distinct())
             {
                 foreach (var vendor in _vendors)
                 {
-                    var dir = Path.Combine(root, vendor);
-                    if (!Directory.Exists(dir))
+                    var directory = Path.Combine(root, vendor);
+                    if (!Directory.Exists(directory))
                     {
                         continue;
                     }
 
                     try
                     {
-                        candidates.AddRange(Directory.EnumerateDirectories(dir)
-                            .Select(d => Path.Combine(d, "bin", "javaw.exe"))
+                        candidates.AddRange(Directory.EnumerateDirectories(directory)
+                            .Select(javaDirectory => Path.Combine(javaDirectory, "bin", "javaw.exe"))
                             .Where(File.Exists)
-                            .Select(p => (p, "system")));
+                            .Select(javawPath => (javawPath, "system")));
                     }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                     {
                     }
                 }
             }
 
             var found = new List<JavaRuntime>();
-            foreach (var (path, source) in candidates.DistinctBy(c => c.Path.ToLowerInvariant()))
+            foreach (var (path, source) in candidates.DistinctBy(candidate => candidate.Path.ToLowerInvariant()))
             {
                 if (!File.Exists(path))
                 {
                     continue;
                 }
 
-                found.Add(new JavaRuntime(path, await ReadMajor(path, ct) ?? 0, source));
+                found.Add(new JavaRuntime(path, await ReadMajor(path, cancellationToken) ?? 0, source));
             }
             return found;
         }
 
         /// <summary>Startet <c>java -version</c> und liest die Hauptversion. <c>null</c> = nicht startbar.</summary>
-        public async Task<int?> ReadMajor(string javawPath, CancellationToken ct = default)
+        public async Task<int?> ReadMajor(string javawPath, CancellationToken cancellationToken = default)
         {
-            var exe = Path.Combine(Path.GetDirectoryName(javawPath) ?? "", "java.exe");
-            if (!File.Exists(exe))
+            var exePath = Path.Combine(Path.GetDirectoryName(javawPath) ?? "", "java.exe");
+            if (!File.Exists(exePath))
             {
-                exe = javawPath;
+                exePath = javawPath;
             }
 
-            if (!File.Exists(exe))
+            if (!File.Exists(exePath))
             {
                 return null;
             }
 
             try
             {
-                using var process = Process.Start(new ProcessStartInfo(exe, "-version")
+                using var process = Process.Start(new ProcessStartInfo(exePath, "-version")
                 {
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
@@ -146,14 +146,14 @@ namespace AxoClient.Game
                     return null;
                 }
 
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromSeconds(6));
                 var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
                 var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
                 await process.WaitForExitAsync(timeout.Token);
                 return ParseMajor(await stderr + await stdout);
             }
-            catch (Exception ex) when (ex is OperationCanceledException or System.ComponentModel.Win32Exception or IOException)
+            catch (Exception exception) when (exception is OperationCanceledException or System.ComponentModel.Win32Exception or IOException)
             {
                 return null;
             }

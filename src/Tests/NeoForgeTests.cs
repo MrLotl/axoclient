@@ -12,22 +12,22 @@ namespace AxoClient.Tests
     {
         private XDocument maven(params string[] versions) =>
             new(new XElement("metadata", new XElement("versioning", new XElement("versions",
-                versions.Select(v => new XElement("version", v))))));
+                versions.Select(version => new XElement("version", version))))));
 
         [Fact]
         public void LegacyVersions_NewestFirst_WithoutForgeDuplicates()
         {
-            var neo = maven("1.20.1-47.1.7", "1.20.1-47.1.5", "1.20.1-47.1.106", "1.20.1-47.1.99", "47.1.82");
+            var neoForge = maven("1.20.1-47.1.7", "1.20.1-47.1.5", "1.20.1-47.1.106", "1.20.1-47.1.99", "47.1.82");
             var forge = maven("1.20.1-47.1.7", "1.20.1-47.4.0", "1.21.1-52.0.1");
 
-            Assert.Equal(["47.1.106", "47.1.99", "47.1.5"], new TestServices().Get<IEnumerable<ILoaderInstaller>>().OfType<NeoForgeLoader>().Single().LegacyVersions(neo, forge));
+            Assert.Equal(["47.1.106", "47.1.99", "47.1.5"], new TestServices().Get<IEnumerable<ILoaderInstaller>>().OfType<NeoForgeLoader>().Single().LegacyVersions(neoForge, forge));
         }
 
         [Theory]
         [InlineData("1.20.1", "47.1.106", "1.20.1-forge-47.1.106")]
         [InlineData("1.21.1", "21.1.200", "neoforge-21.1.200")]
-        public void VersionId_MatchesInstallerProfile(string mc, string loader, string expected) =>
-            Assert.Equal(expected, new TestServices().Get<IGameVersionHelper>().NeoForgeVersionId(mc, loader));
+        public void VersionId_MatchesInstallerProfile(string minecraftVersion, string loader, string expected) =>
+            Assert.Equal(expected, new TestServices().Get<IGameVersionHelper>().NeoForgeVersionId(minecraftVersion, loader));
 
         [Fact]
         public void LegacyForgeVersion_PointsToNeoForgeMaven()
@@ -97,8 +97,8 @@ namespace AxoClient.Tests
         [InlineData("1.20.4", true)]
         [InlineData("1.20.6", false)]
         [InlineData("1.21.1", false)]
-        public void NeoForge_AcceptsForgeModsUntil1_20_4(string mc, bool fits) =>
-            Assert.Equal(fits, new TestServices().Get<IModCompatibility>().LoaderFits(["forge"], LoaderType.NeoForge, mc));
+        public void NeoForge_AcceptsForgeModsUntil1_20_4(string minecraftVersion, bool fits) =>
+            Assert.Equal(fits, new TestServices().Get<IModCompatibility>().LoaderFits(["forge"], LoaderType.NeoForge, minecraftVersion));
 
         [Fact]
         public void NeoForgeOnlyMod_DoesNotFitForge() =>
@@ -112,8 +112,8 @@ namespace AxoClient.Tests
         [InlineData("neoforge", "[1.21.1,1.22)", LoaderType.Forge, "1.20.1", false)]
         [InlineData("forge", "[1.20.1,1.20.2)", LoaderType.Forge, "1.21.1", false)]
         [InlineData("fabric", null, LoaderType.Quilt, "1.21.1", true)]
-        public void LocalMod_FitsByLoaderAndVersion(string modLoader, string? range, LoaderType loader, string mc, bool fits) =>
-            Assert.Equal(fits, new TestServices().Get<IModCompatibility>().ModFits(new ModMetadata { Loaders = [modLoader], MinecraftRange = range }, loader, mc));
+        public void LocalMod_FitsByLoaderAndVersion(string modLoader, string? range, LoaderType loader, string minecraftVersion, bool fits) =>
+            Assert.Equal(fits, new TestServices().Get<IModCompatibility>().ModFits(new ModMetadata { Loaders = [modLoader], MinecraftRange = range }, loader, minecraftVersion));
 
         [Fact]
         public void LocalModWithoutLoaderInfo_IsKept() =>

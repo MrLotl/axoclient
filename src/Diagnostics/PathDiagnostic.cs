@@ -16,7 +16,7 @@ namespace AxoClient.Diagnostics
 
         public string Area => "paths";
 
-        public Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken ct)
+        public Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken cancellationToken)
         {
             var items = new List<DiagnosticItem>();
             try
@@ -27,11 +27,11 @@ namespace AxoClient.Diagnostics
                 File.Delete(probe);
                 items.Add(new(Area, DiagnosticStatus.Ok, new TextRef("diagnostics.writable")));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 items.Add(new(Area, DiagnosticStatus.Error, new TextRef("diagnostics.notWritable"), Solution: new TextRef("diagnostics.notWritable.solution")));
             }
-            if (_paths.Root.Any(c => c > 127))
+            if (_paths.Root.Any(character => character > 127))
             {
                 items.Add(new(Area, DiagnosticStatus.Warning, new TextRef("diagnostics.pathUmlauts"), Solution: new TextRef("diagnostics.pathUmlauts.solution")));
             }

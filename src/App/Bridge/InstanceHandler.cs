@@ -92,244 +92,244 @@ namespace AxoClient.App.Bridge
 
         private sealed record ModLockData(string Id, ModLockLevel Level, bool AdoptCurrent = false);
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            r.On<VersionListData>("versions.list", async (d, ct) => (await _versions.List(ct))
-                .Where(v => v.Type == VersionType.Release || (d.Snapshots && v.Type == VersionType.Snapshot) || (d.Old && v.Type == VersionType.Old))
-                .Select(v => new { id = v.Id, type = v.Type, axo = _axoMod.SupportedMinecraftVersions.Contains(v.Id) })
+            router.On<VersionListData>("versions.list", async (request, cancellationToken) => (await _versions.List(cancellationToken))
+                .Where(gameVersion => gameVersion.Type == VersionType.Release || (request.Snapshots && gameVersion.Type == VersionType.Snapshot) || (request.Old && gameVersion.Type == VersionType.Old))
+                .Select(gameVersion => new { id = gameVersion.Id, type = gameVersion.Type, axo = _axoMod.SupportedMinecraftVersions.Contains(gameVersion.Id) })
                 .ToList());
 
-            r.On<LoaderVersionsData>("loaders.versions", async (d, ct) => await _loaders.ListVersions(d.Loader, d.Minecraft, ct));
+            router.On<LoaderVersionsData>("loaders.versions", async (request, cancellationToken) => await _loaders.ListVersions(request.Loader, request.Minecraft, cancellationToken));
 
-            r.On("instances.list", async ct => await _instances.List(ct));
+            router.On("instances.list", async cancellationToken => await _instances.List(cancellationToken));
 
-            r.On<IdData>("instances.get", async (d, ct) =>
+            router.On<IdData>("instances.get", async (request, cancellationToken) =>
             {
-                var instance = await _instances.Get(d.Id, ct);
-                var summary = await _instances.Summary(instance, ct);
-                await _settings.UpdateState(s => s.LastInstance = d.Id);
+                var instance = await _instances.Get(request.Id, cancellationToken);
+                var summary = await _instances.Summary(instance, cancellationToken);
+                await _settings.UpdateState(state => state.LastInstance = request.Id);
                 return new
                 {
                     instance,
                     summary,
-                    worlds = _worlds.Count(Path.Combine(_paths.GameDir(d.Id), "saves")),
+                    worlds = _worlds.Count(Path.Combine(_paths.GameDirectory(request.Id), "saves")),
                     axoModSupported = _axoMod.IsSupported(instance.Minecraft.Version, instance.Loader.Type),
                     effectiveMemoryMb = instance.MemoryMb ?? _settings.Current.Defaults.MemoryMb
                 };
             });
 
-            r.On<IdData>("instances.activity", async (d, ct) =>
-                await _activity.Load(_paths.PlaytimeJson(TextHelper.RequireId(d.Id))));
+            router.On<IdData>("instances.activity", async (request, cancellationToken) =>
+                await _activity.Load(_paths.PlaytimeJson(TextHelper.RequireId(request.Id))));
 
             // Wo gespielt wurde: Server und Einzelspieler-Welten, mit Namen aus Welten- und Serverliste
-            r.On<IdData>("instances.places", async (d, ct) =>
+            router.On<IdData>("instances.places", async (request, cancellationToken) =>
             {
-                var log = await _places.Load(d.Id, ct);
-                var worlds = (await _worlds.List(d.Id, ct)).ToDictionary(w => w.Folder, StringComparer.OrdinalIgnoreCase);
+                var log = await _places.Load(request.Id, cancellationToken);
+                var worlds = (await _worlds.List(request.Id, cancellationToken)).ToDictionary(worldInfo => worldInfo.Folder, StringComparer.OrdinalIgnoreCase);
                 string Norm(string address) =>
-                    address.Trim().ToLowerInvariant() is var a && a.EndsWith(":25565", StringComparison.Ordinal) ? a[..^6] : address.Trim().ToLowerInvariant();
-                var saved = _serverLists.List(d.Id).GroupBy(s => Norm(s.Address)).ToDictionary(g => g.Key, g => g.First());
-                return log.Places.Select(p =>
+                    address.Trim().ToLowerInvariant() is var normalized && normalized.EndsWith(":25565", StringComparison.Ordinal) ? normalized[..^6] : address.Trim().ToLowerInvariant();
+                var saved = _serverLists.List(request.Id).GroupBy(server => Norm(server.Address)).ToDictionary(group => group.Key, group => group.First());
+                return log.Places.Select(place =>
                 {
-                    if (p.Kind == "world")
+                    if (place.Kind == "world")
                     {
-                        return worlds.TryGetValue(p.Id, out var w)
-                            ? new PlaceView("world", p.Id, w.Name, w.IconUrl, p.Seconds, p.LastPlayed, true)
-                            : new PlaceView("world", p.Id, p.Id, null, p.Seconds, p.LastPlayed, false);
+                        return worlds.TryGetValue(place.Id, out var value)
+                            ? new PlaceView("world", place.Id, value.Name, value.IconUrl, place.Seconds, place.LastPlayed, true)
+                            : new PlaceView("world", place.Id, place.Id, null, place.Seconds, place.LastPlayed, false);
                     }
 
-                    return saved.TryGetValue(Norm(p.Id), out var s)
-                        ? new PlaceView("server", p.Id, s.Name, s.IconUrl, p.Seconds, p.LastPlayed, true)
-                        : new PlaceView("server", p.Id, p.Id, null, p.Seconds, p.LastPlayed, true);
-                }).OrderByDescending(p => p.Seconds).ToList();
+                    return saved.TryGetValue(Norm(place.Id), out var savedValue)
+                        ? new PlaceView("server", place.Id, savedValue.Name, savedValue.IconUrl, place.Seconds, place.LastPlayed, true)
+                        : new PlaceView("server", place.Id, place.Id, null, place.Seconds, place.LastPlayed, true);
+                }).OrderByDescending(placeView => placeView.Seconds).ToList();
             });
 
-            r.On<IdData>("instances.size", async (d, ct) => await Task.Run(() =>
+            router.On<IdData>("instances.size", async (request, cancellationToken) => await Task.Run(() =>
             {
-                var root = _paths.Instance(TextHelper.RequireId(d.Id));
-                var game = _paths.GameDir(d.Id);
+                var root = _paths.Instance(TextHelper.RequireId(request.Id));
+                var game = _paths.GameDirectory(request.Id);
                 var worlds = _directoryHelper.Size(Path.Combine(game, "saves"));
                 var mods = _directoryHelper.Size(Path.Combine(game, "mods"));
                 var all = _directoryHelper.Size(root);
                 return (object)new { worlds, mods, rest = Math.Max(0, all - worlds - mods) };
-            }, ct));
+            }, cancellationToken));
 
             // Probleme einer Instanz ohne Start (Mods-Tab "Reparieren") und "Alles reparieren"
-            r.On<IdData>("instances.diagnose", async (d, ct) => (await _pipeline.Diagnose(d.Id, ct))
-                .Select((x, i) => new IssueView($"{x.CheckId}-{i}", x.Severity, x.Message, x.Detail,
-                    x.Actions.Select(a => new ActionView(a.Id, a.Label, a.Primary)).ToList(), false))
+            router.On<IdData>("instances.diagnose", async (request, cancellationToken) => (await _pipeline.Diagnose(request.Id, cancellationToken))
+                .Select((result, index) => new IssueView($"{result.CheckId}-{index}", result.Severity, result.Message, result.Detail,
+                    result.Actions.Select(action => new ActionView(action.Id, action.Label, action.Primary)).ToList(), false))
                 .ToList());
-            r.On<RepairOneData>("instances.repairOne", async (d, _) =>
+            router.On<RepairOneData>("instances.repairOne", async (request, _) =>
             {
                 // Id aus der Diagnose: "<Prüfung>-<Stelle>"
-                var cut = d.IssueId.LastIndexOf('-');
-                if (cut <= 0 || !int.TryParse(d.IssueId[(cut + 1)..], out var index))
+                var cut = request.IssueId.LastIndexOf('-');
+                if (cut <= 0 || !int.TryParse(request.IssueId[(cut + 1)..], out var index))
                 {
                     throw new AxoException("errors.invalidInput");
                 }
 
                 await _jobs.Run("content.repair", new TextRef("content.repairing"),
-                    job => _pipeline.RepairOne(d.Id, d.IssueId[..cut], index, d.ActionId, job), d.Id);
+                    job => _pipeline.RepairOne(request.Id, request.IssueId[..cut], index, request.ActionId, job), request.Id);
                 return true;
             });
-            r.On<IdData>("instances.repairAll", async (d, _) => await _jobs.Run("content.repair", new TextRef("content.repairing"),
-                job => _pipeline.RepairAll(d.Id, job), d.Id));
+            router.On<IdData>("instances.repairAll", async (request, _) => await _jobs.Run("content.repair", new TextRef("content.repairing"),
+                job => _pipeline.RepairAll(request.Id, job), request.Id));
 
-            r.On<CreateData>("instances.create", async (d, ct) =>
+            router.On<CreateData>("instances.create", async (request, cancellationToken) =>
             {
-                var loaderVersion = d.Loader == LoaderType.Vanilla
+                var loaderVersion = request.Loader == LoaderType.Vanilla
                     ? null
-                    : await _loaders.ResolveVersion(d.Loader, d.Minecraft, d.LoaderVersion, ct);
-                var instance = await _instances.Create(new CreateInstanceRequest(d.Name, d.Minecraft, d.Loader, loaderVersion, d.MemoryMb, ArtSeed: d.ArtSeed),
-                    ct: ct);
-                var type = await _versions.TypeOf(d.Minecraft, ct);
-                if (type is { } t && t != VersionType.Release)
+                    : await _loaders.ResolveVersion(request.Loader, request.Minecraft, request.LoaderVersion, cancellationToken);
+                var instance = await _instances.Create(new CreateInstanceRequest(request.Name, request.Minecraft, request.Loader, loaderVersion, request.MemoryMb, ArtSeed: request.ArtSeed),
+                    cancellationToken: cancellationToken);
+                var type = await _versions.TypeOf(request.Minecraft, cancellationToken);
+                if (type is { } versionType && versionType != VersionType.Release)
                 {
-                    instance.Minecraft = instance.Minecraft with { Type = t };
-                    await _instances.Save(instance, ct);
+                    instance.Minecraft = instance.Minecraft with { Type = versionType };
+                    await _instances.Save(instance, cancellationToken);
                 }
-                if (d.IconRef != null)
+                if (request.IconRef != null)
                 {
-                    await _instances.SetImage(instance.Id, false, await File.ReadAllBytesAsync(_files.Resolve(d.IconRef), ct), ct);
+                    await _instances.SetImage(instance.Id, false, await File.ReadAllBytesAsync(_files.Resolve(request.IconRef), cancellationToken), cancellationToken);
                 }
 
                 return instance;
             });
 
-            r.On<UpdateData>("instances.update", async (d, ct) =>
+            router.On<UpdateData>("instances.update", async (request, cancellationToken) =>
             {
-                if (_games.IsRunning(d.Id) && (d.Minecraft != null || d.Loader != null))
+                if (_games.IsRunning(request.Id) && (request.Minecraft != null || request.Loader != null))
                 {
                     throw new AxoException("instances.running");
                 }
 
-                string? loaderVersion = d.LoaderVersion;
-                if (d.Loader is { } loader and not LoaderType.Vanilla && d.Minecraft is { } mc && loaderVersion == null)
+                string? loaderVersion = request.LoaderVersion;
+                if (request.Loader is { } loader and not LoaderType.Vanilla && request.Minecraft is { } minecraftVersion && loaderVersion == null)
                 {
-                    loaderVersion = await _loaders.ResolveVersion(loader, mc, null, ct);
+                    loaderVersion = await _loaders.ResolveVersion(loader, minecraftVersion, null, cancellationToken);
                 }
 
-                return await _instances.Update(d.Id, new InstanceUpdate(d.Name, d.Minecraft, d.Loader, loaderVersion, d.MemoryMb,
-                    d.ResetMemory, d.JavaArgs, d.BannerAuto, d.AxoMod), ct);
+                return await _instances.Update(request.Id, new InstanceUpdate(request.Name, request.Minecraft, request.Loader, loaderVersion, request.MemoryMb,
+                    request.ResetMemory, request.JavaArgs, request.BannerAuto, request.AxoMod), cancellationToken);
             });
 
             // Nach einem Wechsel von Version oder Loader: Mods passend umstellen bzw. deaktivieren
-            r.On<IdData>("instances.adaptMods", async (d, _) =>
+            router.On<IdData>("instances.adaptMods", async (request, _) =>
             {
-                if (_games.IsRunning(d.Id))
+                if (_games.IsRunning(request.Id))
                 {
                     throw new AxoException("instances.running");
                 }
 
                 return await _jobs.Run("content.adapt", new TextRef("content.adapt.title"),
-                    job => _content.AdaptMods(d.Id, job), d.Id);
+                    job => _content.AdaptMods(request.Id, job), request.Id);
             });
 
-            r.On<ModLockData>("instances.setModLock", async (d, ct) =>
+            router.On<ModLockData>("instances.setModLock", async (request, cancellationToken) =>
             {
-                if (_games.IsRunning(d.Id))
+                if (_games.IsRunning(request.Id))
                 {
                     throw new AxoException("instances.running");
                 }
 
-                return await _content.SetModLock(TextHelper.RequireId(d.Id), d.Level, d.AdoptCurrent, ct);
+                return await _content.SetModLock(TextHelper.RequireId(request.Id), request.Level, request.AdoptCurrent, cancellationToken);
             });
 
-            r.On<ImageData>("instances.setImage", async (d, ct) =>
+            router.On<ImageData>("instances.setImage", async (request, cancellationToken) =>
             {
-                byte[]? bytes = d.FileRef != null ? await File.ReadAllBytesAsync(_files.Resolve(d.FileRef), ct)
-                    : d.Base64 != null ? Convert.FromBase64String(d.Base64) : null;
-                await _instances.SetImage(d.Id, d.Banner, bytes, ct);
+                byte[]? bytes = request.FileRef != null ? await File.ReadAllBytesAsync(_files.Resolve(request.FileRef), cancellationToken)
+                    : request.Base64 != null ? Convert.FromBase64String(request.Base64) : null;
+                await _instances.SetImage(request.Id, request.Banner, bytes, cancellationToken);
                 return null;
             });
 
             // Hintergrund: Panorama (Blickrichtung) oder Farbverlauf; ein eigenes Bild setzt instances.setImage (banner)
-            r.On<BackdropData>("instances.setBackdrop", async (d, ct) =>
+            router.On<BackdropData>("instances.setBackdrop", async (request, cancellationToken) =>
             {
-                await _instances.SetBackdrop(d.Id, d.GradientOnly, d.PanoramaView, ct);
+                await _instances.SetBackdrop(request.Id, request.GradientOnly, request.PanoramaView, cancellationToken);
                 return null;
             });
 
-            r.On<IdData>("instances.delete", async (d, ct) =>
+            router.On<IdData>("instances.delete", async (request, cancellationToken) =>
             {
-                await _instances.Delete(d.Id, ct);
-                _notifications.RemoveForInstance(d.Id);
+                await _instances.Delete(request.Id, cancellationToken);
+                _notifications.RemoveForInstance(request.Id);
                 return null;
             });
 
-            r.On<CopyData>("instances.copy", (d, _) => Task.FromResult<object?>(StartJob(_jobs.Run("instance.copy",
-                new TextRef("instances.copying", ("name", d.Name)), job => _instances.Copy(d.Id, d.Name, job), d.Id))));
+            router.On<CopyData>("instances.copy", (request, _) => Task.FromResult<object?>(StartJob(_jobs.Run("instance.copy",
+                new TextRef("instances.copying", ("name", request.Name)), job => _instances.Copy(request.Id, request.Name, job), request.Id))));
 
-            r.On<ExportData>("instances.export", (d, _) =>
+            router.On<ExportData>("instances.export", (request, _) =>
             {
-                var target = _files.Resolve(d.FileRef);
-                Task task = d.Format switch
+                var target = _files.Resolve(request.FileRef);
+                Task task = request.Format switch
                 {
                     "mrpack" => _jobs.Run("instance.export", new TextRef("instances.exporting"),
-                        job => _modpacks.ExportMrpack(d.Id, target, job), d.Id),
+                        job => _modpacks.ExportMrpack(request.Id, target, job), request.Id),
                     "backup" => _jobs.Run("instance.export", new TextRef("instances.backingUp"),
-                        job => _backups.Export(d.Id, target, job), d.Id),
+                        job => _backups.Export(request.Id, target, job), request.Id),
                     _ => throw new AxoException("errors.invalidInput")
                 };
                 return Task.FromResult<object?>(StartJob(task));
             });
 
-            r.On<ImportData>("instances.import", async (d, _) =>
+            router.On<ImportData>("instances.import", async (request, _) =>
             {
-                var path = _files.Resolve(d.FileRef);
+                var path = _files.Resolve(request.FileRef);
                 var instance = await _jobs.Run("instance.import", new TextRef("instances.importing", ("file", Path.GetFileName(path))),
                     job => _backups.Import(path, job));
                 return instance;
             });
 
             // ---- Welten ----
-            r.On<IdData>("worlds.list", async (d, ct) => await _worlds.List(d.Id, ct));
-            r.On<WorldData>("worlds.backup", (d, _) => Task.FromResult<object?>(StartJob(_jobs.Run("world.backup",
-                new TextRef("worlds.backingUp"), job => _worlds.Backup(d.Id, d.Folder, job), d.Id))));
+            router.On<IdData>("worlds.list", async (request, cancellationToken) => await _worlds.List(request.Id, cancellationToken));
+            router.On<WorldData>("worlds.backup", (request, _) => Task.FromResult<object?>(StartJob(_jobs.Run("world.backup",
+                new TextRef("worlds.backingUp"), job => _worlds.Backup(request.Id, request.Folder, job), request.Id))));
             // Vor einem Wechsel von Version oder Loader: wartet, bis alle Welten gesichert sind
-            r.On<IdData>("worlds.backupAll", async (d, _) =>
+            router.On<IdData>("worlds.backupAll", async (request, _) =>
             {
-                if (_games.IsRunning(d.Id))
+                if (_games.IsRunning(request.Id))
                 {
                     throw new AxoException("instances.running");
                 }
 
-                return await _jobs.Run("world.backupAll", new TextRef("worlds.backingUpAll"), job => _worlds.BackupAll(d.Id, job), d.Id);
+                return await _jobs.Run("world.backupAll", new TextRef("worlds.backingUpAll"), job => _worlds.BackupAll(request.Id, job), request.Id);
             });
             // ---- Datapacks (je Welt) ----
-            r.On<WorldData>("datapacks.list", async (d, ct) => await _datapacks.List(d.Id, d.Folder, ct));
-            r.On<DatapackInstallData>("datapacks.install", (d, _) => Task.FromResult<object?>(StartJob(_jobs.Run("datapack.install",
+            router.On<WorldData>("datapacks.list", async (request, cancellationToken) => await _datapacks.List(request.Id, request.Folder, cancellationToken));
+            router.On<DatapackInstallData>("datapacks.install", (request, _) => Task.FromResult<object?>(StartJob(_jobs.Run("datapack.install",
                 new TextRef("content.installing"),
-                job => _datapacks.Install(d.InstanceId, d.World, new InstallRequest(d.Source, d.ProjectId, d.VersionId), job), d.InstanceId))));
-            r.On<DatapackFileData>("datapacks.setEnabled", async (d, ct) =>
+                job => _datapacks.Install(request.InstanceId, request.World, new InstallRequest(request.Source, request.ProjectId, request.VersionId), job), request.InstanceId))));
+            router.On<DatapackFileData>("datapacks.setEnabled", async (request, cancellationToken) =>
             {
-                await _datapacks.SetEnabled(d.Id, d.World, d.File, d.Enabled);
-                return await _datapacks.List(d.Id, d.World, ct);
+                await _datapacks.SetEnabled(request.Id, request.World, request.File, request.Enabled);
+                return await _datapacks.List(request.Id, request.World, cancellationToken);
             });
-            r.On<DatapackFileData>("datapacks.remove", async (d, ct) =>
+            router.On<DatapackFileData>("datapacks.remove", async (request, cancellationToken) =>
             {
-                if (_games.IsRunning(d.Id))
+                if (_games.IsRunning(request.Id))
                 {
                     throw new AxoException("instances.running");
                 }
 
-                await _datapacks.Remove(d.Id, d.World, d.File, ct);
-                return await _datapacks.List(d.Id, d.World, ct);
+                await _datapacks.Remove(request.Id, request.World, request.File, cancellationToken);
+                return await _datapacks.List(request.Id, request.World, cancellationToken);
             });
-            r.On<IdData>("worlds.backups", (d, _) => Task.FromResult<object?>(_worlds.ListBackups(d.Id)));
-            r.On<BackupFileData>("worlds.restore", async (d, _) =>
-                await _jobs.Run("world.restore", new TextRef("worlds.restoring"), job => _worlds.RestoreBackup(d.Id, d.File, job), d.Id));
-            r.On<WorldImportData>("worlds.import", async (d, _) =>
+            router.On<IdData>("worlds.backups", (request, _) => Task.FromResult<object?>(_worlds.ListBackups(request.Id)));
+            router.On<BackupFileData>("worlds.restore", async (request, _) =>
+                await _jobs.Run("world.restore", new TextRef("worlds.restoring"), job => _worlds.RestoreBackup(request.Id, request.File, job), request.Id));
+            router.On<WorldImportData>("worlds.import", async (request, _) =>
             {
-                var paths = d.FileRefs.Take(20).Select(_files.Resolve).ToList();
+                var paths = request.FileRefs.Take(20).Select(_files.Resolve).ToList();
                 return await _jobs.Run("world.import", new TextRef("worlds.importing"), async job =>
                 {
                     var names = new List<string>();
-                    for (var i = 0; i < paths.Count; i++)
+                    for (var index = 0; index < paths.Count; index++)
                     {
                         try
                         {
-                            names.Add(await _worlds.Import(d.Id, paths[i], job.Sub((double)i / paths.Count, (double)(i + 1) / paths.Count)));
+                            names.Add(await _worlds.Import(request.Id, paths[index], job.Sub((double)index / paths.Count, (double)(index + 1) / paths.Count)));
                         }
                         catch (InvalidDataException)
                         {
@@ -337,59 +337,59 @@ namespace AxoClient.App.Bridge
                         }
                     }
                     return names;
-                }, d.Id);
+                }, request.Id);
             });
-            r.On<WorldData>("worlds.delete", async (d, ct) =>
+            router.On<WorldData>("worlds.delete", async (request, cancellationToken) =>
             {
-                if (_games.IsRunning(d.Id))
+                if (_games.IsRunning(request.Id))
                 {
                     throw new AxoException("instances.running");
                 }
 
-                await _worlds.Delete(d.Id, d.Folder, ct);
+                await _worlds.Delete(request.Id, request.Folder, cancellationToken);
                 return null;
             });
 
             // ---- Serverliste der Instanz ----
-            r.On<IdData>("serverlist.list", (d, _) => Task.FromResult<object?>(_serverLists.List(d.Id)));
-            r.On<ServerAddData>("serverlist.add", async (d, _) =>
+            router.On<IdData>("serverlist.list", (request, _) => Task.FromResult<object?>(_serverLists.List(request.Id)));
+            router.On<ServerAddData>("serverlist.add", async (request, _) =>
             {
-                await _serverLists.Add(d.Id, d.Name, d.Address, d.Index);
-                return _serverLists.List(d.Id);
+                await _serverLists.Add(request.Id, request.Name, request.Address, request.Index);
+                return _serverLists.List(request.Id);
             });
-            r.On<ServerEditData>("serverlist.edit", async (d, _) =>
+            router.On<ServerEditData>("serverlist.edit", async (request, _) =>
             {
-                await _serverLists.Edit(d.Id, d.Index, d.Name, d.Address);
-                return _serverLists.List(d.Id);
+                await _serverLists.Edit(request.Id, request.Index, request.Name, request.Address);
+                return _serverLists.List(request.Id);
             });
-            r.On<ServerIndexData>("serverlist.remove", async (d, _) =>
+            router.On<ServerIndexData>("serverlist.remove", async (request, _) =>
             {
-                await _serverLists.Remove(d.Id, d.Index);
-                return _serverLists.List(d.Id);
+                await _serverLists.Remove(request.Id, request.Index);
+                return _serverLists.List(request.Id);
             });
-            r.On<ServerMoveData>("serverlist.move", async (d, _) =>
+            router.On<ServerMoveData>("serverlist.move", async (request, _) =>
             {
-                await _serverLists.Move(d.Id, d.From, d.To);
-                return _serverLists.List(d.Id);
+                await _serverLists.Move(request.Id, request.From, request.To);
+                return _serverLists.List(request.Id);
             });
-            r.On<AddressData>("server.ping", async (d, ct) =>
-                _serverPing.IsValidAddress(d.Address) ? await _serverPing.Ping(d.Address, ct: ct) : throw new AxoException("servers.addressInvalid"));
+            router.On<AddressData>("server.ping", async (request, cancellationToken) =>
+                _serverPing.IsValidAddress(request.Address) ? await _serverPing.Ping(request.Address, cancellationToken: cancellationToken) : throw new AxoException("servers.addressInvalid"));
 
             // ---- Screenshots ----
-            r.On<IdData>("screenshots.list", (d, _) => Task.FromResult<object?>(_screenshots.List(d.Id)));
-            r.On<RenameData>("screenshots.rename", (d, _) =>
+            router.On<IdData>("screenshots.list", (request, _) => Task.FromResult<object?>(_screenshots.List(request.Id)));
+            router.On<RenameData>("screenshots.rename", (request, _) =>
             {
-                _screenshots.Rename(d.Id, d.File, d.Name);
-                return Task.FromResult<object?>(_screenshots.List(d.Id));
+                _screenshots.Rename(request.Id, request.File, request.Name);
+                return Task.FromResult<object?>(_screenshots.List(request.Id));
             });
-            r.On<BackupFileData>("screenshots.delete", (d, _) =>
+            router.On<BackupFileData>("screenshots.delete", (request, _) =>
             {
-                _screenshots.Delete(d.Id, d.File);
-                return Task.FromResult<object?>(_screenshots.List(d.Id));
+                _screenshots.Delete(request.Id, request.File);
+                return Task.FromResult<object?>(_screenshots.List(request.Id));
             });
-            r.On<BackupFileData>("screenshots.reveal", (d, _) =>
+            router.On<BackupFileData>("screenshots.reveal", (request, _) =>
             {
-                OpenInExplorer(_screenshots.PathOf(d.Id, d.File) ?? throw new AxoException("errors.notFound"));
+                OpenInExplorer(_screenshots.PathOf(request.Id, request.File) ?? throw new AxoException("errors.notFound"));
                 return Task.FromResult<object?>(null);
             });
         }

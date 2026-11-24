@@ -32,8 +32,8 @@ namespace AxoClient.Common
                 return ((long)(status.TotalPhys / 1024 / 1024), (long)(status.AvailPhys / 1024 / 1024));
             }
 
-            var info = GC.GetGCMemoryInfo();
-            return (info.TotalAvailableMemoryBytes / 1024 / 1024, info.TotalAvailableMemoryBytes / 1024 / 1024 / 2);
+            var memoryInfo = GC.GetGCMemoryInfo();
+            return (memoryInfo.TotalAvailableMemoryBytes / 1024 / 1024, memoryInfo.TotalAvailableMemoryBytes / 1024 / 1024 / 2);
         }
 
         public long FreeDiskBytes(string path)
@@ -43,7 +43,7 @@ namespace AxoClient.Common
                 var root = Path.GetPathRoot(Path.GetFullPath(path));
                 return root == null ? long.MaxValue : new DriveInfo(root).AvailableFreeSpace;
             }
-            catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or ArgumentException or UnauthorizedAccessException)
             {
                 return long.MaxValue;
             }

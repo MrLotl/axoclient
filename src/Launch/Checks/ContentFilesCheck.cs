@@ -37,23 +37,23 @@ namespace AxoClient.Launch.Checks
         public override string Id => "contentFiles";
         public override LaunchPhase Phase => LaunchPhase.Content;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
             var results = new List<CheckResult>();
             var redownload = new List<(ContentType Type, ContentEntry Entry)>();
             foreach (var type in Enum.GetValues<ContentType>())
             {
-                foreach (var entry in ctx.Content.ListOf(type))
+                foreach (var entry in context.Content.ListOf(type))
                 {
                     if (entry.Source == ContentSource.AxoClient)
                     {
                         continue;
                     }
 
-                    var path = Path.Combine(ctx.GameDir, _contentFolders.Of(type), entry.DiskName);
+                    var path = Path.Combine(context.GameDir, _contentFolders.Of(type), entry.DiskName);
                     if (!File.Exists(path))
                     {
-                        if (Directory.Exists(Path.Combine(ctx.GameDir, _contentFolders.Of(type), entry.File)))
+                        if (Directory.Exists(Path.Combine(context.GameDir, _contentFolders.Of(type), entry.File)))
                         {
                             continue;
                         }
@@ -65,20 +65,20 @@ namespace AxoClient.Launch.Checks
 
                         continue;
                     }
-                    var info = new FileInfo(path);
-                    var changed = info.Length != entry.Size || entry.Modified != info.LastWriteTimeUtc;
+                    var file = new FileInfo(path);
+                    var changed = file.Length != entry.Size || entry.Modified != file.LastWriteTimeUtc;
                     if (!changed)
                     {
                         continue;
                     }
 
-                    if (!ctx.Settings.Game.CheckModsOnLaunch && info.Length == entry.Size)
+                    if (!context.Settings.Game.CheckModsOnLaunch && file.Length == entry.Size)
                     {
                         continue;
                     }
 
                     string sha1;
-                    using (var stream = info.OpenRead())
+                    using (var stream = file.OpenRead())
                     {
                         sha1 = _textHelper.Sha1Hex(stream);
                     }
@@ -103,28 +103,28 @@ namespace AxoClient.Launch.Checks
             if (redownload.Count > 0)
             {
                 results.Add(new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.content.redownload", ("count", redownload.Count)),
-                    [new CheckAction("redownload", new TextRef("pipeline.action.redownload"), (c, job) => redownloadFiles(c, redownload, job), true)]));
+                    [new CheckAction("redownload", new TextRef("pipeline.action.redownload"), (launchContext, job) => redownloadFiles(launchContext, redownload, job), true)]));
             }
 
             return Task.FromResult<IReadOnlyList<CheckResult>>(results.Count == 0 ? [Ok()] : results);
         }
 
-        private bool hasSource(ContentEntry e) =>
-            e.Source is ContentSource.Modrinth or ContentSource.CurseForge && e.VersionId != null;
+        private bool hasSource(ContentEntry entry) =>
+            entry.Source is ContentSource.Modrinth or ContentSource.CurseForge && entry.VersionId != null;
 
-        private async Task redownloadFiles(LaunchContext ctx, List<(ContentType Type, ContentEntry Entry)> items, JobContext job)
+        private async Task redownloadFiles(LaunchContext context, List<(ContentType Type, ContentEntry Entry)> items, JobContext job)
         {
             var requests = new List<DownloadRequest>();
             foreach (var (type, entry) in items)
             {
                 var version = await _providers.Get(entry.Source).GetVersion(entry.VersionId!, job.Token);
-                var file = version?.Files.FirstOrDefault(f => f.FileName == entry.File) ?? version?.PrimaryFile;
+                var file = version?.Files.FirstOrDefault(candidateFile => candidateFile.FileName == entry.File) ?? version?.PrimaryFile;
                 if (file == null || string.IsNullOrEmpty(file.Url))
                 {
                     throw new AxoException("pipeline.content.redownloadFailed", new() { ["name"] = entry.Name });
                 }
 
-                requests.Add(new DownloadRequest(file.Url, _pathGuard.Combine(Path.Combine(ctx.GameDir, _contentFolders.Of(type)), entry.DiskName),
+                requests.Add(new DownloadRequest(file.Url, _pathGuard.Combine(Path.Combine(context.GameDir, _contentFolders.Of(type)), entry.DiskName),
                     file.Sha1, file.Sha512));
             }
             job.Status("pipeline.content.downloading");

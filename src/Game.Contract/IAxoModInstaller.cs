@@ -11,7 +11,7 @@ namespace AxoClient.Game.Contract
 
         IReadOnlyList<string> SupportedMinecraftVersions { get; }
 
-        Task<byte[]> ReadJar(AxoModEntry entry, CancellationToken ct);
+        Task<byte[]> ReadJar(AxoModEntry entry, CancellationToken cancellationToken);
 
         /// <summary>
         /// Ob die Jar unter <paramref name="path"/> genau die mitgelieferte ist (SHA-256). Verglichen wird der Inhalt, nicht
@@ -20,8 +20,8 @@ namespace AxoClient.Game.Contract
         bool IsCurrent(AxoModEntry entry, string path);
 
         /// <summary>Legt die richtige Jar in <c>mods/</c> und entfernt alte AxoMod-Jars.</summary>
-        Task<ContentEntry?> Sync(string modsDir, string minecraftVersion, LoaderType loader, bool enabled,
-        CancellationToken ct);
+        Task<ContentEntry?> Sync(string modsDirectory, string minecraftVersion, LoaderType loader, bool enabled,
+        CancellationToken cancellationToken);
 
         bool IsAxoModFile(string fileName);
     }

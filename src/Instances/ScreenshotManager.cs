@@ -20,47 +20,47 @@ namespace AxoClient.Instances
             _imageFormats = imageFormats;
         }
 
-        private string getDir(string id) => Path.Combine(_paths.GameDir(_textHelper.RequireId(id)), "screenshots");
+        private string getDirectory(string id) => Path.Combine(_paths.GameDirectory(_textHelper.RequireId(id)), "screenshots");
 
         public IReadOnlyList<ScreenshotInfo> List(string instanceId)
         {
-            var dir = getDir(instanceId);
-            if (!Directory.Exists(dir))
+            var directory = getDirectory(instanceId);
+            if (!Directory.Exists(directory))
             {
                 return [];
             }
 
-            return new DirectoryInfo(dir).EnumerateFiles()
-                .Where(f => f.Extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
-                            || f.Extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(f => f.LastWriteTimeUtc)
-                .Select(f =>
+            return new DirectoryInfo(directory).EnumerateFiles()
+                .Where(file => file.Extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
+                            || file.Extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .Select(file =>
                 {
                     (int, int)? size = null;
                     try
                     {
                         var header = new byte[24];
-                        using (var s = f.OpenRead())
+                        using (var stream = file.OpenRead())
                         {
-                            s.ReadExactly(header);
+                            stream.ReadExactly(header);
                         }
 
                         size = _imageFormats.PngSize(header);
                     }
-                    catch (Exception ex) when (ex is IOException or EndOfStreamException)
+                    catch (Exception exception) when (exception is IOException or EndOfStreamException)
                     {
                     }
-                    return new ScreenshotInfo(f.Name, f.LastWriteTime, f.Length,
-                        $"/axo/screenshot/{instanceId}/{Uri.EscapeDataString(f.Name)}?v={f.LastWriteTimeUtc.Ticks % 1_000_000_007}",
+                    return new ScreenshotInfo(file.Name, file.LastWriteTime, file.Length,
+                        $"/axo/screenshot/{instanceId}/{Uri.EscapeDataString(file.Name)}?v={file.LastWriteTimeUtc.Ticks % 1_000_000_007}",
                         size?.Item1, size?.Item2);
                 })
                 .ToList();
         }
 
         public string? PathOf(string instanceId, string file) =>
-            _textHelper.IsValidId(instanceId) && _pathGuard.IsSafeFileName(file) && _pathGuard.SafeCombine(getDir(instanceId), file) is { } p
-                                       && File.Exists(p)
-                ? p
+            _textHelper.IsValidId(instanceId) && _pathGuard.IsSafeFileName(file) && _pathGuard.SafeCombine(getDirectory(instanceId), file) is { } screenshotPath
+                                       && File.Exists(screenshotPath)
+                ? screenshotPath
                 : null;
 
         public void Rename(string instanceId, string file, string newName)
@@ -78,7 +78,7 @@ namespace AxoClient.Instances
                 throw new AxoException("errors.invalidFileName");
             }
 
-            var target = _pathGuard.Combine(getDir(instanceId), clean);
+            var target = _pathGuard.Combine(getDirectory(instanceId), clean);
             if (File.Exists(target))
             {
                 throw new AxoException("errors.fileExists");

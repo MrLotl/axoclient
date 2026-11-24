@@ -13,7 +13,7 @@ namespace AxoClient.Settings.Contract
         /// Bereinigt die Darstellungs-Einstellungen: ungültige eigene Verläufe fliegen raus, der aktive Verlauf
         /// passt immer zur gewählten Vorlage. Das alte Format (<c>custom</c> ohne Id) wird zu einem eigenen Verlauf.
         /// </summary>
-        void Validate(AppearanceSettings a);
+        void Validate(AppearanceSettings appearanceSettings);
 
         /// <summary>Kleinster Kontrast zwischen weißem Button-Text und den beiden Verlaufsfarben (WCAG).</summary>
         double MinContrastWithWhite(AccentGradient accent);

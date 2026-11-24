@@ -19,7 +19,7 @@ namespace AxoClient.Diagnostics
 
         public string Area => "account";
 
-        public async Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken ct)
+        public async Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken cancellationToken)
         {
             if (_accounts.Active == null)
             {
@@ -29,22 +29,22 @@ namespace AxoClient.Diagnostics
             var items = new List<DiagnosticItem>();
             try
             {
-                await _accounts.GetSession(ct, forceRefresh: true);
+                await _accounts.GetSession(cancellationToken, forceRefresh: true);
                 items.Add(new(Area, DiagnosticStatus.Ok, new TextRef("diagnostics.loginOk")));
             }
-            catch (AxoException ex)
+            catch (AxoException exception)
             {
-                items.Add(new(Area, DiagnosticStatus.Error, new TextRef("diagnostics.loginBroken"), ex.Text, new TextRef("diagnostics.loginBroken.solution")));
+                items.Add(new(Area, DiagnosticStatus.Error, new TextRef("diagnostics.loginBroken"), exception.Text, new TextRef("diagnostics.loginBroken.solution")));
                 return items;
             }
             try
             {
-                await _online.Send(HttpMethod.Get, "/me", ct: ct);
+                await _online.Send(HttpMethod.Get, "/me", cancellationToken: cancellationToken);
                 items.Add(new(Area, DiagnosticStatus.Ok, new TextRef("diagnostics.serviceOk")));
             }
-            catch (AxoException ex)
+            catch (AxoException exception)
             {
-                items.Add(new(Area, DiagnosticStatus.Warning, new TextRef("diagnostics.serviceBroken"), ex.Text));
+                items.Add(new(Area, DiagnosticStatus.Warning, new TextRef("diagnostics.serviceBroken"), exception.Text));
             }
             return items;
         }

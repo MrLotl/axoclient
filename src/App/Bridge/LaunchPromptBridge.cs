@@ -23,15 +23,15 @@ namespace AxoClient.App.Bridge
         }
 
         public async Task<PromptDecision> Ask(string launchId, string instanceId, LaunchPhase phase, IReadOnlyList<IssueView> issues,
-            CancellationToken ct)
+            CancellationToken cancellationToken)
         {
             var promptId = $"{launchId}:{phase}:{Guid.NewGuid():N}"[..40];
-            var tcs = new TaskCompletionSource<PromptDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var completionSource = new TaskCompletionSource<PromptDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
             var shown = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            _pending[promptId] = tcs;
+            _pending[promptId] = completionSource;
             _shown[promptId] = shown;
-            await using var _ = ct.Register(() => tcs.TrySetCanceled(ct));
-            var summary = string.Join("; ", issues.Select(i => $"{i.Severity} {i.Message}"));
+            await using var _ = cancellationToken.Register(() => completionSource.TrySetCanceled(cancellationToken));
+            var summary = string.Join("; ", issues.Select(issue => $"{issue.Severity} {issue.Message}"));
             _appLog.Info($"Start {launchId}: Rückfrage ({phase}) mit {issues.Count} Punkt(en): {summary}");
             try
             {
@@ -42,14 +42,14 @@ namespace AxoClient.App.Bridge
                     throw new AxoException("pipeline.promptFailed");
                 }
 
-                var first = await Task.WhenAny(shown.Task, tcs.Task, Task.Delay(_showTimeout, ct));
-                if (first != shown.Task && first != tcs.Task)
+                var first = await Task.WhenAny(shown.Task, completionSource.Task, Task.Delay(_showTimeout, cancellationToken));
+                if (first != shown.Task && first != completionSource.Task)
                 {
-                    ct.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
                     _appLog.Error($"Start {launchId}: Rückfrage ({phase}) wurde von der Oberfläche nicht bestätigt");
                     throw new AxoException("pipeline.promptFailed");
                 }
-                return await tcs.Task;
+                return await completionSource.Task;
             }
             finally
             {
@@ -60,9 +60,9 @@ namespace AxoClient.App.Bridge
         }
 
         /// <summary>Die Oberfläche zeigt den Dialog an.</summary>
-        public bool Shown(string promptId) => _shown.TryGetValue(promptId, out var tcs) && tcs.TrySetResult();
+        public bool Shown(string promptId) => _shown.TryGetValue(promptId, out var completionSource) && completionSource.TrySetResult();
 
         public bool Resolve(string promptId, PromptDecision decision) =>
-            _pending.TryGetValue(promptId, out var tcs) && tcs.TrySetResult(decision);
+            _pending.TryGetValue(promptId, out var completionSource) && completionSource.TrySetResult(decision);
     }
 }

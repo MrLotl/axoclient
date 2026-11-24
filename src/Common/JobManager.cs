@@ -20,10 +20,10 @@ namespace AxoClient.Common
             _exceptionHelper = exceptionHelper;
         }
 
-        public IReadOnlyList<JobInfo> Active => _jobs.Values.Where(j => j.State == JobState.Running).Select(j => j.ToInfo()).ToList();
+        public IReadOnlyList<JobInfo> Active => _jobs.Values.Where(value => value.State == JobState.Running).Select(value => value.ToInfo()).ToList();
 
         public bool IsRunning(string kind, string? subject = null) =>
-            _jobs.Values.Any(j => j.State == JobState.Running && j.Kind == kind && (subject == null || j.Subject == subject));
+            _jobs.Values.Any(value => value.State == JobState.Running && value.Kind == kind && (subject == null || value.Subject == subject));
 
         public Task<T> Run<T>(string kind, TextRef title, Func<JobContext, Task<T>> work, string? subject = null,
             CancellationToken outer = default)
@@ -37,9 +37,9 @@ namespace AxoClient.Common
 
         public Task Run(string kind, TextRef title, Func<JobContext, Task> work, string? subject = null,
             CancellationToken outer = default) =>
-            Run<bool>(kind, title, async ctx =>
+            Run<bool>(kind, title, async context =>
             {
-                await work(ctx);
+                await work(context);
                 return true;
             }, subject, outer);
 
@@ -67,13 +67,13 @@ namespace AxoClient.Common
                 job.State = JobState.Cancelled;
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
                 job.State = JobState.Failed;
-                job.Error = _exceptionHelper.Describe(ex);
-                if (ex is not AxoException)
+                job.Error = _exceptionHelper.Describe(exception);
+                if (exception is not AxoException)
                 {
-                    _appLog.Error($"Job {job.Kind} fehlgeschlagen", ex);
+                    _appLog.Error($"Job {job.Kind} fehlgeschlagen", exception);
                 }
 
                 throw;

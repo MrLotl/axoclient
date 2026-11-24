@@ -28,32 +28,32 @@ namespace AxoClient.Launch
         public async Task<LaunchContext> Prepare(string instanceId, QuickPlay? quickPlay, JobContext job)
         {
             var instance = await _instances.Get(instanceId, job.Token);
-            var gameDir = _instances.GameDir(instanceId);
-            var ctx = new LaunchContext
+            var gameDirectory = _instances.GameDirectory(instanceId);
+            var context = new LaunchContext
             {
                 LaunchId = Guid.NewGuid().ToString("N")[..12],
                 Instance = instance,
                 Content = await _instances.ContentOf(instanceId).Load(job.Token),
                 Settings = _settings.Current,
-                GamePath = _installer.PathFor(gameDir),
-                GameDir = gameDir,
+                GamePath = _installer.PathFor(gameDirectory),
+                GameDir = gameDirectory,
                 QuickPlay = quickPlay
             };
-            await runChecks(ctx, job, startPhase: LaunchPhase.Environment, endPhase: LaunchPhase.Resources, interactive: true);
+            await runChecks(context, job, startPhase: LaunchPhase.Environment, endPhase: LaunchPhase.Resources, interactive: true);
 
             // Eine Maßnahme kann Loader oder Version geändert haben: dann jetzt nachinstallieren
-            if (ctx.VersionName == null || ctx.Instance.Loader.Version == null && ctx.Instance.Loader.Type != LoaderType.Vanilla)
+            if (context.VersionName == null || context.Instance.Loader.Version == null && context.Instance.Loader.Type != LoaderType.Vanilla)
             {
-                await runChecks(ctx, job, LaunchPhase.GameFiles, LaunchPhase.GameFiles, interactive: true);
-                if (ctx.VersionName == null)
+                await runChecks(context, job, LaunchPhase.GameFiles, LaunchPhase.GameFiles, interactive: true);
+                if (context.VersionName == null)
                 {
                     throw new AxoException("pipeline.gameFiles.failed");
                 }
             }
 
             // Geprüft: bis zur nächsten Änderung müssen Kompatibilität und Abhängigkeiten nicht erneut laufen
-            ctx.Content = await _instances.ContentOf(instanceId).Update(doc => doc.CheckedAt = DateTimeOffset.UtcNow, job.Token);
-            return ctx;
+            context.Content = await _instances.ContentOf(instanceId).Update(document => document.CheckedAt = DateTimeOffset.UtcNow, job.Token);
+            return context;
         }
 
         /// <summary>Prüfungen, die nur beim Start Sinn ergeben (Konto, laufendes Spiel, Internet) oder still mitlaufen.</summary>
@@ -65,29 +65,29 @@ namespace AxoClient.Launch
         /// laufen (AxoClient-Mod, e4mc, neue Dateien eintragen), schwankende Werte (gerade freier Arbeitsspeicher) und
         /// stummgeschaltete Warnungen gehören nicht dazu – sonst meldet auch ein einwandfreies Modpack ständig ein Problem.
         /// </summary>
-        public bool IsRepairIssue(CheckResult r, ContentDocument content)
+        public bool IsRepairIssue(CheckResult result, ContentDocument content)
         {
-            if (r.Severity == Severity.Ok || _notARepair.Contains(r.CheckId))
+            if (result.Severity == Severity.Ok || _notARepair.Contains(result.CheckId))
             {
                 return false;
             }
             // Auto-Fixes laufen beim Start still; nur fehlende oder beschädigte Mod-Dateien sind ein echtes Problem
-            if (r.Severity == Severity.AutoFix)
+            if (result.Severity == Severity.AutoFix)
             {
-                return r.CheckId == "contentFiles";
+                return result.CheckId == "contentFiles";
             }
 
-            if (r.Key == "ram-not-free")
+            if (result.Key == "ram-not-free")
             {
                 return false;
             }
 
-            return !(r.Severity == Severity.Warning && r.CanSilence && r.Key != null && content.IgnoredWarnings.Contains(r.Key));
+            return !(result.Severity == Severity.Warning && result.CanSilence && result.Key != null && content.IgnoredWarnings.Contains(result.Key));
         }
 
         /// <summary>Für die Diagnose: alle Prüfungen einer Instanz ohne Dialog und ohne Reparatur.</summary>
-        public async Task<IReadOnlyList<CheckResult>> Diagnose(string instanceId, CancellationToken ct) =>
-            (await collectIssues(instanceId, "diagnose", ct)).Issues;
+        public async Task<IReadOnlyList<CheckResult>> Diagnose(string instanceId, CancellationToken cancellationToken) =>
+            (await collectIssues(instanceId, "diagnose", cancellationToken)).Issues;
 
         /// <summary>
         /// Ein einzelnes Problem aus der Diagnose beheben. <paramref name="index"/> ist die Stelle in der Liste von
@@ -95,72 +95,72 @@ namespace AxoClient.Launch
         /// </summary>
         public async Task RepairOne(string instanceId, string checkId, int index, string? actionId, JobContext job)
         {
-            var (ctx, issues) = await collectIssues(instanceId, "repair", job.Token);
+            var (context, issues) = await collectIssues(instanceId, "repair", job.Token);
             if (index < 0 || index >= issues.Count || issues[index].CheckId != checkId)
             {
                 throw new AxoException("content.issueGone");
             }
 
             var issue = issues[index];
-            var action = issue.Actions.FirstOrDefault(a => a.Id == actionId)
-                         ?? issue.Actions.FirstOrDefault(a => a.Primary) ?? issue.Actions.FirstOrDefault()
+            var action = issue.Actions.FirstOrDefault(candidateAction => candidateAction.Id == actionId)
+                         ?? issue.Actions.FirstOrDefault(candidateAction => candidateAction.Primary) ?? issue.Actions.FirstOrDefault()
                          ?? throw new AxoException("content.issueGone");
             _appLog.Info($"Reparatur einzeln: {issue.CheckId}/{action.Id} ({issue.Message.Code})");
-            await action.Run(ctx, job.Sub(0, 1));
+            await action.Run(context, job.Sub(0, 1));
         }
 
         private async Task<(LaunchContext Ctx, List<CheckResult> Issues)> collectIssues(string instanceId, string launchId,
-            CancellationToken ct)
+            CancellationToken cancellationToken)
         {
-            var instance = await _instances.Get(instanceId, ct);
-            var gameDir = _instances.GameDir(instanceId);
-            var ctx = new LaunchContext
+            var instance = await _instances.Get(instanceId, cancellationToken);
+            var gameDirectory = _instances.GameDirectory(instanceId);
+            var context = new LaunchContext
             {
                 LaunchId = launchId,
                 Instance = instance,
-                Content = await _instances.ContentOf(instanceId).Load(ct),
+                Content = await _instances.ContentOf(instanceId).Load(cancellationToken),
                 Settings = _settings.Current,
-                GamePath = _installer.PathFor(gameDir),
-                GameDir = gameDir
+                GamePath = _installer.PathFor(gameDirectory),
+                GameDir = gameDirectory
             };
             var results = new List<CheckResult>();
-            foreach (var check in _checks.Where(c => !_notARepair.Contains(c.Id)))
+            foreach (var check in _checks.Where(check => !_notARepair.Contains(check.Id)))
             {
                 try
                 {
-                    results.AddRange(await check.Run(ctx, ct));
+                    results.AddRange(await check.Run(context, cancellationToken));
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception exception) when (exception is not OperationCanceledException)
                 {
                     // Eine Prüfung, die selbst scheitert (z. B. Modrinth nicht erreichbar), ist kein Problem der Instanz
-                    _appLog.Warn($"Prüfung {check.Id} für die Diagnose fehlgeschlagen", ex);
+                    _appLog.Warn($"Prüfung {check.Id} für die Diagnose fehlgeschlagen", exception);
                 }
             }
-            return (ctx, results.Where(r => IsRepairIssue(r, ctx.Content)).ToList());
+            return (context, results.Where(result => IsRepairIssue(result, context.Content)).ToList());
         }
 
         /// <summary>"Alles reparieren" im Mods-Tab: für jedes gefundene Problem die erste (empfohlene) Maßnahme ausführen.</summary>
         public async Task<int> RepairAll(string instanceId, JobContext job)
         {
             var instance = await _instances.Get(instanceId, job.Token);
-            var gameDir = _instances.GameDir(instanceId);
-            var ctx = new LaunchContext
+            var gameDirectory = _instances.GameDirectory(instanceId);
+            var context = new LaunchContext
             {
                 LaunchId = "repair",
                 Instance = instance,
                 Content = await _instances.ContentOf(instanceId).Load(job.Token),
                 Settings = _settings.Current,
-                GamePath = _installer.PathFor(gameDir),
-                GameDir = gameDir
+                GamePath = _installer.PathFor(gameDirectory),
+                GameDir = gameDirectory
             };
             var fixedCount = 0;
             foreach (var phase in new[] { LaunchPhase.Content, LaunchPhase.Compatibility, LaunchPhase.Resources })
             {
-                var results = await runPhase(ctx, phase, job.Token);
+                var results = await runPhase(context, phase, job.Token);
                 // Genau das reparieren, was die Diagnose als Problem zeigt – nicht still nebenbei RAM senken o. Ä.
-                foreach (var result in results.Where(r => IsRepairIssue(r, ctx.Content) && r.Actions.Count > 0))
+                foreach (var result in results.Where(result => IsRepairIssue(result, context.Content) && result.Actions.Count > 0))
                 {
-                    var action = result.Actions.FirstOrDefault(a => a.Primary) ?? result.Actions[0];
+                    var action = result.Actions.FirstOrDefault(candidateAction => candidateAction.Primary) ?? result.Actions[0];
                     if (action.Id is "switch" or "retry" or "login")
                     {
                         continue;
@@ -168,24 +168,24 @@ namespace AxoClient.Launch
 
                     try
                     {
-                        await action.Run(ctx, job.Sub(0, 1));
+                        await action.Run(context, job.Sub(0, 1));
                         fixedCount++;
                     }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    catch (Exception exception) when (exception is not OperationCanceledException)
                     {
                         // Eine Maßnahme, die nicht klappt (z. B. keine passende Version), hält die übrigen nicht auf
-                        _appLog.Warn($"Reparatur {result.CheckId}/{action.Id} fehlgeschlagen", ex);
+                        _appLog.Warn($"Reparatur {result.CheckId}/{action.Id} fehlgeschlagen", exception);
                     }
                 }
-                ctx.Content = await _instances.ContentOf(instanceId).Load(job.Token);
-                ctx.Instance = await _instances.Get(instanceId, job.Token);
+                context.Content = await _instances.ContentOf(instanceId).Load(job.Token);
+                context.Instance = await _instances.Get(instanceId, job.Token);
             }
             return fixedCount;
         }
 
-        private async Task runChecks(LaunchContext ctx, JobContext job, LaunchPhase startPhase, LaunchPhase endPhase, bool interactive)
+        private async Task runChecks(LaunchContext context, JobContext job, LaunchPhase startPhase, LaunchPhase endPhase, bool interactive)
         {
-            var phases = Enum.GetValues<LaunchPhase>().Where(p => p >= startPhase && p <= endPhase).ToList();
+            var phases = Enum.GetValues<LaunchPhase>().Where(value => value >= startPhase && value <= endPhase).ToList();
             // Warnungen, auf die der Nutzer bei diesem Start schon reagiert hat, nicht erneut fragen. Sonst kommt z. B.
             // "nur X MB frei" nach "RAM senken" sofort wieder, weil der freie Arbeitsspeicher ständig schwankt.
             var answered = new HashSet<string>();
@@ -198,46 +198,46 @@ namespace AxoClient.Launch
 
                 for (var round = 0; ; round++)
                 {
-                    var results = await runPhase(ctx, phase, job.Token);
+                    var results = await runPhase(context, phase, job.Token);
 
                     // Auto-Fixes in Prüfungsreihenfolge ausführen
                     var failedFixes = new List<CheckResult>();
-                    foreach (var fix in results.Where(r => r.Severity == Severity.AutoFix))
+                    foreach (var fix in results.Where(result => result.Severity == Severity.AutoFix))
                     {
                         try
                         {
                             job.Report(progressFrom, fix.Message);
-                            _appLog.Info($"Start {ctx.LaunchId}: Auto-Fix {fix.CheckId} ({fix.Message.Code})");
+                            _appLog.Info($"Start {context.LaunchId}: Auto-Fix {fix.CheckId} ({fix.Message.Code})");
                             var sub = new JobContextScope(job, progressFrom, progressTo);
-                            await fix.AutoFix!.Run(ctx, sub.Context);
+                            await fix.AutoFix!.Run(context, sub.Context);
                         }
-                        catch (AxoException ex) when (ex.Code.StartsWith("content.modLock.", StringComparison.Ordinal))
+                        catch (AxoException exception) when (exception.Code.StartsWith("content.modLock.", StringComparison.Ordinal))
                         {
                             // Mod-Schutz: nicht automatisch an gesperrten Mods drehen, Spiel trotzdem starten
-                            ctx.Hints.Add(new TextRef("pipeline.modLockSkipped", ("what", fix.Message.Code)));
+                            context.Hints.Add(new TextRef("pipeline.modLockSkipped", ("what", fix.Message.Code)));
                         }
-                        catch (Exception ex) when (ex is not OperationCanceledException and not LaunchAbortedException)
+                        catch (Exception exception) when (exception is not OperationCanceledException and not LaunchAbortedException)
                         {
-                            _appLog.Warn($"Auto-Fix {fix.CheckId} fehlgeschlagen", ex);
+                            _appLog.Warn($"Auto-Fix {fix.CheckId} fehlgeschlagen", exception);
                             // Bei Mods (z. B. eine Abhängigkeit gibt es nicht für diese Version) darf man trotzdem starten;
                             // fehlen Spieldateien oder der Loader, geht es nicht.
                             var severity = phase is LaunchPhase.Content or LaunchPhase.Compatibility ? Severity.Warning : Severity.Blocker;
                             failedFixes.Add(new CheckResult(fix.CheckId, severity,
-                                new TextRef("pipeline.autoFixFailed", ("what", fix.Message.Code), ("reason", _exceptionHelper.Describe(ex).Code)),
+                                new TextRef("pipeline.autoFixFailed", ("what", fix.Message.Code), ("reason", _exceptionHelper.Describe(exception).Code)),
                                 [new CheckAction("retry", new TextRef("pipeline.action.retry"), (_, _) => Task.CompletedTask, true)],
-                                CanSilence: false, Detail: _exceptionHelper.Describe(ex)));
+                                CanSilence: false, Detail: _exceptionHelper.Describe(exception)));
                         }
                     }
-                    if (results.Any(r => r.Severity == Severity.AutoFix))
+                    if (results.Any(result => result.Severity == Severity.AutoFix))
                     {
-                        ctx.Content = await _instances.ContentOf(ctx.Instance.Id).Load(job.Token);
+                        context.Content = await _instances.ContentOf(context.Instance.Id).Load(job.Token);
                     }
 
-                    var ignored = ctx.Content.IgnoredWarnings.ToHashSet();
+                    var ignored = context.Content.IgnoredWarnings.ToHashSet();
                     var issues = results
-                        .Where(r => r.Severity == Severity.Blocker
-                                    || r.Severity == Severity.Warning && !(r.CanSilence && r.Key != null && ignored.Contains(r.Key))
-                                                                     && !answered.Contains(warningKey(r)))
+                        .Where(result => result.Severity == Severity.Blocker
+                                    || result.Severity == Severity.Warning && !(result.CanSilence && result.Key != null && ignored.Contains(result.Key))
+                                                                     && !answered.Contains(warningKey(result)))
                         .Concat(failedFixes)
                         .ToList();
                     if (issues.Count == 0)
@@ -250,53 +250,53 @@ namespace AxoClient.Launch
                         throw new AxoException("pipeline.blocked");
                     }
 
-                    var views = issues.Select((r, i) => toView(r, i)).ToList();
-                    var decision = await _prompt.Ask(ctx.LaunchId, ctx.Instance.Id, phase, views, job.Token);
+                    var views = issues.Select((issue, index) => toView(issue, index)).ToList();
+                    var decision = await _prompt.Ask(context.LaunchId, context.Instance.Id, phase, views, job.Token);
                     if (decision.Choice == PromptChoice.Cancel)
                     {
                         throw new OperationCanceledException();
                     }
 
-                    foreach (var warning in issues.Where(r => r.Severity == Severity.Warning))
+                    foreach (var warning in issues.Where(issue => issue.Severity == Severity.Warning))
                     {
                         answered.Add(warningKey(warning));
                     }
 
-                    var hasBlocker = issues.Any(r => r.Severity == Severity.Blocker);
+                    var hasBlocker = issues.Any(issue => issue.Severity == Severity.Blocker);
                     if (decision.Choice == PromptChoice.StartAnyway && !hasBlocker)
                     {
-                        await silence(ctx, issues, views, decision.Silence);
+                        await silence(context, issues, views, decision.Silence);
                         break;
                     }
 
                     // Gewählte Maßnahmen ausführen; ohne Auswahl die jeweils erste
-                    for (var i = 0; i < issues.Count; i++)
+                    for (var index = 0; index < issues.Count; index++)
                     {
-                        var issue = issues[i];
-                        var actionId = decision.Actions?.GetValueOrDefault(views[i].Id);
+                        var issue = issues[index];
+                        var actionId = decision.Actions?.GetValueOrDefault(views[index].Id);
                         if (decision.Choice == PromptChoice.StartAnyway && issue.Severity == Severity.Warning)
                         {
                             continue;
                         }
 
-                        var action = issue.Actions.FirstOrDefault(a => a.Id == actionId) ?? issue.Actions.FirstOrDefault();
+                        var action = issue.Actions.FirstOrDefault(candidateAction => candidateAction.Id == actionId) ?? issue.Actions.FirstOrDefault();
                         if (action == null)
                         {
                             continue;
                         }
 
                         job.Report(progressFrom, action.Label);
-                        await action.Run(ctx, new JobContextScope(job, progressFrom, progressTo).Context);
+                        await action.Run(context, new JobContextScope(job, progressFrom, progressTo).Context);
                     }
-                    await silence(ctx, issues, views, decision.Silence);
-                    ctx.Content = await _instances.ContentOf(ctx.Instance.Id).Load(job.Token);
-                    ctx.Instance = await _instances.Get(ctx.Instance.Id, job.Token);
+                    await silence(context, issues, views, decision.Silence);
+                    context.Content = await _instances.ContentOf(context.Instance.Id).Load(job.Token);
+                    context.Instance = await _instances.Get(context.Instance.Id, job.Token);
                 }
             }
             job.Report(1, new TextRef("pipeline.phase.ready"));
         }
 
-        private string warningKey(CheckResult r) => r.Key ?? $"{r.CheckId}:{r.Message.Code}";
+        private string warningKey(CheckResult result) => result.Key ?? $"{result.CheckId}:{result.Message.Code}";
 
         /// <summary>Höchstdauer einer einzelnen Prüfung; Spieldateien (Download, Loader-Installation) laufen als Auto-Fix und zählen nicht.</summary>
         private readonly TimeSpan _checkTimeout = TimeSpan.FromSeconds(45);
@@ -319,60 +319,60 @@ namespace AxoClient.Launch
             _checks = checks.ToList();
         }
 
-        private async Task<List<CheckResult>> runPhase(LaunchContext ctx, LaunchPhase phase, CancellationToken ct)
+        private async Task<List<CheckResult>> runPhase(LaunchContext context, LaunchPhase phase, CancellationToken cancellationToken)
         {
             var results = new List<CheckResult>();
-            foreach (var check in _checks.Where(c => c.Phase == phase))
+            foreach (var check in _checks.Where(check => check.Phase == phase))
             {
-                ct.ThrowIfCancellationRequested();
+                cancellationToken.ThrowIfCancellationRequested();
                 var started = System.Diagnostics.Stopwatch.StartNew();
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(_checkTimeout);
                 try
                 {
                     // WaitAsync: auch eine Prüfung, die das Token nicht beachtet, hält den Start nicht auf
                     // Task.Run: das Zeitlimit greift auch, wenn eine Prüfung vor ihrem ersten await lange rechnet oder liest
-                    results.AddRange(await Task.Run(() => check.Run(ctx, timeout.Token), ct).WaitAsync(_checkTimeout, ct));
+                    results.AddRange(await Task.Run(() => check.Run(context, timeout.Token), cancellationToken).WaitAsync(_checkTimeout, cancellationToken));
                 }
-                catch (Exception ex) when (ex is TimeoutException or OperationCanceledException && !ct.IsCancellationRequested)
+                catch (Exception exception) when (exception is TimeoutException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
                 {
                     // Eine Prüfung, die hängt (z. B. Modrinth antwortet nicht), darf den Start nicht blockieren
-                    _appLog.Warn($"Start {ctx.LaunchId}: Prüfung {check.Id} nach {started.Elapsed.TotalSeconds:0} s abgebrochen");
-                    ctx.Hints.Add(new TextRef("pipeline.checkSkipped", ("check", check.Id)));
+                    _appLog.Warn($"Start {context.LaunchId}: Prüfung {check.Id} nach {started.Elapsed.TotalSeconds:0} s abgebrochen");
+                    context.Hints.Add(new TextRef("pipeline.checkSkipped", ("check", check.Id)));
                     continue;
                 }
-                _appLog.Info($"Start {ctx.LaunchId}: Prüfung {check.Id} fertig ({started.ElapsedMilliseconds} ms)");
+                _appLog.Info($"Start {context.LaunchId}: Prüfung {check.Id} fertig ({started.ElapsedMilliseconds} ms)");
             }
             return results;
         }
 
-        private async Task silence(LaunchContext ctx, List<CheckResult> issues, List<IssueView> views, IReadOnlyCollection<string>? silence)
+        private async Task silence(LaunchContext context, List<CheckResult> issues, List<IssueView> views, IReadOnlyCollection<string>? silence)
         {
             if (silence is not { Count: > 0 })
             {
                 return;
             }
 
-            var keys = issues.Where((r, i) => r.Severity == Severity.Warning && r.CanSilence && r.Key != null && silence.Contains(views[i].Id))
-                .Select(r => r.Key!).ToList();
+            var keys = issues.Where((issue, index) => issue.Severity == Severity.Warning && issue.CanSilence && issue.Key != null && silence.Contains(views[index].Id))
+                .Select(issue => issue.Key!).ToList();
             if (keys.Count == 0)
             {
                 return;
             }
 
-            await _instances.ContentOf(ctx.Instance.Id).Update(doc =>
+            await _instances.ContentOf(context.Instance.Id).Update(document =>
             {
-                foreach (var key in keys.Where(k => !doc.IgnoredWarnings.Contains(k)))
+                foreach (var key in keys.Where(key => !document.IgnoredWarnings.Contains(key)))
                 {
-                    doc.IgnoredWarnings.Add(key);
+                    document.IgnoredWarnings.Add(key);
                 }
             });
         }
 
-        private IssueView toView(CheckResult r, int index) => new(
-            $"{r.CheckId}-{index}", r.Severity, r.Message, r.Detail,
-            r.Actions.Select(a => new ActionView(a.Id, a.Label, a.Primary)).ToList(),
-            r.Severity == Severity.Warning && r.CanSilence && r.Key != null);
+        private IssueView toView(CheckResult result, int index) => new(
+            $"{result.CheckId}-{index}", result.Severity, result.Message, result.Detail,
+            result.Actions.Select(action => new ActionView(action.Id, action.Label, action.Primary)).ToList(),
+            result.Severity == Severity.Warning && result.CanSilence && result.Key != null);
 
         /// <summary>Gibt einem Auto-Fix einen Teil des Fortschrittsbalkens.</summary>
         private sealed class JobContextScope

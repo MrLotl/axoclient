@@ -19,9 +19,9 @@ namespace AxoClient.Launch.Checks
         public override string Id => "running";
         public override LaunchPhase Phase => LaunchPhase.Environment;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            IReadOnlyList<CheckResult> result = _processes.Get(_instances.ProcessKey(ctx.Instance.Id)) == null
+            IReadOnlyList<CheckResult> result = _processes.Get(_instances.ProcessKey(context.Instance.Id)) == null
                 ? [Ok()]
                 : [new CheckResult(Id, Severity.Warning, new TextRef("pipeline.running.warning"),
                     [new CheckAction("switch", new TextRef("pipeline.action.switchToGame"), (_, _) =>

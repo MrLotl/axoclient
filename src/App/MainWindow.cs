@@ -115,11 +115,11 @@ namespace AxoClient.App
 
         public void Run()
         {
-            _ = _host.Start().ContinueWith(t =>
+            _ = _host.Start().ContinueWith(task =>
             {
-                if (t.Exception != null)
+                if (task.Exception != null)
                 {
-                    _appLog.Error("Dienste konnten nicht starten", t.Exception);
+                    _appLog.Error("Dienste konnten nicht starten", task.Exception);
                 }
 
                 _router.Emit("app.ready", null);
@@ -159,9 +159,9 @@ namespace AxoClient.App
                     _pending.Clear();
                 }
             }
-            foreach (var m in queued)
+            foreach (var queuedMessage in queued)
             {
-                post(m);
+                post(queuedMessage);
             }
             _router.Handle(message);
         }
@@ -172,7 +172,7 @@ namespace AxoClient.App
             {
                 _window.SendWebMessage(message);
             }
-            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException or ApplicationException)
+            catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException or ApplicationException)
             {
                 // Fenster wird gerade geschlossen
             }
@@ -184,7 +184,7 @@ namespace AxoClient.App
             {
                 _window.Invoke(action);
             }
-            catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException or ApplicationException)
+            catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException or ApplicationException)
             {
             }
         }
@@ -209,41 +209,41 @@ namespace AxoClient.App
 
         public Task<string[]> OpenFile(string title, (string Name, string[] Extensions)[] filters, bool multi)
         {
-            var tcs = new TaskCompletionSource<string[]>();
+            var completionSource = new TaskCompletionSource<string[]>();
             Invoke(() =>
             {
                 try
                 {
-                    tcs.TrySetResult(_window.ShowOpenFile(title, null, multi, filters) ?? []);
+                    completionSource.TrySetResult(_window.ShowOpenFile(title, null, multi, filters) ?? []);
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    tcs.TrySetException(ex);
+                    completionSource.TrySetException(exception);
                 }
             });
-            return tcs.Task;
+            return completionSource.Task;
         }
 
         public Task<string?> OpenFolder(string title)
         {
-            var tcs = new TaskCompletionSource<string?>();
+            var completionSource = new TaskCompletionSource<string?>();
             Invoke(() =>
             {
                 try
                 {
-                    tcs.TrySetResult(_window.ShowOpenFolder(title, null, false)?.FirstOrDefault());
+                    completionSource.TrySetResult(_window.ShowOpenFolder(title, null, false)?.FirstOrDefault());
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    tcs.TrySetException(ex);
+                    completionSource.TrySetException(exception);
                 }
             });
-            return tcs.Task;
+            return completionSource.Task;
         }
 
         public Task<string?> SaveFile(string title, string suggestedName, (string Name, string[] Extensions)[] filters)
         {
-            var tcs = new TaskCompletionSource<string?>();
+            var completionSource = new TaskCompletionSource<string?>();
             var owner = _window.WindowHandle;
             var thread = new Thread(() =>
             {
@@ -254,21 +254,21 @@ namespace AxoClient.App
                         Title = title,
                         FileName = suggestedName,
                         InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                        Filter = string.Join("|", filters.Select(f => $"{f.Name}|{string.Join(";", f.Extensions)}")),
+                        Filter = string.Join("|", filters.Select(filter => $"{filter.Name}|{string.Join(";", filter.Extensions)}")),
                         AddExtension = true,
                         OverwritePrompt = true
                     };
-                    tcs.TrySetResult(dialog.ShowDialog(new Win32Owner(owner)) == System.Windows.Forms.DialogResult.OK ? dialog.FileName : null);
+                    completionSource.TrySetResult(dialog.ShowDialog(new Win32Owner(owner)) == System.Windows.Forms.DialogResult.OK ? dialog.FileName : null);
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    tcs.TrySetException(ex);
+                    completionSource.TrySetException(exception);
                 }
             });
             thread.SetApartmentState(ApartmentState.STA);
             thread.IsBackground = true;
             thread.Start();
-            return tcs.Task;
+            return completionSource.Task;
         }
 
         private void onGameStarted()
@@ -319,7 +319,7 @@ namespace AxoClient.App
         public string Serialize(object? value) => JsonSerializer.Serialize(value, _jsonHelper.Compact);
 
         /// <summary>Photino will eine Datei: das eingebettete Symbol einmal in den Cache schreiben.</summary>
-        private string? windowIcon(string cacheDir)
+        private string? windowIcon(string cacheDirectory)
         {
             try
             {
@@ -329,18 +329,18 @@ namespace AxoClient.App
                     return null;
                 }
 
-                var path = Path.Combine(cacheDir, "axoclient.ico");
+                var path = Path.Combine(cacheDirectory, "axoclient.ico");
                 if (!File.Exists(path) || new FileInfo(path).Length != stream.Length)
                 {
-                    Directory.CreateDirectory(cacheDir);
+                    Directory.CreateDirectory(cacheDirectory);
                     using var file = File.Create(path);
                     stream.CopyTo(file);
                 }
                 return path;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn("Fenstersymbol", ex);
+                _appLog.Warn("Fenstersymbol", exception);
                 return null;
             }
         }
@@ -351,24 +351,24 @@ namespace AxoClient.App
     {
         public string Text(NotificationItem item)
         {
-            string P(string key) => item.Text.Params?.GetValueOrDefault(key)?.ToString() ?? "";
+            string parameter(string key) => item.Text.Params?.GetValueOrDefault(key)?.ToString() ?? "";
             return item.Type switch
             {
-                "friendRequest" => $"{P("name")} möchte mit dir befreundet sein.",
-                "friendAccepted" => $"{P("name")} hat deine Anfrage angenommen.",
-                "friendOnline" => $"{P("name")} ist online.",
-                "friendOnServer" => $"{P("name")} spielt auf {P("server")}.",
-                "friendOpenWorld" => $"{P("name")} hat eine Welt zum Nachjoinen geöffnet.",
-                "invite" => $"{P("name")} lädt dich ein.",
-                "inbox" => $"{P("name")} hat dir etwas geschickt.",
-                "modUpdates" => $"Updates für {P("instance")} verfügbar.",
-                "modpackUpdates" => $"Modpack-Update für {P("instance")} verfügbar.",
-                "launcherUpdate" => $"AxoClient {P("version")} ist verfügbar.",
+                "friendRequest" => $"{parameter("name")} möchte mit dir befreundet sein.",
+                "friendAccepted" => $"{parameter("name")} hat deine Anfrage angenommen.",
+                "friendOnline" => $"{parameter("name")} ist online.",
+                "friendOnServer" => $"{parameter("name")} spielt auf {parameter("server")}.",
+                "friendOpenWorld" => $"{parameter("name")} hat eine Welt zum Nachjoinen geöffnet.",
+                "invite" => $"{parameter("name")} lädt dich ein.",
+                "inbox" => $"{parameter("name")} hat dir etwas geschickt.",
+                "modUpdates" => $"Updates für {parameter("instance")} verfügbar.",
+                "modpackUpdates" => $"Modpack-Update für {parameter("instance")} verfügbar.",
+                "launcherUpdate" => $"AxoClient {parameter("version")} ist verfügbar.",
                 "jobFinished" => "Download abgeschlossen.",
                 "authExpired" => "Bitte melde dich erneut an.",
                 "lowDiskSpace" => "Der Speicherplatz wird knapp.",
-                "serverCrashed" => $"Der Server {P("server")} wurde unerwartet beendet.",
-                "serverPlayerJoined" => $"{P("player")} ist auf {P("server")}.",
+                "serverCrashed" => $"Der Server {parameter("server")} wurde unerwartet beendet.",
+                "serverPlayerJoined" => $"{parameter("player")} ist auf {parameter("server")}.",
                 "capeReview" => "Dein Cape wurde geprüft.",
                 _ => "Neue Benachrichtigung"
             };

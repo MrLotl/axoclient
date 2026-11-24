@@ -21,22 +21,22 @@ namespace AxoClient.Diagnostics
 
         public string Area => "instances";
 
-        public async Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken ct)
+        public async Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken cancellationToken)
         {
             var items = new List<DiagnosticItem>();
-            foreach (var instance in await _instances.LoadAll(ct))
+            foreach (var instance in await _instances.LoadAll(cancellationToken))
             {
-                var results = await _pipeline.Diagnose(instance.Id, ct);
-                var problems = results.Where(r => r.Severity is Severity.Warning or Severity.Blocker).ToList();
+                var results = await _pipeline.Diagnose(instance.Id, cancellationToken);
+                var problems = results.Where(result => result.Severity is Severity.Warning or Severity.Blocker).ToList();
                 if (problems.Count == 0)
                 {
                     items.Add(new(Area, DiagnosticStatus.Ok, new TextRef("diagnostics.instanceOk", ("name", instance.Name))));
                 }
 
-                foreach (var p in problems)
+                foreach (var problem in problems)
                 {
-                    items.Add(new(Area, p.Severity == Severity.Blocker ? DiagnosticStatus.Error : DiagnosticStatus.Warning,
-                        new TextRef("diagnostics.instanceIssue", ("name", instance.Name)), p.Message, p.Actions.FirstOrDefault()?.Label));
+                    items.Add(new(Area, problem.Severity == Severity.Blocker ? DiagnosticStatus.Error : DiagnosticStatus.Warning,
+                        new TextRef("diagnostics.instanceIssue", ("name", instance.Name)), problem.Message, problem.Actions.FirstOrDefault()?.Label));
                 }
             }
             return items;

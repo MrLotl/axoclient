@@ -12,6 +12,6 @@ namespace AxoClient.Launch.Contract
         /// </summary>
         bool SatisfiesLoosely(string version, string? range);
 
-        int Compare(string a, string b);
+        int Compare(string firstVersion, string secondVersion);
     }
 }

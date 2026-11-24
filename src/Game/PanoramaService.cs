@@ -85,7 +85,7 @@ namespace AxoClient.Game
         /// Wie <see cref="Get"/>, lädt aber das Panorama nach, wenn die Version noch nie gestartet wurde.
         /// Ohne Internet oder bei unbekannten Versionen <c>null</c>.
         /// </summary>
-        public async Task<byte[]?> Fetch(string version, int face = 0, CancellationToken ct = default)
+        public async Task<byte[]?> Fetch(string version, int face = 0, CancellationToken cancellationToken = default)
         {
             if (Get(version, face) is { } local)
             {
@@ -98,12 +98,12 @@ namespace AxoClient.Game
             }
 
             var key = version + ":" + face;
-            if (_failed.TryGetValue(key, out var at) && DateTimeOffset.UtcNow - at < _retryAfterFailure)
+            if (_failed.TryGetValue(key, out var value) && DateTimeOffset.UtcNow - value < _retryAfterFailure)
             {
                 return null;
             }
 
-            var task = _inflight.GetOrAdd(key, _ => download(version, face, ct));
+            var task = _inflight.GetOrAdd(key, _ => download(version, face, cancellationToken));
             try
             {
                 var bytes = await task;
@@ -124,32 +124,32 @@ namespace AxoClient.Game
             }
         }
 
-        private async Task<byte[]?> download(string version, int face, CancellationToken ct)
+        private async Task<byte[]?> download(string version, int face, CancellationToken cancellationToken)
         {
             try
             {
-                var url = await _versions!.UrlOf(version, ct);
+                var url = await _versions!.UrlOf(version, cancellationToken);
                 if (url == null)
                 {
                     return null;
                 }
 
-                var index = (await _api!.GetJson<VersionJson>(url, TimeSpan.FromDays(7), ct)).AssetIndex;
+                var index = (await _api!.GetJson<VersionJson>(url, TimeSpan.FromDays(7), cancellationToken)).AssetIndex;
                 if (index == null)
                 {
                     return null;
                 }
 
-                var objects = (await _api.GetJson<AssetIndexJson>(index.Url, TimeSpan.FromDays(7), ct)).Objects;
-                if (objects == null || !objects.TryGetValue(AssetName + face + ".png", out var obj)
-                    || obj.Hash is not { Length: 40 } hash || !hash.All(char.IsAsciiHexDigit) || obj.Size is < MinBytes or > MaxBytes)
+                var objects = (await _api.GetJson<AssetIndexJson>(index.Url, TimeSpan.FromDays(7), cancellationToken)).Objects;
+                if (objects == null || !objects.TryGetValue(AssetName + face + ".png", out var jsonObject)
+                    || jsonObject.Hash is not { Length: 40 } hash || !hash.All(char.IsAsciiHexDigit) || jsonObject.Size is < MinBytes or > MaxBytes)
                 {
                     return null;
                 }
 
-                using var response = await _api.Send(() => new HttpRequestMessage(HttpMethod.Get, ResourcesHost + hash[..2] + "/" + hash), ct);
-                await _api.EnsureSuccess(response, ct);
-                var bytes = await response.Content.ReadAsByteArrayAsync(ct);
+                using var response = await _api.Send(() => new HttpRequestMessage(HttpMethod.Get, ResourcesHost + hash[..2] + "/" + hash), cancellationToken);
+                await _api.EnsureSuccess(response, cancellationToken);
+                var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
                 // Nur genau das Bild, das Mojang im Index nennt
                 if (bytes.Length > MaxBytes || !Convert.ToHexStringLower(SHA1.HashData(bytes)).Equals(hash, StringComparison.OrdinalIgnoreCase)
                     || !_imageFormats.IsPng(bytes))
@@ -157,15 +157,15 @@ namespace AxoClient.Game
                     return null;
                 }
 
-                var fs = _paths.Fs;
+                var fileSystem = _paths.Fs;
                 var file = cacheFile(version, face);
-                fs.Directory.CreateDirectory(fs.Path.GetDirectoryName(file)!);
-                var temp = file + ".tmp";
-                await fs.File.WriteAllBytesAsync(temp, bytes, ct);
-                fs.File.Move(temp, file, overwrite: true);
+                fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(file)!);
+                var temporary = file + ".tmp";
+                await fileSystem.File.WriteAllBytesAsync(temporary, bytes, cancellationToken);
+                fileSystem.File.Move(temporary, file, overwrite: true);
                 return bytes;
             }
-            catch (Exception ex) when (ex is HttpRequestException or AxoException or IOException or JsonException
+            catch (Exception exception) when (exception is HttpRequestException or AxoException or IOException or JsonException
                                            or TaskCanceledException or UnauthorizedAccessException)
             {
                 return null;
@@ -188,7 +188,7 @@ namespace AxoClient.Game
                 var bytes = _paths.Fs.File.ReadAllBytes(file);
                 return _imageFormats.IsPng(bytes) ? bytes : null;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 return null;
             }
@@ -196,40 +196,40 @@ namespace AxoClient.Game
 
         private byte[]? fromAssets(string version, int face)
         {
-            var fs = _paths.Fs;
+            var fileSystem = _paths.Fs;
             try
             {
-                var versionJson = fs.Path.Combine(_paths.Versions, version, version + ".json");
-                if (!fs.File.Exists(versionJson))
+                var versionJson = fileSystem.Path.Combine(_paths.Versions, version, version + ".json");
+                if (!fileSystem.File.Exists(versionJson))
                 {
                     return null;
                 }
 
                 string? indexId;
-                using (var doc = JsonDocument.Parse(fs.File.ReadAllText(versionJson)))
+                using (var document = JsonDocument.Parse(fileSystem.File.ReadAllText(versionJson)))
                 {
-                    var root = doc.RootElement;
-                    indexId = root.TryGetProperty("assetIndex", out var ai) && ai.TryGetProperty("id", out var id) ? id.GetString()
-                        : root.TryGetProperty("assets", out var a) ? a.GetString() : null;
+                    var root = document.RootElement;
+                    indexId = root.TryGetProperty("assetIndex", out var assetIndex) && assetIndex.TryGetProperty("id", out var id) ? id.GetString()
+                        : root.TryGetProperty("assets", out var assets) ? assets.GetString() : null;
                 }
                 if (indexId == null || !IsValidVersion(indexId))
                 {
                     return null;
                 }
 
-                var indexFile = fs.Path.Combine(_paths.Assets, "indexes", indexId + ".json");
-                if (!fs.File.Exists(indexFile))
+                var indexFile = fileSystem.Path.Combine(_paths.Assets, "indexes", indexId + ".json");
+                if (!fileSystem.File.Exists(indexFile))
                 {
                     return null;
                 }
 
                 string? hash;
-                using (var doc = JsonDocument.Parse(fs.File.ReadAllText(indexFile)))
+                using (var document = JsonDocument.Parse(fileSystem.File.ReadAllText(indexFile)))
                 {
-                    hash = doc.RootElement.TryGetProperty("objects", out var objects)
-                           && objects.TryGetProperty(AssetName + face + ".png", out var obj)
-                           && obj.TryGetProperty("hash", out var h)
-                        ? h.GetString()
+                    hash = document.RootElement.TryGetProperty("objects", out var objects)
+                           && objects.TryGetProperty(AssetName + face + ".png", out var jsonObject)
+                           && jsonObject.TryGetProperty("hash", out var hashElement)
+                        ? hashElement.GetString()
                         : null;
                 }
                 if (hash is not { Length: 40 } || !hash.All(char.IsAsciiHexDigit))
@@ -237,16 +237,16 @@ namespace AxoClient.Game
                     return null;
                 }
 
-                var file = fs.Path.Combine(_paths.Assets, "objects", hash[..2], hash);
-                if (!fs.File.Exists(file) || fs.FileInfo.New(file).Length is < MinBytes or > MaxBytes)
+                var file = fileSystem.Path.Combine(_paths.Assets, "objects", hash[..2], hash);
+                if (!fileSystem.File.Exists(file) || fileSystem.FileInfo.New(file).Length is < MinBytes or > MaxBytes)
                 {
                     return null;
                 }
 
-                var bytes = fs.File.ReadAllBytes(file);
+                var bytes = fileSystem.File.ReadAllBytes(file);
                 return _imageFormats.IsPng(bytes) ? bytes : null;
             }
-            catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or InvalidOperationException)
+            catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException or InvalidOperationException)
             {
                 return null;
             }
@@ -276,7 +276,7 @@ namespace AxoClient.Game
                 var bytes = output.ToArray();
                 return _imageFormats.IsPng(bytes) ? bytes : null;
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
             {
                 return null;
             }
@@ -286,6 +286,6 @@ namespace AxoClient.Game
         public bool IsValidVersion(string version) =>
             version.Length is > 0 and <= 64
             && !version.Contains("..", StringComparison.Ordinal)
-            && version.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or '_');
+            && version.All(character => char.IsAsciiLetterOrDigit(character) || character is '.' or '-' or '_');
     }
 }

@@ -39,17 +39,17 @@ namespace AxoClient.Skins
             _library = new(paths, paths.Skins, paths.SkinLibrary, _textHelper, _pathGuard, _jsonStoreFactory);
         }
 
-        public async Task<IReadOnlyList<SkinView>> List(CancellationToken ct = default)
+        public async Task<IReadOnlyList<SkinView>> List(CancellationToken cancellationToken = default)
         {
             var active = _accounts.Active?.Skin;
-            return (await _library.List(ct))
-                .Select(s => new SkinView(s.Id, s.Name, s.Model, s.Origin.Type, s.Origin.Player, $"/axo/skin-file/{s.Id}", s.Id == active))
+            return (await _library.List(cancellationToken))
+                .Select(skinItem => new SkinView(skinItem.Id, skinItem.Name, skinItem.Model, skinItem.Origin.Type, skinItem.Origin.Player, $"/axo/skin-file/{skinItem.Id}", skinItem.Id == active))
                 .ToList();
         }
 
         public string? FilePath(string id) => _library.FilePathById(id);
 
-        public async Task<SkinView> Add(byte[] png, string name, SkinModel model, SkinOrigin? origin = null, CancellationToken ct = default)
+        public async Task<SkinView> Add(byte[] png, string name, SkinModel model, SkinOrigin? origin = null, CancellationToken cancellationToken = default)
         {
             if (!_skinFiles.IsValidSkin(png))
             {
@@ -60,92 +60,92 @@ namespace AxoClient.Skins
             var item = new SkinItem
             {
                 Id = id,
-                Name = _textHelper.Clean(name, 40) is { Length: > 0 } n ? n : "Skin",
+                Name = _textHelper.Clean(name, 40) is { Length: > 0 } cleanName ? cleanName : "Skin",
                 File = id + ".png",
                 Model = model,
                 Origin = origin ?? new SkinOrigin()
             };
-            await _library.Add(item, png, ct);
+            await _library.Add(item, png, cancellationToken);
             _events.Publish("skins.changed");
             return new SkinView(item.Id, item.Name, item.Model, item.Origin.Type, item.Origin.Player, $"/axo/skin-file/{item.Id}", false);
         }
 
         /// <summary>"Von Spieler übernehmen": Skin eines anderen Spielers in die Bibliothek legen.</summary>
-        public async Task<SkinView> AdoptFromPlayer(string playerName, CancellationToken ct)
+        public async Task<SkinView> AdoptFromPlayer(string playerName, CancellationToken cancellationToken)
         {
-            var found = await _mojang.LookUp(playerName, ct) ?? throw new AxoException("skins.playerNotFound");
-            var textures = await _mojang.GetTextures(found.Uuid, ct);
+            var found = await _mojang.LookUp(playerName, cancellationToken) ?? throw new AxoException("skins.playerNotFound");
+            var textures = await _mojang.GetTextures(found.Uuid, cancellationToken);
             if (textures?.SkinUrl == null)
             {
                 throw new AxoException("skins.playerHasNoSkin");
             }
 
-            var png = await _mojang.DownloadTexture(textures.SkinUrl, ct);
-            return await Add(png, found.Name, textures.Model, new SkinOrigin { Type = SkinOriginType.Player, Player = found.Name }, ct);
+            var png = await _mojang.DownloadTexture(textures.SkinUrl, cancellationToken);
+            return await Add(png, found.Name, textures.Model, new SkinOrigin { Type = SkinOriginType.Player, Player = found.Name }, cancellationToken);
         }
 
-        public async Task Update(string id, string? name, SkinModel? model, byte[]? newPng, CancellationToken ct)
+        public async Task Update(string id, string? name, SkinModel? model, byte[]? newPng, CancellationToken cancellationToken)
         {
             if (newPng != null)
             {
-                var old = await _library.Get(id, ct) ?? throw new AxoException("errors.notFound");
-                await _library.Remove(id, ct);
-                await Add(newPng, name ?? old.Name, model ?? old.Model, old.Origin, ct);
+                var old = await _library.Get(id, cancellationToken) ?? throw new AxoException("errors.notFound");
+                await _library.Remove(id, cancellationToken);
+                await Add(newPng, name ?? old.Name, model ?? old.Model, old.Origin, cancellationToken);
                 return;
             }
-            await _library.Update(id, s =>
+            await _library.Update(id, skinItem =>
             {
                 if (name != null)
                 {
-                    s.Name = _textHelper.Clean(name, 40) is { Length: > 0 } n ? n : s.Name;
+                    skinItem.Name = _textHelper.Clean(name, 40) is { Length: > 0 } cleanName ? cleanName : skinItem.Name;
                 }
 
                 if (model != null)
                 {
-                    s.Model = model.Value;
+                    skinItem.Model = model.Value;
                 }
-            }, ct);
+            }, cancellationToken);
             _events.Publish("skins.changed");
         }
 
-        public async Task Remove(string id, CancellationToken ct)
+        public async Task Remove(string id, CancellationToken cancellationToken)
         {
-            await _library.Remove(id, ct);
+            await _library.Remove(id, cancellationToken);
             _events.Publish("skins.changed");
         }
 
         /// <summary>Skin bei Mojang hochladen und für den aktiven Account merken.</summary>
-        public async Task<MojangProfile> Apply(string id, CancellationToken ct)
+        public async Task<MojangProfile> Apply(string id, CancellationToken cancellationToken)
         {
-            var item = await _library.Get(id, ct) ?? throw new AxoException("errors.notFound");
-            var png = await File.ReadAllBytesAsync(_library.FilePath(item), ct);
-            var profile = await _mojang.UploadSkin(png, item.Model, ct);
+            var item = await _library.Get(id, cancellationToken) ?? throw new AxoException("errors.notFound");
+            var png = await File.ReadAllBytesAsync(_library.FilePath(item), cancellationToken);
+            var profile = await _mojang.UploadSkin(png, item.Model, cancellationToken);
             if (_accounts.Active is { } account)
             {
-                await _accounts.UpdateEntry(account.Uuid, a => a.Skin = id);
+                await _accounts.UpdateEntry(account.Uuid, accountEntry => accountEntry.Skin = id);
             }
 
-            await CacheOwnSkin(profile, ct);
+            await CacheOwnSkin(profile, cancellationToken);
             _events.Publish("skins.changed");
             return profile;
         }
 
         /// <summary>Den aktuellen Mojang-Skin des Accounts in den Kopf-Cache legen.</summary>
-        public async Task CacheOwnSkin(MojangProfile profile, CancellationToken ct)
+        public async Task CacheOwnSkin(MojangProfile profile, CancellationToken cancellationToken)
         {
             if (profile.SkinUrl == null)
             {
                 return;
             }
 
-            var png = await _mojang.DownloadTexture(profile.SkinUrl, ct);
+            var png = await _mojang.DownloadTexture(profile.SkinUrl, cancellationToken);
             Directory.CreateDirectory(_paths.Heads);
-            await File.WriteAllBytesAsync(Path.Combine(_paths.Heads, profile.Uuid.Replace("-", "") + ".png"), png, ct);
+            await File.WriteAllBytesAsync(Path.Combine(_paths.Heads, profile.Uuid.Replace("-", "") + ".png"), png, cancellationToken);
             _events.Publish("accounts.changed");
         }
 
         /// <summary>Skin-PNG eines Spielers für Köpfe (Cache 1 Tag, sonst von Mojang).</summary>
-        public async Task<byte[]?> PlayerSkin(string uuid, CancellationToken ct)
+        public async Task<byte[]?> PlayerSkin(string uuid, CancellationToken cancellationToken)
         {
             var compact = uuid.Replace("-", "").ToLowerInvariant();
             if (compact.Length != 32 || !compact.All(Uri.IsHexDigit))
@@ -156,25 +156,25 @@ namespace AxoClient.Skins
             var cache = Path.Combine(_paths.Heads, compact + ".png");
             if (File.Exists(cache) && DateTime.UtcNow - File.GetLastWriteTimeUtc(cache) < TimeSpan.FromDays(1))
             {
-                return await File.ReadAllBytesAsync(cache, ct);
+                return await File.ReadAllBytesAsync(cache, cancellationToken);
             }
 
             try
             {
-                var textures = await _mojang.GetTextures(compact, ct);
+                var textures = await _mojang.GetTextures(compact, cancellationToken);
                 if (textures?.SkinUrl == null)
                 {
-                    return File.Exists(cache) ? await File.ReadAllBytesAsync(cache, ct) : null;
+                    return File.Exists(cache) ? await File.ReadAllBytesAsync(cache, cancellationToken) : null;
                 }
 
-                var png = await _mojang.DownloadTexture(textures.SkinUrl, ct);
+                var png = await _mojang.DownloadTexture(textures.SkinUrl, cancellationToken);
                 Directory.CreateDirectory(_paths.Heads);
-                await File.WriteAllBytesAsync(cache, png, ct);
+                await File.WriteAllBytesAsync(cache, png, cancellationToken);
                 return png;
             }
-            catch (Exception ex) when (ex is HttpRequestException or AxoException or IOException)
+            catch (Exception exception) when (exception is HttpRequestException or AxoException or IOException)
             {
-                return File.Exists(cache) ? await File.ReadAllBytesAsync(cache, ct) : null;
+                return File.Exists(cache) ? await File.ReadAllBytesAsync(cache, cancellationToken) : null;
             }
         }
     }

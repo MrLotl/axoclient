@@ -52,45 +52,45 @@ namespace AxoClient.App.Bridge
         private const long MaxExtractBytes = 8L * 1024 * 1024 * 1024;
         private const int MaxExtractEntries = 200_000;
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
             // Andere Launcher an ihren Standard-Speicherorten durchsuchen
-            r.On("import.scan", async _ =>
+            router.On("import.scan", async _ =>
                 await _jobs.Run("import.scan", new TextRef("import.scanTitle"), job => _foreign.Scan(job)));
 
             // Ausgewählte Instanzen übernehmen. Ergebnis pro Instanz (mit Hinweisen), die UI zeigt eine Zusammenfassung.
-            r.On<ForeignImportData>("import.run", async (d, _) =>
+            router.On<ForeignImportData>("import.run", async (request, _) =>
             {
-                if (d.Choices.Count == 0)
+                if (request.Choices.Count == 0)
                 {
                     throw new AxoException("errors.invalidInput");
                 }
 
-                var results = await _jobs.Run("import.run", new TextRef("import.runTitle", ("count", d.Choices.Count)),
-                    job => _foreignImport.Import(d.Choices, job));
+                var results = await _jobs.Run("import.run", new TextRef("import.runTitle", ("count", request.Choices.Count)),
+                    job => _foreignImport.Import(request.Choices, job));
                 await _instances.List();
                 return results;
             });
 
             // In eine bestehende Instanz übernehmen: andere AxoClient-Instanzen als zusätzliche Quelle
-            r.On<IdData>("import.ownSources", async (d, ct) => await _transfer.OwnSources(TextHelper.RequireId(d.Id), ct));
+            router.On<IdData>("import.ownSources", async (request, cancellationToken) => await _transfer.OwnSources(TextHelper.RequireId(request.Id), cancellationToken));
 
-            r.On<TransferData>("import.into", async (d, _) =>
+            router.On<TransferData>("import.into", async (request, _) =>
             {
-                var target = TextHelper.RequireId(d.TargetId);
+                var target = TextHelper.RequireId(request.TargetId);
                 if (_games.IsRunning(target))
                 {
                     throw new AxoException("instances.running");
                 }
 
                 var result = await _jobs.Run("import.into", new TextRef("transfer.title"),
-                    job => _transfer.Transfer(d.SourceId, target, d.Parts, job), target);
+                    job => _transfer.Transfer(request.SourceId, target, request.Parts, job), target);
                 await _instances.List();
                 return result;
             });
 
             // Ordner einer Instanz (z. B. aus einem portablen Launcher) wählen
-            r.On("import.folder", async _ =>
+            router.On("import.folder", async _ =>
             {
                 var folder = await window.OpenFolder("Instanzordner wählen");
                 if (folder == null)
@@ -103,9 +103,9 @@ namespace AxoClient.App.Bridge
 
             // Datei: .mrpack und AxoClient-Backups direkt; andere ZIPs (Prism/MultiMC-Export, CurseForge-Modpack) werden
             // entpackt und wie ein fremder Ordner gelesen – die UI zeigt sie dann zur Kontrolle wie eine gefundene Instanz.
-            r.On<FileRefData>("import.file", async (d, _) =>
+            router.On<FileRefData>("import.file", async (request, _) =>
             {
-                var path = _files.Resolve(d.FileRef);
+                var path = _files.Resolve(request.FileRef);
                 if (isDirectImport(path))
                 {
                     var instance = await _jobs.Run("instance.import", new TextRef("instances.importing", ("file", Path.GetFileName(path))),
@@ -142,24 +142,24 @@ namespace AxoClient.App.Bridge
         {
             Directory.CreateDirectory(target);
             using var zip = ZipFile.OpenRead(archive);
-            if (zip.Entries.Count > MaxExtractEntries || zip.Entries.Sum(e => e.Length) > MaxExtractBytes)
+            if (zip.Entries.Count > MaxExtractEntries || zip.Entries.Sum(zipEntry => zipEntry.Length) > MaxExtractBytes)
             {
                 throw new AxoException("import.tooLarge");
             }
 
-            var files = zip.Entries.Where(e => !e.FullName.EndsWith('/')).ToList();
-            for (var i = 0; i < files.Count; i++)
+            var files = zip.Entries.Where(zipEntry => !zipEntry.FullName.EndsWith('/')).ToList();
+            for (var index = 0; index < files.Count; index++)
             {
                 job.Token.ThrowIfCancellationRequested();
-                var destination = _pathGuard.Combine(target, files[i].FullName);
+                var destination = _pathGuard.Combine(target, files[index].FullName);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                await using (var from = files[i].Open())
+                await using (var from = files[index].Open())
                 await using (var to = File.Create(destination))
                 {
                     await from.CopyToAsync(to, job.Token);
                 }
 
-                job.Report((double)(i + 1) / files.Count);
+                job.Report((double)(index + 1) / files.Count);
             }
             var root = target;
             while (Directory.GetFiles(root).Length == 0 && Directory.GetDirectories(root) is [var only])

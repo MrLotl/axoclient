@@ -23,47 +23,47 @@ namespace AxoClient.Tests
         public async Task MissingFileGivesDefaults()
         {
             var store = new JsonStore<TestDoc>(new MockFileSystem(), Path, new JsonHelper(), new AppLog(new LogRedactor()));
-            var doc = await store.Load();
-            Assert.Equal("", doc.Name);
+            var document = await store.Load();
+            Assert.Equal("", document.Name);
         }
 
         [Fact]
         public async Task SaveAndLoadRoundTrip()
         {
-            var fs = new MockFileSystem();
-            var store = new JsonStore<TestDoc>(fs, Path, new JsonHelper(), new AppLog(new LogRedactor()));
+            var fileSystem = new MockFileSystem();
+            var store = new JsonStore<TestDoc>(fileSystem, Path, new JsonHelper(), new AppLog(new LogRedactor()));
             await store.Save(new TestDoc { Name = "Survival", Count = 3 });
-            var doc = await new JsonStore<TestDoc>(fs, Path, new JsonHelper(), new AppLog(new LogRedactor())).Load();
-            Assert.Equal("Survival", doc.Name);
-            Assert.Equal(3, doc.Count);
-            Assert.False(fs.File.Exists(Path + ".tmp"));
+            var document = await new JsonStore<TestDoc>(fileSystem, Path, new JsonHelper(), new AppLog(new LogRedactor())).Load();
+            Assert.Equal("Survival", document.Name);
+            Assert.Equal(3, document.Count);
+            Assert.False(fileSystem.File.Exists(Path + ".tmp"));
         }
 
         [Fact]
         public async Task BrokenFileIsMovedAside()
         {
-            var fs = new MockFileSystem(new Dictionary<string, MockFileData> { [Path] = new("{ kaputt") });
-            var store = new JsonStore<TestDoc>(fs, Path, new JsonHelper(), new AppLog(new LogRedactor()));
-            var doc = await store.Load();
-            Assert.NotNull(doc);
+            var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData> { [Path] = new("{ kaputt") });
+            var store = new JsonStore<TestDoc>(fileSystem, Path, new JsonHelper(), new AppLog(new LogRedactor()));
+            var document = await store.Load();
+            Assert.NotNull(document);
             Assert.True(store.RecoveredFromBrokenFile);
         }
 
         [Fact]
         public async Task MigrationsRunInOrder()
         {
-            var fs = new MockFileSystem(new Dictionary<string, MockFileData>
+            var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 [Path] = new("""{ "formatVersion": 1, "title": "Alt" }""")
             });
-            var store = new JsonStore<TestDoc>(fs, Path, new JsonHelper(), new AppLog(new LogRedactor()), 2, [new JsonMigration(1, o =>
+            var store = new JsonStore<TestDoc>(fileSystem, Path, new JsonHelper(), new AppLog(new LogRedactor()), 2, [new JsonMigration(1, jsonObject =>
             {
-                o["name"] = o["title"]?.GetValue<string>();
-                o.Remove("title");
+                jsonObject["name"] = jsonObject["title"]?.GetValue<string>();
+                jsonObject.Remove("title");
             })]);
-            var doc = await store.Load();
-            Assert.Equal("Alt", doc.Name);
-            Assert.Equal(2, doc.FormatVersion);
+            var document = await store.Load();
+            Assert.Equal("Alt", document.Name);
+            Assert.Equal(2, document.FormatVersion);
         }
     }
 
@@ -200,34 +200,34 @@ namespace AxoClient.Tests
         [Fact]
         public void OldCustomBecomesSavedGradient()
         {
-            var a = new AppearanceSettings { Preset = "custom", Accent = new AccentGradient("#112233", "#445566", 90) };
-            _appearance.Validate(a);
-            var saved = Assert.Single(a.CustomGradients);
-            Assert.Equal(Appearance.CustomPrefix + saved.Id, a.Preset);
-            Assert.Equal(new AccentGradient("#112233", "#445566", 90), a.Accent);
+            var appearanceSettings = new AppearanceSettings { Preset = "custom", Accent = new AccentGradient("#112233", "#445566", 90) };
+            _appearance.Validate(appearanceSettings);
+            var saved = Assert.Single(appearanceSettings.CustomGradients);
+            Assert.Equal(Appearance.CustomPrefix + saved.Id, appearanceSettings.Preset);
+            Assert.Equal(new AccentGradient("#112233", "#445566", 90), appearanceSettings.Accent);
         }
 
         [Fact]
         public void AccentFollowsSelectedCustomGradient()
         {
-            var a = new AppearanceSettings
+            var appearanceSettings = new AppearanceSettings
             {
                 Preset = "custom:abc",
                 Accent = new AccentGradient("#000000", "#000000", 0),
                 CustomGradients = [new CustomGradient("abc", "#ff0000", "#00ff00", 400), new CustomGradient("bad", "red", "#00ff00", 0)]
             };
-            _appearance.Validate(a);
-            Assert.Single(a.CustomGradients);
-            Assert.Equal(new AccentGradient("#ff0000", "#00ff00", 360), a.Accent);
+            _appearance.Validate(appearanceSettings);
+            Assert.Single(appearanceSettings.CustomGradients);
+            Assert.Equal(new AccentGradient("#ff0000", "#00ff00", 360), appearanceSettings.Accent);
         }
 
         [Fact]
         public void MissingCustomGradientFallsBackToAxo()
         {
-            var a = new AppearanceSettings { Preset = "custom:gone" };
-            _appearance.Validate(a);
-            Assert.Equal("axo", a.Preset);
-            Assert.Equal(_appearance.Presets["axo"], a.Accent);
+            var appearanceSettings = new AppearanceSettings { Preset = "custom:gone" };
+            _appearance.Validate(appearanceSettings);
+            Assert.Equal("axo", appearanceSettings.Preset);
+            Assert.Equal(_appearance.Presets["axo"], appearanceSettings.Accent);
         }
     }
 
@@ -241,22 +241,22 @@ namespace AxoClient.Tests
         [Fact]
         public void BedrockArmsOnlyWithLoop()
         {
-            var anim = parse("""{"animations":{"a":{"loop":true,"bones":{"right_arm":{},"head":{}}}}}""");
-            Assert.Equal((true, true), _emotes.Detect(anim));
+            var animation = parse("""{"animations":{"a":{"loop":true,"bones":{"right_arm":{},"head":{}}}}}""");
+            Assert.Equal((true, true), _emotes.Detect(animation));
         }
 
         [Fact]
         public void BedrockWithLegsIsNotMoving()
         {
-            var anim = parse("""{"animations":{"a":{"loop":"hold_on_last_frame","bones":{"leftLeg":{}}}}}""");
-            Assert.Equal((true, false), _emotes.Detect(anim));
+            var animation = parse("""{"animations":{"a":{"loop":"hold_on_last_frame","bones":{"leftLeg":{}}}}}""");
+            Assert.Equal((true, false), _emotes.Detect(animation));
         }
 
         [Fact]
         public void EmotecraftLoopAsString()
         {
-            var anim = parse("""{"emote":{"isLoop":"true","moves":[{"tick":0,"rightArm":{"pitch":1}}]}}""");
-            Assert.Equal((true, true), _emotes.Detect(anim));
+            var animation = parse("""{"emote":{"isLoop":"true","moves":[{"tick":0,"rightArm":{"pitch":1}}]}}""");
+            Assert.Equal((true, true), _emotes.Detect(animation));
         }
 
         [Fact]

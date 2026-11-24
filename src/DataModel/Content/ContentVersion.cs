@@ -14,6 +14,6 @@ namespace AxoClient.DataModel.Content
         IReadOnlyList<ContentDependency> Dependencies,
         string? Changelog = null)
     {
-        public ContentFile? PrimaryFile => Files.FirstOrDefault(f => f.Primary) ?? Files.FirstOrDefault();
+        public ContentFile? PrimaryFile => Files.FirstOrDefault(file => file.Primary) ?? Files.FirstOrDefault();
     }
 }

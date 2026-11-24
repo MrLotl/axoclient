@@ -9,7 +9,7 @@ namespace AxoClient.Game.Contract
         /// Wie <see cref="Get"/>, lädt aber das Panorama nach, wenn die Version noch nie gestartet wurde.
         /// Ohne Internet oder bei unbekannten Versionen <c>null</c>.
         /// </summary>
-        Task<byte[]?> Fetch(string version, int face = 0, CancellationToken ct = default);
+        Task<byte[]?> Fetch(string version, int face = 0, CancellationToken cancellationToken = default);
 
         /// <summary>Versionsnamen wie „1.21.4“, „24w14a“ oder „1.20.1-pre2“; nichts, was aus dem Ordner führt.</summary>
         bool IsValidVersion(string version);

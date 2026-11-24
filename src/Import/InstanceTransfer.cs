@@ -57,11 +57,11 @@ namespace AxoClient.Import
             string? OwnId, string? ExtraDataDir);
 
         /// <summary>Andere AxoClient-Instanzen als Quelle (für die Auswahl im Dialog).</summary>
-        public async Task<ForeignLauncherView> OwnSources(string exceptId, CancellationToken ct)
+        public async Task<ForeignLauncherView> OwnSources(string exceptId, CancellationToken cancellationToken)
         {
-            var list = (await _instances.List(ct)).Where(i => i.Id != exceptId).Select(i => new ForeignInstanceView(
-                OwnPrefix + i.Id, i.Name, i.Loader, i.MinecraftVersion, i.LoaderVersion,
-                _worlds.Count(Path.Combine(_instances.GameDir(i.Id), "saves")), i.ModCount, false, 0, null, null)).ToList();
+            var list = (await _instances.List(cancellationToken)).Where(instanceSummary => instanceSummary.Id != exceptId).Select(instanceSummary => new ForeignInstanceView(
+                OwnPrefix + instanceSummary.Id, instanceSummary.Name, instanceSummary.Loader, instanceSummary.MinecraftVersion, instanceSummary.LoaderVersion,
+                _worlds.Count(Path.Combine(_instances.GameDirectory(instanceSummary.Id), "saves")), instanceSummary.ModCount, false, 0, null, null)).ToList();
             return new ForeignLauncherView("axoclient", "AxoClient", true, list, null);
         }
 
@@ -69,7 +69,7 @@ namespace AxoClient.Import
         {
             var target = await _instances.Get(targetId, job.Token);
             var source = await resolve(sourceId, job.Token);
-            var to = _instances.GameDir(target.Id);
+            var to = _instances.GameDirectory(target.Id);
             var notes = new List<TextRef>();
 
             if (parts.Worlds)
@@ -82,7 +82,7 @@ namespace AxoClient.Import
             if (parts.Settings)
             {
                 job.Status("transfer.settings");
-                var copied = _optionFiles.Count(f => copyWithBackup(Path.Combine(source.GameDir, f), Path.Combine(to, f)));
+                var copied = _optionFiles.Count(optionFile => copyWithBackup(Path.Combine(source.GameDir, optionFile), Path.Combine(to, optionFile)));
                 notes.Add(new TextRef(copied > 0 ? "transfer.result.settings" : "transfer.result.noSettings"));
                 var added = await mergeServers(Path.Combine(source.GameDir, "servers.dat"), target.Id);
                 if (added > 0)
@@ -120,13 +120,13 @@ namespace AxoClient.Import
             return new ForeignImportResult(target.Name, target.Id, notes, null);
         }
 
-        private async Task<Source> resolve(string id, CancellationToken ct)
+        private async Task<Source> resolve(string id, CancellationToken cancellationToken)
         {
             if (id.StartsWith(OwnPrefix, StringComparison.Ordinal))
             {
-                var own = await _instances.Get(_textHelper.RequireId(id[OwnPrefix.Length..]), ct);
-                var dir = _instances.GameDir(own.Id);
-                return new Source(own.Name, dir, Path.Combine(dir, "mods"), Path.Combine(dir, "config"), own.Loader.Type, own.Minecraft.Version, own.Id, null);
+                var own = await _instances.Get(_textHelper.RequireId(id[OwnPrefix.Length..]), cancellationToken);
+                var directory = _instances.GameDirectory(own.Id);
+                return new Source(own.Name, directory, Path.Combine(directory, "mods"), Path.Combine(directory, "config"), own.Loader.Type, own.Minecraft.Version, own.Id, null);
             }
             var foreign = _scanner.Get(id) ?? throw new AxoException("import.problem.gone");
             if (foreign.Problem != null)
@@ -155,7 +155,7 @@ namespace AxoClient.Import
                 notes.Add(new TextRef("transfer.result.noMods"));
                 return;
             }
-            var to = _instances.GameDir(target.Id);
+            var to = _instances.GameDirectory(target.Id);
             var sameSetup = (source.Loader == null || source.Loader == target.Loader.Type)
                             && (source.Version == null || source.Version == target.Minecraft.Version);
             if (sameSetup)
@@ -172,9 +172,9 @@ namespace AxoClient.Import
                 {
                     await _content.IdentifyLocal(target.Id, job.Token);
                 }
-                catch (Exception ex) when (ex is HttpRequestException or AxoException)
+                catch (Exception exception) when (exception is HttpRequestException or AxoException)
                 {
-                    _appLog.Warn("Übernommene Mods konnten nicht zugeordnet werden", ex);
+                    _appLog.Warn("Übernommene Mods konnten nicht zugeordnet werden", exception);
                 }
                 notes.Add(new TextRef("transfer.result.modsCopied", ("count", copied)));
                 return;
@@ -186,25 +186,25 @@ namespace AxoClient.Import
                 notes.Add(new TextRef("transfer.result.modsMismatch", ("loader", source.Loader?.ToString() ?? "?"), ("version", source.Version ?? "?")));
                 return;
             }
-            var doc = await _instances.ContentOf(source.OwnId).Load(job.Token);
-            var installed = (await _content.Sync(target.Id, job.Token)).Mods.Where(m => m.ProjectId != null).Select(m => m.ProjectId!).ToHashSet();
-            var known = doc.Mods.Where(m => m.Source == ContentSource.Modrinth && m.ProjectId != null && !installed.Contains(m.ProjectId)).ToList();
-            var unknown = doc.Mods.Count(m => m.Source is ContentSource.Local or ContentSource.Friend);
+            var document = await _instances.ContentOf(source.OwnId).Load(job.Token);
+            var installed = (await _content.Sync(target.Id, job.Token)).Mods.Where(mod => mod.ProjectId != null).Select(mod => mod.ProjectId!).ToHashSet();
+            var known = document.Mods.Where(mod => mod.Source == ContentSource.Modrinth && mod.ProjectId != null && !installed.Contains(mod.ProjectId)).ToList();
+            var unknown = document.Mods.Count(mod => mod.Source is ContentSource.Local or ContentSource.Friend);
             var failed = 0;
-            for (var i = 0; i < known.Count; i++)
+            for (var index = 0; index < known.Count; index++)
             {
                 job.Token.ThrowIfCancellationRequested();
-                job.Status("transfer.modsInstalling", ("index", i + 1), ("count", known.Count));
+                job.Status("transfer.modsInstalling", ("index", index + 1), ("count", known.Count));
                 try
                 {
-                    var files = await _content.Install(target.Id, ContentType.Mod, new InstallRequest("modrinth", known[i].ProjectId!),
-                        job.Sub((double)i / known.Count, (double)(i + 1) / known.Count));
-                    if (!known[i].Enabled && files.Count > 0)
+                    var files = await _content.Install(target.Id, ContentType.Mod, new InstallRequest("modrinth", known[index].ProjectId!),
+                        job.Sub((double)index / known.Count, (double)(index + 1) / known.Count));
+                    if (!known[index].Enabled && files.Count > 0)
                     {
                         await _content.SetEnabled(target.Id, ContentType.Mod, files[0], false, job.Token);
                     }
                 }
-                catch (Exception ex) when (ex is AxoException or HttpRequestException)
+                catch (Exception exception) when (exception is AxoException or HttpRequestException)
                 {
                     failed++;
                 }
@@ -233,7 +233,7 @@ namespace AxoClient.Import
             {
                 root = _nbtReader.ReadFile(serversDat);
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or EndOfStreamException)
             {
                 return 0;
             }
@@ -269,13 +269,13 @@ namespace AxoClient.Import
 
             Directory.CreateDirectory(to);
             var count = 0;
-            foreach (var world in Directory.EnumerateDirectories(from).Where(d => File.Exists(Path.Combine(d, "level.dat"))))
+            foreach (var world in Directory.EnumerateDirectories(from).Where(directory => File.Exists(Path.Combine(directory, "level.dat"))))
             {
                 var name = Path.GetFileName(world);
                 var destination = Path.Combine(to, name);
-                for (var n = 2; Directory.Exists(destination); n++)
+                for (var index = 2; Directory.Exists(destination); index++)
                 {
-                    destination = Path.Combine(to, $"{name} ({n})");
+                    destination = Path.Combine(to, $"{name} ({index})");
                 }
 
                 copyDirectory(world, destination);
@@ -331,15 +331,15 @@ namespace AxoClient.Import
                 return count;
             }
 
-            foreach (var dir in Directory.EnumerateDirectories(from).Where(d => new DirectoryInfo(d).LinkTarget == null))
+            foreach (var directory in Directory.EnumerateDirectories(from).Where(directory => new DirectoryInfo(directory).LinkTarget == null))
             {
-                var destination = Path.Combine(to, Path.GetFileName(dir));
+                var destination = Path.Combine(to, Path.GetFileName(directory));
                 if (Directory.Exists(destination))
                 {
                     continue;
                 }
 
-                copyDirectory(dir, destination);
+                copyDirectory(directory, destination);
                 count++;
             }
             return count;
@@ -356,9 +356,9 @@ namespace AxoClient.Import
                 }
             }
 
-            foreach (var dir in Directory.EnumerateDirectories(from).Where(d => new DirectoryInfo(d).LinkTarget == null))
+            foreach (var directory in Directory.EnumerateDirectories(from).Where(directory => new DirectoryInfo(directory).LinkTarget == null))
             {
-                copyDirectory(dir, Path.Combine(to, Path.GetFileName(dir)));
+                copyDirectory(directory, Path.Combine(to, Path.GetFileName(directory)));
             }
         }
 
@@ -371,9 +371,9 @@ namespace AxoClient.Import
                 input.CopyTo(output);
                 return true;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn($"Beim Übernehmen nicht kopierbar: {Path.GetFileName(from)}", ex);
+                _appLog.Warn($"Beim Übernehmen nicht kopierbar: {Path.GetFileName(from)}", exception);
                 return false;
             }
         }

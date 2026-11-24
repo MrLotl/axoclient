@@ -21,9 +21,9 @@ namespace AxoClient.Accounts
         private readonly Lock _lock = new();
         private JsonObject? _data;
 
-        public TokenStore(IFileSystem fs, string path, IAppLog appLog)
+        public TokenStore(IFileSystem fileSystem, string path, IAppLog appLog)
         {
-            _fs = fs;
+            _fs = fileSystem;
             _path = path;
             _appLog = appLog;
             Protect = data => ProtectedData.Protect(data, _entropy, DataProtectionScope.CurrentUser);
@@ -72,7 +72,7 @@ namespace AxoClient.Accounts
             lock (_lock)
             {
                 var data = load();
-                foreach (var key in data.Select(p => p.Key).Where(predicate).ToList())
+                foreach (var key in data.Select(pair => pair.Key).Where(predicate).ToList())
                 {
                     data.Remove(key);
                 }
@@ -96,25 +96,25 @@ namespace AxoClient.Accounts
                     _data = JsonNode.Parse(Encoding.UTF8.GetString(plain)) as JsonObject;
                 }
             }
-            catch (Exception ex) when (ex is CryptographicException or System.Text.Json.JsonException or IOException)
+            catch (Exception exception) when (exception is CryptographicException or System.Text.Json.JsonException or IOException)
             {
                 // Anderer Windows-Benutzer oder beschädigt: alle müssen sich einmal neu anmelden
-                _appLog.Warn("Gespeicherte Anmeldungen konnten nicht gelesen werden", ex);
+                _appLog.Warn("Gespeicherte Anmeldungen konnten nicht gelesen werden", exception);
             }
             return _data ??= new JsonObject();
         }
 
         private void save(JsonObject data)
         {
-            var dir = _fs.Path.GetDirectoryName(_path);
-            if (!string.IsNullOrEmpty(dir))
+            var directory = _fs.Path.GetDirectoryName(_path);
+            if (!string.IsNullOrEmpty(directory))
             {
-                _fs.Directory.CreateDirectory(dir);
+                _fs.Directory.CreateDirectory(directory);
             }
 
-            var tmp = _path + ".tmp";
-            _fs.File.WriteAllBytes(tmp, Protect(Encoding.UTF8.GetBytes(data.ToJsonString())));
-            _fs.File.Move(tmp, _path, overwrite: true);
+            var temporary = _path + ".tmp";
+            _fs.File.WriteAllBytes(temporary, Protect(Encoding.UTF8.GetBytes(data.ToJsonString())));
+            _fs.File.Move(temporary, _path, overwrite: true);
         }
     }
 }

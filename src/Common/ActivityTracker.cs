@@ -8,9 +8,9 @@ namespace AxoClient.Common
         private readonly IFileSystem _fs;
         private readonly IJsonStoreFactory _jsonStoreFactory;
 
-        public ActivityTracker(IFileSystem fs, IJsonStoreFactory jsonStoreFactory)
+        public ActivityTracker(IFileSystem fileSystem, IJsonStoreFactory jsonStoreFactory)
         {
-            _fs = fs;
+            _fs = fileSystem;
             _jsonStoreFactory = jsonStoreFactory;
         }
 
@@ -53,7 +53,7 @@ namespace AxoClient.Common
             }
 
             // Nur ein Jahr Tageswerte behalten
-            foreach (var old in log.Days.Keys.Where(k => string.CompareOrdinal(k, DateTime.Now.AddDays(-400).ToString("yyyy-MM-dd")) < 0).ToList())
+            foreach (var old in log.Days.Keys.Where(key => string.CompareOrdinal(key, DateTime.Now.AddDays(-400).ToString("yyyy-MM-dd")) < 0).ToList())
             {
                 log.Days.Remove(old);
             }

@@ -10,18 +10,18 @@ namespace AxoClient.Common
             _logRedactor = logRedactor;
         }
 
-        public TextRef Describe(Exception ex)
+        public TextRef Describe(Exception exception)
         {
-            return ex switch
+            return exception switch
             {
-                AxoException axo => axo.Text,
+                AxoException axoException => axoException.Text,
                 OperationCanceledException => new TextRef("errors.cancelled"),
                 HttpRequestException http when http.StatusCode is null => new TextRef("errors.offline"),
                 HttpRequestException http => new TextRef("errors.http", ("status", (int)http.StatusCode!)),
                 UnauthorizedAccessException => new TextRef("errors.accessDenied"),
-                IOException io when io.HResult == unchecked((int)0x80070070) => new TextRef("errors.diskFull"),
-                IOException => new TextRef("errors.io", ("detail", _logRedactor.Redact(ex.Message))),
-                _ => new TextRef("errors.unexpected", ("detail", _logRedactor.Redact(ex.Message)))
+                IOException ioException when ioException.HResult == unchecked((int)0x80070070) => new TextRef("errors.diskFull"),
+                IOException => new TextRef("errors.io", ("detail", _logRedactor.Redact(exception.Message))),
+                _ => new TextRef("errors.unexpected", ("detail", _logRedactor.Redact(exception.Message)))
             };
         }
     }

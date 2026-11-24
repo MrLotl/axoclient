@@ -7,20 +7,20 @@ namespace AxoClient.Common
         private double? _progress;
         private TextRef? _status;
 
-        public JobContext(Action<double?, TextRef?> update, CancellationToken ct)
+        public JobContext(Action<double?, TextRef?> update, CancellationToken cancellationToken)
         {
             _update = update;
-            Token = ct;
+            Token = cancellationToken;
         }
 
-        internal JobContext(Job job, CancellationToken ct) : this(job.Update, ct)
+        internal JobContext(Job job, CancellationToken cancellationToken) : this(job.Update, cancellationToken)
         {
         }
 
         /// <summary>Für Tests und Aufrufe ohne Fortschrittsanzeige.</summary>
         /// <summary>Ohne Fortschrittsanzeige (für Aufrufe außerhalb eines Jobs).</summary>
-        public JobContext(CancellationToken ct = default)
-            : this((_, _) => { }, ct)
+        public JobContext(CancellationToken cancellationToken = default)
+            : this((_, _) => { }, cancellationToken)
         {
         }
 
@@ -34,15 +34,15 @@ namespace AxoClient.Common
             _update(progress, _status);
         }
 
-        public void Status(string code, params (string, object?)[] args) => Report(_progress, new TextRef(code, args));
+        public void Status(string code, params (string, object?)[] arguments) => Report(_progress, new TextRef(code, arguments));
 
         /// <summary>Teilfortschritt für einen Abschnitt [from, to] des Gesamtfortschritts.</summary>
         public IProgress<double> Range(double from, double to) =>
-            new SyncProgress(p => Report(from + (to - from) * Math.Clamp(p, 0, 1)));
+            new SyncProgress(partProgress => Report(from + (to - from) * Math.Clamp(partProgress, 0, 1)));
 
         /// <summary>Ein Kontext, dessen 0..1 auf [from, to] dieses Kontexts abgebildet wird.</summary>
         public JobContext Sub(double from, double to) =>
-            new((p, s) => Report(p is { } v ? from + (to - from) * Math.Clamp(v, 0, 1) : _progress, s), Token);
+            new((partProgress, textRef) => Report(partProgress is { } knownProgress ? from + (to - from) * Math.Clamp(knownProgress, 0, 1) : _progress, textRef), Token);
 
         /// <summary>Ruft sofort auf (Progress&lt;T&gt; würde über den SynchronizationContext posten).</summary>
         private sealed class SyncProgress : IProgress<double>

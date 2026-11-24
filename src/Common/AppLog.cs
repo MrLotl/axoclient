@@ -19,33 +19,33 @@ namespace AxoClient.Common
             _logRedactor = logRedactor;
         }
 
-        public void Initialize(string logsDir)
+        public void Initialize(string logsDirectory)
         {
             if (_writer != null)
             {
                 return;
             }
 
-            _dir = logsDir;
-            Directory.CreateDirectory(logsDir);
+            _dir = logsDirectory;
+            Directory.CreateDirectory(logsDirectory);
             _writer = new Thread(writeLoop) { IsBackground = true, Name = "AppLog" };
             _writer.Start();
         }
 
         public void Info(string message) => write("INFO", message, null);
-        public void Warn(string message, Exception? ex = null) => write("WARN", message, ex);
-        public void Error(string message, Exception? ex = null) => write("ERROR", message, ex);
+        public void Warn(string message, Exception? exception = null) => write("WARN", message, exception);
+        public void Error(string message, Exception? exception = null) => write("ERROR", message, exception);
 
         public string? CurrentFile => _dir == null ? null : Path.Combine(_dir, $"launcher-{DateTime.Now:yyyy-MM-dd}.log");
 
-        private void write(string level, string message, Exception? ex)
+        private void write(string level, string message, Exception? exception)
         {
             var line = new StringBuilder()
                 .Append(DateTime.Now.ToString("HH:mm:ss.fff")).Append(' ').Append(level).Append(' ')
                 .Append(message);
-            if (ex != null)
+            if (exception != null)
             {
-                line.AppendLine().Append(ex);
+                line.AppendLine().Append(exception);
             }
 
             var text = _logRedactor.Redact(line.ToString());

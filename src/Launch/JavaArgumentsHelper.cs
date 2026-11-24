@@ -8,40 +8,40 @@ namespace AxoClient.Launch
     public partial class JavaArgumentsHelper : IJavaArgumentsHelper
     {
         /// <summary>Enthalten die Argumente -Xmx/-Xms (der RAM-Regler hat Vorrang)?</summary>
-        public bool HasMemoryArg(string args)
+        public bool HasMemoryArgument(string arguments)
         {
-            return memoryArg().IsMatch(args);
+            return memoryArgumentPattern().IsMatch(arguments);
         }
 
-        public string StripMemory(string args)
+        public string StripMemory(string arguments)
         {
-            return string.Join(' ', Split(args).Where(a => !memoryArg().IsMatch(a)));
+            return string.Join(' ', Split(arguments).Where(argument => !memoryArgumentPattern().IsMatch(argument)));
         }
 
         /// <summary>Jedes Argument muss mit - beginnen, Anführungszeichen müssen paarig sein, keine Steuerzeichen.</summary>
-        public bool IsValid(string args)
+        public bool IsValid(string arguments)
         {
-            if (args.Count(c => c == '"') % 2 != 0 || args.Any(char.IsControl))
+            if (arguments.Count(character => character == '"') % 2 != 0 || arguments.Any(char.IsControl))
             {
                 return false;
             }
-            var parts = Split(args);
-            return parts.Count > 0 && parts.All(p => p.StartsWith('-') && p.Length > 1)
-                                   && !parts.Any(p => p.StartsWith("-jar", StringComparison.Ordinal) || p is "-cp" or "-classpath");
+            var parts = Split(arguments);
+            return parts.Count > 0 && parts.All(part => part.StartsWith('-') && part.Length > 1)
+                                   && !parts.Any(part => part.StartsWith("-jar", StringComparison.Ordinal) || part is "-cp" or "-classpath");
         }
 
-        public List<string> Split(string args)
+        public List<string> Split(string arguments)
         {
             var result = new List<string>();
             var current = new StringBuilder();
             var quoted = false;
-            foreach (var c in args)
+            foreach (var character in arguments)
             {
-                if (c == '"')
+                if (character == '"')
                 {
                     quoted = !quoted;
                 }
-                else if (char.IsWhiteSpace(c) && !quoted)
+                else if (char.IsWhiteSpace(character) && !quoted)
                 {
                     if (current.Length > 0)
                     {
@@ -51,7 +51,7 @@ namespace AxoClient.Launch
                 }
                 else
                 {
-                    current.Append(c);
+                    current.Append(character);
                 }
             }
             if (current.Length > 0)
@@ -62,6 +62,6 @@ namespace AxoClient.Launch
         }
 
         [GeneratedRegex(@"(^|\s)-Xm[xs]\d+[kKmMgG]?\b")]
-        private partial Regex memoryArg();
+        private partial Regex memoryArgumentPattern();
     }
 }

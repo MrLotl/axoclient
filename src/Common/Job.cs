@@ -27,7 +27,7 @@ namespace AxoClient.Common
 
         public void Update(double? progress, TextRef? status)
         {
-            Progress = progress is { } p ? Math.Clamp(p, 0, 1) : null;
+            Progress = progress is { } knownProgress ? Math.Clamp(knownProgress, 0, 1) : null;
             var statusChanged = status != Status;
             Status = status;
             // Fortschritt höchstens ~15 mal pro Sekunde an die UI

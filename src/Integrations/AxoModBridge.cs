@@ -66,28 +66,28 @@ namespace AxoClient.Integrations
             _ = acceptLoop(_cts.Token);
         }
 
-        IEnumerable<string> IGameLaunchHook.JvmArguments(LaunchContext ctx)
+        IEnumerable<string> IGameLaunchHook.JvmArguments(LaunchContext context)
         {
-            if (!ctx.Instance.AxoMod || _listener == null)
+            if (!context.Instance.AxoMod || _listener == null)
             {
                 return [];
             }
 
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
-            _tokens[ctx.Instance.Id] = token;
+            _tokens[context.Instance.Id] = token;
             return
             [
                 $"-Daxoclient.ipc=127.0.0.1:{Port}",
                 $"-Daxoclient.token={token}",
-                $"-Daxoclient.instance={ctx.Instance.Id}",
+                $"-Daxoclient.instance={context.Instance.Id}",
                 $"-Daxoclient.api={_appInfo.ServiceUrl}/v2"
             ];
         }
 
-        void IGameLaunchHook.OnExited(LaunchContext ctx, RunningProcess process, int exitCode, bool crashed)
+        void IGameLaunchHook.OnExited(LaunchContext context, RunningProcess process, int exitCode, bool crashed)
         {
-            _tokens.TryRemove(ctx.Instance.Id, out _);
-            if (_sockets.TryRemove(ctx.Instance.Id, out var socket))
+            _tokens.TryRemove(context.Instance.Id, out _);
+            if (_sockets.TryRemove(context.Instance.Id, out var socket))
             {
                 socket.Abort();
             }
@@ -114,7 +114,7 @@ namespace AxoClient.Integrations
                         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                         await socket.SendAsync(bytes, WebSocketMessageType.Text, true, timeout.Token);
                     }
-                    catch (Exception ex) when (ex is WebSocketException or IOException or ObjectDisposedException or OperationCanceledException)
+                    catch (Exception exception) when (exception is WebSocketException or IOException or ObjectDisposedException or OperationCanceledException)
                     {
                     }
                 }
@@ -126,35 +126,35 @@ namespace AxoClient.Integrations
         }
 
         /// <summary>Instanzen, deren Mod gerade verbunden ist.</summary>
-        public IReadOnlyList<string> ConnectedInstances => _sockets.Where(s => s.Value.State == WebSocketState.Open).Select(s => s.Key).ToList();
+        public IReadOnlyList<string> ConnectedInstances => _sockets.Where(socket => socket.Value.State == WebSocketState.Open).Select(socket => socket.Key).ToList();
 
-        public bool IsConnected(string instanceId) => _sockets.TryGetValue(instanceId, out var s) && s.State == WebSocketState.Open;
+        public bool IsConnected(string instanceId) => _sockets.TryGetValue(instanceId, out var value) && value.State == WebSocketState.Open;
 
-        private async Task acceptLoop(CancellationToken ct)
+        private async Task acceptLoop(CancellationToken cancellationToken)
         {
-            while (!ct.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 TcpClient client;
                 try
                 {
-                    client = await _listener!.AcceptTcpClientAsync(ct);
+                    client = await _listener!.AcceptTcpClientAsync(cancellationToken);
                 }
-                catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or SocketException)
+                catch (Exception exception) when (exception is OperationCanceledException or ObjectDisposedException or SocketException)
                 {
                     return;
                 }
-                _ = handle(client, ct);
+                _ = handle(client, cancellationToken);
             }
         }
 
-        private async Task handle(TcpClient client, CancellationToken ct)
+        private async Task handle(TcpClient client, CancellationToken cancellationToken)
         {
             using var tcp = client;
             var stream = client.GetStream();
             try
             {
                 // HTTP-Upgrade lesen (höchstens 8 KB)
-                var request = await readHeaders(stream, ct);
+                var request = await readHeaders(stream, cancellationToken);
                 var key = header(request, "Sec-WebSocket-Key");
                 var path = request.Split("\r\n")[0].Split(' ').ElementAtOrDefault(1) ?? "";
                 var query = path.Contains('?') ? System.Web.HttpUtility.ParseQueryString(path[(path.IndexOf('?') + 1)..]) : null;
@@ -163,23 +163,23 @@ namespace AxoClient.Integrations
                 if (key == null || instance == null || token == null || !_tokens.TryGetValue(instance, out var expected)
                     || !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(expected)))
                 {
-                    await stream.WriteAsync("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n"u8.ToArray(), ct);
+                    await stream.WriteAsync("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n"u8.ToArray(), cancellationToken);
                     return;
                 }
 
                 var accept = Convert.ToBase64String(SHA1.HashData(Encoding.ASCII.GetBytes(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
                 await stream.WriteAsync(Encoding.ASCII.GetBytes(
                     "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
-                    $"Sec-WebSocket-Accept: {accept}\r\n\r\n"), ct);
+                    $"Sec-WebSocket-Accept: {accept}\r\n\r\n"), cancellationToken);
 
                 using var socket = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, TimeSpan.FromSeconds(20));
                 _sockets[instance] = socket;
                 var buffer = new byte[64 * 1024];
                 using var message = new MemoryStream();
                 var tooLarge = false;
-                while (socket.State == WebSocketState.Open && !ct.IsCancellationRequested)
+                while (socket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
                 {
-                    var result = await socket.ReceiveAsync(buffer, ct);
+                    var result = await socket.ReceiveAsync(buffer, cancellationToken);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
                         break;
@@ -193,7 +193,7 @@ namespace AxoClient.Integrations
                         }
                         else
                         {
-                            await message.WriteAsync(buffer.AsMemory(0, result.Count), ct);
+                            await message.WriteAsync(buffer.AsMemory(0, result.Count), cancellationToken);
                         }
                     }
                     if (!result.EndOfMessage)
@@ -212,8 +212,8 @@ namespace AxoClient.Integrations
 
                     try
                     {
-                        using var doc = JsonDocument.Parse(message.GetBuffer().AsMemory(0, length));
-                        var type = doc.RootElement.GetProperty("type").GetString();
+                        using var document = JsonDocument.Parse(message.GetBuffer().AsMemory(0, length));
+                        var type = document.RootElement.GetProperty("type").GetString();
                         if (type == "hello")
                         {
                             await Send(instance, "welcome", new { protocol = 2, features = Features });
@@ -221,27 +221,27 @@ namespace AxoClient.Integrations
 
                         if (type is { Length: > 0 and < 40 })
                         {
-                            MessageReceived?.Invoke(instance, type, doc.RootElement.TryGetProperty("data", out var data) ? data.Clone() : default);
+                            MessageReceived?.Invoke(instance, type, document.RootElement.TryGetProperty("data", out var data) ? data.Clone() : default);
                         }
                     }
-                    catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
+                    catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException)
                     {
                     }
                 }
                 _sockets.TryRemove(instance, out _);
             }
-            catch (Exception ex) when (ex is IOException or WebSocketException or OperationCanceledException)
+            catch (Exception exception) when (exception is IOException or WebSocketException or OperationCanceledException)
             {
             }
         }
 
-        private async Task<string> readHeaders(NetworkStream stream, CancellationToken ct)
+        private async Task<string> readHeaders(NetworkStream stream, CancellationToken cancellationToken)
         {
             var buffer = new byte[8192];
             var total = 0;
             while (total < buffer.Length)
             {
-                var read = await stream.ReadAsync(buffer.AsMemory(total, buffer.Length - total), ct);
+                var read = await stream.ReadAsync(buffer.AsMemory(total, buffer.Length - total), cancellationToken);
                 if (read == 0)
                 {
                     break;
@@ -257,7 +257,7 @@ namespace AxoClient.Integrations
         }
 
         private string? header(string request, string name) =>
-            request.Split("\r\n").Select(l => l.Split(':', 2)).FirstOrDefault(p => p.Length == 2 && p[0].Trim().Equals(name, StringComparison.OrdinalIgnoreCase))
+            request.Split("\r\n").Select(part => part.Split(':', 2)).FirstOrDefault(headerParts => headerParts.Length == 2 && headerParts[0].Trim().Equals(name, StringComparison.OrdinalIgnoreCase))
                 ?[1].Trim();
 
         public async ValueTask DisposeAsync()

@@ -19,7 +19,7 @@ namespace AxoClient.Common
         }
 
         /// <summary>Gibt den vollen Pfad zurück oder <c>null</c>, wenn <paramref name="relative"/> nicht sicher ist.</summary>
-        public string? SafeCombine(string baseDir, string? relative)
+        public string? SafeCombine(string baseDirectory, string? relative)
         {
             if (string.IsNullOrWhiteSpace(relative) || relative.Length > 260)
             {
@@ -42,12 +42,12 @@ namespace AxoClient.Common
                     return null;
                 }
             }
-            return ResolveInside(baseDir, normalized);
+            return ResolveInside(baseDirectory, normalized);
         }
 
         /// <summary>Wie <see cref="SafeCombine"/>, wirft aber einen übersetzbaren Fehler.</summary>
-        public string Combine(string baseDir, string? relative) =>
-            SafeCombine(baseDir, relative) ?? throw new AxoException("errors.unsafePath",
+        public string Combine(string baseDirectory, string? relative) =>
+            SafeCombine(baseDirectory, relative) ?? throw new AxoException("errors.unsafePath",
                 new() { ["path"] = _textHelper.Clean(relative, 120) });
 
         public string? ResolveInside(string parent, string relative)
@@ -58,7 +58,7 @@ namespace AxoClient.Common
                 var full = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
                 return full.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? full : null;
             }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
             {
                 return null;
             }
@@ -71,7 +71,7 @@ namespace AxoClient.Common
                 var root = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
                 return Path.GetFullPath(path).StartsWith(root, StringComparison.OrdinalIgnoreCase);
             }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
             {
                 return false;
             }

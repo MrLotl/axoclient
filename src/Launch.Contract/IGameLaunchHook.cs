@@ -7,13 +7,13 @@ namespace AxoClient.Launch.Contract
     public interface IGameLaunchHook
     {
         /// <summary>Zusätzliche JVM-Argumente für diesen Start.</summary>
-        IEnumerable<string> JvmArguments(LaunchContext ctx) => [];
+        IEnumerable<string> JvmArguments(LaunchContext context) => [];
 
-        void OnStarted(LaunchContext ctx, RunningProcess process)
+        void OnStarted(LaunchContext context, RunningProcess process)
         {
         }
 
-        void OnExited(LaunchContext ctx, RunningProcess process, int exitCode, bool crashed)
+        void OnExited(LaunchContext context, RunningProcess process, int exitCode, bool crashed)
         {
         }
     }

@@ -14,10 +14,10 @@ namespace AxoClient.Launch.Contract
         /// laufen (AxoClient-Mod, e4mc, neue Dateien eintragen), schwankende Werte (gerade freier Arbeitsspeicher) und
         /// stummgeschaltete Warnungen gehören nicht dazu – sonst meldet auch ein einwandfreies Modpack ständig ein Problem.
         /// </summary>
-        bool IsRepairIssue(CheckResult r, ContentDocument content);
+        bool IsRepairIssue(CheckResult result, ContentDocument content);
 
         /// <summary>Für die Diagnose: alle Prüfungen einer Instanz ohne Dialog und ohne Reparatur.</summary>
-        Task<IReadOnlyList<CheckResult>> Diagnose(string instanceId, CancellationToken ct);
+        Task<IReadOnlyList<CheckResult>> Diagnose(string instanceId, CancellationToken cancellationToken);
 
         /// <summary>
         /// Ein einzelnes Problem aus der Diagnose beheben. <paramref name="index"/> ist die Stelle in der Liste von

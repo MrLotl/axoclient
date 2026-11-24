@@ -62,11 +62,11 @@ namespace AxoClient.Import
                 return results;
             }
 
-            var temp = Path.Combine(Path.GetTempPath(), "axoclient-db-" + Guid.NewGuid().ToString("N")[..8]);
+            var temporary = Path.Combine(Path.GetTempPath(), "axoclient-db-" + Guid.NewGuid().ToString("N")[..8]);
             try
             {
-                Directory.CreateDirectory(temp);
-                var copy = Path.Combine(temp, "copy.db");
+                Directory.CreateDirectory(temporary);
+                var copy = Path.Combine(temporary, "copy.db");
                 foreach (var suffix in new[] { "", "-wal", "-shm" })
                 {
                     if (!File.Exists(file + suffix))
@@ -78,31 +78,31 @@ namespace AxoClient.Import
                     using var to = File.Create(copy + suffix);
                     from.CopyTo(to);
                 }
-                for (var i = 0; i < queryGroups.Length; i++)
+                for (var index = 0; index < queryGroups.Length; index++)
                 {
-                    foreach (var sql in queryGroups[i])
+                    foreach (var sql in queryGroups[index])
                     {
                         if (query(copy, sql) is not { } rows)
                         {
                             continue;
                         }
 
-                        results[i] = rows;
+                        results[index] = rows;
                         break;
                     }
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DllNotFoundException or EntryPointNotFoundException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or DllNotFoundException or EntryPointNotFoundException)
             {
-                _appLog.Warn($"Datenbank {Path.GetFileName(file)} eines anderen Launchers nicht lesbar", ex);
+                _appLog.Warn($"Datenbank {Path.GetFileName(file)} eines anderen Launchers nicht lesbar", exception);
             }
             finally
             {
                 try
                 {
-                    Directory.Delete(temp, true);
+                    Directory.Delete(temporary, true);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
                 }
             }
@@ -111,14 +111,14 @@ namespace AxoClient.Import
 
         private List<string?[]>? query(string file, string sql)
         {
-            if (sqlite3_open_v2(utf8(file), out var db, OpenReadOnly, IntPtr.Zero) != 0)
+            if (sqlite3_open_v2(utf8(file), out var database, OpenReadOnly, IntPtr.Zero) != 0)
             {
-                sqlite3_close(db);
+                sqlite3_close(database);
                 return null;
             }
             try
             {
-                if (sqlite3_prepare_v2(db, utf8(sql), -1, out var statement, IntPtr.Zero) != 0)
+                if (sqlite3_prepare_v2(database, utf8(sql), -1, out var statement, IntPtr.Zero) != 0)
                 {
                     return null;
                 }
@@ -130,9 +130,9 @@ namespace AxoClient.Import
                     while (sqlite3_step(statement) == Row)
                     {
                         var row = new string?[columns];
-                        for (var i = 0; i < columns; i++)
+                        for (var index = 0; index < columns; index++)
                         {
-                            row[i] = Marshal.PtrToStringUTF8(sqlite3_column_text(statement, i));
+                            row[index] = Marshal.PtrToStringUTF8(sqlite3_column_text(statement, index));
                         }
 
                         rows.Add(row);
@@ -146,7 +146,7 @@ namespace AxoClient.Import
             }
             finally
             {
-                sqlite3_close(db);
+                sqlite3_close(database);
             }
         }
 

@@ -59,21 +59,21 @@ namespace AxoClient.Launch.Checks
         public override string Id => "compat";
         public override LaunchPhase Phase => LaunchPhase.Compatibility;
 
-        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            if (!ctx.ContentChanged && !ctx.Settings.Game.CheckModsOnLaunch)
+            if (!context.ContentChanged && !context.Settings.Game.CheckModsOnLaunch)
             {
                 return [Ok()];
             }
 
             var results = new List<CheckResult>();
-            var instance = ctx.Instance;
+            var instance = context.Instance;
             var loader = instance.Loader.Type;
-            var mc = instance.Minecraft.Version;
-            useLoaderVariants(ctx, loader, mc);
-            var mods = ctx.Content.Mods.Where(m => m.Enabled && m.Source != ContentSource.AxoClient).ToList();
+            var minecraftVersion = instance.Minecraft.Version;
+            useLoaderVariants(context, loader, minecraftVersion);
+            var mods = context.Content.Mods.Where(mod => mod.Enabled && mod.Source != ContentSource.AxoClient).ToList();
             var provided = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var mod in mods.Where(m => m.Meta != null))
+            foreach (var mod in mods.Where(mod => mod.Meta != null))
             {
                 if (mod.Meta!.ModId != null)
                 {
@@ -82,10 +82,10 @@ namespace AxoClient.Launch.Checks
 
                 provided.UnionWith(mod.Meta.Provides);
             }
-            var installedProjects = ctx.Content.Mods.Where(m => m.ProjectId != null).Select(m => m.ProjectId!).ToHashSet();
+            var installedProjects = context.Content.Mods.Where(mod => mod.ProjectId != null).Select(mod => mod.ProjectId!).ToHashSet();
             // Was deaktivierte Mods bereitstellen würden: fehlt so eine Abhängigkeit, nicht still neu installieren
             var disabledProviders = new Dictionary<string, ContentEntry>(StringComparer.OrdinalIgnoreCase);
-            foreach (var mod in ctx.Content.Mods.Where(m => !m.Enabled && m.Meta != null && m.Source != ContentSource.AxoClient))
+            foreach (var mod in context.Content.Mods.Where(mod => !mod.Enabled && mod.Meta != null && mod.Source != ContentSource.AxoClient))
             {
                 foreach (var id in mod.Meta!.ModId is { } own ? mod.Meta.Provides.Prepend(own) : mod.Meta.Provides)
                 {
@@ -103,7 +103,7 @@ namespace AxoClient.Launch.Checks
                 var key = $"{mod.Meta?.ModId ?? mod.File}@{(mod.Hashes.Sha1 ?? "")[..Math.Min(8, mod.Hashes.Sha1?.Length ?? 0)]}";
 
                 // Falscher Loader (Quilt lädt auch Fabric-Mods)
-                if (meta is { Loaders.Count: > 0 } && loader != LoaderType.Vanilla && !_modCompatibility.LoaderFits(meta.Loaders, loader, mc))
+                if (meta is { Loaders.Count: > 0 } && loader != LoaderType.Vanilla && !_modCompatibility.LoaderFits(meta.Loaders, loader, minecraftVersion))
                 {
                     results.Add(new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.compat.wrongLoader", ("name", mod.Name),
                             ("modLoader", loaderLabel(meta.Loaders[0])), ("loader", _loaderNames.Display(loader))),
@@ -112,24 +112,24 @@ namespace AxoClient.Launch.Checks
                 }
 
                 // Falsche MC-Version
-                if (meta?.MinecraftRange is { } range && !_versionRange.SatisfiesLoosely(mc, range))
+                if (meta?.MinecraftRange is { } range && !_versionRange.SatisfiesLoosely(minecraftVersion, range))
                 {
                     var actions = new List<CheckAction>();
                     if (mod.ProjectId != null && mod.Source is ContentSource.Modrinth or ContentSource.CurseForge)
                     {
                         actions.Add(new CheckAction("installMatching", new TextRef("pipeline.action.installMatching"),
-                            (c, job) => _content.Install(c.Instance.Id, ContentType.Mod,
+                            (launchContext, job) => _content.Install(launchContext.Instance.Id, ContentType.Mod,
                                 new InstallRequest(mod.Source == ContentSource.CurseForge ? "curseforge" : "modrinth", mod.ProjectId!), job), true));
                     }
 
                     actions.Add(DisableAction(_content, ContentType.Mod, mod.File));
                     results.Add(new CheckResult(Id, Severity.Warning, new TextRef("pipeline.compat.wrongVersion", ("name", mod.Name),
-                        ("range", _textHelper.Clean(range, 40)), ("version", mc)), actions, Key: $"version-mismatch:{key}"));
+                        ("range", _textHelper.Clean(range, 40)), ("version", minecraftVersion)), actions, Key: $"version-mismatch:{key}"));
                 }
 
                 // Loader zu alt (Forge-Versionen tauchen auch als "1.20.1-47.2.0" auf)
                 if (meta?.LoaderRange is { } loaderRange && instance.Loader.Version is { } loaderVersion
-                                                          && !_versionRange.Satisfies(stripMinecraftPrefix(loaderVersion, mc), loaderRange))
+                                                          && !_versionRange.Satisfies(stripMinecraftPrefix(loaderVersion, minecraftVersion), loaderRange))
                 {
                     results.Add(new CheckResult(Id, Severity.Warning, new TextRef("pipeline.compat.loaderTooOld", ("name", mod.Name),
                             ("loader", _loaderNames.Display(loader))),
@@ -151,33 +151,33 @@ namespace AxoClient.Launch.Checks
                 }
 
                 // Fehlende Abhängigkeiten aus den Metadaten
-                foreach (var dep in meta?.Depends ?? [])
+                foreach (var dependency in meta?.Depends ?? [])
                 {
-                    if (_builtin.Contains(dep) || provided.Contains(dep) || (hasFabricApi && dep.StartsWith("fabric-", StringComparison.Ordinal)))
+                    if (_builtin.Contains(dependency) || provided.Contains(dependency) || (hasFabricApi && dependency.StartsWith("fabric-", StringComparison.Ordinal)))
                     {
                         continue;
                     }
 
-                    if (disabledProviders.TryGetValue(dep, out var off))
+                    if (disabledProviders.TryGetValue(dependency, out var off))
                     {
                         // Deaktiviert: nichts nachinstallieren. Vorschlag: die Abhängigkeit wieder aktivieren, sonst die Mod abschalten
                         results.Add(new CheckResult(Id, Severity.Blocker,
                             new TextRef("pipeline.compat.dependencyDisabled", ("name", mod.Name), ("dependency", off.Name)),
                             [
                                 new CheckAction("enableDependency", new TextRef("pipeline.action.enableMod", ("name", off.Name)),
-                                    (c, job) => _content.SetEnabled(c.Instance.Id, ContentType.Mod, off.File, true, job.Token), true),
+                                    (launchContext, job) => _content.SetEnabled(launchContext.Instance.Id, ContentType.Mod, off.File, true, job.Token), true),
                                 DisableAction(_content, ContentType.Mod, mod.File)
                             ], CanSilence: false));
                         continue;
                     }
-                    missing.Add((mod, dep));
+                    missing.Add((mod, dependency));
                 }
 
                 // Fehlende Abhängigkeiten laut Modrinth (Projekt-IDs) – nur, wenn die Jar selbst nichts verrät. Die Angaben
                 // auf Modrinth gelten oft für eine andere Loader-Variante oder sind schon in der Jar enthalten.
                 if (meta == null)
                 {
-                    foreach (var projectId in mod.Dependencies.Where(p => !installedProjects.Contains(p)))
+                    foreach (var projectId in mod.Dependencies.Where(dependency => !installedProjects.Contains(dependency)))
                     {
                         results.Add(installDependency(mod, projectId, mod.Source == ContentSource.CurseForge ? "curseforge" : "modrinth", projectId));
                     }
@@ -186,20 +186,20 @@ namespace AxoClient.Launch.Checks
 
             if (missing.Count > 0)
             {
-                var found = await lookupDependencies(ctx, missing.Select(m => m.Dependency).Distinct(StringComparer.OrdinalIgnoreCase), ct);
-                foreach (var (mod, dep) in missing)
+                var found = await lookupDependencies(context, missing.Select(missingDependency => missingDependency.Dependency).Distinct(StringComparer.OrdinalIgnoreCase), cancellationToken);
+                foreach (var (mod, dependency) in missing)
                 {
-                    results.Add(found.GetValueOrDefault(dep) is { } projectId
-                        ? installDependency(mod, dep, "modrinth", projectId)
+                    results.Add(found.GetValueOrDefault(dependency) is { } projectId
+                        ? installDependency(mod, dependency, "modrinth", projectId)
                         // Warnung statt Blocker: die Erkennung kann sich irren (z. B. ungewöhnlich verpackte Mods), dann soll
                         // man trotzdem starten oder die Meldung stummschalten können
-                        : new CheckResult(Id, Severity.Warning, new TextRef("pipeline.compat.dependencyUnavailable", ("name", mod.Name), ("dependency", dep)),
-                            [DisableAction(_content, ContentType.Mod, mod.File)], Key: $"dependency-missing:{mod.File}:{dep}"));
+                        : new CheckResult(Id, Severity.Warning, new TextRef("pipeline.compat.dependencyUnavailable", ("name", mod.Name), ("dependency", dependency)),
+                            [DisableAction(_content, ContentType.Mod, mod.File)], Key: $"dependency-missing:{mod.File}:{dependency}"));
                 }
             }
 
             // Shader ohne Shader-Mod
-            if (ctx.Content.Shaderpacks.Any(s => s.Enabled) && !provided.Overlaps(["iris", "oculus", "optifine", "optifabric"]))
+            if (context.Content.Shaderpacks.Any(shaderpack => shaderpack.Enabled) && !provided.Overlaps(["iris", "oculus", "optifine", "optifabric"]))
             {
                 var shaderMod = loader is LoaderType.Fabric or LoaderType.Quilt or LoaderType.NeoForge ? "iris"
                     : loader == LoaderType.Forge ? "oculus" : null;
@@ -207,11 +207,11 @@ namespace AxoClient.Launch.Checks
                     shaderMod == null
                         ? []
                         : [new CheckAction("installIris", new TextRef("pipeline.action.installShaderMod", ("name", shaderMod == "iris" ? "Iris" : "Oculus")),
-                            (c, job) => _content.Install(c.Instance.Id, ContentType.Mod, new InstallRequest("modrinth", shaderMod), job), true)],
+                            (launchContext, job) => _content.Install(launchContext.Instance.Id, ContentType.Mod, new InstallRequest("modrinth", shaderMod), job), true)],
                     Key: "shader-without-mod"));
             }
 
-            return results.Count == 0 ? [Ok()] : results.DistinctBy(r => r.Message.ToString()).ToList();
+            return results.Count == 0 ? [Ok()] : results.DistinctBy(result => result.Message.ToString()).ToList();
         }
 
         /// <summary>
@@ -219,27 +219,27 @@ namespace AxoClient.Launch.Checks
         /// mit kurzem Zeitlimit. Sonst dauert die Prüfung bei großen Packs oder gedrosseltem Modrinth Minuten und der Start
         /// scheint bei 60 % zu hängen. Ergebnis: Mod-ID → Projekt-ID (fehlt = nicht gefunden).
         /// </summary>
-        private async Task<Dictionary<string, string>> lookupDependencies(LaunchContext ctx, IEnumerable<string> dependencyIds,
-            CancellationToken ct)
+        private async Task<Dictionary<string, string>> lookupDependencies(LaunchContext context, IEnumerable<string> dependencyIds,
+            CancellationToken cancellationToken)
         {
             var modrinth = _providers.Get("modrinth");
             var found = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             using var gate = new SemaphoreSlim(6);
-            await Task.WhenAll(dependencyIds.Where(d => _textHelper.IsValidId(d.Replace('_', '-'))).Select(async dependencyId =>
+            await Task.WhenAll(dependencyIds.Where(dependencyId => _textHelper.IsValidId(dependencyId.Replace('_', '-'))).Select(async dependencyId =>
             {
-                await gate.WaitAsync(ct);
+                await gate.WaitAsync(cancellationToken);
                 try
                 {
-                    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     timeout.CancelAfter(TimeSpan.FromSeconds(8));
-                    var versions = await modrinth.GetVersions(dependencyId, ctx.Instance.Minecraft.Version, ctx.Instance.Loader.Type,
+                    var versions = await modrinth.GetVersions(dependencyId, context.Instance.Minecraft.Version, context.Instance.Loader.Type,
                         ProjectKind.Mod, timeout.Token);
                     if (versions.Count > 0)
                     {
                         found[dependencyId] = versions[0].ProjectId;
                     }
                 }
-                catch (Exception ex) when (ex is AxoException or HttpRequestException or OperationCanceledException && !ct.IsCancellationRequested)
+                catch (Exception exception) when (exception is AxoException or HttpRequestException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
                 {
                     // Nicht gefunden, nicht erreichbar oder zu langsam: gilt als nicht verfügbar
                 }
@@ -259,7 +259,7 @@ namespace AxoClient.Launch.Checks
             new(Id, Severity.Warning, new TextRef("pipeline.compat.dependencyMissing", ("name", mod.Name), ("dependency", label)),
                 [
                     new CheckAction("installDependency", new TextRef("pipeline.action.installNamed", ("name", label)),
-                        (c, job) => _content.Install(c.Instance.Id, ContentType.Mod, new InstallRequest(source, projectId), job), true),
+                        (context, job) => _content.Install(context.Instance.Id, ContentType.Mod, new InstallRequest(source, projectId), job), true),
                     DisableAction(_content, ContentType.Mod, mod.File)
                 ], Key: $"dependency-missing:{mod.File}:{label}");
 
@@ -267,49 +267,49 @@ namespace AxoClient.Launch.Checks
         /// Neueste Loader-Version, die alle Mods zufriedenstellt, eintragen und speichern. Vorher wurde nur im Speicher
         /// "leer" gesetzt: beim Reparieren passierte nichts, und beim Start kam die empfohlene – oft wieder zu alte – Version.
         /// </summary>
-        private async Task updateLoader(LaunchContext ctx, JobContext job)
+        private async Task updateLoader(LaunchContext context, JobContext job)
         {
-            var loader = ctx.Instance.Loader.Type;
-            var mc = ctx.Instance.Minecraft.Version;
+            var loader = context.Instance.Loader.Type;
+            var minecraftVersion = context.Instance.Minecraft.Version;
             if (_loaders == null || _instances == null)
             {
-                ctx.Instance.Loader = ctx.Instance.Loader with { Version = null };
-                ctx.VersionName = null;
+                context.Instance.Loader = context.Instance.Loader with { Version = null };
+                context.VersionName = null;
                 return;
             }
             job.Status("pipeline.compat.loaderSearching");
-            var ranges = ctx.Content.Mods.Where(m => m.Enabled && m.Meta?.LoaderRange is { Length: > 0 }).Select(m => m.Meta!.LoaderRange!).ToList();
-            var versions = (await _loaders.ListVersions(loader, mc, job.Token))
-                .OrderByDescending(v => stripMinecraftPrefix(v.Version, mc), Comparer<string>.Create(_versionRange.Compare)).ToList();
-            bool Fits(LoaderVersionInfo v) => ranges.All(r => _versionRange.Satisfies(stripMinecraftPrefix(v.Version, mc), r));
-            var pick = versions.FirstOrDefault(v => v.Stable && Fits(v)) ?? versions.FirstOrDefault(Fits)
+            var ranges = context.Content.Mods.Where(mod => mod.Enabled && mod.Meta?.LoaderRange is { Length: > 0 }).Select(mod => mod.Meta!.LoaderRange!).ToList();
+            var versions = (await _loaders.ListVersions(loader, minecraftVersion, job.Token))
+                .OrderByDescending(loaderVersion => stripMinecraftPrefix(loaderVersion.Version, minecraftVersion), Comparer<string>.Create(_versionRange.Compare)).ToList();
+            bool Fits(LoaderVersionInfo loaderVersion) => ranges.All(range => _versionRange.Satisfies(stripMinecraftPrefix(loaderVersion.Version, minecraftVersion), range));
+            var pick = versions.FirstOrDefault(version => version.Stable && Fits(version)) ?? versions.FirstOrDefault(Fits)
                        ?? throw new AxoException("pipeline.compat.noLoaderVersion", new() { ["loader"] = _loaderNames.Display(loader) });
-            _appLog.Info($"Loader für {ctx.Instance.Id}: {ctx.Instance.Loader.Version} → {pick.Version}");
-            ctx.Instance = await _instances.Update(ctx.Instance.Id, new InstanceUpdate(Loader: loader, LoaderVersion: pick.Version),
+            _appLog.Info($"Loader für {context.Instance.Id}: {context.Instance.Loader.Version} → {pick.Version}");
+            context.Instance = await _instances.Update(context.Instance.Id, new InstanceUpdate(Loader: loader, LoaderVersion: pick.Version),
                 job.Token);
             // Neue Version muss vor dem Start installiert werden
-            ctx.VersionName = null;
+            context.VersionName = null;
         }
 
         /// <summary>
         /// Jars mit Metadaten für mehrere Loader (z. B. Collective: Fabric und NeoForge) wurden evtl. mit den Angaben eines
         /// anderen Loaders eingelesen. Für die Prüfung die Angaben zum Loader der Instanz nehmen (nur im Speicher).
         /// </summary>
-        private void useLoaderVariants(LaunchContext ctx, LoaderType loader, string mc)
+        private void useLoaderVariants(LaunchContext context, LoaderType loader, string minecraftVersion)
         {
             if (loader == LoaderType.Vanilla)
             {
                 return;
             }
 
-            foreach (var mod in ctx.Content.Mods)
+            foreach (var mod in context.Content.Mods)
             {
-                if (mod.Meta is not { Loaders.Count: > 1 } meta || _modCompatibility.LoaderFits([meta.Loaders[0]], loader, mc) || !_modCompatibility.LoaderFits(meta.Loaders, loader, mc))
+                if (mod.Meta is not { Loaders.Count: > 1 } meta || _modCompatibility.LoaderFits([meta.Loaders[0]], loader, minecraftVersion) || !_modCompatibility.LoaderFits(meta.Loaders, loader, minecraftVersion))
                 {
                     continue;
                 }
 
-                var path = Path.Combine(ctx.GameDir, "mods", mod.DiskName);
+                var path = Path.Combine(context.GameDir, "mods", mod.DiskName);
                 if (File.Exists(path) && _modMetadataReader.Read(path, _loaderNames.ModrinthId(loader))?.Meta is { } variant)
                 {
                     mod.Meta = variant;
@@ -317,8 +317,8 @@ namespace AxoClient.Launch.Checks
             }
         }
 
-        private string stripMinecraftPrefix(string loaderVersion, string mc) =>
-            loaderVersion.StartsWith(mc + "-", StringComparison.Ordinal) ? loaderVersion[(mc.Length + 1)..] : loaderVersion;
+        private string stripMinecraftPrefix(string loaderVersion, string minecraftVersion) =>
+            loaderVersion.StartsWith(minecraftVersion + "-", StringComparison.Ordinal) ? loaderVersion[(minecraftVersion.Length + 1)..] : loaderVersion;
 
         private string loaderLabel(string id) => id switch
         {
@@ -346,12 +346,12 @@ namespace AxoClient.Launch.Checks
                 return true;
             }
 
-            var versions = mods.Where(m => string.Equals(m.Meta?.ModId, modId, StringComparison.OrdinalIgnoreCase))
-                .Select(m => m.Meta!.ModVersion).OfType<string>().ToList();
-            return versions.Any(v => _versionRange.Satisfies(v, range, unknown: false));
+            var versions = mods.Where(mod => string.Equals(mod.Meta?.ModId, modId, StringComparison.OrdinalIgnoreCase))
+                .Select(mod => mod.Meta!.ModVersion).OfType<string>().ToList();
+            return versions.Any(version => _versionRange.Satisfies(version, range, unknown: false));
         }
 
         private string nameOf(List<ContentEntry> mods, string modId) =>
-            mods.FirstOrDefault(m => string.Equals(m.Meta?.ModId, modId, StringComparison.OrdinalIgnoreCase))?.Name ?? modId;
+            mods.FirstOrDefault(mod => string.Equals(mod.Meta?.ModId, modId, StringComparison.OrdinalIgnoreCase))?.Name ?? modId;
     }
 }

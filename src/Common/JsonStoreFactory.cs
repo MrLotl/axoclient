@@ -14,10 +14,10 @@ namespace AxoClient.Common
             _appLog = appLog;
         }
 
-        public JsonStore<T> Create<T>(IFileSystem fs, string path, int currentVersion = 1, IEnumerable<JsonMigration>? migrations = null)
+        public JsonStore<T> Create<T>(IFileSystem fileSystem, string path, int currentVersion = 1, IEnumerable<JsonMigration>? migrations = null)
             where T : class, IVersionedDocument, new()
         {
-            return new JsonStore<T>(fs, path, _jsonHelper, _appLog, currentVersion, migrations);
+            return new JsonStore<T>(fileSystem, path, _jsonHelper, _appLog, currentVersion, migrations);
         }
     }
 }

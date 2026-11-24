@@ -39,30 +39,30 @@ namespace AxoClient.Social
 
         private readonly JsonStore<EmoteLibraryDocument> _store;
 
-        public async Task<IReadOnlyList<EmoteView>> List(CancellationToken ct = default)
+        public async Task<IReadOnlyList<EmoteView>> List(CancellationToken cancellationToken = default)
         {
-            var doc = await _store.Load(ct);
-            return doc.Emotes.Where(e => System.IO.File.Exists(filePath(e)))
+            var document = await _store.Load(cancellationToken);
+            return document.Emotes.Where(emote => System.IO.File.Exists(filePath(emote)))
                 .Select(view).ToList();
         }
 
-        public async Task<IReadOnlyList<string?>> Slots(CancellationToken ct = default)
+        public async Task<IReadOnlyList<string?>> Slots(CancellationToken cancellationToken = default)
         {
-            var doc = await _store.Load(ct);
-            return normalize(doc.Slots, doc.Emotes);
+            var document = await _store.Load(cancellationToken);
+            return normalize(document.Slots, document.Emotes);
         }
 
-        public async Task SetSlots(IReadOnlyList<string?> slots, CancellationToken ct = default)
+        public async Task SetSlots(IReadOnlyList<string?> slots, CancellationToken cancellationToken = default)
         {
-            await _store.Update(doc => doc.Slots = normalize(slots, doc.Emotes).ToList(), ct);
+            await _store.Update(document => document.Slots = normalize(slots, document.Emotes).ToList(), cancellationToken);
             _events.Publish("emotes.changed");
         }
 
         /// <summary>Importiert eine Animationsdatei (Blockbench/GeckoLib-Bedrock oder PlayerAnimator/Emotecraft). Gibt die neuen Emotes zurück.</summary>
-        public async Task<IReadOnlyList<EmoteView>> Import(string sourcePath, CancellationToken ct = default)
+        public async Task<IReadOnlyList<EmoteView>> Import(string sourcePath, CancellationToken cancellationToken = default)
         {
-            var info = new FileInfo(sourcePath);
-            if (!info.Exists || info.Length > MaxFileBytes)
+            var file = new FileInfo(sourcePath);
+            if (!file.Exists || file.Length > MaxFileBytes)
             {
                 throw new AxoException("emotes.tooLarge");
             }
@@ -70,7 +70,7 @@ namespace AxoClient.Social
             JsonObject root;
             try
             {
-                root = JsonNode.Parse(await System.IO.File.ReadAllTextAsync(sourcePath, ct)) as JsonObject
+                root = JsonNode.Parse(await System.IO.File.ReadAllTextAsync(sourcePath, cancellationToken)) as JsonObject
                        ?? throw new AxoException("emotes.invalidFile");
             }
             catch (JsonException)
@@ -120,28 +120,28 @@ namespace AxoClient.Social
                 }
 
                 var id = "c_" + _textHelper.Sha256Hex(Encoding.UTF8.GetBytes(compact))[..12];
-                await System.IO.File.WriteAllTextAsync(Path.Combine(_paths.Emotes, id + ".json"), compact, ct);
+                await System.IO.File.WriteAllTextAsync(Path.Combine(_paths.Emotes, id + ".json"), compact, cancellationToken);
                 var (loop, moving) = Detect(animation);
                 added.Add(new EmoteItem { Id = id, Name = name is { Length: > 0 } ? name : "Emote", File = id + ".json", Animation = key, Loop = loop, Moving = moving });
             }
 
-            await _store.Update(doc =>
+            await _store.Update(document =>
             {
                 foreach (var item in added)
                 {
-                    doc.Emotes.RemoveAll(e => e.Id == item.Id);
-                    doc.Emotes.Insert(0, item);
+                    document.Emotes.RemoveAll(emote => emote.Id == item.Id);
+                    document.Emotes.Insert(0, item);
                 }
-                if (doc.Emotes.Count > MaxEmotes)
+                if (document.Emotes.Count > MaxEmotes)
                 {
                     throw new AxoException("emotes.tooMany");
                 }
-            }, ct);
+            }, cancellationToken);
             _events.Publish("emotes.changed");
             return added.Select(view).ToList();
         }
 
-        public async Task Rename(string id, string name, CancellationToken ct = default)
+        public async Task Rename(string id, string name, CancellationToken cancellationToken = default)
         {
             var clean = _textHelper.Clean(name, 24);
             if (clean.Length == 0)
@@ -149,11 +149,11 @@ namespace AxoClient.Social
                 throw new AxoException("emotes.nameRequired");
             }
 
-            await _store.Update(doc =>
+            await _store.Update(document =>
             {
-                var item = doc.Emotes.FirstOrDefault(e => e.Id == id) ?? throw new AxoException("errors.notFound");
+                var item = document.Emotes.FirstOrDefault(emote => emote.Id == id) ?? throw new AxoException("errors.notFound");
                 item.Name = clean;
-            }, ct);
+            }, cancellationToken);
             _events.Publish("emotes.changed");
         }
 
@@ -161,43 +161,43 @@ namespace AxoClient.Social
         /// Stellt ein, ob das Emote dauerhaft läuft und ob man dabei laufen darf. "Dauerhaft" steht auch in der Animation selbst,
         /// damit andere Spieler es genauso sehen.
         /// </summary>
-        public async Task SetOptions(string id, bool loop, bool moving, CancellationToken ct = default)
+        public async Task SetOptions(string id, bool loop, bool moving, CancellationToken cancellationToken = default)
         {
-            var doc = await _store.Load(ct);
-            var item = doc.Emotes.FirstOrDefault(e => e.Id == id) ?? throw new AxoException("errors.notFound");
+            var document = await _store.Load(cancellationToken);
+            var item = document.Emotes.FirstOrDefault(emote => emote.Id == id) ?? throw new AxoException("errors.notFound");
             var path = filePath(item);
-            if (System.IO.File.Exists(path) && JsonNode.Parse(await System.IO.File.ReadAllTextAsync(path, ct)) is JsonObject root)
+            if (System.IO.File.Exists(path) && JsonNode.Parse(await System.IO.File.ReadAllTextAsync(path, cancellationToken)) is JsonObject root)
             {
                 ApplyLoop(root, loop);
-                await System.IO.File.WriteAllTextAsync(path, root.ToJsonString(_jsonHelper.Compact), ct);
+                await System.IO.File.WriteAllTextAsync(path, root.ToJsonString(_jsonHelper.Compact), cancellationToken);
             }
-            await _store.Update(d =>
+            await _store.Update(emoteLibraryDocument =>
             {
-                var stored = d.Emotes.FirstOrDefault(e => e.Id == id) ?? throw new AxoException("errors.notFound");
+                var stored = emoteLibraryDocument.Emotes.FirstOrDefault(emote => emote.Id == id) ?? throw new AxoException("errors.notFound");
                 stored.Loop = loop;
                 stored.Moving = moving;
-            }, ct);
+            }, cancellationToken);
             _events.Publish("emotes.changed");
         }
 
-        public async Task Remove(string id, CancellationToken ct = default)
+        public async Task Remove(string id, CancellationToken cancellationToken = default)
         {
             EmoteItem? removed = null;
-            await _store.Update(doc =>
+            await _store.Update(document =>
             {
-                removed = doc.Emotes.FirstOrDefault(e => e.Id == id);
-                doc.Emotes.RemoveAll(e => e.Id == id);
-                if (doc.Slots != null)
+                removed = document.Emotes.FirstOrDefault(emote => emote.Id == id);
+                document.Emotes.RemoveAll(emote => emote.Id == id);
+                if (document.Slots != null)
                 {
-                    for (var i = 0; i < doc.Slots.Count; i++)
+                    for (var index = 0; index < document.Slots.Count; index++)
                     {
-                        if (doc.Slots[i] == id)
+                        if (document.Slots[index] == id)
                         {
-                            doc.Slots[i] = null;
+                            document.Slots[index] = null;
                         }
                     }
                 }
-            }, ct);
+            }, cancellationToken);
             if (removed != null && System.IO.File.Exists(filePath(removed)))
             {
                 System.IO.File.Delete(filePath(removed));
@@ -244,32 +244,32 @@ namespace AxoClient.Social
         }
 
         /// <summary>Animation eines eigenen Emotes (kompaktes JSON) samt Name der Animation darin, oder <c>null</c>.</summary>
-        public async Task<(string Json, string? Animation)?> Animation(string id, CancellationToken ct = default)
+        public async Task<(string Json, string? Animation)?> Animation(string id, CancellationToken cancellationToken = default)
         {
-            var doc = await _store.Load(ct);
-            var item = doc.Emotes.FirstOrDefault(e => e.Id == id);
+            var document = await _store.Load(cancellationToken);
+            var item = document.Emotes.FirstOrDefault(emote => emote.Id == id);
             if (item == null || !System.IO.File.Exists(filePath(item)))
             {
                 return null;
             }
 
-            return (await System.IO.File.ReadAllTextAsync(filePath(item), ct), item.Animation);
+            return (await System.IO.File.ReadAllTextAsync(filePath(item), cancellationToken), item.Animation);
         }
 
         /// <summary>Alle eigenen Emotes samt Animation – so bekommt sie die Mod.</summary>
-        public async Task<IReadOnlyList<(EmoteItem Item, string Json)>> AllWithAnimations(CancellationToken ct = default)
+        public async Task<IReadOnlyList<(EmoteItem Item, string Json)>> AllWithAnimations(CancellationToken cancellationToken = default)
         {
-            var doc = await _store.Load(ct);
+            var document = await _store.Load(cancellationToken);
             var result = new List<(EmoteItem, string)>();
-            foreach (var item in doc.Emotes.Where(e => System.IO.File.Exists(filePath(e))))
+            foreach (var item in document.Emotes.Where(emote => System.IO.File.Exists(filePath(emote))))
             {
-                result.Add((item, await System.IO.File.ReadAllTextAsync(filePath(item), ct)));
+                result.Add((item, await System.IO.File.ReadAllTextAsync(filePath(item), cancellationToken)));
             }
 
             return result;
         }
 
-        private EmoteView view(EmoteItem e) => new(e.Id, e.Name, "imported", e.CreatedAt, e.Loop, e.Moving);
+        private EmoteView view(EmoteItem emote) => new(emote.Id, emote.Name, "imported", emote.CreatedAt, emote.Loop, emote.Moving);
 
         /// <summary>
         /// Liest aus der Animation, ob sie dauerhaft läuft (Bedrock <c>loop</c>, Emotecraft <c>isLoop</c>) und ob man dabei
@@ -277,22 +277,22 @@ namespace AxoClient.Social
         /// </summary>
         internal (bool Loop, bool Moving) Detect(JsonObject animation)
         {
-            bool Truthy(JsonNode? node) => node is JsonValue v && (
-                v.TryGetValue<bool>(out var b) && b
-                || v.TryGetValue<string>(out var s) && (s.Equals("true", StringComparison.OrdinalIgnoreCase) || s == "hold_on_last_frame"));
+            bool Truthy(JsonNode? node) => node is JsonValue jsonValue && (
+                jsonValue.TryGetValue<bool>(out var value) && value
+                || jsonValue.TryGetValue<string>(out var text) && (text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "hold_on_last_frame"));
             bool IsLeg(string bone) => bone.Contains("leg", StringComparison.OrdinalIgnoreCase);
 
             if (animation["animations"] is JsonObject animations)
             {
-                var anims = animations.Select(a => a.Value).OfType<JsonObject>().ToList();
-                var loop = anims.Any(a => Truthy(a["loop"]));
-                var legs = anims.Any(a => a["bones"] is JsonObject bones && bones.Any(b => IsLeg(b.Key)));
+                var otherAnimations = animations.Select(animationPair => animationPair.Value).OfType<JsonObject>().ToList();
+                var loop = otherAnimations.Any(animationObject => Truthy(animationObject["loop"]));
+                var legs = otherAnimations.Any(animationObject => animationObject["bones"] is JsonObject bones && bones.Any(bone => IsLeg(bone.Key)));
                 return (loop, !legs);
             }
             if (animation["emote"] is JsonObject emote)
             {
                 var loop = Truthy(emote["isLoop"]);
-                var legs = emote["moves"] is JsonArray moves && moves.OfType<JsonObject>().Any(m => m.Any(p => IsLeg(p.Key)));
+                var legs = emote["moves"] is JsonArray moves && moves.OfType<JsonObject>().Any(move => move.Any(pair => IsLeg(pair.Key)));
                 return (loop, !legs);
             }
             return (false, false);
@@ -303,16 +303,16 @@ namespace AxoClient.Social
         {
             if (animation["animations"] is JsonObject animations)
             {
-                foreach (var anim in animations.Select(a => a.Value).OfType<JsonObject>())
+                foreach (var otherAnimation in animations.Select(animationPair => animationPair.Value).OfType<JsonObject>())
                 {
-                    var hold = anim["loop"] is JsonValue v && v.TryGetValue<string>(out var s) && s == "hold_on_last_frame";
+                    var hold = otherAnimation["loop"] is JsonValue loopValue && loopValue.TryGetValue<string>(out var value) && value == "hold_on_last_frame";
                     if (!loop)
                     {
-                        anim.Remove("loop");
+                        otherAnimation.Remove("loop");
                     }
                     else if (!hold)
                     {
-                        anim["loop"] = true;
+                        otherAnimation["loop"] = true;
                     }
                 }
             }
@@ -332,14 +332,14 @@ namespace AxoClient.Social
                 return _defaultSlots;
             }
 
-            var known = BuiltIn.Select(b => b.Id).Concat(imported.Select(e => e.Id)).ToHashSet();
+            var known = BuiltIn.Select(builtInEmote => builtInEmote.Id).Concat(imported.Select(emote => emote.Id)).ToHashSet();
             var seen = new HashSet<string>();
             var result = new string?[SlotCount];
-            for (var i = 0; i < SlotCount && i < slots.Count; i++)
+            for (var index = 0; index < SlotCount && index < slots.Count; index++)
             {
-                if (slots[i] is { } id && known.Contains(id) && seen.Add(id))
+                if (slots[index] is { } id && known.Contains(id) && seen.Add(id))
                 {
-                    result[i] = id;
+                    result[index] = id;
                 }
             }
 

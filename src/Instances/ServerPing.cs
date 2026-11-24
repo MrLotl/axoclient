@@ -17,14 +17,14 @@ namespace AxoClient.Instances
             _textHelper = textHelper;
         }
 
-        public async Task<ServerStatus> Ping(string address, int timeoutMs = 4000, CancellationToken ct = default)
+        public async Task<ServerStatus> Ping(string address, int timeoutMs = 4000, CancellationToken cancellationToken = default)
         {
             try
             {
-                return await pingCore(address, timeoutMs, ct);
+                return await pingCore(address, timeoutMs, cancellationToken);
             }
-            catch (Exception ex) when (ex is SocketException or IOException or OperationCanceledException or InvalidDataException
-                                           or JsonException or ArgumentException && !ct.IsCancellationRequested)
+            catch (Exception exception) when (exception is SocketException or IOException or OperationCanceledException or InvalidDataException
+                                           or JsonException or ArgumentException && !cancellationToken.IsCancellationRequested)
             {
                 return new ServerStatus(false, 0, 0, "", null, null, null);
             }
@@ -66,16 +66,16 @@ namespace AxoClient.Instances
 
             using var json = JsonDocument.Parse(buffer);
             var root = json.RootElement;
-            var players = root.TryGetProperty("players", out var p) && p.ValueKind == JsonValueKind.Object ? p : default;
-            var favicon = root.TryGetProperty("favicon", out var f) ? f.GetString() : null;
+            var players = root.TryGetProperty("players", out var playersElement) && playersElement.ValueKind == JsonValueKind.Object ? playersElement : default;
+            var favicon = root.TryGetProperty("favicon", out var faviconElement) ? faviconElement.GetString() : null;
             return new ServerStatus(
                 true,
                 players.ValueKind == JsonValueKind.Object && players.TryGetProperty("online", out var on) ? on.GetInt32() : 0,
                 players.ValueKind == JsonValueKind.Object && players.TryGetProperty("max", out var max) ? max.GetInt32() : 0,
-                root.TryGetProperty("description", out var d) ? _textHelper.Clean(cleanMotd(chatToText(d, 0)), 200) : "",
+                root.TryGetProperty("description", out var description) ? _textHelper.Clean(cleanMotd(chatToText(description, 0)), 200) : "",
                 latency,
                 favicon is { Length: < 64 * 1024 } && favicon.StartsWith("data:image/png;base64,") ? favicon : null,
-                root.TryGetProperty("version", out var v) && v.TryGetProperty("name", out var vn) ? _textHelper.Clean(vn.GetString(), 60) : null);
+                root.TryGetProperty("version", out var version) && version.TryGetProperty("name", out var name) ? _textHelper.Clean(name.GetString(), 60) : null);
         }
 
         /// <summary>"Play.Example.net" und "play.example.net:25565" gelten als gleich.</summary>
@@ -92,7 +92,7 @@ namespace AxoClient.Instances
             {
                 var end = address.IndexOf(']');
                 var hostV6 = address[1..end];
-                return (hostV6, address.Length > end + 2 && int.TryParse(address[(end + 2)..], out var p6) ? p6 : 25565);
+                return (hostV6, address.Length > end + 2 && int.TryParse(address[(end + 2)..], out var parsed) ? parsed : 25565);
             }
             var colon = address.LastIndexOf(':');
             if (colon > 0 && address.IndexOf(':') == colon && int.TryParse(address[(colon + 1)..], out var port)
@@ -108,15 +108,15 @@ namespace AxoClient.Instances
             !string.IsNullOrWhiteSpace(address) && address.Length <= 255 && !address.Any(char.IsWhiteSpace)
             && !address.Contains('/') && !address.Contains('\\');
 
-        private string chatToText(JsonElement e, int depth) => depth > 20
+        private string chatToText(JsonElement component, int depth) => depth > 20
             ? ""
-            : e.ValueKind switch
+            : component.ValueKind switch
             {
-                JsonValueKind.String => e.GetString() ?? "",
-                JsonValueKind.Array => string.Concat(e.EnumerateArray().Select(x => chatToText(x, depth + 1))),
+                JsonValueKind.String => component.GetString() ?? "",
+                JsonValueKind.Array => string.Concat(component.EnumerateArray().Select(part => chatToText(part, depth + 1))),
                 JsonValueKind.Object =>
-                    (e.TryGetProperty("text", out var t) ? chatToText(t, depth + 1) : "") +
-                    (e.TryGetProperty("extra", out var x) ? chatToText(x, depth + 1) : ""),
+                    (component.TryGetProperty("text", out var text) ? chatToText(text, depth + 1) : "") +
+                    (component.TryGetProperty("extra", out var extra) ? chatToText(extra, depth + 1) : ""),
                 _ => ""
             };
 
@@ -126,32 +126,32 @@ namespace AxoClient.Instances
         private string cleanMotd(string motd) =>
             string.Join(" ", formattingCodes().Replace(motd, "").Split('\n', StringSplitOptions.TrimEntries)).Trim();
 
-        private async Task sendPacket(NetworkStream stream, List<byte> payload, CancellationToken ct)
+        private async Task sendPacket(NetworkStream stream, List<byte> payload, CancellationToken cancellationToken)
         {
             var packet = new List<byte>();
             writeVarInt(packet, payload.Count);
             packet.AddRange(payload);
-            await stream.WriteAsync(packet.ToArray(), ct);
+            await stream.WriteAsync(packet.ToArray(), cancellationToken);
         }
 
         private void writeVarInt(List<byte> buffer, int value)
         {
-            var v = (uint)value;
+            var remaining = (uint)value;
             do
             {
-                var b = (byte)(v & 0x7F);
-                v >>= 7;
-                buffer.Add(v != 0 ? (byte)(b | 0x80) : b);
-            } while (v != 0);
+                var nextByte = (byte)(remaining & 0x7F);
+                remaining >>= 7;
+                buffer.Add(remaining != 0 ? (byte)(nextByte | 0x80) : nextByte);
+            } while (remaining != 0);
         }
 
-        private async Task<int> readVarInt(NetworkStream stream, CancellationToken ct)
+        private async Task<int> readVarInt(NetworkStream stream, CancellationToken cancellationToken)
         {
             int value = 0, shift = 0;
             var one = new byte[1];
             while (true)
             {
-                await stream.ReadExactlyAsync(one, ct);
+                await stream.ReadExactlyAsync(one, cancellationToken);
                 value |= (one[0] & 0x7F) << shift;
                 if ((one[0] & 0x80) == 0)
                 {

@@ -11,9 +11,9 @@ namespace AxoClient.Updates.Contract
 
         void StartBackgroundChecks();
 
-        Task<UpdateView?> Check(CancellationToken ct = default);
+        Task<UpdateView?> Check(CancellationToken cancellationToken = default);
 
-        Task Download(IProgress<double>? progress, CancellationToken ct);
+        Task Download(IProgress<double>? progress, CancellationToken cancellationToken);
 
         /// <summary>Installieren und neu starten. Läuft etwas, wird nicht installiert.</summary>
         Task ApplyAndRestart(JobContext job);

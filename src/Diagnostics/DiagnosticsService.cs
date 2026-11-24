@@ -32,17 +32,17 @@ namespace AxoClient.Diagnostics
         {
             var list = _checks.ToList();
             var results = new List<DiagnosticItem>();
-            for (var i = 0; i < list.Count; i++)
+            for (var index = 0; index < list.Count; index++)
             {
-                job.Report((double)i / list.Count, new TextRef("diagnostics.running", ("area", list[i].Area)));
+                job.Report((double)index / list.Count, new TextRef("diagnostics.running", ("area", list[index].Area)));
                 try
                 {
-                    results.AddRange(await list[i].Run(job.Token));
+                    results.AddRange(await list[index].Run(job.Token));
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    results.Add(new DiagnosticItem(list[i].Area, DiagnosticStatus.Error, new TextRef("diagnostics.checkFailed"),
-                        _exceptionHelper.Describe(ex)));
+                    results.Add(new DiagnosticItem(list[index].Area, DiagnosticStatus.Error, new TextRef("diagnostics.checkFailed"),
+                        _exceptionHelper.Describe(exception)));
                 }
             }
             job.Report(1);
@@ -56,7 +56,7 @@ namespace AxoClient.Diagnostics
                 .AppendLine($"AxoClient {_appInfo.Version} · Diagnose {DateTime.Now:yyyy-MM-dd HH:mm}")
                 .AppendLine(_systemInfo.WindowsVersion)
                 .AppendLine();
-            foreach (var group in items.GroupBy(i => i.Area))
+            foreach (var group in items.GroupBy(item => item.Area))
             {
                 text.AppendLine($"[{group.Key}]");
                 foreach (var item in group)

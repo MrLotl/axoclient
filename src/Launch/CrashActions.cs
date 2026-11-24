@@ -59,14 +59,14 @@ namespace AxoClient.Launch
                     }
                 case "recommendedRam":
                     {
-                        var doc = await _content.Sync(instanceId, job.Token);
+                        var document = await _content.Sync(instanceId, job.Token);
                         var (total, _) = _systemInfo.Memory();
                         await _instances.Update(instanceId,
-                            new InstanceUpdate(MemoryMb: _systemInfo.RecommendedMemoryMb(doc.Mods.Count(m => m.Enabled), total)), job.Token);
+                            new InstanceUpdate(MemoryMb: _systemInfo.RecommendedMemoryMb(document.Mods.Count(mod => mod.Enabled), total)), job.Token);
                         break;
                     }
                 case "javaAuto":
-                    await _settings.Update(s => s.Defaults.Java = "auto");
+                    await _settings.Update(settings => settings.Defaults.Java = "auto");
                     break;
                 case "repairInstance":
                 case "repairGameFiles":
@@ -74,7 +74,7 @@ namespace AxoClient.Launch
                     break;
                 case "checkMods":
                     // Beim nächsten Start alle Kompatibilitätsprüfungen erzwingen
-                    await _content.Change(instanceId, doc => doc.CheckedAt = null, job.Token);
+                    await _content.Change(instanceId, document => document.CheckedAt = null, job.Token);
                     break;
                 case "disableMod":
                     await _content.SetEnabled(instanceId, ContentType.Mod, requireFile(file), false, job.Token);
@@ -82,7 +82,7 @@ namespace AxoClient.Launch
                 case "updateMod":
                     {
                         var found = await _updates.Scan(instanceId, job.Token);
-                        var match = found.Where(u => u.File == requireFile(file)).ToList();
+                        var match = found.Where(contentUpdate => contentUpdate.File == requireFile(file)).ToList();
                         if (match.Count == 0)
                         {
                             throw new AxoException("crash.noUpdate");
@@ -92,29 +92,29 @@ namespace AxoClient.Launch
                         break;
                     }
                 case "keepNewest":
-                    await _content.Change(instanceId, doc => doc.CheckedAt = null, job.Token);
+                    await _content.Change(instanceId, document => document.CheckedAt = null, job.Token);
                     break;
                 case "disableShaders":
                     {
-                        var doc = await _content.Sync(instanceId, job.Token);
-                        foreach (var shader in doc.Shaderpacks.Where(s => s.Enabled))
+                        var document = await _content.Sync(instanceId, job.Token);
+                        foreach (var shader in document.Shaderpacks.Where(shaderpack => shaderpack.Enabled))
                         {
                             await _content.SetEnabled(instanceId, ContentType.ShaderPack, shader.File, false, job.Token);
                         }
                         // Iris merkt sich den aktiven Shader selbst: dort ebenfalls ausschalten
-                        var iris = Path.Combine(_instances.GameDir(instanceId), "config", "iris.properties");
+                        var iris = Path.Combine(_instances.GameDirectory(instanceId), "config", "iris.properties");
                         if (File.Exists(iris))
                         {
                             var lines = (await File.ReadAllLinesAsync(iris, job.Token))
-                                .Select(l => l.StartsWith("enableShaders=") ? "enableShaders=false" : l);
+                                .Select(line => line.StartsWith("enableShaders=") ? "enableShaders=false" : line);
                             await File.WriteAllLinesAsync(iris, lines, job.Token);
                         }
                         break;
                     }
                 case "resetConfig":
                     {
-                        var configDir = Path.Combine(_instances.GameDir(instanceId), "config");
-                        var path = _pathGuard.Combine(configDir, requireFile(file));
+                        var configDirectory = Path.Combine(_instances.GameDirectory(instanceId), "config");
+                        var path = _pathGuard.Combine(configDirectory, requireFile(file));
                         if (File.Exists(path))
                         {
                             File.Move(path, path + $".axoclient-backup-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true);
@@ -130,7 +130,7 @@ namespace AxoClient.Launch
                         // Nur, was der Launcher jederzeit neu holen kann: Caches und alte Logs. Welten und Backups bleiben.
                         _storage.CleanCache();
                         _storage.CleanLogs();
-                        var root = Path.GetPathRoot(Path.GetFullPath(_instances.GameDir(instanceId)));
+                        var root = Path.GetPathRoot(Path.GetFullPath(_instances.GameDirectory(instanceId)));
                         if (root != null && new DriveInfo(root).AvailableFreeSpace < 1L << 30)
                         {
                             throw new AxoException("crash.diskStillFull");
@@ -146,17 +146,17 @@ namespace AxoClient.Launch
         private async Task repair(string instanceId, JobContext job)
         {
             var instance = await _instances.Get(instanceId, job.Token);
-            var path = _installer.PathFor(_instances.GameDir(instanceId));
+            var path = _installer.PathFor(_instances.GameDirectory(instanceId));
             await _installer.Install(path, instance.Minecraft.Version, instance.Loader.Type, instance.Loader.Version, job);
             // Inhalte: beim nächsten Start alles gegen die Hashes prüfen
-            await _content.Change(instanceId, doc =>
+            await _content.Change(instanceId, document =>
             {
-                foreach (var entry in Enum.GetValues<ContentType>().SelectMany(doc.ListOf))
+                foreach (var entry in Enum.GetValues<ContentType>().SelectMany(document.ListOf))
                 {
                     entry.Modified = null;
                 }
 
-                doc.CheckedAt = null;
+                document.CheckedAt = null;
             }, job.Token);
         }
 

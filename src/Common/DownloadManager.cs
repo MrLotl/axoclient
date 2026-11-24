@@ -15,26 +15,26 @@ namespace AxoClient.Common
         private readonly int _parallel;
         private const int Attempts = 3;
 
-        public DownloadManager(IApiClient api, IFileSystem fs, IAppLog appLog, int parallel = 6)
+        public DownloadManager(IApiClient api, IFileSystem fileSystem, IAppLog appLog, int parallel = 6)
         {
             _api = api;
-            _fs = fs;
+            _fs = fileSystem;
             _appLog = appLog;
             _parallel = parallel;
         }
 
         /// <summary>Lädt alle Dateien, meldet Fortschritt als Anteil der Bytes (bzw. Dateien, wenn Größen fehlen).</summary>
         public async Task DownloadAll(IReadOnlyCollection<DownloadRequest> requests, IProgress<double>? progress,
-            CancellationToken ct)
+            CancellationToken cancellationToken)
         {
-            var todo = requests.Where(r => !isAlreadyValid(r)).ToList();
+            var todo = requests.Where(request => !isAlreadyValid(request)).ToList();
             if (todo.Count == 0)
             {
                 progress?.Report(1);
                 return;
             }
 
-            var totalBytes = todo.All(r => r.Size is > 0) ? todo.Sum(r => r.Size!.Value) : 0;
+            var totalBytes = todo.All(downloadRequest => downloadRequest.Size is > 0) ? todo.Sum(downloadRequest => downloadRequest.Size!.Value) : 0;
             long doneBytes = 0;
             var doneFiles = 0;
             void Advance(long bytes, bool fileDone)
@@ -44,17 +44,17 @@ namespace AxoClient.Common
                 progress?.Report(totalBytes > 0 ? (double)total / totalBytes : (double)files / todo.Count);
             }
 
-            await Parallel.ForEachAsync(todo, new ParallelOptions { MaxDegreeOfParallelism = _parallel, CancellationToken = ct },
+            await Parallel.ForEachAsync(todo, new ParallelOptions { MaxDegreeOfParallelism = _parallel, CancellationToken = cancellationToken },
                 async (request, token) =>
                 {
-                    await downloadOne(request, b => Advance(b, false), token);
+                    await downloadOne(request, downloadedBytes => Advance(downloadedBytes, false), token);
                     Advance(0, true);
                 });
             progress?.Report(1);
         }
 
-        public Task Download(DownloadRequest request, IProgress<double>? progress, CancellationToken ct) =>
-            DownloadAll([request], progress, ct);
+        public Task Download(DownloadRequest request, IProgress<double>? progress, CancellationToken cancellationToken) =>
+            DownloadAll([request], progress, cancellationToken);
 
         private bool isAlreadyValid(DownloadRequest request)
         {
@@ -71,10 +71,10 @@ namespace AxoClient.Common
             return HashMatches(request.TargetPath, request);
         }
 
-        private async Task downloadOne(DownloadRequest request, Action<long> onBytes, CancellationToken ct)
+        private async Task downloadOne(DownloadRequest request, Action<long> onBytes, CancellationToken cancellationToken)
         {
-            var dir = _fs.Path.GetDirectoryName(request.TargetPath)!;
-            _fs.Directory.CreateDirectory(dir);
+            var directory = _fs.Path.GetDirectoryName(request.TargetPath)!;
+            _fs.Directory.CreateDirectory(directory);
             var part = request.TargetPath + ".part";
 
             for (var attempt = 1; ; attempt++)
@@ -82,17 +82,17 @@ namespace AxoClient.Common
                 long received = 0;
                 try
                 {
-                    using (var response = await _api.Send(() => new HttpRequestMessage(HttpMethod.Get, request.Url), ct,
+                    using (var response = await _api.Send(() => new HttpRequestMessage(HttpMethod.Get, request.Url), cancellationToken,
                                completion: HttpCompletionOption.ResponseHeadersRead))
                     {
-                        await _api.EnsureSuccess(response, ct);
-                        await using var source = await response.Content.ReadAsStreamAsync(ct);
+                        await _api.EnsureSuccess(response, cancellationToken);
+                        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
                         await using var target = _fs.File.Create(part);
                         var buffer = new byte[81920];
                         int read;
-                        while ((read = await source.ReadAsync(buffer, ct)) > 0)
+                        while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
                         {
-                            await target.WriteAsync(buffer.AsMemory(0, read), ct);
+                            await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
                             received += read;
                             onBytes(read);
                         }
@@ -111,13 +111,13 @@ namespace AxoClient.Common
                     _fs.File.Move(part, request.TargetPath, overwrite: true);
                     return;
                 }
-                catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException
-                                           && attempt < Attempts && !ct.IsCancellationRequested)
+                catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidDataException
+                                           && attempt < Attempts && !cancellationToken.IsCancellationRequested)
                 {
                     onBytes(-received);
                     tryDelete(part);
-                    _appLog.Warn($"Download fehlgeschlagen (Versuch {attempt}): {request.Url}", ex);
-                    await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), ct);
+                    _appLog.Warn($"Download fehlgeschlagen (Versuch {attempt}): {request.Url}", exception);
+                    await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
                 }
                 catch (InvalidDataException)
                 {

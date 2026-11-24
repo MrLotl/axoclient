@@ -23,9 +23,9 @@ namespace AxoClient.Launch.Checks
         public override string Id => "disk";
         public override LaunchPhase Phase => LaunchPhase.Environment;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            var installed = _installer.InstalledVersionName(ctx.Instance.Minecraft.Version, ctx.Instance.Loader.Type, ctx.Instance.Loader.Version);
+            var installed = _installer.InstalledVersionName(context.Instance.Minecraft.Version, context.Instance.Loader.Type, context.Instance.Loader.Version);
             var needed = (installed == null ? NewVersionBytes : 0) + Reserve;
             var free = _systemInfo.FreeDiskBytes(_paths.Root);
             IReadOnlyList<CheckResult> result = free >= needed

@@ -46,9 +46,9 @@ namespace AxoClient.App
         {
             var scale = Math.Max(1, GetDpiForSystem()) / 96.0;
             var area = System.Windows.Forms.Screen.PrimaryScreen?.WorkingArea ?? new System.Drawing.Rectangle(0, 0, 1920, 1040);
-            var w = Math.Min((int)(width * scale), (int)(area.Width * 0.9));
-            var h = Math.Min((int)(height * scale), (int)(area.Height * 0.9));
-            return (area.X + (area.Width - w) / 2, area.Y + (area.Height - h) / 2, w, h);
+            var windowWidth = Math.Min((int)(width * scale), (int)(area.Width * 0.9));
+            var windowHeight = Math.Min((int)(height * scale), (int)(area.Height * 0.9));
+            return (area.X + (area.Width - windowWidth) / 2, area.Y + (area.Height - windowHeight) / 2, windowWidth, windowHeight);
         }
 
         private const uint WmGetMinMaxInfo = 0x0024;
@@ -95,7 +95,7 @@ namespace AxoClient.App
             public Point Reserved, MaxSize, MaxPosition, MinTrackSize, MaxTrackSize;
         }
 
-        private delegate IntPtr SubclassProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, UIntPtr id, UIntPtr data);
+        private delegate IntPtr SubclassProc(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam, UIntPtr id, UIntPtr data);
 
         // Muss leben, solange das Fenster existiert (sonst sammelt der GC den Delegaten ein)
         private SubclassProc? _subclass;
@@ -132,30 +132,30 @@ namespace AxoClient.App
                 return;
             }
 
-            _subclass = (h, msg, wParam, lParam, _, _) =>
+            _subclass = (windowHandle, message, wParam, lParam, _, _) =>
             {
                 // Kein sichtbarer Systemrahmen: die Oberfläche füllt das ganze Fenster
-                if (msg == WmNcCalcSize && wParam != IntPtr.Zero)
+                if (message == WmNcCalcSize && wParam != IntPtr.Zero)
                 {
                     return IntPtr.Zero;
                 }
 
-                var result = DefSubclassProc(h, msg, wParam, lParam);
-                if (msg != WmGetMinMaxInfo || lParam == IntPtr.Zero)
+                var result = DefSubclassProc(windowHandle, message, wParam, lParam);
+                if (message != WmGetMinMaxInfo || lParam == IntPtr.Zero)
                 {
                     return result;
                 }
 
-                var monitor = MonitorFromWindow(h, MonitorDefaultToNearest);
-                var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
-                if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info))
+                var monitor = MonitorFromWindow(windowHandle, MonitorDefaultToNearest);
+                var monitorInfo = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+                if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref monitorInfo))
                 {
                     return result;
                 }
 
                 var mmi = Marshal.PtrToStructure<MinMaxInfo>(lParam);
-                mmi.MaxPosition = new Point { X = info.Work.Left - info.Monitor.Left, Y = info.Work.Top - info.Monitor.Top };
-                mmi.MaxSize = new Point { X = info.Work.Right - info.Work.Left, Y = info.Work.Bottom - info.Work.Top };
+                mmi.MaxPosition = new Point { X = monitorInfo.Work.Left - monitorInfo.Monitor.Left, Y = monitorInfo.Work.Top - monitorInfo.Monitor.Top };
+                mmi.MaxSize = new Point { X = monitorInfo.Work.Right - monitorInfo.Work.Left, Y = monitorInfo.Work.Bottom - monitorInfo.Work.Top };
                 Marshal.StructureToPtr(mmi, lParam, false);
                 return IntPtr.Zero;
             };

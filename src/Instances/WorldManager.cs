@@ -31,57 +31,57 @@ namespace AxoClient.Instances
             _directoryHelper = directoryHelper;
         }
 
-        private string savesDir(string id) => Path.Combine(_paths.GameDir(_textHelper.RequireId(id)), "saves");
+        private string savesDirectory(string id) => Path.Combine(_paths.GameDirectory(_textHelper.RequireId(id)), "saves");
 
-        public Task<IReadOnlyList<WorldInfo>> List(string instanceId, CancellationToken ct = default) => Task.Run(() =>
+        public Task<IReadOnlyList<WorldInfo>> List(string instanceId, CancellationToken cancellationToken = default) => Task.Run(() =>
         {
-            var saves = savesDir(instanceId);
+            var saves = savesDirectory(instanceId);
             if (!Directory.Exists(saves))
             {
                 return (IReadOnlyList<WorldInfo>)[];
             }
 
             return Directory.EnumerateDirectories(saves)
-                .Where(d => File.Exists(Path.Combine(d, "level.dat")))
-                .Select(d => read(instanceId, d))
-                .OrderByDescending(w => w.LastPlayed ?? DateTimeOffset.MinValue)
+                .Where(directory => File.Exists(Path.Combine(directory, "level.dat")))
+                .Select(directory => read(instanceId, directory))
+                .OrderByDescending(worldInfo => worldInfo.LastPlayed ?? DateTimeOffset.MinValue)
                 .ToList();
-        }, ct);
+        }, cancellationToken);
 
-        public int Count(string savesDir) =>
-            Directory.Exists(savesDir) ? Directory.EnumerateDirectories(savesDir).Count(d => File.Exists(Path.Combine(d, "level.dat"))) : 0;
+        public int Count(string savesDirectory) =>
+            Directory.Exists(savesDirectory) ? Directory.EnumerateDirectories(savesDirectory).Count(directory => File.Exists(Path.Combine(directory, "level.dat"))) : 0;
 
-        private WorldInfo read(string instanceId, string dir)
+        private WorldInfo read(string instanceId, string directory)
         {
-            var folder = Path.GetFileName(dir);
+            var folder = Path.GetFileName(directory);
             string name = folder, mode = "survival";
             string? version = null;
             bool hardcore = false, cheats = false;
             DateTimeOffset? lastPlayed = null;
             try
             {
-                if (_nbtReader.ReadFile(Path.Combine(dir, "level.dat")).Get<NbtCompound>("Data") is { } data)
+                if (_nbtReader.ReadFile(Path.Combine(directory, "level.dat")).Get<NbtCompound>("Data") is { } data)
                 {
-                    name = data.Get<string>("LevelName") is { Length: > 0 } n ? _textHelper.Clean(n, 80) : folder;
-                    if (data.TryGetValue("LastPlayed", out var lp) && lp is long ms and > 0)
+                    name = data.Get<string>("LevelName") is { Length: > 0 } levelName ? _textHelper.Clean(levelName, 80) : folder;
+                    if (data.TryGetValue("LastPlayed", out var lastPlayedValue) && lastPlayedValue is long milliseconds and > 0)
                     {
-                        lastPlayed = DateTimeOffset.FromUnixTimeMilliseconds(ms);
+                        lastPlayed = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
                     }
 
-                    mode = data.TryGetValue("GameType", out var gt) && gt is int type
+                    mode = data.TryGetValue("GameType", out var gameType) && gameType is int type
                         ? type switch { 1 => "creative", 2 => "adventure", 3 => "spectator", _ => "survival" }
                         : "survival";
-                    hardcore = data.TryGetValue("hardcore", out var hc) && hc is sbyte h && h != 0;
-                    cheats = data.TryGetValue("allowCommands", out var ac) && ac is sbyte c && c != 0;
+                    hardcore = data.TryGetValue("hardcore", out var hardcoreValue) && hardcoreValue is sbyte hardcoreFlag && hardcoreFlag != 0;
+                    cheats = data.TryGetValue("allowCommands", out var allowCommands) && allowCommands is sbyte cheatsFlag && cheatsFlag != 0;
                     version = data.Get<NbtCompound>("Version")?.Get<string>("Name");
                 }
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or EndOfStreamException)
             {
-                _appLog.Warn($"level.dat von {folder} nicht lesbar", ex);
+                _appLog.Warn($"level.dat von {folder} nicht lesbar", exception);
             }
-            var hasIcon = File.Exists(Path.Combine(dir, "icon.png"));
-            return new WorldInfo(folder, name, mode, hardcore, cheats, version, lastPlayed, _directoryHelper.Size(dir),
+            var hasIcon = File.Exists(Path.Combine(directory, "icon.png"));
+            return new WorldInfo(folder, name, mode, hardcore, cheats, version, lastPlayed, _directoryHelper.Size(directory),
                 hasIcon ? $"/axo/world-icon/{instanceId}/{Uri.EscapeDataString(folder)}" : null);
         }
 
@@ -92,38 +92,38 @@ namespace AxoClient.Instances
                 return null;
             }
 
-            var dir = _pathGuard.SafeCombine(savesDir(instanceId), folder);
-            var icon = dir == null ? null : Path.Combine(dir, "icon.png");
+            var directory = _pathGuard.SafeCombine(savesDirectory(instanceId), folder);
+            var icon = directory == null ? null : Path.Combine(directory, "icon.png");
             return icon != null && File.Exists(icon) ? icon : null;
         }
 
-        public string WorldDir(string instanceId, string folder) =>
-            _pathGuard.SafeCombine(savesDir(instanceId), folder) is { } dir && Directory.Exists(dir)
-                ? dir
+        public string WorldDirectory(string instanceId, string folder) =>
+            _pathGuard.SafeCombine(savesDirectory(instanceId), folder) is { } directory && Directory.Exists(directory)
+                ? directory
                 : throw new AxoException("worlds.notFound");
 
         /// <summary>Welt als ZIP in <c>backups/</c> sichern.</summary>
         public async Task<BackupInfo> Backup(string instanceId, string folder, JobContext job)
         {
-            var dir = WorldDir(instanceId, folder);
+            var directory = WorldDirectory(instanceId, folder);
             var backups = _paths.InstanceBackups(instanceId);
             Directory.CreateDirectory(backups);
             var file = $"{folder}-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.zip";
             var target = Path.Combine(backups, file);
-            var files = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
-                .Where(f => !Path.GetFileName(f).Equals("session.lock", StringComparison.OrdinalIgnoreCase)).ToList();
+            var files = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+                .Where(filePath => !Path.GetFileName(filePath).Equals("session.lock", StringComparison.OrdinalIgnoreCase)).ToList();
             await using (var stream = File.Create(target + ".tmp"))
             using (var zip = new ZipArchive(stream, ZipArchiveMode.Create))
             {
-                for (var i = 0; i < files.Count; i++)
+                for (var index = 0; index < files.Count; index++)
                 {
                     job.Token.ThrowIfCancellationRequested();
-                    var entry = zip.CreateEntry(folder + "/" + Path.GetRelativePath(dir, files[i]).Replace('\\', '/'),
+                    var entry = zip.CreateEntry(folder + "/" + Path.GetRelativePath(directory, files[index]).Replace('\\', '/'),
                         CompressionLevel.Fastest);
-                    await using var source = new FileStream(files[i], FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    await using var source = new FileStream(files[index], FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     await using var target2 = entry.Open();
                     await source.CopyToAsync(target2, job.Token);
-                    job.Report((double)(i + 1) / files.Count);
+                    job.Report((double)(index + 1) / files.Count);
                 }
             }
             File.Move(target + ".tmp", target, overwrite: true);
@@ -136,9 +136,9 @@ namespace AxoClient.Instances
         /// </summary>
         public async Task<int> BackupAll(string instanceId, JobContext job)
         {
-            var saves = savesDir(instanceId);
+            var saves = savesDirectory(instanceId);
             var worlds = Directory.Exists(saves)
-                ? Directory.EnumerateDirectories(saves).Where(d => File.Exists(Path.Combine(d, "level.dat"))).ToList()
+                ? Directory.EnumerateDirectories(saves).Where(directory => File.Exists(Path.Combine(directory, "level.dat"))).ToList()
                 : [];
             if (worlds.Count == 0)
             {
@@ -155,26 +155,26 @@ namespace AxoClient.Instances
                 throw new AxoException(new TextRef("worlds.backupNoSpace", ("gb", Math.Ceiling(needed / 1e8) / 10)));
             }
 
-            for (var i = 0; i < worlds.Count; i++)
+            for (var index = 0; index < worlds.Count; index++)
             {
-                job.Status("worlds.backingUpOf", ("index", i + 1), ("count", worlds.Count));
-                await Backup(instanceId, Path.GetFileName(worlds[i]), job.Sub((double)i / worlds.Count, (double)(i + 1) / worlds.Count));
+                job.Status("worlds.backingUpOf", ("index", index + 1), ("count", worlds.Count));
+                await Backup(instanceId, Path.GetFileName(worlds[index]), job.Sub((double)index / worlds.Count, (double)(index + 1) / worlds.Count));
             }
             return worlds.Count;
         }
 
         public IReadOnlyList<BackupInfo> ListBackups(string instanceId)
         {
-            var dir = _paths.InstanceBackups(_textHelper.RequireId(instanceId));
-            if (!Directory.Exists(dir))
+            var directory = _paths.InstanceBackups(_textHelper.RequireId(instanceId));
+            if (!Directory.Exists(directory))
             {
                 return [];
             }
 
-            return new DirectoryInfo(dir).EnumerateFiles("*.zip")
-                .Select(f => new BackupInfo(f.Name, f.Name.Contains('-') ? f.Name[..f.Name.LastIndexOf('-', f.Name.LastIndexOf('_'))] : f.Name,
-                    f.CreationTime, f.Length))
-                .OrderByDescending(b => b.CreatedAt)
+            return new DirectoryInfo(directory).EnumerateFiles("*.zip")
+                .Select(file => new BackupInfo(file.Name, file.Name.Contains('-') ? file.Name[..file.Name.LastIndexOf('-', file.Name.LastIndexOf('_'))] : file.Name,
+                    file.CreationTime, file.Length))
+                .OrderByDescending(backupInfo => backupInfo.CreatedAt)
                 .ToList();
         }
 
@@ -182,14 +182,14 @@ namespace AxoClient.Instances
         public async Task<string> RestoreBackup(string instanceId, string backupFile, JobContext job)
         {
             var zipPath = _pathGuard.Combine(_paths.InstanceBackups(_textHelper.RequireId(instanceId)), backupFile);
-            var saves = savesDir(instanceId);
+            var saves = savesDirectory(instanceId);
             Directory.CreateDirectory(saves);
             using var zip = ZipFile.OpenRead(zipPath);
-            var root = zip.Entries.Select(e => e.FullName.Split('/')[0]).FirstOrDefault() ?? "Welt";
+            var root = zip.Entries.Select(zipEntry => zipEntry.FullName.Split('/')[0]).FirstOrDefault() ?? "Welt";
             var target = root;
-            for (var i = 2; Directory.Exists(Path.Combine(saves, target)); i++)
+            for (var index = 2; Directory.Exists(Path.Combine(saves, target)); index++)
             {
-                target = $"{root} ({i})";
+                target = $"{root} ({index})";
             }
 
             var count = zip.Entries.Count;
@@ -221,21 +221,21 @@ namespace AxoClient.Instances
         /// </summary>
         public async Task<string> Import(string instanceId, string zipPath, JobContext job)
         {
-            var saves = savesDir(instanceId);
+            var saves = savesDirectory(instanceId);
             Directory.CreateDirectory(saves);
             using var zip = ZipFile.OpenRead(zipPath);
-            var levelDat = zip.Entries.Where(e => e.FullName.Replace('\\', '/').Split('/')[^1] == "level.dat")
-                .MinBy(e => e.FullName.Count(c => c == '/')) ?? throw new AxoException("worlds.importNoWorld");
+            var levelDat = zip.Entries.Where(zipEntry => zipEntry.FullName.Replace('\\', '/').Split('/')[^1] == "level.dat")
+                .MinBy(zipEntry => zipEntry.FullName.Count(character => character == '/')) ?? throw new AxoException("worlds.importNoWorld");
             var prefix = levelDat.FullName.Replace('\\', '/')[..^"level.dat".Length];
             var name = prefix.TrimEnd('/').Split('/')[^1] is { Length: > 0 } folder ? folder : Path.GetFileNameWithoutExtension(zipPath);
             name = string.Concat(name.Split(Path.GetInvalidFileNameChars())).Trim().TrimEnd('.') is { Length: > 0 } clean ? clean : "Welt";
             var target = name;
-            for (var i = 2; Directory.Exists(Path.Combine(saves, target)); i++)
+            for (var index = 2; Directory.Exists(Path.Combine(saves, target)); index++)
             {
-                target = $"{name} ({i})";
+                target = $"{name} ({index})";
             }
 
-            var entries = zip.Entries.Where(e => e.FullName.Replace('\\', '/').StartsWith(prefix, StringComparison.Ordinal)).ToList();
+            var entries = zip.Entries.Where(zipEntry => zipEntry.FullName.Replace('\\', '/').StartsWith(prefix, StringComparison.Ordinal)).ToList();
             var done = 0;
             try
             {
@@ -270,7 +270,7 @@ namespace AxoClient.Instances
                 {
                     Directory.Delete(Path.Combine(saves, target), recursive: true);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
                 }
                 throw;
@@ -278,12 +278,12 @@ namespace AxoClient.Instances
             return target;
         }
 
-        public async Task Delete(string instanceId, string folder, CancellationToken ct = default)
+        public async Task Delete(string instanceId, string folder, CancellationToken cancellationToken = default)
         {
-            var dir = WorldDir(instanceId, folder);
-            await Task.Run(() => Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(dir,
+            var directory = WorldDirectory(instanceId, folder);
+            await Task.Run(() => Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(directory,
                 Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
-                Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin), ct);
+                Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin), cancellationToken);
         }
     }
 }

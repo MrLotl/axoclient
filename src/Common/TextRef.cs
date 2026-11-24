@@ -6,8 +6,8 @@ namespace AxoClient.Common
     /// </summary>
     public sealed record TextRef(string Code, Dictionary<string, object?>? Params = null)
     {
-        public TextRef(string code, params (string Key, object? Value)[] args)
-            : this(code, args.Length == 0 ? null : args.ToDictionary(a => a.Key, a => a.Value))
+        public TextRef(string code, params (string Key, object? Value)[] arguments)
+            : this(code, arguments.Length == 0 ? null : arguments.ToDictionary(argument => argument.Key, argument => argument.Value))
         {
         }
 
@@ -15,7 +15,7 @@ namespace AxoClient.Common
         {
             if (Params is { Count: > 0 })
             {
-                return $"{Code} {string.Join(", ", Params.Select(p => $"{p.Key}={p.Value}"))}";
+                return $"{Code} {string.Join(", ", Params.Select(parameter => $"{parameter.Key}={parameter.Value}"))}";
             }
             return Code;
         }

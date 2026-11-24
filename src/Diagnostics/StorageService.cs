@@ -21,13 +21,13 @@ namespace AxoClient.Diagnostics
             _directoryHelper = directoryHelper;
         }
 
-        public async Task<StorageOverview> Scan(CancellationToken ct)
+        public async Task<StorageOverview> Scan(CancellationToken cancellationToken)
         {
             var list = new List<InstanceStorage>();
             long backups = 0;
-            foreach (var instance in await _instances.LoadAll(ct))
+            foreach (var instance in await _instances.LoadAll(cancellationToken))
             {
-                var game = _paths.GameDir(instance.Id);
+                var game = _paths.GameDirectory(instance.Id);
                 var worlds = _directoryHelper.Size(Path.Combine(game, "saves"));
                 var mods = _directoryHelper.Size(Path.Combine(game, "mods"));
                 var all = _directoryHelper.Size(_paths.Instance(instance.Id));
@@ -40,8 +40,8 @@ namespace AxoClient.Diagnostics
             var cache = _directoryHelper.Size(_paths.Cache) + _directoryHelper.Size(_paths.Tmp);
             var logs = _directoryHelper.Size(_paths.Logs);
             var servers = _directoryHelper.Size(_paths.Servers);
-            var total = list.Sum(i => i.Worlds + i.Mods + i.Rest) + backups + gameSize + java + cache + logs + servers;
-            return new StorageOverview(list.OrderByDescending(i => i.Worlds + i.Mods + i.Rest).ToList(), backups, gameSize, java, cache, logs,
+            var total = list.Sum(instanceStorage => instanceStorage.Worlds + instanceStorage.Mods + instanceStorage.Rest) + backups + gameSize + java + cache + logs + servers;
+            return new StorageOverview(list.OrderByDescending(instanceStorage => instanceStorage.Worlds + instanceStorage.Mods + instanceStorage.Rest).ToList(), backups, gameSize, java, cache, logs,
                 servers, total);
         }
 
@@ -51,16 +51,16 @@ namespace AxoClient.Diagnostics
             long freed = 0;
             foreach (var id in _instances.Ids())
             {
-                var dir = _paths.InstanceBackups(id);
-                if (!Directory.Exists(dir))
+                var directory = _paths.InstanceBackups(id);
+                if (!Directory.Exists(directory))
                 {
                     continue;
                 }
 
-                var files = new DirectoryInfo(dir).EnumerateFiles("*.zip").OrderByDescending(f => f.CreationTimeUtc).ToList();
-                var newestPerWorld = files.GroupBy(f => f.Name[..Math.Max(1, f.Name.LastIndexOf('-', Math.Max(0, f.Name.LastIndexOf('_'))))])
-                    .Select(g => g.First().FullName).ToHashSet();
-                foreach (var file in files.Where(f => f.CreationTimeUtc < DateTime.UtcNow.AddDays(-keepDays) && !newestPerWorld.Contains(f.FullName)))
+                var files = new DirectoryInfo(directory).EnumerateFiles("*.zip").OrderByDescending(file => file.CreationTimeUtc).ToList();
+                var newestPerWorld = files.GroupBy(file => file.Name[..Math.Max(1, file.Name.LastIndexOf('-', Math.Max(0, file.Name.LastIndexOf('_'))))])
+                    .Select(group => group.First().FullName).ToHashSet();
+                foreach (var file in files.Where(file => file.CreationTimeUtc < DateTime.UtcNow.AddDays(-keepDays) && !newestPerWorld.Contains(file.FullName)))
                 {
                     freed += file.Length;
                     file.Delete();
@@ -70,7 +70,7 @@ namespace AxoClient.Diagnostics
         }
 
         /// <summary>Minecraft-Versionen entfernen, die keine Instanz mehr nutzt (Libraries und Assets bleiben).</summary>
-        public async Task<long> CleanVersions(CancellationToken ct)
+        public async Task<long> CleanVersions(CancellationToken cancellationToken)
         {
             if (!Directory.Exists(_paths.Versions))
             {
@@ -78,25 +78,25 @@ namespace AxoClient.Diagnostics
             }
 
             var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var instance in await _instances.LoadAll(ct))
+            foreach (var instance in await _instances.LoadAll(cancellationToken))
             {
                 used.Add(instance.Minecraft.Version);
-                if (instance.Loader.Version is { } lv)
+                if (instance.Loader.Version is { } version)
                 {
                     used.UnionWith(Directory.EnumerateDirectories(_paths.Versions).Select(Path.GetFileName).OfType<string>()
-                        .Where(n => n.Contains(lv) && n.Contains(instance.Minecraft.Version)));
+                        .Where(folderName => folderName.Contains(version) && folderName.Contains(instance.Minecraft.Version)));
                 }
             }
             long freed = 0;
-            foreach (var dir in Directory.EnumerateDirectories(_paths.Versions))
+            foreach (var directory in Directory.EnumerateDirectories(_paths.Versions))
             {
-                if (used.Contains(Path.GetFileName(dir)))
+                if (used.Contains(Path.GetFileName(directory)))
                 {
                     continue;
                 }
 
-                freed += _directoryHelper.Size(dir);
-                Directory.Delete(dir, recursive: true);
+                freed += _directoryHelper.Size(directory);
+                Directory.Delete(directory, recursive: true);
             }
             return freed;
         }
@@ -105,12 +105,12 @@ namespace AxoClient.Diagnostics
         public long CleanJava()
         {
             long freed = 0;
-            foreach (var dir in Directory.Exists(_paths.Java) ? Directory.EnumerateDirectories(_paths.Java).ToList() : [])
+            foreach (var directory in Directory.Exists(_paths.Java) ? Directory.EnumerateDirectories(_paths.Java).ToList() : [])
             {
-                freed += _directoryHelper.Size(dir);
+                freed += _directoryHelper.Size(directory);
                 try
                 {
-                    Directory.Delete(dir, recursive: true);
+                    Directory.Delete(directory, recursive: true);
                 }
                 catch (IOException)
                 {
@@ -123,14 +123,14 @@ namespace AxoClient.Diagnostics
         public long CleanCache()
         {
             long freed = 0;
-            foreach (var dir in new[] { _paths.ApiCache, _paths.DownloadCache, _paths.ServerIcons, _paths.Tmp })
+            foreach (var directory in new[] { _paths.ApiCache, _paths.DownloadCache, _paths.ServerIcons, _paths.Tmp })
             {
-                if (!Directory.Exists(dir))
+                if (!Directory.Exists(directory))
                 {
                     continue;
                 }
 
-                foreach (var file in new DirectoryInfo(dir).EnumerateFiles("*", SearchOption.AllDirectories))
+                foreach (var file in new DirectoryInfo(directory).EnumerateFiles("*", SearchOption.AllDirectories))
                 {
                     try
                     {

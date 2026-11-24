@@ -35,7 +35,7 @@ namespace AxoClient.App
         public string NameOf(string id) => Path.GetFileName(Resolve(id));
 
         /// <summary>Datei aus der UI (Drag &amp; Drop) im temporären Ordner ablegen.</summary>
-        public async Task<string> Upload(string name, string base64, CancellationToken ct)
+        public async Task<string> Upload(string name, string base64, CancellationToken cancellationToken)
         {
             var clean = _textHelper.Clean(Path.GetFileName(name), 120);
             if (!_pathGuard.IsSafeFileName(clean))
@@ -48,21 +48,21 @@ namespace AxoClient.App
                 throw new AxoException("errors.fileTooLarge");
             }
 
-            var dir = Path.Combine(_paths.Tmp, "uploads", Guid.NewGuid().ToString("N")[..12]);
-            Directory.CreateDirectory(dir);
-            var target = Path.Combine(dir, clean);
-            await File.WriteAllBytesAsync(target, Convert.FromBase64String(base64), ct);
+            var directory = Path.Combine(_paths.Tmp, "uploads", Guid.NewGuid().ToString("N")[..12]);
+            Directory.CreateDirectory(directory);
+            var target = Path.Combine(directory, clean);
+            await File.WriteAllBytesAsync(target, Convert.FromBase64String(base64), cancellationToken);
             return Add(target);
         }
 
         public void CleanUploads()
         {
-            var dir = Path.Combine(_paths.Tmp, "uploads");
+            var directory = Path.Combine(_paths.Tmp, "uploads");
             try
             {
-                if (Directory.Exists(dir))
+                if (Directory.Exists(directory))
                 {
-                    Directory.Delete(dir, recursive: true);
+                    Directory.Delete(directory, recursive: true);
                 }
             }
             catch (IOException)

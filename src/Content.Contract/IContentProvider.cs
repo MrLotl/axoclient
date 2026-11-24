@@ -15,19 +15,19 @@ namespace AxoClient.Content.Contract
         /// <summary>CurseForge ist ohne API-Key nicht verfügbar ("Bald verfügbar").</summary>
         bool IsAvailable { get; }
 
-        Task<SearchPage> Search(SearchQuery query, CancellationToken ct);
+        Task<SearchPage> Search(SearchQuery query, CancellationToken cancellationToken);
 
-        Task<ContentProject> GetProject(string id, CancellationToken ct);
+        Task<ContentProject> GetProject(string id, CancellationToken cancellationToken);
 
-        Task<IReadOnlyDictionary<string, ContentProject>> GetProjects(IEnumerable<string> ids, CancellationToken ct);
+        Task<IReadOnlyDictionary<string, ContentProject>> GetProjects(IEnumerable<string> ids, CancellationToken cancellationToken);
 
         /// <summary>Versionen eines Projekts, optional auf MC-Version und Loader gefiltert. Neueste zuerst.</summary>
         Task<IReadOnlyList<ContentVersion>> GetVersions(string projectId, string? minecraftVersion, LoaderType? loader,
-            ProjectKind kind, CancellationToken ct);
+            ProjectKind kind, CancellationToken cancellationToken);
 
-        Task<ContentVersion?> GetVersion(string versionId, CancellationToken ct);
+        Task<ContentVersion?> GetVersion(string versionId, CancellationToken cancellationToken);
 
         /// <summary>Dateien anhand ihres SHA-1 erkennen (viele auf einmal).</summary>
-        Task<IReadOnlyDictionary<string, ContentVersion>> Identify(IReadOnlyCollection<LocalFileHash> files, CancellationToken ct);
+        Task<IReadOnlyDictionary<string, ContentVersion>> Identify(IReadOnlyCollection<LocalFileHash> files, CancellationToken cancellationToken);
     }
 }

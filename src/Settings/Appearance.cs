@@ -26,16 +26,16 @@ namespace AxoClient.Settings
         /// Bereinigt die Darstellungs-Einstellungen: ungültige eigene Verläufe fliegen raus, der aktive Verlauf
         /// passt immer zur gewählten Vorlage. Das alte Format (<c>custom</c> ohne Id) wird zu einem eigenen Verlauf.
         /// </summary>
-        public void Validate(AppearanceSettings a)
+        public void Validate(AppearanceSettings appearanceSettings)
         {
-            a.CustomGradients = (a.CustomGradients ?? [])
-                .Where(c => c != null && !string.IsNullOrWhiteSpace(c.Id) && c.Id.Length <= 40 && IsColor(c.From) && IsColor(c.To))
-                .DistinctBy(c => c.Id)
+            appearanceSettings.CustomGradients = (appearanceSettings.CustomGradients ?? [])
+                .Where(customGradient => customGradient != null && !string.IsNullOrWhiteSpace(customGradient.Id) && customGradient.Id.Length <= 40 && IsColor(customGradient.From) && IsColor(customGradient.To))
+                .DistinctBy(customGradient => customGradient.Id)
                 .Take(MaxCustomGradients)
-                .Select(c => c with { Angle = Math.Clamp(c.Angle, 0, 360) })
+                .Select(customGradient => customGradient with { Angle = Math.Clamp(customGradient.Angle, 0, 360) })
                 .ToList();
 
-            var accent = a.Accent;
+            var accent = appearanceSettings.Accent;
             if (accent == null || !IsColor(accent.From) || !IsColor(accent.To))
             {
                 accent = Presets["axo"];
@@ -43,30 +43,30 @@ namespace AxoClient.Settings
 
             accent = accent with { Angle = Math.Clamp(accent.Angle, 0, 360) };
 
-            if (a.Preset == "custom" && a.CustomGradients.Count < MaxCustomGradients)
+            if (appearanceSettings.Preset == "custom" && appearanceSettings.CustomGradients.Count < MaxCustomGradients)
             {
                 var id = Guid.NewGuid().ToString("N")[..8];
-                a.CustomGradients.Add(new CustomGradient(id, accent.From, accent.To, accent.Angle));
-                a.Preset = CustomPrefix + id;
+                appearanceSettings.CustomGradients.Add(new CustomGradient(id, accent.From, accent.To, accent.Angle));
+                appearanceSettings.Preset = CustomPrefix + id;
             }
 
-            if (a.Preset?.StartsWith(CustomPrefix, StringComparison.Ordinal) == true)
+            if (appearanceSettings.Preset?.StartsWith(CustomPrefix, StringComparison.Ordinal) == true)
             {
-                var custom = a.CustomGradients.FirstOrDefault(c => CustomPrefix + c.Id == a.Preset);
+                var custom = appearanceSettings.CustomGradients.FirstOrDefault(customGradient => CustomPrefix + customGradient.Id == appearanceSettings.Preset);
                 if (custom != null)
                 {
-                    a.Accent = new AccentGradient(custom.From, custom.To, custom.Angle);
+                    appearanceSettings.Accent = new AccentGradient(custom.From, custom.To, custom.Angle);
                     return;
                 }
             }
-            else if (a.Preset != null && Presets.TryGetValue(a.Preset, out var preset))
+            else if (appearanceSettings.Preset != null && Presets.TryGetValue(appearanceSettings.Preset, out var preset))
             {
-                a.Accent = preset;
+                appearanceSettings.Accent = preset;
                 return;
             }
 
-            a.Preset = "axo";
-            a.Accent = Presets["axo"];
+            appearanceSettings.Preset = "axo";
+            appearanceSettings.Accent = Presets["axo"];
         }
 
         /// <summary>Kleinster Kontrast zwischen weißem Button-Text und den beiden Verlaufsfarben (WCAG).</summary>
@@ -78,17 +78,17 @@ namespace AxoClient.Settings
 
         public double ContrastWithWhite(string hex)
         {
-            var l = relativeLuminance(hex);
-            return 1.05 / (l + 0.05);
+            var luminance = relativeLuminance(hex);
+            return 1.05 / (luminance + 0.05);
         }
 
         private double relativeLuminance(string hex)
         {
             var value = int.Parse(hex.AsSpan(1), NumberStyles.HexNumber);
-            double Channel(int c)
+            double Channel(int channelValue)
             {
-                var s = c / 255.0;
-                return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
+                var scaled = channelValue / 255.0;
+                return scaled <= 0.03928 ? scaled / 12.92 : Math.Pow((scaled + 0.055) / 1.055, 2.4);
             }
             return 0.2126 * Channel((value >> 16) & 0xFF) + 0.7152 * Channel((value >> 8) & 0xFF) + 0.0722 * Channel(value & 0xFF);
         }

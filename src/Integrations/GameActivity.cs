@@ -31,18 +31,18 @@ namespace AxoClient.Integrations
             _settings = settings;
         }
 
-        void IGameLaunchHook.OnStarted(LaunchContext ctx, RunningProcess process)
+        void IGameLaunchHook.OnStarted(LaunchContext context, RunningProcess process)
         {
-            _server = ctx.QuickPlay?.Server;
+            _server = context.QuickPlay?.Server;
             _relay = null;
-            InstanceName = ctx.Instance.Name;
-            Minecraft = ctx.Instance.Minecraft.Version;
+            InstanceName = context.Instance.Name;
+            Minecraft = context.Instance.Minecraft.Version;
             StartedAt = DateTimeOffset.Now;
             process.LineReceived += onLine;
             raise();
         }
 
-        void IGameLaunchHook.OnExited(LaunchContext ctx, RunningProcess process, int exitCode, bool crashed)
+        void IGameLaunchHook.OnExited(LaunchContext context, RunningProcess process, int exitCode, bool crashed)
         {
             process.LineReceived -= onLine;
             _server = null;
@@ -57,7 +57,7 @@ namespace AxoClient.Integrations
             var text = line.Text;
             if (connecting().Match(text) is { Success: true } connect)
             {
-                var port = int.TryParse(connect.Groups[2].Value, out var p) ? p : 25565;
+                var port = int.TryParse(connect.Groups[2].Value, out var parsed) ? parsed : 25565;
                 _server = port == 25565 ? connect.Groups[1].Value : $"{connect.Groups[1].Value}:{port}";
                 raise();
             }

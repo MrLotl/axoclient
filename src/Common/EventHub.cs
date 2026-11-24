@@ -22,9 +22,9 @@ namespace AxoClient.Common
                 Published?.Invoke(type, data);
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _appLog.Error($"Ereignis {type} konnte nicht zugestellt werden", ex);
+                _appLog.Error($"Ereignis {type} konnte nicht zugestellt werden", exception);
                 return false;
             }
         }
@@ -35,9 +35,9 @@ namespace AxoClient.Common
             {
                 Published?.Invoke(type, data);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _appLog.Error($"Ereignis {type} konnte nicht zugestellt werden", ex);
+                _appLog.Error($"Ereignis {type} konnte nicht zugestellt werden", exception);
             }
         }
     }

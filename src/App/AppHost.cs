@@ -64,7 +64,7 @@ namespace AxoClient.App
             // Laufende Spiele zeigen das neue Axo-Cape sofort, ohne auf die nächste Abfrage beim Dienst zu warten
             capeService.ActiveChanged += (uuid, cape) => _ = bridge.Send(null, "cape", new { uuid, cape });
             // Ergebnis einer Cape-Prüfung (Benachrichtigung vom Dienst) in die eigene Cape-Liste übernehmen
-            social.RemoteNotification += n => _ = applyCapeReview(n);
+            social.RemoteNotification += notification => _ = applyCapeReview(notification);
             // Emotes: Mod → Launcher → Dienst (Raum des Servers) → andere Launcher → deren Mod
             playActivity.JoinAddressChanged += address => live.SetServer(address);
             // Lokale Benachrichtigungen aus Core-Ereignissen
@@ -111,33 +111,33 @@ namespace AxoClient.App
                 }
                 _notifications.Add(kind, text);
             }
-            catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
+            catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException)
             {
-                _appLog.Warn("Benachrichtigung konnte nicht gelesen werden", ex);
+                _appLog.Warn("Benachrichtigung konnte nicht gelesen werden", exception);
             }
         }
 
         /// <summary>"capeReview" vom Dienst: Status des eigenen Capes (freigegeben/abgelehnt, Grund) übernehmen.</summary>
-        private async Task applyCapeReview(ServiceNotification n)
+        private async Task applyCapeReview(ServiceNotification notification)
         {
-            if (n.Kind != "capeReview" || n.Data == null)
+            if (notification.Kind != "capeReview" || notification.Data == null)
             {
                 return;
             }
             try
             {
-                var data = JsonSerializer.SerializeToElement(n.Data, _jsonHelper.Options);
-                var localId = data.TryGetProperty("localId", out var l) ? l.GetString() : null;
-                var approved = data.TryGetProperty("approved", out var a) && a.ValueKind == JsonValueKind.True;
-                var reason = data.TryGetProperty("reason", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString() : null;
+                var data = JsonSerializer.SerializeToElement(notification.Data, _jsonHelper.Options);
+                var localId = data.TryGetProperty("localId", out var localIdElement) ? localIdElement.GetString() : null;
+                var approved = data.TryGetProperty("approved", out var approvedElement) && approvedElement.ValueKind == JsonValueKind.True;
+                var reason = data.TryGetProperty("reason", out var reasonElement) && reasonElement.ValueKind == JsonValueKind.String ? reasonElement.GetString() : null;
                 if (localId != null)
                 {
                     await _capeService.ApplyReview(localId, approved, reason, CancellationToken.None);
                 }
             }
-            catch (Exception ex) when (ex is JsonException or InvalidOperationException or IOException or AxoException)
+            catch (Exception exception) when (exception is JsonException or InvalidOperationException or IOException or AxoException)
             {
-                _appLog.Warn("Cape-Prüfung konnte nicht übernommen werden", ex);
+                _appLog.Warn("Cape-Prüfung konnte nicht übernommen werden", exception);
             }
         }
 
@@ -154,9 +154,9 @@ namespace AxoClient.App
                         await checkUpdates(instance);
                     }
                 }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
+                catch (Exception exception) when (exception is not OutOfMemoryException)
                 {
-                    _appLog.Warn("Tägliche Update-Prüfung fehlgeschlagen", ex);
+                    _appLog.Warn("Tägliche Update-Prüfung fehlgeschlagen", exception);
                 }
                 await Task.Delay(TimeSpan.FromHours(24));
             }
@@ -170,9 +170,9 @@ namespace AxoClient.App
                 _notifications.Add("modUpdates", new TextRef("notifications.modUpdates", ("count", updates.Count), ("instance", instance.Name)),
                     new() { ["instanceId"] = instance.Id }, $"modUpdates:{instance.Id}");
             }
-            if (instance.Origin is { Type: OriginType.Modpack, Source: "modrinth", ProjectId: { } pid, VersionId: { } vid })
+            if (instance.Origin is { Type: OriginType.Modpack, Source: "modrinth", ProjectId: { } processId, VersionId: { } vid })
             {
-                var latest = (await _modrinth.GetVersions(pid, null, null, ProjectKind.Modpack, CancellationToken.None)).FirstOrDefault();
+                var latest = (await _modrinth.GetVersions(processId, null, null, ProjectKind.Modpack, CancellationToken.None)).FirstOrDefault();
                 if (latest != null && latest.Id != vid)
                 {
                     _notifications.Add("modpackUpdates", new TextRef("notifications.modpackUpdate", ("instance", instance.Name),

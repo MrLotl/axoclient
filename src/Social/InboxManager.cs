@@ -67,10 +67,10 @@ namespace AxoClient.Social
         }
 
         public async Task SendInstance(string instanceId, IReadOnlyCollection<string> recipients, bool includeServers, bool includeOptions,
-            bool includeModLock, CancellationToken ct)
+            bool includeModLock, CancellationToken cancellationToken)
         {
-            var instance = await _instances.Get(instanceId, ct);
-            var doc = await _content.Sync(instanceId, ct);
+            var instance = await _instances.Get(instanceId, cancellationToken);
+            var document = await _content.Sync(instanceId, cancellationToken);
             var recipe = new InstanceRecipe
             {
                 Name = instance.Name,
@@ -78,33 +78,33 @@ namespace AxoClient.Social
                 Loader = _loaderNames.ModrinthId(instance.Loader.Type),
                 LoaderVersion = instance.Loader.Version,
                 // Lokale Dateien ohne bekannte Quelle und die AxoClient-Mod werden nie mitgeschickt
-                Content = Enum.GetValues<ContentType>().SelectMany(t => doc.ListOf(t).Select(e => (t, e)))
-                    .Where(x => x.e.Enabled && x.e.Source is ContentSource.Modrinth or ContentSource.CurseForge && x.e.ProjectId != null
-                                && x.e.VersionId != null)
-                    .Select(x => new RecipeContent(x.t.ToString().ToLowerInvariant(),
-                        x.e.Source == ContentSource.CurseForge ? "curseforge" : "modrinth", x.e.ProjectId!, x.e.VersionId!,
-                        includeModLock && x.t == ContentType.Mod && instance.ModLock.IsLocked(x.e)))
+                Content = Enum.GetValues<ContentType>().SelectMany(contentType => document.ListOf(contentType).Select(entry => (Type: contentType, Entry: entry)))
+                    .Where(contentItem => contentItem.Entry.Enabled && contentItem.Entry.Source is ContentSource.Modrinth or ContentSource.CurseForge && contentItem.Entry.ProjectId != null
+                                && contentItem.Entry.VersionId != null)
+                    .Select(contentItem => new RecipeContent(contentItem.Type.ToString().ToLowerInvariant(),
+                        contentItem.Entry.Source == ContentSource.CurseForge ? "curseforge" : "modrinth", contentItem.Entry.ProjectId!, contentItem.Entry.VersionId!,
+                        includeModLock && contentItem.Type == ContentType.Mod && instance.ModLock.IsLocked(contentItem.Entry)))
                     .ToList(),
-                Servers = includeServers ? _servers.List(instanceId).Select(s => new RecipeServer(s.Name, s.Address)).ToList() : [],
-                Options = includeOptions ? await readOptions(instanceId, ct) : null,
+                Servers = includeServers ? _servers.List(instanceId).Select(server => new RecipeServer(server.Name, server.Address)).ToList() : [],
+                Options = includeOptions ? await readOptions(instanceId, cancellationToken) : null,
                 ModLock = includeModLock && instance.ModLock.Active ? instance.ModLock.Level.ToString().ToLowerInvariant() : null
             };
-            await send("instance", instance.Name, recipe, recipients, ct);
+            await send("instance", instance.Name, recipe, recipients, cancellationToken);
         }
 
-        public Task SendMod(string title, RecipeContent mod, IReadOnlyCollection<string> recipients, CancellationToken ct) =>
-            send("mod", title, mod, recipients, ct);
+        public Task SendMod(string title, RecipeContent mod, IReadOnlyCollection<string> recipients, CancellationToken cancellationToken) =>
+            send("mod", title, mod, recipients, cancellationToken);
 
-        public Task SendServer(string name, string address, IReadOnlyCollection<string> recipients, CancellationToken ct) =>
+        public Task SendServer(string name, string address, IReadOnlyCollection<string> recipients, CancellationToken cancellationToken) =>
             _serverPing.IsValidAddress(address)
-                ? send("server", name, new RecipeServer(_textHelper.Clean(name, 80), address.Trim()), recipients, ct)
+                ? send("server", name, new RecipeServer(_textHelper.Clean(name, 80), address.Trim()), recipients, cancellationToken)
                 : throw new AxoException("servers.addressInvalid");
 
         public Task SendInvite(string address, string? instanceName, string? minecraft, IReadOnlyCollection<string> recipients,
-            CancellationToken ct) =>
-            send("invite", address, new InvitePayload(address, instanceName, minecraft), recipients, ct);
+            CancellationToken cancellationToken) =>
+            send("invite", address, new InvitePayload(address, instanceName, minecraft), recipients, cancellationToken);
 
-        private async Task send(string kind, string title, object payload, IReadOnlyCollection<string> recipients, CancellationToken ct)
+        private async Task send(string kind, string title, object payload, IReadOnlyCollection<string> recipients, CancellationToken cancellationToken)
         {
             var json = JsonSerializer.Serialize(payload, _jsonHelper.Compact);
             if (json.Length > MaxPayloadChars)
@@ -123,26 +123,26 @@ namespace AxoClient.Social
                 kind,
                 title = _textHelper.Clean(title, 80),
                 payload = json
-            }, ct);
+            }, cancellationToken);
         }
 
-        public async Task<JsonElement> Fetch(string id, CancellationToken ct)
+        public async Task<JsonElement> Fetch(string id, CancellationToken cancellationToken)
         {
             requireId(id);
-            var item = await _client.Send<JsonElement>(HttpMethod.Get, $"/inbox/{id}", ct: ct);
+            var item = await _client.Send<JsonElement>(HttpMethod.Get, $"/inbox/{id}", cancellationToken: cancellationToken);
             return item;
         }
 
-        public async Task Discard(string id, CancellationToken ct)
+        public async Task Discard(string id, CancellationToken cancellationToken)
         {
-            await _client.Send(HttpMethod.Delete, $"/inbox/{requireId(id)}", ct: ct);
-            await _social.SyncNow(ct);
+            await _client.Send(HttpMethod.Delete, $"/inbox/{requireId(id)}", cancellationToken: cancellationToken);
+            await _social.SyncNow(cancellationToken);
         }
 
         /// <summary>Paket annehmen: Instanz anlegen, Mod installieren oder Server eintragen.</summary>
-        public async Task<string?> Accept(string id, string? targetInstanceId, CancellationToken ct)
+        public async Task<string?> Accept(string id, string? targetInstanceId, CancellationToken cancellationToken)
         {
-            var item = await Fetch(id, ct);
+            var item = await Fetch(id, cancellationToken);
             var kind = item.GetProperty("kind").GetString();
             var payloadText = item.GetProperty("payload").GetString() ?? "{}";
             if (payloadText.Length > MaxPayloadChars)
@@ -166,7 +166,7 @@ namespace AxoClient.Social
                         var type = parseType(mod.Type);
                         await _jobs.Run("content.install", new TextRef("content.installing"),
                             job => _content.Install(target, type, new InstallRequest(requireSource(mod.Source), mod.ProjectId, mod.VersionId), job),
-                            target, ct);
+                            target, cancellationToken);
                         result = target;
                         break;
                     }
@@ -184,7 +184,7 @@ namespace AxoClient.Social
                 default:
                     throw new AxoException("inbox.invalid");
             }
-            await Discard(id, ct);
+            await Discard(id, cancellationToken);
             return result;
         }
 
@@ -202,23 +202,23 @@ namespace AxoClient.Social
                 var instance = await _instances.Create(new CreateInstanceRequest(recipe.Name, recipe.Minecraft, loader,
                     _gameVersionHelper.IsSafeVersion(recipe.LoaderVersion) ? recipe.LoaderVersion : null), OriginType.Import, job.Token);
                 var items = recipe.Content.Take(500).ToList();
-                for (var i = 0; i < items.Count; i++)
+                for (var index = 0; index < items.Count; index++)
                 {
-                    var c = items[i];
-                    job.Report((double)i / items.Count);
+                    var recipeContent = items[index];
+                    job.Report((double)index / items.Count);
                     try
                     {
-                        await _content.Install(instance.Id, parseType(c.Type), new InstallRequest(requireSource(c.Source), c.ProjectId, c.VersionId),
-                            job.Sub((double)i / items.Count, (double)(i + 1) / items.Count));
+                        await _content.Install(instance.Id, parseType(recipeContent.Type), new InstallRequest(requireSource(recipeContent.Source), recipeContent.ProjectId, recipeContent.VersionId),
+                            job.Sub((double)index / items.Count, (double)(index + 1) / items.Count));
                     }
-                    catch (AxoException ex)
+                    catch (AxoException exception)
                     {
-                        _appLog.Warn($"Inhalt aus Paket übersprungen: {c.ProjectId}", ex);
+                        _appLog.Warn($"Inhalt aus Paket übersprungen: {recipeContent.ProjectId}", exception);
                     }
                 }
-                foreach (var server in recipe.Servers.Take(50).Where(s => _serverPing.IsValidAddress(s.Address)))
+                foreach (var server in recipe.Servers.Take(50).Where(server => _serverPing.IsValidAddress(server.Address)))
                 {
-                    await _servers.Add(instance.Id, s(server.Name), server.Address);
+                    await _servers.Add(instance.Id, cleanServerName(server.Name), server.Address);
                 }
 
                 if (recipe.Options != null)
@@ -232,13 +232,13 @@ namespace AxoClient.Social
                     created.ModLock = new ModLock
                     {
                         Level = recipe.ModLock == "full" ? ModLockLevel.Full : ModLockLevel.Pack,
-                        PackMods = items.Where(c => c.Pack && c.Type == "mod").Select(c => "project:" + c.ProjectId).Distinct().ToList()
+                        PackMods = items.Where(item => item.Pack && item.Type == "mod").Select(item => "project:" + item.ProjectId).Distinct().ToList()
                     };
                     await _instances.Save(created, job.Token);
                 }
                 return instance.Id;
 
-                string s(string name) => _textHelper.Clean(name, 80) is { Length: > 0 } n ? n : "Server";
+                string cleanServerName(string name) => _textHelper.Clean(name, 80) is { Length: > 0 } cleanName ? cleanName : "Server";
             });
 
         private ContentType parseType(string type) => type switch
@@ -253,15 +253,15 @@ namespace AxoClient.Social
             source is "modrinth" or "curseforge" ? source : throw new AxoException("inbox.invalid");
 
         private string requireId(string id) =>
-            id.Length is > 0 and <= 64 && id.All(c => char.IsAsciiLetterOrDigit(c) || c == '-') ? id : throw new AxoException("errors.invalidId");
+            id.Length is > 0 and <= 64 && id.All(character => char.IsAsciiLetterOrDigit(character) || character == '-') ? id : throw new AxoException("errors.invalidId");
 
-        private async Task<string?> readOptions(string instanceId, CancellationToken ct)
+        private async Task<string?> readOptions(string instanceId, CancellationToken cancellationToken)
         {
-            var path = Path.Combine(_instances.GameDir(instanceId), "options.txt");
-            return File.Exists(path) ? _optionsFile.Filter(await File.ReadAllTextAsync(path, ct)) : null;
+            var path = Path.Combine(_instances.GameDirectory(instanceId), "options.txt");
+            return File.Exists(path) ? _optionsFile.Filter(await File.ReadAllTextAsync(path, cancellationToken)) : null;
         }
 
-        private async Task writeOptions(string instanceId, string options, CancellationToken ct) =>
-            await File.WriteAllTextAsync(Path.Combine(_instances.GameDir(instanceId), "options.txt"), _optionsFile.Filter(options), ct);
+        private async Task writeOptions(string instanceId, string options, CancellationToken cancellationToken) =>
+            await File.WriteAllTextAsync(Path.Combine(_instances.GameDirectory(instanceId), "options.txt"), _optionsFile.Filter(options), cancellationToken);
     }
 }

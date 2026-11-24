@@ -5,9 +5,9 @@ namespace AxoClient.Common
     /// <summary>Alle Pfade des Datenordners an einer Stelle (siehe docs/plan/02-ordnerstruktur.md).</summary>
     public sealed class AppPaths
     {
-        public AppPaths(string root, IFileSystem? fs = null)
+        public AppPaths(string root, IFileSystem? fileSystem = null)
         {
-            Fs = fs ?? new FileSystem();
+            Fs = fileSystem ?? new FileSystem();
             Root = Fs.Path.GetFullPath(root);
         }
 
@@ -55,7 +55,7 @@ namespace AxoClient.Common
         public string PlaytimeJson(string id) => combine("instances", id, "playtime.json");
         public string PlacesJson(string id) => combine("instances", id, "places.json");
         public string InstanceBackups(string id) => combine("instances", id, "backups");
-        public string GameDir(string id) => combine("instances", id, "minecraft");
+        public string GameDirectory(string id) => combine("instances", id, "minecraft");
 
         public string Server(string id) => combine("servers", id);
         public string ServerJson(string id) => combine("servers", id, "server.json");
@@ -65,13 +65,13 @@ namespace AxoClient.Common
         /// <summary>Legt alle festen Ordner an. Fehlende Ordner sind nie ein Fehler.</summary>
         public void EnsureCreated()
         {
-            foreach (var dir in new[]
+            foreach (var directory in new[]
                      {
                          Root, Instances, Servers, Skins, Capes, Emotes, Versions, Libraries, Assets, Java, ApiCache,
                          DownloadCache, Heads, ServerIcons, Updates, Logs, Tmp
                      })
             {
-                Fs.Directory.CreateDirectory(dir);
+                Fs.Directory.CreateDirectory(directory);
             }
         }
 

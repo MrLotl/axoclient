@@ -30,14 +30,14 @@ namespace AxoClient.Skins
 
         public string Folder { get; }
 
-        public async Task<IReadOnlyList<TItem>> List(CancellationToken ct = default)
+        public async Task<IReadOnlyList<TItem>> List(CancellationToken cancellationToken = default)
         {
-            var doc = await _store.Load(ct);
-            return doc.Items.Where(i => File.Exists(FilePath(i))).ToList();
+            var document = await _store.Load(cancellationToken);
+            return document.Items.Where(item => File.Exists(FilePath(item))).ToList();
         }
 
-        public async Task<TItem?> Get(string id, CancellationToken ct = default) =>
-            (await List(ct)).FirstOrDefault(i => i.Id == id);
+        public async Task<TItem?> Get(string id, CancellationToken cancellationToken = default) =>
+            (await List(cancellationToken)).FirstOrDefault(libraryItem => libraryItem.Id == id);
 
         public string FilePath(TItem item) => _pathGuard.Combine(Folder, item.File);
 
@@ -52,32 +52,32 @@ namespace AxoClient.Skins
             return File.Exists(path) ? path : null;
         }
 
-        public async Task Add(TItem item, byte[] png, CancellationToken ct = default)
+        public async Task Add(TItem item, byte[] png, CancellationToken cancellationToken = default)
         {
             Directory.CreateDirectory(Folder);
-            await File.WriteAllBytesAsync(_pathGuard.Combine(Folder, item.File), png, ct);
-            await _store.Update(doc =>
+            await File.WriteAllBytesAsync(_pathGuard.Combine(Folder, item.File), png, cancellationToken);
+            await _store.Update(document =>
             {
-                doc.Items.RemoveAll(i => i.Id == item.Id);
-                doc.Items.Insert(0, item);
-            }, ct);
+                document.Items.RemoveAll(libraryItem => libraryItem.Id == item.Id);
+                document.Items.Insert(0, item);
+            }, cancellationToken);
         }
 
-        public Task Update(string id, Action<TItem> change, CancellationToken ct = default) =>
-            _store.Update(doc =>
+        public Task Update(string id, Action<TItem> change, CancellationToken cancellationToken = default) =>
+            _store.Update(document =>
             {
-                var item = doc.Items.FirstOrDefault(i => i.Id == id) ?? throw new AxoException("errors.notFound");
+                var item = document.Items.FirstOrDefault(libraryItem => libraryItem.Id == id) ?? throw new AxoException("errors.notFound");
                 change(item);
-            }, ct);
+            }, cancellationToken);
 
-        public async Task Remove(string id, CancellationToken ct = default)
+        public async Task Remove(string id, CancellationToken cancellationToken = default)
         {
             TItem? removed = null;
-            await _store.Update(doc =>
+            await _store.Update(document =>
             {
-                removed = doc.Items.FirstOrDefault(i => i.Id == id);
-                doc.Items.RemoveAll(i => i.Id == id);
-            }, ct);
+                removed = document.Items.FirstOrDefault(item => item.Id == id);
+                document.Items.RemoveAll(item => item.Id == id);
+            }, cancellationToken);
             if (removed != null)
             {
                 var path = _pathGuard.Combine(Folder, removed.File);

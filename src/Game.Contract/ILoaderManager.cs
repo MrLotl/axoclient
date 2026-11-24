@@ -6,9 +6,9 @@ namespace AxoClient.Game.Contract
     {
         ILoaderInstaller? For(LoaderType type);
 
-        Task<IReadOnlyList<LoaderVersionInfo>> ListVersions(LoaderType type, string mc, CancellationToken ct);
+        Task<IReadOnlyList<LoaderVersionInfo>> ListVersions(LoaderType type, string minecraftVersion, CancellationToken cancellationToken);
 
         /// <summary>Gewählte oder empfohlene Loader-Version.</summary>
-        Task<string?> ResolveVersion(LoaderType type, string mc, string? wanted, CancellationToken ct);
+        Task<string?> ResolveVersion(LoaderType type, string minecraftVersion, string? wanted, CancellationToken cancellationToken);
     }
 }

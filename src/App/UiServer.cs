@@ -38,24 +38,24 @@ namespace AxoClient.App
             _ = Task.Run(() => acceptLoop(_cts.Token));
         }
 
-        private async Task acceptLoop(CancellationToken ct)
+        private async Task acceptLoop(CancellationToken cancellationToken)
         {
-            while (!ct.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 TcpClient client;
                 try
                 {
-                    client = await _listener!.AcceptTcpClientAsync(ct);
+                    client = await _listener!.AcceptTcpClientAsync(cancellationToken);
                 }
-                catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or SocketException)
+                catch (Exception exception) when (exception is OperationCanceledException or ObjectDisposedException or SocketException)
                 {
                     return;
                 }
-                _ = Task.Run(() => serve(client, ct), ct);
+                _ = Task.Run(() => serve(client, cancellationToken), cancellationToken);
             }
         }
 
-        private async Task serve(TcpClient client, CancellationToken ct)
+        private async Task serve(TcpClient client, CancellationToken cancellationToken)
         {
             using var _ = client;
             client.NoDelay = true;
@@ -63,9 +63,9 @@ namespace AxoClient.App
             try
             {
                 // Keep-Alive: mehrere Anfragen pro Verbindung, bis der Browser schließt oder 30 s Ruhe ist
-                while (!ct.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    using var idle = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    using var idle = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     idle.CancelAfter(TimeSpan.FromSeconds(30));
                     var head = await readHead(stream, idle.Token);
                     if (head == null)
@@ -73,81 +73,81 @@ namespace AxoClient.App
                         return;
                     }
 
-                    if (!await handle(stream, head, ct))
+                    if (!await handle(stream, head, cancellationToken))
                     {
                         return;
                     }
                 }
             }
-            catch (Exception ex) when (ex is IOException or OperationCanceledException or SocketException or ObjectDisposedException)
+            catch (Exception exception) when (exception is IOException or OperationCanceledException or SocketException or ObjectDisposedException)
             {
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _appLog.Warn("UI-Server: Anfrage fehlgeschlagen", ex);
+                _appLog.Warn("UI-Server: Anfrage fehlgeschlagen", exception);
             }
         }
 
         /// <summary>Beantwortet eine Anfrage. Gibt false zurück, wenn die Verbindung danach geschlossen werden soll.</summary>
-        private async Task<bool> handle(NetworkStream stream, string head, CancellationToken ct)
+        private async Task<bool> handle(NetworkStream stream, string head, CancellationToken cancellationToken)
         {
             var lines = head.Split("\r\n");
             var parts = lines[0].Split(' ');
             if (parts.Length != 3 || !parts[1].StartsWith('/'))
             {
-                await write(stream, 400, "text/plain", [], false, false, ct);
+                await write(stream, 400, "text/plain", [], false, false, cancellationToken);
                 return false;
             }
             var method = parts[0];
             var target = parts[1];
-            var host = lines.Skip(1).Select(l => l.Split(':', 2))
-                .FirstOrDefault(p => p.Length == 2 && p[0].Trim().Equals("Host", StringComparison.OrdinalIgnoreCase))?[1].Trim();
-            var keepAlive = !lines.Any(l => l.Equals("Connection: close", StringComparison.OrdinalIgnoreCase));
+            var host = lines.Skip(1).Select(line => line.Split(':', 2))
+                .FirstOrDefault(headerParts => headerParts.Length == 2 && headerParts[0].Trim().Equals("Host", StringComparison.OrdinalIgnoreCase))?[1].Trim();
+            var keepAlive = !lines.Any(line => line.Equals("Connection: close", StringComparison.OrdinalIgnoreCase));
 
             if (host != $"127.0.0.1:{Port}" && host != $"localhost:{Port}")
             {
-                await write(stream, 403, "text/plain", [], false, false, ct);
+                await write(stream, 403, "text/plain", [], false, false, cancellationToken);
                 return false;
             }
             if (method is not ("GET" or "HEAD"))
             {
-                await write(stream, 405, "text/plain", [], false, keepAlive, ct);
+                await write(stream, 405, "text/plain", [], false, keepAlive, cancellationToken);
                 return keepAlive;
             }
 
             var url = "http://127.0.0.1" + target;
             var isAxo = target.StartsWith("/axo/", StringComparison.Ordinal);
             using var body = isAxo ? _content.Axo(url, out var type) : _content.App(url, out type);
-            var bytes = await readAll(body, ct);
+            var bytes = await readAll(body, cancellationToken);
             var status = isAxo && bytes.Length == 0 ? 404 : 200;
             // Gebaute Dateien unter /assets/ tragen einen Hash im Namen und ändern sich nie
             // Panoramas und Bilder mit Versionsangabe (?v=…) bleiben unter derselben Adresse gleich: zwischenspeichern,
             // sonst lädt und dekodiert die Oberfläche sie bei jedem Seitenwechsel neu (sichtbares Nachladen)
             var immutable = status == 200 && ((!isAxo && target.StartsWith("/assets/", StringComparison.Ordinal))
                 || (isAxo && (target.StartsWith("/axo/panorama/", StringComparison.Ordinal) || target.Contains("?v=", StringComparison.Ordinal))));
-            await write(stream, status, type, method == "HEAD" ? [] : bytes, immutable, keepAlive, ct, bytes.Length);
+            await write(stream, status, type, method == "HEAD" ? [] : bytes, immutable, keepAlive, cancellationToken, bytes.Length);
             return keepAlive;
         }
 
-        private async Task<byte[]> readAll(Stream? body, CancellationToken ct)
+        private async Task<byte[]> readAll(Stream? body, CancellationToken cancellationToken)
         {
             if (body == null)
             {
                 return [];
             }
 
-            if (body is MemoryStream ms)
+            if (body is MemoryStream stream)
             {
-                return ms.ToArray();
+                return stream.ToArray();
             }
 
             using var copy = new MemoryStream();
-            await body.CopyToAsync(copy, ct);
+            await body.CopyToAsync(copy, cancellationToken);
             return copy.ToArray();
         }
 
         private async Task write(NetworkStream stream, int status, string contentType, byte[] body, bool immutable,
-            bool keepAlive, CancellationToken ct, int? length = null)
+            bool keepAlive, CancellationToken cancellationToken, int? length = null)
         {
             var reason = status switch { 200 => "OK", 400 => "Bad Request", 403 => "Forbidden", 404 => "Not Found", _ => "Method Not Allowed" };
             var header = new StringBuilder()
@@ -161,33 +161,33 @@ namespace AxoClient.App
                 .Append(keepAlive ? "Connection: keep-alive\r\n" : "Connection: close\r\n")
                 .Append("\r\n")
                 .ToString();
-            await stream.WriteAsync(Encoding.ASCII.GetBytes(header), ct);
+            await stream.WriteAsync(Encoding.ASCII.GetBytes(header), cancellationToken);
             if (body.Length > 0)
             {
-                await stream.WriteAsync(body, ct);
+                await stream.WriteAsync(body, cancellationToken);
             }
 
-            await stream.FlushAsync(ct);
+            await stream.FlushAsync(cancellationToken);
         }
 
         /// <summary>Liest Anfragezeile und Header bis zur Leerzeile. null, wenn die Verbindung endet.</summary>
-        private async Task<string?> readHead(NetworkStream stream, CancellationToken ct)
+        private async Task<string?> readHead(NetworkStream stream, CancellationToken cancellationToken)
         {
             var buffer = new List<byte>(1024);
             var one = new byte[1];
             while (buffer.Count < MaxHeaderBytes)
             {
-                var read = await stream.ReadAsync(one, ct);
+                var read = await stream.ReadAsync(one, cancellationToken);
                 if (read == 0)
                 {
                     return null;
                 }
 
                 buffer.Add(one[0]);
-                var n = buffer.Count;
-                if (n >= 4 && buffer[n - 4] == '\r' && buffer[n - 3] == '\n' && buffer[n - 2] == '\r' && buffer[n - 1] == '\n')
+                var bufferedCount = buffer.Count;
+                if (bufferedCount >= 4 && buffer[bufferedCount - 4] == '\r' && buffer[bufferedCount - 3] == '\n' && buffer[bufferedCount - 2] == '\r' && buffer[bufferedCount - 1] == '\n')
                 {
-                    return Encoding.ASCII.GetString(buffer.ToArray(), 0, n - 4);
+                    return Encoding.ASCII.GetString(buffer.ToArray(), 0, bufferedCount - 4);
                 }
             }
             return null;

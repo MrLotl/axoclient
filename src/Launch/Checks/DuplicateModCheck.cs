@@ -21,23 +21,23 @@ namespace AxoClient.Launch.Checks
         public override string Id => "duplicate";
         public override LaunchPhase Phase => LaunchPhase.Content;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            var results = ctx.Content.Mods
-                .Where(m => m.Enabled && m.Meta?.ModId is { Length: > 0 } && m.Source != ContentSource.AxoClient)
-                .GroupBy(m => m.Meta!.ModId!, StringComparer.OrdinalIgnoreCase)
-                .Where(g => g.Count() > 1)
-                .Select(g =>
+            var results = context.Content.Mods
+                .Where(mod => mod.Enabled && mod.Meta?.ModId is { Length: > 0 } && mod.Source != ContentSource.AxoClient)
+                .GroupBy(mod => mod.Meta!.ModId!, StringComparer.OrdinalIgnoreCase)
+                .Where(group => group.Count() > 1)
+                .Select(group =>
                 {
-                    var ordered = g.OrderByDescending(m => m.Version ?? "", Comparer<string>.Create(_versionRange.Compare))
-                        .ThenByDescending(m => m.AddedAt).ToList();
+                    var ordered = group.OrderByDescending(entry => entry.Version ?? "", Comparer<string>.Create(_versionRange.Compare))
+                        .ThenByDescending(entry => entry.AddedAt).ToList();
                     var keep = ordered[0];
-                    var older = ordered.Skip(1).Select(m => m.File).ToList();
+                    var older = ordered.Skip(1).Select(entry => entry.File).ToList();
                     return new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.content.duplicate", ("name", keep.Name),
                             ("count", ordered.Count)),
-                        [new CheckAction("keepNewest", new TextRef("pipeline.action.keepNewest"), async (c, job) =>
+                        [new CheckAction("keepNewest", new TextRef("pipeline.action.keepNewest"), async (launchContext, job) =>
                         {
-                            foreach (var file in older) { await _content.SetEnabled(c.Instance.Id, ContentType.Mod, file, false, job.Token); } }, true)], CanSilence: false);
+                            foreach (var file in older) { await _content.SetEnabled(launchContext.Instance.Id, ContentType.Mod, file, false, job.Token); } }, true)], CanSilence: false);
                 }).ToList();
             return Task.FromResult<IReadOnlyList<CheckResult>>(results.Count == 0 ? [Ok()] : results);
         }

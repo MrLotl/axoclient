@@ -17,16 +17,16 @@ namespace AxoClient.Game
         {
             _loaderNames = loaderNames;
             _gameVersionHelper = gameVersionHelper;
-            _installers = installers.ToDictionary(i => i.Type);
+            _installers = installers.ToDictionary(installer => installer.Type);
         }
 
         public ILoaderInstaller? For(LoaderType type) => _installers.GetValueOrDefault(type);
 
-        public Task<IReadOnlyList<LoaderVersionInfo>> ListVersions(LoaderType type, string mc, CancellationToken ct) =>
-            For(type)?.ListVersions(mc, ct) ?? Task.FromResult<IReadOnlyList<LoaderVersionInfo>>([]);
+        public Task<IReadOnlyList<LoaderVersionInfo>> ListVersions(LoaderType type, string minecraftVersion, CancellationToken cancellationToken) =>
+            For(type)?.ListVersions(minecraftVersion, cancellationToken) ?? Task.FromResult<IReadOnlyList<LoaderVersionInfo>>([]);
 
         /// <summary>Gewählte oder empfohlene Loader-Version.</summary>
-        public async Task<string?> ResolveVersion(LoaderType type, string mc, string? wanted, CancellationToken ct)
+        public async Task<string?> ResolveVersion(LoaderType type, string minecraftVersion, string? wanted, CancellationToken cancellationToken)
         {
             if (type == LoaderType.Vanilla)
             {
@@ -38,10 +38,10 @@ namespace AxoClient.Game
                 return wanted;
             }
 
-            var versions = await ListVersions(type, mc, ct);
-            return (versions.FirstOrDefault(v => v.Recommended) ?? versions.FirstOrDefault(v => v.Stable) ?? versions.FirstOrDefault())?.Version
+            var versions = await ListVersions(type, minecraftVersion, cancellationToken);
+            return (versions.FirstOrDefault(version => version.Recommended) ?? versions.FirstOrDefault(version => version.Stable) ?? versions.FirstOrDefault())?.Version
                    ?? throw new AxoException("game.loaderUnsupported",
-                       new() { ["loader"] = _loaderNames.Display(type), ["version"] = mc });
+                       new() { ["loader"] = _loaderNames.Display(type), ["version"] = minecraftVersion });
         }
     }
 }

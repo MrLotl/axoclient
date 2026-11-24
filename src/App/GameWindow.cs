@@ -24,13 +24,13 @@ namespace AxoClient.App
         private static partial bool IsZoomed(IntPtr hWnd);
 
         /// <summary>Maximiert das Fenster des Prozesses, sobald es da ist (höchstens drei Minuten lang gesucht).</summary>
-        public void MaximizeWhenShown(int pid) => _ = Task.Run(() => maximize(pid));
+        public void MaximizeWhenShown(int processId) => _ = Task.Run(() => maximize(processId));
 
-        private async Task maximize(int pid)
+        private async Task maximize(int processId)
         {
             try
             {
-                using var process = Process.GetProcessById(pid);
+                using var process = Process.GetProcessById(processId);
                 var until = DateTime.UtcNow.AddMinutes(3);
                 var maximized = 0;
                 while (DateTime.UtcNow < until && !process.HasExited)
@@ -54,7 +54,7 @@ namespace AxoClient.App
                     }
                 }
             }
-            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
             {
                 // Spiel schon wieder beendet
             }

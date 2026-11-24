@@ -18,7 +18,7 @@ namespace AxoClient.Launch.Checks
         public override string Id => "account";
         public override LaunchPhase Phase => LaunchPhase.Environment;
 
-        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
             if (_accounts.Active == null)
             {
@@ -28,31 +28,31 @@ namespace AxoClient.Launch.Checks
 
             try
             {
-                ctx.Session = await _accounts.GetSession(ct);
+                context.Session = await _accounts.GetSession(cancellationToken);
                 return [Ok()];
             }
-            catch (AxoException ex) when (ex.Code == "errors.offline")
+            catch (AxoException exception) when (exception.Code == "errors.offline")
             {
                 // Offline: Microsoft-Spiele starten trotzdem (nur Einzelspieler sinnvoll)
-                ctx.Session = _accounts.CachedSession;
-                ctx.Offline = true;
-                return ctx.Session != null
+                context.Session = _accounts.CachedSession;
+                context.Offline = true;
+                return context.Session != null
                     ? [Ok()]
                     : [new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.account.offlineNoSession"),
                         [new CheckAction("retry", new TextRef("pipeline.action.retry"), (_, _) => Task.CompletedTask, true)], CanSilence: false)];
             }
-            catch (AxoException ex) when (ex.Code == "auth.expired")
+            catch (AxoException exception) when (exception.Code == "auth.expired")
             {
                 return [new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.account.expired"),
                     [new CheckAction("login", new TextRef("pipeline.action.login"), login, true)], CanSilence: false)];
             }
         }
 
-        private async Task login(LaunchContext ctx, JobContext job)
+        private async Task login(LaunchContext context, JobContext job)
         {
             var type = _accounts.Active?.Type ?? AccountType.Microsoft;
             await _accounts.Login(type, job.Token);
-            ctx.Session = await _accounts.GetSession(job.Token);
+            context.Session = await _accounts.GetSession(job.Token);
         }
     }
 }

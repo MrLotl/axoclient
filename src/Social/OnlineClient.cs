@@ -73,19 +73,19 @@ namespace AxoClient.Social
 
         public bool CanUse => _accounts.Active is { Type: AccountType.Microsoft };
 
-        public async Task<T?> Send<T>(HttpMethod method, string path, object? body = null, CancellationToken ct = default)
+        public async Task<T?> Send<T>(HttpMethod method, string path, object? body = null, CancellationToken cancellationToken = default)
         {
-            using var response = await SendRaw(method, path, body == null ? null : jsonContent(body), ct);
-            var text = await response.Content.ReadAsStringAsync(ct);
+            using var response = await SendRaw(method, path, body == null ? null : jsonContent(body), cancellationToken);
+            var text = await response.Content.ReadAsStringAsync(cancellationToken);
             return string.IsNullOrWhiteSpace(text) ? default : JsonSerializer.Deserialize<T>(text, _jsonHelper.Options);
         }
 
-        public async Task Send(HttpMethod method, string path, object? body = null, CancellationToken ct = default)
+        public async Task Send(HttpMethod method, string path, object? body = null, CancellationToken cancellationToken = default)
         {
-            using var _ = await SendRaw(method, path, body == null ? null : jsonContent(body), ct);
+            using var _ = await SendRaw(method, path, body == null ? null : jsonContent(body), cancellationToken);
         }
 
-        public async Task<HttpResponseMessage> SendRaw(HttpMethod method, string path, HttpContent? content, CancellationToken ct,
+        public async Task<HttpResponseMessage> SendRaw(HttpMethod method, string path, HttpContent? content, CancellationToken cancellationToken,
             bool allowAnonymous = false)
         {
             if (!allowAnonymous && !CanUse)
@@ -98,13 +98,13 @@ namespace AxoClient.Social
                 string? token = null;
                 if (!allowAnonymous)
                 {
-                    token = _tokens.GetString(tokenKey(_accounts.Active!.Uuid)) ?? await Register(ct);
+                    token = _tokens.GetString(tokenKey(_accounts.Active!.Uuid)) ?? await Register(cancellationToken);
                 }
 
                 HttpResponseMessage response;
                 try
                 {
-                    var bytes = content == null ? null : await content.ReadAsByteArrayAsync(ct);
+                    var bytes = content == null ? null : await content.ReadAsByteArrayAsync(cancellationToken);
                     var contentType = content?.Headers.ContentType;
                     response = await _api.Send(() =>
                     {
@@ -116,18 +116,18 @@ namespace AxoClient.Social
                         }
                         request.Headers.Add("X-AxoClient-Version", _appInfo.Version);
                         return request;
-                    }, ct, r =>
+                    }, cancellationToken, request =>
                     {
                         if (token != null)
                         {
-                            r.Headers.Authorization = _api.Bearer(token);
+                            request.Headers.Authorization = _api.Bearer(token);
                         }
                     });
                 }
-                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+                catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
                 {
                     Available = false;
-                    throw new AxoException("service.unavailable", inner: ex);
+                    throw new AxoException("service.unavailable", inner: exception);
                 }
                 Available = true;
 
@@ -143,18 +143,18 @@ namespace AxoClient.Social
                     return response;
                 }
 
-                throw await toError(response, ct);
+                throw await toError(response, cancellationToken);
             }
         }
 
-        private async Task<AxoException> toError(HttpResponseMessage response, CancellationToken ct)
+        private async Task<AxoException> toError(HttpResponseMessage response, CancellationToken cancellationToken)
         {
             string code = "service.error";
             try
             {
-                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
-                if (doc.RootElement.TryGetProperty("error", out var error) && error.TryGetProperty("code", out var c) && c.GetString() is { } value
-                    && value.All(ch => char.IsAsciiLetterOrDigit(ch) || ch == '_'))
+                using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                if (document.RootElement.TryGetProperty("error", out var error) && error.TryGetProperty("code", out var codeElement) && codeElement.GetString() is { } value
+                    && value.All(character => char.IsAsciiLetterOrDigit(character) || character == '_'))
                 {
                     code = "service." + value;
                 }
@@ -172,9 +172,9 @@ namespace AxoClient.Social
         }
 
         /// <summary>Anmeldung beim Service mit einem Mojang-Spielerzertifikat. Gibt das neue Geräte-Token zurück.</summary>
-        public async Task<string> Register(CancellationToken ct)
+        public async Task<string> Register(CancellationToken cancellationToken)
         {
-            await _registerLock.WaitAsync(ct);
+            await _registerLock.WaitAsync(cancellationToken);
             try
             {
                 var account = _accounts.Active ?? throw new AxoException("service.notSignedIn");
@@ -183,13 +183,13 @@ namespace AxoClient.Social
                     return existing;
                 }
 
-                var session = await _accounts.GetSession(ct);
+                var session = await _accounts.GetSession(cancellationToken);
                 using var certResponse = await _api.Send(() => new HttpRequestMessage(HttpMethod.Post, CertificatesUrl)
                 {
                     Content = new ByteArrayContent([]) { Headers = { ContentType = new MediaTypeHeaderValue("application/json") } }
-                }, ct, r => r.Headers.Authorization = _api.Bearer(session.AccessToken));
-                await _api.EnsureSuccess(certResponse, ct);
-                using var cert = JsonDocument.Parse(await certResponse.Content.ReadAsStringAsync(ct));
+                }, cancellationToken, request => request.Headers.Authorization = _api.Bearer(session.AccessToken));
+                await _api.EnsureSuccess(certResponse, cancellationToken);
+                using var cert = JsonDocument.Parse(await certResponse.Content.ReadAsStringAsync(cancellationToken));
                 var root = cert.RootElement;
                 var keyPair = root.GetProperty("keyPair");
 
@@ -214,21 +214,21 @@ namespace AxoClient.Social
                         signature = Convert.ToBase64String(signature),
                         device = _textHelper.Clean(Environment.MachineName, 40)
                     })
-                }, ct);
+                }, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
-                    throw await toError(response, ct);
+                    throw await toError(response, cancellationToken);
                 }
 
-                using var answer = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+                using var answer = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 var token = answer.RootElement.GetProperty("token").GetString()!;
                 _tokens.Set(tokenKey(account.Uuid), token);
                 return token;
             }
-            catch (HttpRequestException ex)
+            catch (HttpRequestException exception)
             {
                 Available = false;
-                throw new AxoException("service.unavailable", inner: ex);
+                throw new AxoException("service.unavailable", inner: exception);
             }
             finally
             {
@@ -237,14 +237,14 @@ namespace AxoClient.Social
         }
 
         /// <summary>Geräte-Token des aktiven Kontos (meldet bei Bedarf neu an), z. B. für den Echtzeit-Kanal.</summary>
-        public async Task<string> Token(CancellationToken ct)
+        public async Task<string> Token(CancellationToken cancellationToken)
         {
             if (!CanUse)
             {
                 throw new AxoException("service.notSignedIn");
             }
 
-            return _tokens.GetString(tokenKey(_accounts.Active!.Uuid)) ?? await Register(ct);
+            return _tokens.GetString(tokenKey(_accounts.Active!.Uuid)) ?? await Register(cancellationToken);
         }
 
         /// <summary>Token verwerfen (vom Service abgelehnt); die nächste Anfrage meldet still neu an.</summary>
@@ -257,7 +257,7 @@ namespace AxoClient.Social
         }
 
         /// <summary>Dieses Gerät abmelden (Token beim Service widerrufen und lokal löschen).</summary>
-        public async Task SignOutDevice(string uuid, CancellationToken ct)
+        public async Task SignOutDevice(string uuid, CancellationToken cancellationToken)
         {
             if (_tokens.GetString(tokenKey(uuid)) == null)
             {
@@ -268,7 +268,7 @@ namespace AxoClient.Social
             {
                 if (_accounts.Active?.Uuid == uuid)
                 {
-                    await Send(HttpMethod.Delete, "/auth/token", ct: ct);
+                    await Send(HttpMethod.Delete, "/auth/token", cancellationToken: cancellationToken);
                 }
             }
             catch (AxoException)
@@ -295,7 +295,7 @@ namespace AxoClient.Social
         }
 
         private string pemBody(string pem) =>
-            string.Concat(pem.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith("-----")));
+            string.Concat(pem.Split('\n').Select(part => part.Trim()).Where(line => line.Length > 0 && !line.StartsWith("-----")));
 
         private StringContent jsonContent(object body) =>
             new(JsonSerializer.Serialize(body, _jsonHelper.Compact), Encoding.UTF8, "application/json");

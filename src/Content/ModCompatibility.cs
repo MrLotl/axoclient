@@ -19,24 +19,24 @@ namespace AxoClient.Content
         /// Passt eine Mod zum Loader der Instanz? NeoForge bis 1.20.4 nutzt noch Forges mods.toml (und lädt unter 1.20.1
         /// Forge-Mods direkt), solche Jars gelten dort deshalb als passend.
         /// </summary>
-        public bool LoaderFits(List<string> modLoaders, LoaderType loader, string mc)
+        public bool LoaderFits(List<string> modLoaders, LoaderType loader, string minecraftVersion)
         {
             return loader switch
             {
-                LoaderType.Quilt => modLoaders.Any(l => l is "quilt" or "fabric"),
+                LoaderType.Quilt => modLoaders.Any(modLoader => modLoader is "quilt" or "fabric"),
                 LoaderType.Fabric => modLoaders.Contains("fabric"),
                 LoaderType.Forge => modLoaders.Contains("forge"),
                 LoaderType.NeoForge => modLoaders.Contains("neoforge")
-                                       || (modLoaders.Contains("forge") && _versionRange.Satisfies(mc, "<1.20.5", unknown: false)),
+                                       || (modLoaders.Contains("forge") && _versionRange.Satisfies(minecraftVersion, "<1.20.5", unknown: false)),
                 _ => true
             };
         }
 
         /// <summary>Passt eine lokale Mod laut ihren Metadaten (Loader und Minecraft-Version)?</summary>
-        public bool ModFits(ModMetadata meta, LoaderType loader, string mc)
+        public bool ModFits(ModMetadata meta, LoaderType loader, string minecraftVersion)
         {
-            return (meta.Loaders.Count == 0 || LoaderFits(meta.Loaders, loader, mc))
-                   && (meta.MinecraftRange is not { } range || _versionRange.SatisfiesLoosely(mc, range));
+            return (meta.Loaders.Count == 0 || LoaderFits(meta.Loaders, loader, minecraftVersion))
+                   && (meta.MinecraftRange is not { } range || _versionRange.SatisfiesLoosely(minecraftVersion, range));
         }
     }
 }

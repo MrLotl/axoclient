@@ -109,9 +109,9 @@ namespace AxoClient.Integrations
                     }
                     _client!.SetPresence(presence);
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    _appLog.Warn("Discord-Status setzen", ex);
+                    _appLog.Warn("Discord-Status setzen", exception);
                 }
             }
         }
@@ -127,9 +127,9 @@ namespace AxoClient.Integrations
                     Assets = new Assets { LargeImageKey = ImageKey, LargeImageText = AppInfo.Name }
                 });
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _appLog.Warn("Discord-Status setzen", ex);
+                _appLog.Warn("Discord-Status setzen", exception);
             }
         }
 
@@ -151,16 +151,16 @@ namespace AxoClient.Integrations
                 _client = client;
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                _appLog.Warn("Discord-Verbindung aufbauen", ex);
+                _appLog.Warn("Discord-Verbindung aufbauen", exception);
                 return false;
             }
         }
 
-        private void onJoin(object sender, JoinMessage args)
+        private void onJoin(object sender, JoinMessage arguments)
         {
-            var parts = args.Secret.Split('\n', 2);
+            var parts = arguments.Secret.Split('\n', 2);
             if (parts[0].Length > 0 && _serverPing.IsValidAddress(parts[0]))
             {
                 JoinRequested?.Invoke(parts[0], parts.Length > 1 && parts[1].Length > 0 ? parts[1] : null);

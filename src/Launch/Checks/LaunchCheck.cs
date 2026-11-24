@@ -12,7 +12,7 @@ namespace AxoClient.Launch.Checks
         public abstract string Id { get; }
         public abstract LaunchPhase Phase { get; }
 
-        public abstract Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct);
+        public abstract Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken);
 
         /// <summary>Alles in Ordnung.</summary>
         protected CheckResult Ok()
@@ -24,7 +24,7 @@ namespace AxoClient.Launch.Checks
         protected CheckAction DisableAction(IContentManager content, ContentType type, string file)
         {
             return new CheckAction("disable", new TextRef("pipeline.action.disableMod"),
-                (c, job) => content.SetEnabled(c.Instance.Id, type, file, false, job.Token));
+                (context, job) => content.SetEnabled(context.Instance.Id, type, file, false, job.Token));
         }
     }
 }

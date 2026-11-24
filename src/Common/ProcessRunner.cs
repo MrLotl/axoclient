@@ -17,17 +17,17 @@ namespace AxoClient.Common
         public event Action<RunningProcess>? Started;
         public event Action<RunningProcess, int>? Exited;
 
-        public RunningProcess Start(string key, ProcessStartInfo info)
+        public RunningProcess Start(string key, ProcessStartInfo processStartInfo)
         {
-            info.UseShellExecute = false;
-            info.RedirectStandardOutput = true;
-            info.RedirectStandardError = true;
-            info.RedirectStandardInput = true;
-            info.CreateNoWindow = true;
-            info.StandardOutputEncoding = System.Text.Encoding.UTF8;
-            info.StandardErrorEncoding = System.Text.Encoding.UTF8;
+            processStartInfo.UseShellExecute = false;
+            processStartInfo.RedirectStandardOutput = true;
+            processStartInfo.RedirectStandardError = true;
+            processStartInfo.RedirectStandardInput = true;
+            processStartInfo.CreateNoWindow = true;
+            processStartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+            processStartInfo.StandardErrorEncoding = System.Text.Encoding.UTF8;
 
-            var running = new RunningProcess(key, new Process { StartInfo = info }, _logRedactor);
+            var running = new RunningProcess(key, new Process { StartInfo = processStartInfo }, _logRedactor);
             running.Start();
             lock (_lock)
             {
@@ -43,7 +43,7 @@ namespace AxoClient.Common
         {
             lock (_lock)
             {
-                return _running.TryGetValue(key, out var p) && !p.HasExited ? p : null;
+                return _running.TryGetValue(key, out var value) && !value.HasExited ? value : null;
             }
         }
 
@@ -71,7 +71,7 @@ namespace AxoClient.Common
         {
             lock (_lock)
             {
-                return _running.Values.Any(p => !p.HasExited && (filter == null || filter(p.Key)));
+                return _running.Values.Any(value => !value.HasExited && (filter == null || filter(value.Key)));
             }
         }
 

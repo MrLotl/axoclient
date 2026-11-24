@@ -62,17 +62,17 @@ namespace AxoClient.Settings
             State = await _state.Update(change);
         }
 
-        private void validate(LauncherSettings s)
+        private void validate(LauncherSettings settings)
         {
-            s.Defaults.MemoryMb = Math.Clamp(s.Defaults.MemoryMb, 512, 65536);
-            s.Game.WindowSize = new Size2(Math.Clamp(s.Game.WindowSize.W, 320, 7680), Math.Clamp(s.Game.WindowSize.H, 240, 4320));
-            if (s.Defaults.Java != "auto" && !(s.Defaults.Java.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase)
-                                              || s.Defaults.Java.EndsWith("java.exe", StringComparison.OrdinalIgnoreCase)))
+            settings.Defaults.MemoryMb = Math.Clamp(settings.Defaults.MemoryMb, 512, 65536);
+            settings.Game.WindowSize = new Size2(Math.Clamp(settings.Game.WindowSize.W, 320, 7680), Math.Clamp(settings.Game.WindowSize.H, 240, 4320));
+            if (settings.Defaults.Java != "auto" && !(settings.Defaults.Java.EndsWith("javaw.exe", StringComparison.OrdinalIgnoreCase)
+                                              || settings.Defaults.Java.EndsWith("java.exe", StringComparison.OrdinalIgnoreCase)))
             {
-                s.Defaults.Java = "auto";
+                settings.Defaults.Java = "auto";
             }
 
-            _appearance.Validate(s.Appearance);
+            _appearance.Validate(settings.Appearance);
         }
     }
 }

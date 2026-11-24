@@ -18,14 +18,14 @@ namespace AxoClient.Accounts.Contract
         IReadOnlyList<AccountView> Views();
 
         /// <summary>Neues Konto hinzufügen (oder ein bestehendes neu anmelden) und aktiv setzen.</summary>
-        Task<AccountEntry> Login(AccountType type, CancellationToken ct);
+        Task<AccountEntry> Login(AccountType type, CancellationToken cancellationToken);
 
-        Task Switch(string uuid, CancellationToken ct);
+        Task Switch(string uuid, CancellationToken cancellationToken);
 
-        Task Remove(string uuid, CancellationToken ct);
+        Task Remove(string uuid, CancellationToken cancellationToken);
 
         /// <summary>Gültige Sitzung für den Spielstart. Erneuert still, wenn sie älter als 10 Minuten ist.</summary>
-        Task<GameSession> GetSession(CancellationToken ct, bool forceRefresh = false);
+        Task<GameSession> GetSession(CancellationToken cancellationToken, bool forceRefresh = false);
 
         /// <summary>Für Skin/Cape-Aufrufe an Mojang, ohne das Token herauszugeben.</summary>
         GameSession? CachedSession { get; }

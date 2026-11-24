@@ -9,10 +9,10 @@ namespace AxoClient.Accounts
         /// <summary>Kompakte UUID (32 Zeichen) in die Form mit Bindestrichen bringen.</summary>
         public string FormatUuid(string uuid)
         {
-            var c = uuid.Replace("-", "").ToLowerInvariant();
-            if (c.Length == 32)
+            var compact = uuid.Replace("-", "").ToLowerInvariant();
+            if (compact.Length == 32)
             {
-                return $"{c[..8]}-{c[8..12]}-{c[12..16]}-{c[16..20]}-{c[20..]}";
+                return $"{compact[..8]}-{compact[8..12]}-{compact[12..16]}-{compact[16..20]}-{compact[20..]}";
             }
             return uuid;
         }

@@ -22,6 +22,6 @@ namespace AxoClient.Content.Contract
         Task ExportMrpack(string instanceId, string targetPath, JobContext job);
 
         /// <summary>Für die Modpack-Seite: verfügbare Versionen eines Packs.</summary>
-        Task<IReadOnlyList<ContentVersion>> Versions(string source, string projectId, CancellationToken ct);
+        Task<IReadOnlyList<ContentVersion>> Versions(string source, string projectId, CancellationToken cancellationToken);
     }
 }

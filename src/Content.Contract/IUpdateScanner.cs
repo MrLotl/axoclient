@@ -5,7 +5,7 @@ namespace AxoClient.Content.Contract
 {
     public interface IUpdateScanner
     {
-        Task<IReadOnlyList<ContentUpdate>> Scan(string instanceId, CancellationToken ct);
+        Task<IReadOnlyList<ContentUpdate>> Scan(string instanceId, CancellationToken cancellationToken);
 
         Task Apply(string instanceId, IReadOnlyList<ContentUpdate> updates, JobContext job);
     }

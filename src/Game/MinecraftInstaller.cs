@@ -30,11 +30,11 @@ namespace AxoClient.Game
         }
 
         /// <summary>Gemeinsame Bibliotheken, Versionen und Assets; Spielordner pro Instanz.</summary>
-        public MinecraftPath PathFor(string gameDir) => new(gameDir)
+        public MinecraftPath PathFor(string gameDirectory) => new(gameDirectory)
         {
             Library = _paths.Libraries,
             Versions = _paths.Versions,
-            Resource = Path.Combine(gameDir, "resources"),
+            Resource = Path.Combine(gameDirectory, "resources"),
             Assets = _paths.Assets,
             Runtime = _paths.Java
         };
@@ -43,15 +43,15 @@ namespace AxoClient.Game
             new(MinecraftLauncherParameters.CreateDefault(path, _http));
 
         /// <summary>Versions-ID, falls Version und Loader schon installiert sind (für Offline-Starts).</summary>
-        public string? InstalledVersionName(string mc, LoaderType loader, string? loaderVersion)
+        public string? InstalledVersionName(string minecraftVersion, LoaderType loader, string? loaderVersion)
         {
             string? candidate = loader switch
             {
-                LoaderType.Vanilla => mc,
-                LoaderType.Fabric => loaderVersion != null ? $"fabric-loader-{loaderVersion}-{mc}" : null,
-                LoaderType.Quilt => loaderVersion != null ? $"quilt-loader-{loaderVersion}-{mc}" : null,
-                LoaderType.Forge => loaderVersion != null ? $"{mc}-forge-{loaderVersion}" : null,
-                LoaderType.NeoForge => loaderVersion != null ? _gameVersionHelper.NeoForgeVersionId(mc, loaderVersion) : null,
+                LoaderType.Vanilla => minecraftVersion,
+                LoaderType.Fabric => loaderVersion != null ? $"fabric-loader-{loaderVersion}-{minecraftVersion}" : null,
+                LoaderType.Quilt => loaderVersion != null ? $"quilt-loader-{loaderVersion}-{minecraftVersion}" : null,
+                LoaderType.Forge => loaderVersion != null ? $"{minecraftVersion}-forge-{loaderVersion}" : null,
+                LoaderType.NeoForge => loaderVersion != null ? _gameVersionHelper.NeoForgeVersionId(minecraftVersion, loaderVersion) : null,
                 _ => null
             };
             if (candidate != null && File.Exists(Path.Combine(_paths.Versions, candidate, candidate + ".json")))
@@ -61,7 +61,7 @@ namespace AxoClient.Game
 
             if (loader == LoaderType.Forge && loaderVersion != null)
             {
-                var legacy = $"{mc}-forge{mc}-{loaderVersion}";
+                var legacy = $"{minecraftVersion}-forge{minecraftVersion}-{loaderVersion}";
                 if (File.Exists(Path.Combine(_paths.Versions, legacy, legacy + ".json")))
                 {
                     return legacy;
@@ -81,50 +81,50 @@ namespace AxoClient.Game
 
             try
             {
-                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(json));
-                var root = doc.RootElement;
+                using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(json));
+                var root = document.RootElement;
                 var jarId = root.TryGetProperty("inheritsFrom", out var parent) ? parent.GetString()! : versionName;
-                if (root.TryGetProperty("jar", out var jar) && jar.GetString() is { } j)
+                if (root.TryGetProperty("jar", out var jar) && jar.GetString() is { } jarName)
                 {
-                    jarId = j;
+                    jarId = jarName;
                 }
 
                 return File.Exists(Path.Combine(_paths.Versions, jarId, jarId + ".jar"));
             }
-            catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException)
+            catch (Exception exception) when (exception is System.Text.Json.JsonException or IOException)
             {
                 return false;
             }
         }
 
         /// <summary>Loader installieren (falls nötig) und alle Spieldateien laden bzw. reparieren.</summary>
-        public async Task<string> Install(MinecraftPath path, string mc, LoaderType loader, string? loaderVersion, JobContext job)
+        public async Task<string> Install(MinecraftPath path, string minecraftVersion, LoaderType loader, string? loaderVersion, JobContext job)
         {
             var launcher = CreateLauncher(path);
-            var status = new Progress<string>(s =>
+            var status = new Progress<string>(statusText =>
             {
-                if (s.StartsWith("loader.installing:"))
+                if (statusText.StartsWith("loader.installing:"))
                 {
-                    job.Status("pipeline.installingLoader", ("loader", s["loader.installing:".Length..]));
+                    job.Status("pipeline.installingLoader", ("loader", statusText["loader.installing:".Length..]));
                 }
             });
-            var files = new Progress<InstallerProgressChangedEventArgs>(e =>
+            var files = new Progress<InstallerProgressChangedEventArgs>(installerProgressChangedEventArgs =>
             {
-                if (e.TotalTasks > 0)
+                if (installerProgressChangedEventArgs.TotalTasks > 0)
                 {
-                    job.Report(0.1 + 0.85 * e.ProgressedTasks / e.TotalTasks, new TextRef("pipeline.downloadingFiles",
-                        ("done", e.ProgressedTasks), ("total", e.TotalTasks)));
+                    job.Report(0.1 + 0.85 * installerProgressChangedEventArgs.ProgressedTasks / installerProgressChangedEventArgs.TotalTasks, new TextRef("pipeline.downloadingFiles",
+                        ("done", installerProgressChangedEventArgs.ProgressedTasks), ("total", installerProgressChangedEventArgs.TotalTasks)));
                 }
             });
             var bytes = new Progress<ByteProgress>(_ => { });
 
-            var versionName = mc;
+            var versionName = minecraftVersion;
             if (loader != LoaderType.Vanilla)
             {
                 var installer = _loaders.For(loader) ?? throw new AxoException("game.loaderUnsupported",
-                    new() { ["loader"] = _loaderNames.Display(loader), ["version"] = mc });
-                versionName = InstalledVersionName(mc, loader, loaderVersion)
-                              ?? await installer.Install(new LoaderInstallContext(launcher, path, mc, loaderVersion, status, files,
+                    new() { ["loader"] = _loaderNames.Display(loader), ["version"] = minecraftVersion });
+                versionName = InstalledVersionName(minecraftVersion, loader, loaderVersion)
+                              ?? await installer.Install(new LoaderInstallContext(launcher, path, minecraftVersion, loaderVersion, status, files,
                                   bytes, job.Token));
             }
 

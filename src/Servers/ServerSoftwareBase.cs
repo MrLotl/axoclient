@@ -19,9 +19,9 @@ namespace AxoClient.Servers
 
         public virtual bool IsProxy => false;
 
-        public abstract Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken ct);
+        public abstract Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken cancellationToken);
 
-        public abstract Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken ct);
+        public abstract Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken cancellationToken);
 
         public virtual int RequiredJava(string version)
         {

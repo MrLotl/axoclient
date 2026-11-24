@@ -40,7 +40,7 @@ namespace AxoClient.Tests
             var result = analyze("[main/ERROR] [net.neoforged.fml.loading.moddiscovery.ModDiscoverer/]: File mods\\sodium-fabric-0.6.jar is a Fabric mod and cannot be loaded", content);
             Assert.Equal("wrongLoaderMod", result.RuleId);
             Assert.Equal("sodium-fabric-0.6.jar", result.ConfigFile);
-            Assert.Equal(["Sodium"], result.Suspects.Select(s => s.Name).ToArray());
+            Assert.Equal(["Sodium"], result.Suspects.Select(suspect => suspect.Name).ToArray());
             Assert.Contains("disableMod", result.Actions);
         }
 
@@ -52,7 +52,7 @@ namespace AxoClient.Tests
                 "Missing or unsupported mandatory dependencies:",
                 "\tMod ID: 'architectury', Requested by: 'roughlyenoughitems', Expected range: '[13.0.0,)', Actual version: '[MISSING]'"), content);
             Assert.Equal("forgeMissingDependency", result.RuleId);
-            Assert.Equal(["Roughly Enough Items"], result.Suspects.Select(s => s.Name).ToArray());
+            Assert.Equal(["Roughly Enough Items"], result.Suspects.Select(suspect => suspect.Name).ToArray());
             Assert.Equal("checkMods", result.Actions[0]);
         }
 
@@ -62,7 +62,7 @@ namespace AxoClient.Tests
             var content = new ContentDocument { Mods = [mod("create.jar", "Create", "create")] };
             var result = analyze("Mod Create requires Flywheel 1.0.0 or above\nCurrently, Flywheel is not installed", content);
             Assert.Equal("forgeMissingDependency", result.RuleId);
-            Assert.Equal(["Create"], result.Suspects.Select(s => s.Name).ToArray());
+            Assert.Equal(["Create"], result.Suspects.Select(suspect => suspect.Name).ToArray());
         }
 
         [Theory]
@@ -102,7 +102,7 @@ namespace AxoClient.Tests
         {
             var services = new TestServices(_root);
             var paths = services.Paths;
-            var saves = Path.Combine(paths.GameDir("inst1"), "saves");
+            var saves = Path.Combine(paths.GameDirectory("inst1"), "saves");
             foreach (var world in new[] { "Welt A", "Welt B" })
             {
                 Directory.CreateDirectory(Path.Combine(saves, world, "region"));
@@ -117,8 +117,8 @@ namespace AxoClient.Tests
             Assert.Equal(2, count);
             var backups = manager.ListBackups("inst1");
             Assert.Equal(2, backups.Count);
-            using var zip = ZipFile.OpenRead(Path.Combine(paths.InstanceBackups("inst1"), backups.Single(b => b.File.StartsWith("Welt A")).File));
-            Assert.Contains(zip.Entries, e => e.FullName == "Welt A/region/r.0.0.mca");
+            using var zip = ZipFile.OpenRead(Path.Combine(paths.InstanceBackups("inst1"), backups.Single(backup => backup.File.StartsWith("Welt A")).File));
+            Assert.Contains(zip.Entries, zipEntry => zipEntry.FullName == "Welt A/region/r.0.0.mca");
         }
 
         [Fact]

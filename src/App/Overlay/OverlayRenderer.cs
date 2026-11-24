@@ -34,55 +34,55 @@ namespace AxoClient.App.Overlay
         /// <summary>Zeichnet den Frame für ein Spielfenster von clientWidth × clientHeight Bildpunkten; null = nichts zu sehen.</summary>
         public Image? Render(JsonElement frame, int clientWidth, int clientHeight, McFont? font)
         {
-            if (!frame.TryGetProperty("guiWidth", out var gw) || !gw.TryGetSingle(out var guiWidth) || guiWidth <= 0
-                || !frame.TryGetProperty("cmds", out var cmds) || cmds.ValueKind != JsonValueKind.Array)
+            if (!frame.TryGetProperty("guiWidth", out var guiWidthElement) || !guiWidthElement.TryGetSingle(out var guiWidth) || guiWidth <= 0
+                || !frame.TryGetProperty("cmds", out var commands) || commands.ValueKind != JsonValueKind.Array)
             {
                 return null;
             }
 
-            var k = clientWidth / guiWidth; // Bildpunkte je Einheit
+            var pixelScale = clientWidth / guiWidth; // Bildpunkte je Einheit
 
             // Erst die Fläche bestimmen, die überhaupt bemalt wird
             float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
-            foreach (var cmd in cmds.EnumerateArray())
+            foreach (var command in commands.EnumerateArray())
             {
-                var x = num(cmd, "x");
-                var y = num(cmd, "y");
-                var s = num(cmd, "s", 1);
-                var w = num(cmd, "w") * s;
-                var h = str(cmd, "t") == "t" ? 10 * s : num(cmd, "h") * s;
-                if (str(cmd, "t") == "t")
+                var x = readNumber(command, "x");
+                var y = readNumber(command, "y");
+                var scale = readNumber(command, "s", 1);
+                var width = readNumber(command, "w") * scale;
+                var height = readString(command, "t") == "t" ? 10 * scale : readNumber(command, "h") * scale;
+                if (readString(command, "t") == "t")
                 {
-                    w += 2 * s; // Schatten und Fett
+                    width += 2 * scale; // Schatten und Fett
                 }
 
                 minX = Math.Min(minX, x);
                 minY = Math.Min(minY, y);
-                maxX = Math.Max(maxX, x + w);
-                maxY = Math.Max(maxY, y + h);
+                maxX = Math.Max(maxX, x + width);
+                maxY = Math.Max(maxY, y + height);
             }
-            var left = Math.Max(0, (int)MathF.Floor(minX * k) - 2);
-            var top = Math.Max(0, (int)MathF.Floor(minY * k) - 2);
-            var right = Math.Min(clientWidth, (int)MathF.Ceiling(maxX * k) + 2);
-            var bottom = Math.Min(clientHeight, (int)MathF.Ceiling(maxY * k) + 2);
+            var left = Math.Max(0, (int)MathF.Floor(minX * pixelScale) - 2);
+            var top = Math.Max(0, (int)MathF.Floor(minY * pixelScale) - 2);
+            var right = Math.Min(clientWidth, (int)MathF.Ceiling(maxX * pixelScale) + 2);
+            var bottom = Math.Min(clientHeight, (int)MathF.Ceiling(maxY * pixelScale) + 2);
             if (right <= left || bottom <= top)
             {
                 return null;
             }
 
             var canvas = new Canvas(new uint[(right - left) * (bottom - top)], left, top, right - left, bottom - top);
-            foreach (var cmd in cmds.EnumerateArray())
+            foreach (var command in commands.EnumerateArray())
             {
-                var type = str(cmd, "t");
-                var x = num(cmd, "x");
-                var y = num(cmd, "y");
-                var s = num(cmd, "s", 1);
-                var color = readColor(cmd);
+                var type = readString(command, "t");
+                var x = readNumber(command, "x");
+                var y = readNumber(command, "y");
+                var scale = readNumber(command, "s", 1);
+                var color = readColor(command);
                 if (type == "r")
                 {
-                    fill(canvas, x * k, y * k, (x + num(cmd, "w") * s) * k, (y + num(cmd, "h") * s) * k, color);
+                    fill(canvas, x * pixelScale, y * pixelScale, (x + readNumber(command, "w") * scale) * pixelScale, (y + readNumber(command, "h") * scale) * pixelScale, color);
                 }
-                else if (type == "t" && str(cmd, "v") is { Length: > 0 } text)
+                else if (type == "t" && readString(command, "v") is { Length: > 0 } text)
                 {
                     // Wie Minecraft: Textfarben ohne Deckkraft-Anteil gelten als voll deckend
                     if ((color & 0xFC000000) == 0)
@@ -90,111 +90,111 @@ namespace AxoClient.App.Overlay
                         color |= 0xFF000000;
                     }
 
-                    if (cmd.TryGetProperty("sh", out var sh) && sh.ValueKind == JsonValueKind.True)
+                    if (command.TryGetProperty("sh", out var shadowElement) && shadowElement.ValueKind == JsonValueKind.True)
                     {
                         // Schatten wie Minecraft: ein Schrift-Pixel versetzt, Farbe auf ein Viertel abgedunkelt
                         var shadow = (color & 0xFF000000) | ((color & 0xFCFCFC) >> 2);
-                        drawText(canvas, font, text, x + s, y + s, s, k, shadow);
+                        drawText(canvas, font, text, x + scale, y + scale, scale, pixelScale, shadow);
                     }
-                    drawText(canvas, font, text, x, y, s, k, color);
+                    drawText(canvas, font, text, x, y, scale, pixelScale, color);
                 }
             }
             return new Image(canvas.Pixels, left, top, canvas.Width, canvas.Height);
         }
 
-        private string? str(JsonElement e, string name) =>
-            e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+        private string? readString(JsonElement element, string name) =>
+            element.TryGetProperty(name, out var valueElement) && valueElement.ValueKind == JsonValueKind.String ? valueElement.GetString() : null;
 
         /// <summary>Farbe als ganze Zahl lesen (als Kommazahl gingen die unteren Bits verloren).</summary>
-        private uint readColor(JsonElement e) =>
-            e.TryGetProperty("c", out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var c) ? (uint)(c & 0xFFFFFFFF) : 0;
+        private uint readColor(JsonElement element) =>
+            element.TryGetProperty("c", out var colorElement) && colorElement.ValueKind == JsonValueKind.Number && colorElement.TryGetInt64(out var parsed) ? (uint)(parsed & 0xFFFFFFFF) : 0;
 
-        private float num(JsonElement e, string name, float fallback = 0) =>
-            e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? (float)v.GetDouble() : fallback;
+        private float readNumber(JsonElement element, string name, float fallback = 0) =>
+            element.TryGetProperty(name, out var valueElement) && valueElement.ValueKind == JsonValueKind.Number ? (float)valueElement.GetDouble() : fallback;
 
         /// <summary>Text: jedes gesetzte Schrift-Pixel als kleine Fläche (scharf wie im Spiel).</summary>
-        private void drawText(Canvas canvas, McFont? font, string text, float x, float y, float s, float k, uint color)
+        private void drawText(Canvas canvas, McFont? font, string text, float x, float y, float scale, float pixelScale, uint color)
         {
             var pen = x;
-            for (var i = 0; i < text.Length; i += char.IsSurrogatePair(text, i) ? 2 : 1)
+            for (var index = 0; index < text.Length; index += char.IsSurrogatePair(text, index) ? 2 : 1)
             {
-                var cp = char.IsSurrogate(text[i]) && !char.IsSurrogatePair(text, i) ? '?' : char.ConvertToUtf32(text, i);
-                var glyph = font?.Get(cp);
+                var codepoint = char.IsSurrogate(text[index]) && !char.IsSurrogatePair(text, index) ? '?' : char.ConvertToUtf32(text, index);
+                var glyph = font?.Get(codepoint);
                 if (glyph != null)
                 {
-                    var unit = s * glyph.Scale;
-                    var top = y + glyph.Top * s;
-                    for (var gy = 0; gy < glyph.Height; gy++)
+                    var unit = scale * glyph.Scale;
+                    var top = y + glyph.Top * scale;
+                    for (var glyphY = 0; glyphY < glyph.Height; glyphY++)
                     {
-                        for (var gx = 0; gx < glyph.Width; gx++)
+                        for (var glyphX = 0; glyphX < glyph.Width; glyphX++)
                         {
-                            var a = glyph.Alpha[gy * glyph.Width + gx];
-                            if (a == 0)
+                            var alpha = glyph.Alpha[glyphY * glyph.Width + glyphX];
+                            if (alpha == 0)
                             {
                                 continue;
                             }
 
-                            var c = a == 255 ? color : ((color >> 24) * a / 255 << 24) | (color & 0xFFFFFF);
-                            fill(canvas, (pen + gx * unit) * k, (top + gy * unit) * k, (pen + (gx + 1) * unit) * k, (top + (gy + 1) * unit) * k, c);
+                            var pixelColor = alpha == 255 ? color : ((color >> 24) * alpha / 255 << 24) | (color & 0xFFFFFF);
+                            fill(canvas, (pen + glyphX * unit) * pixelScale, (top + glyphY * unit) * pixelScale, (pen + (glyphX + 1) * unit) * pixelScale, (top + (glyphY + 1) * unit) * pixelScale, pixelColor);
                         }
                     }
 
-                    pen += glyph.Advance * s;
+                    pen += glyph.Advance * scale;
                 }
                 else
                 {
-                    var advance = font?.Advance(cp) ?? 6;
-                    if (cp != ' ' && advance > 2)
+                    var advance = font?.Advance(codepoint) ?? 6;
+                    if (codepoint != ' ' && advance > 2)
                     {
                         // Unbekanntes Zeichen: Kästchen, wie Minecraft ohne passende Schrift
-                        var w = (advance - 1) * s;
-                        fill(canvas, pen * k, y * k, (pen + w) * k, (y + s) * k, color);
-                        fill(canvas, pen * k, (y + 7 * s) * k, (pen + w) * k, (y + 8 * s) * k, color);
-                        fill(canvas, pen * k, (y + s) * k, (pen + s) * k, (y + 7 * s) * k, color);
-                        fill(canvas, (pen + w - s) * k, (y + s) * k, (pen + w) * k, (y + 7 * s) * k, color);
+                        var width = (advance - 1) * scale;
+                        fill(canvas, pen * pixelScale, y * pixelScale, (pen + width) * pixelScale, (y + scale) * pixelScale, color);
+                        fill(canvas, pen * pixelScale, (y + 7 * scale) * pixelScale, (pen + width) * pixelScale, (y + 8 * scale) * pixelScale, color);
+                        fill(canvas, pen * pixelScale, (y + scale) * pixelScale, (pen + scale) * pixelScale, (y + 7 * scale) * pixelScale, color);
+                        fill(canvas, (pen + width - scale) * pixelScale, (y + scale) * pixelScale, (pen + width) * pixelScale, (y + 7 * scale) * pixelScale, color);
                     }
-                    pen += advance * s;
+                    pen += advance * scale;
                 }
             }
         }
 
         /// <summary>Fläche von (x0, y0) bis (x1, y1) in Bildpunkten des Spielfensters, gerundet wie die Grafikkarte.</summary>
-        private void fill(Canvas canvas, float x0, float y0, float x1, float y1, uint argb)
+        private void fill(Canvas canvas, float startX, float startY, float endX, float endY, uint argb)
         {
-            var a = argb >> 24;
-            if (a == 0)
+            var alpha = argb >> 24;
+            if (alpha == 0)
             {
                 return;
             }
 
-            var left = Math.Max(canvas.X, (int)MathF.Round(x0)) - canvas.X;
-            var right = Math.Min(canvas.X + canvas.Width, (int)MathF.Round(x1)) - canvas.X;
-            var top = Math.Max(canvas.Y, (int)MathF.Round(y0)) - canvas.Y;
-            var bottom = Math.Min(canvas.Y + canvas.Height, (int)MathF.Round(y1)) - canvas.Y;
+            var left = Math.Max(canvas.X, (int)MathF.Round(startX)) - canvas.X;
+            var right = Math.Min(canvas.X + canvas.Width, (int)MathF.Round(endX)) - canvas.X;
+            var top = Math.Max(canvas.Y, (int)MathF.Round(startY)) - canvas.Y;
+            var bottom = Math.Min(canvas.Y + canvas.Height, (int)MathF.Round(endY)) - canvas.Y;
             if (left >= right || top >= bottom)
             {
                 return;
             }
             // Vormultipliziert: Farbe × Deckkraft
-            var r = ((argb >> 16) & 0xFF) * a / 255;
-            var g = ((argb >> 8) & 0xFF) * a / 255;
-            var b = (argb & 0xFF) * a / 255;
-            var inv = 255 - a;
+            var red = ((argb >> 16) & 0xFF) * alpha / 255;
+            var green = ((argb >> 8) & 0xFF) * alpha / 255;
+            var blue = (argb & 0xFF) * alpha / 255;
+            var inv = 255 - alpha;
             var pixels = canvas.Pixels;
-            for (var yy = top; yy < bottom; yy++)
+            for (var index = top; index < bottom; index++)
             {
-                var row = yy * canvas.Width;
-                for (var xx = left; xx < right; xx++)
+                var row = index * canvas.Width;
+                for (var pixelX = left; pixelX < right; pixelX++)
                 {
-                    var d = pixels[row + xx];
-                    if (inv == 0 || d == 0)
+                    var existingPixel = pixels[row + pixelX];
+                    if (inv == 0 || existingPixel == 0)
                     {
-                        pixels[row + xx] = (a << 24) | (r << 16) | (g << 8) | b;
+                        pixels[row + pixelX] = (alpha << 24) | (red << 16) | (green << 8) | blue;
                         continue;
                     }
                     // Über das Vorhandene legen (source over)
-                    pixels[row + xx] = ((a + (d >> 24) * inv / 255) << 24) | ((r + ((d >> 16) & 0xFF) * inv / 255) << 16)
-                                       | ((g + ((d >> 8) & 0xFF) * inv / 255) << 8) | (b + (d & 0xFF) * inv / 255);
+                    pixels[row + pixelX] = ((alpha + (existingPixel >> 24) * inv / 255) << 24) | ((red + ((existingPixel >> 16) & 0xFF) * inv / 255) << 16)
+                                       | ((green + ((existingPixel >> 8) & 0xFF) * inv / 255) << 8) | (blue + (existingPixel & 0xFF) * inv / 255);
                 }
             }
         }

@@ -40,7 +40,7 @@ namespace AxoClient.Content
             _ => "modpack"
         };
 
-        public async Task<SearchPage> Search(SearchQuery query, CancellationToken ct)
+        public async Task<SearchPage> Search(SearchQuery query, CancellationToken cancellationToken)
         {
             var projectType = ProjectType(query.Kind);
             // Datapacks sind bei Modrinth meist Projekte vom Typ "mod" mit dem Loader "datapack"
@@ -52,7 +52,7 @@ namespace AxoClient.Content
 
             if (query.Loader is { } loader && loader != LoaderType.Vanilla && query.Kind is ProjectKind.Mod or ProjectKind.Modpack)
             {
-                facets.Add(LoaderCategories(loader).Select(c => $"categories:{c}").ToArray());
+                facets.Add(LoaderCategories(loader).Select(category => $"categories:{category}").ToArray());
             }
             else if (query.Kind == ProjectKind.Modpack)
             {
@@ -76,7 +76,7 @@ namespace AxoClient.Content
                       $"&query={Uri.EscapeDataString(_textHelper.Clean(query.Text, 100))}" +
                       $"&facets={Uri.EscapeDataString(JsonSerializer.Serialize(facets))}";
 
-            using var json = JsonDocument.Parse(await _api.GetString(url, _searchCache, ct));
+            using var json = JsonDocument.Parse(await _api.GetString(url, _searchCache, cancellationToken));
             var items = json.RootElement.GetProperty("hits").EnumerateArray().Select(hit =>
             {
                 var categories = strings(hit, "display_categories");
@@ -90,35 +90,35 @@ namespace AxoClient.Content
                     hit.GetProperty("project_id").GetString()!,
                     slug,
                     _textHelper.Clean(hit.GetProperty("title").GetString(), 100),
-                    _textHelper.Clean(str(hit, "author"), 60),
-                    _textHelper.Clean(str(hit, "description"), 400),
-                    _urlHelper.SafeUrl(str(hit, "icon_url")),
-                    _urlHelper.SafeUrl(hit.TryGetProperty("featured_gallery", out var g) && g.ValueKind == JsonValueKind.String
-                        ? g.GetString()
+                    _textHelper.Clean(readString(hit, "author"), 60),
+                    _textHelper.Clean(readString(hit, "description"), 400),
+                    _urlHelper.SafeUrl(readString(hit, "icon_url")),
+                    _urlHelper.SafeUrl(hit.TryGetProperty("featured_gallery", out var featuredGallery) && featuredGallery.ValueKind == JsonValueKind.String
+                        ? featuredGallery.GetString()
                         : strings(hit, "gallery").FirstOrDefault()),
-                    hit.TryGetProperty("downloads", out var d) ? d.GetInt64() : 0,
-                    categories.Where(c => !isLoaderCategory(c)).ToList(),
+                    hit.TryGetProperty("downloads", out var downloads) ? downloads.GetInt64() : 0,
+                    categories.Where(category => !isLoaderCategory(category)).ToList(),
                     strings(hit, "categories").Where(isLoaderCategory).ToList(),
                     strings(hit, "versions"),
-                    hit.TryGetProperty("date_modified", out var m) && m.ValueKind == JsonValueKind.String ? m.GetDateTimeOffset() : null,
+                    hit.TryGetProperty("date_modified", out var dateModified) && dateModified.ValueKind == JsonValueKind.String ? dateModified.GetDateTimeOffset() : null,
                     $"https://modrinth.com/{projectType}/{Uri.EscapeDataString(slug)}");
             }).ToList();
             return new SearchPage(items, json.RootElement.GetProperty("total_hits").GetInt32());
         }
 
-        public async Task<ContentProject> GetProject(string id, CancellationToken ct)
+        public async Task<ContentProject> GetProject(string id, CancellationToken cancellationToken)
         {
-            using var json = JsonDocument.Parse(await _api.GetString($"{Api}/project/{Uri.EscapeDataString(id)}", _versionCache, ct));
+            using var json = JsonDocument.Parse(await _api.GetString($"{Api}/project/{Uri.EscapeDataString(id)}", _versionCache, cancellationToken));
             return parseProject(json.RootElement);
         }
 
-        public async Task<IReadOnlyDictionary<string, ContentProject>> GetProjects(IEnumerable<string> ids, CancellationToken ct)
+        public async Task<IReadOnlyDictionary<string, ContentProject>> GetProjects(IEnumerable<string> ids, CancellationToken cancellationToken)
         {
             var result = new Dictionary<string, ContentProject>();
             foreach (var chunk in ids.Distinct().Chunk(IdsPerRequest))
             {
                 using var json = JsonDocument.Parse(await _api.GetString(
-                    $"{Api}/projects?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}", _versionCache, ct));
+                    $"{Api}/projects?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}", _versionCache, cancellationToken));
                 foreach (var project in json.RootElement.EnumerateArray().Select(parseProject))
                 {
                     result[project.Id] = project;
@@ -131,39 +131,39 @@ namespace AxoClient.Content
         /// <c>server_side</c> je Projekt (<c>required</c>, <c>optional</c>, <c>unsupported</c>, <c>unknown</c>): beim Nachjoinen in eine
         /// offene Welt zählen reine Client-Mods des Gastgebers nicht als „fehlt“.
         /// </summary>
-        public async Task<IReadOnlyDictionary<string, string>> ServerSides(IEnumerable<string> ids, CancellationToken ct)
+        public async Task<IReadOnlyDictionary<string, string>> ServerSides(IEnumerable<string> ids, CancellationToken cancellationToken)
         {
             var result = new Dictionary<string, string>();
             foreach (var chunk in ids.Distinct().Chunk(IdsPerRequest))
             {
                 using var json = JsonDocument.Parse(await _api.GetString(
-                    $"{Api}/projects?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}", _versionCache, ct));
-                foreach (var p in json.RootElement.EnumerateArray())
+                    $"{Api}/projects?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}", _versionCache, cancellationToken));
+                foreach (var projectElement in json.RootElement.EnumerateArray())
                 {
-                    if (p.TryGetProperty("id", out var id) && id.GetString() is { } key)
+                    if (projectElement.TryGetProperty("id", out var id) && id.GetString() is { } key)
                     {
-                        result[key] = str(p, "server_side") ?? "unknown";
+                        result[key] = readString(projectElement, "server_side") ?? "unknown";
                     }
                 }
             }
             return result;
         }
 
-        private ContentProject parseProject(JsonElement p)
+        private ContentProject parseProject(JsonElement projectElement)
         {
-            var type = str(p, "project_type") ?? "mod";
-            var slug = str(p, "slug") ?? "";
-            return new ContentProject(Source, p.GetProperty("id").GetString()!, slug,
-                _textHelper.Clean(str(p, "title"), 100), "", _textHelper.Clean(str(p, "description"), 400), _urlHelper.SafeUrl(str(p, "icon_url")),
-                null, p.TryGetProperty("downloads", out var d) ? d.GetInt64() : 0,
-                strings(p, "categories").Where(c => !isLoaderCategory(c)).ToList(),
-                strings(p, "loaders"), strings(p, "game_versions"),
-                p.TryGetProperty("updated", out var u) && u.ValueKind == JsonValueKind.String ? u.GetDateTimeOffset() : null,
+            var type = readString(projectElement, "project_type") ?? "mod";
+            var slug = readString(projectElement, "slug") ?? "";
+            return new ContentProject(Source, projectElement.GetProperty("id").GetString()!, slug,
+                _textHelper.Clean(readString(projectElement, "title"), 100), "", _textHelper.Clean(readString(projectElement, "description"), 400), _urlHelper.SafeUrl(readString(projectElement, "icon_url")),
+                null, projectElement.TryGetProperty("downloads", out var downloads) ? downloads.GetInt64() : 0,
+                strings(projectElement, "categories").Where(category => !isLoaderCategory(category)).ToList(),
+                strings(projectElement, "loaders"), strings(projectElement, "game_versions"),
+                projectElement.TryGetProperty("updated", out var updated) && updated.ValueKind == JsonValueKind.String ? updated.GetDateTimeOffset() : null,
                 $"https://modrinth.com/{type}/{Uri.EscapeDataString(slug)}");
         }
 
         public async Task<IReadOnlyList<ContentVersion>> GetVersions(string projectId, string? minecraftVersion,
-            LoaderType? loader, ProjectKind kind, CancellationToken ct)
+            LoaderType? loader, ProjectKind kind, CancellationToken cancellationToken)
         {
             var url = $"{Api}/project/{Uri.EscapeDataString(projectId)}/version?include_changelog=false";
             if (minecraftVersion != null)
@@ -171,9 +171,9 @@ namespace AxoClient.Content
                 url += $"&game_versions={Uri.EscapeDataString(JsonSerializer.Serialize(new[] { minecraftVersion }))}";
             }
 
-            if (loader is { } l && l != LoaderType.Vanilla && kind is ProjectKind.Mod or ProjectKind.Modpack)
+            if (loader is { } loaderType && loaderType != LoaderType.Vanilla && kind is ProjectKind.Mod or ProjectKind.Modpack)
             {
-                url += $"&loaders={Uri.EscapeDataString(JsonSerializer.Serialize(LoaderCategories(l)))}";
+                url += $"&loaders={Uri.EscapeDataString(JsonSerializer.Serialize(LoaderCategories(loaderType)))}";
             }
             else if (kind == ProjectKind.DataPack)
             {
@@ -184,31 +184,31 @@ namespace AxoClient.Content
                 url += $"&loaders={Uri.EscapeDataString("[\"iris\",\"optifine\",\"canvas\",\"vanilla\"]")}";
             }
 
-            using var json = JsonDocument.Parse(await _api.GetString(url, _versionCache, ct));
-            return json.RootElement.EnumerateArray().Select(ParseVersion).OrderByDescending(v => v.Published).ToList();
+            using var json = JsonDocument.Parse(await _api.GetString(url, _versionCache, cancellationToken));
+            return json.RootElement.EnumerateArray().Select(ParseVersion).OrderByDescending(version => version.Published).ToList();
         }
 
-        public async Task<ContentVersion?> GetVersion(string versionId, CancellationToken ct)
+        public async Task<ContentVersion?> GetVersion(string versionId, CancellationToken cancellationToken)
         {
             try
             {
                 using var json = JsonDocument.Parse(await _api.GetString($"{Api}/version/{Uri.EscapeDataString(versionId)}",
-                    _versionCache, ct));
+                    _versionCache, cancellationToken));
                 return ParseVersion(json.RootElement);
             }
-            catch (AxoException ex) when (ex.Code == "errors.notFound")
+            catch (AxoException exception) when (exception.Code == "errors.notFound")
             {
                 return null;
             }
         }
 
-        public async Task<IReadOnlyDictionary<string, ContentVersion>> GetVersionsByIds(IEnumerable<string> ids, CancellationToken ct)
+        public async Task<IReadOnlyDictionary<string, ContentVersion>> GetVersionsByIds(IEnumerable<string> ids, CancellationToken cancellationToken)
         {
             var result = new Dictionary<string, ContentVersion>();
             foreach (var chunk in ids.Distinct().Chunk(IdsPerRequest))
             {
                 using var json = JsonDocument.Parse(await _api.GetString(
-                    $"{Api}/versions?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}", _versionCache, ct));
+                    $"{Api}/versions?ids={Uri.EscapeDataString(JsonSerializer.Serialize(chunk))}", _versionCache, cancellationToken));
                 foreach (var version in json.RootElement.EnumerateArray().Select(ParseVersion))
                 {
                     result[version.Id] = version;
@@ -218,9 +218,9 @@ namespace AxoClient.Content
         }
 
         public async Task<IReadOnlyDictionary<string, ContentVersion>> Identify(IReadOnlyCollection<LocalFileHash> files,
-            CancellationToken ct)
+            CancellationToken cancellationToken)
         {
-            var hashes = files.Select(f => f.Sha1).Distinct().ToList();
+            var hashes = files.Select(file => file.Sha1).Distinct().ToList();
             if (hashes.Count == 0)
             {
                 return new Dictionary<string, ContentVersion>();
@@ -230,7 +230,7 @@ namespace AxoClient.Content
             foreach (var chunk in hashes.Chunk(500))
             {
                 var response = await _api.PostJson<Dictionary<string, JsonElement>>($"{Api}/version_files",
-                    new { hashes = chunk, algorithm = "sha1" }, ct);
+                    new { hashes = chunk, algorithm = "sha1" }, cancellationToken);
                 foreach (var (hash, version) in response ?? [])
                 {
                     result[hash] = ParseVersion(version);
@@ -241,15 +241,15 @@ namespace AxoClient.Content
 
         /// <summary>Neueste passende Version für viele Dateien auf einmal (Update-Prüfung).</summary>
         public async Task<IReadOnlyDictionary<string, ContentVersion>> LatestForHashes(IReadOnlyCollection<string> sha1,
-            string minecraftVersion, LoaderType? loader, ProjectKind kind, CancellationToken ct)
+            string minecraftVersion, LoaderType? loader, ProjectKind kind, CancellationToken cancellationToken)
         {
             if (sha1.Count == 0)
             {
                 return new Dictionary<string, ContentVersion>();
             }
 
-            var loaders = loader is { } l && l != LoaderType.Vanilla && kind == ProjectKind.Mod
-                ? LoaderCategories(l)
+            var loaders = loader is { } loaderType && loaderType != LoaderType.Vanilla && kind == ProjectKind.Mod
+                ? LoaderCategories(loaderType)
                 : kind == ProjectKind.ShaderPack ? ["iris", "optifine"] : kind == ProjectKind.ResourcePack ? ["minecraft"] : [];
             var result = new Dictionary<string, ContentVersion>();
             foreach (var chunk in sha1.Distinct().Chunk(500))
@@ -257,7 +257,7 @@ namespace AxoClient.Content
                 object body = loaders.Length > 0
                     ? new { hashes = chunk, algorithm = "sha1", loaders, game_versions = new[] { minecraftVersion } }
                     : new { hashes = chunk, algorithm = "sha1", game_versions = new[] { minecraftVersion } };
-                var response = await _api.PostJson<Dictionary<string, JsonElement>>($"{Api}/version_files/update", body, ct);
+                var response = await _api.PostJson<Dictionary<string, JsonElement>>($"{Api}/version_files/update", body, cancellationToken);
                 foreach (var (hash, version) in response ?? [])
                 {
                     result[hash] = ParseVersion(version);
@@ -266,22 +266,22 @@ namespace AxoClient.Content
             return result;
         }
 
-        internal ContentVersion ParseVersion(JsonElement v)
+        internal ContentVersion ParseVersion(JsonElement versionElement)
         {
-            var files = v.GetProperty("files").EnumerateArray().Select(f =>
+            var files = versionElement.GetProperty("files").EnumerateArray().Select(file =>
             {
-                var hashes = f.GetProperty("hashes");
-                return new ContentFile(f.GetProperty("url").GetString()!, f.GetProperty("filename").GetString()!,
-                    hashes.TryGetProperty("sha1", out var s1) ? s1.GetString() : null,
-                    hashes.TryGetProperty("sha512", out var s5) ? s5.GetString() : null,
-                    f.TryGetProperty("size", out var size) && size.ValueKind == JsonValueKind.Number ? size.GetInt64() : 0,
-                    f.TryGetProperty("primary", out var primary) && primary.GetBoolean());
+                var hashes = file.GetProperty("hashes");
+                return new ContentFile(file.GetProperty("url").GetString()!, file.GetProperty("filename").GetString()!,
+                    hashes.TryGetProperty("sha1", out var sha1) ? sha1.GetString() : null,
+                    hashes.TryGetProperty("sha512", out var sha512) ? sha512.GetString() : null,
+                    file.TryGetProperty("size", out var size) && size.ValueKind == JsonValueKind.Number ? size.GetInt64() : 0,
+                    file.TryGetProperty("primary", out var primary) && primary.GetBoolean());
             }).ToList();
 
-            var deps = v.TryGetProperty("dependencies", out var d)
-                ? d.EnumerateArray().Select(dep => new ContentDependency(
-                    str(dep, "project_id"), str(dep, "version_id"),
-                    str(dep, "dependency_type") switch
+            var otherDependencies = versionElement.TryGetProperty("dependencies", out var dependencies)
+                ? dependencies.EnumerateArray().Select(dependency => new ContentDependency(
+                    readString(dependency, "project_id"), readString(dependency, "version_id"),
+                    readString(dependency, "dependency_type") switch
                     {
                         "required" => DependencyKind.Required,
                         "incompatible" => DependencyKind.Incompatible,
@@ -290,11 +290,11 @@ namespace AxoClient.Content
                     })).ToList()
                 : [];
 
-            return new ContentVersion(Source, v.GetProperty("id").GetString()!, v.GetProperty("project_id").GetString()!,
-                _textHelper.Clean(str(v, "name"), 120), _textHelper.Clean(str(v, "version_number"), 80), str(v, "version_type") ?? "release",
-                v.GetProperty("date_published").GetDateTimeOffset(), strings(v, "game_versions"),
-                strings(v, "loaders").Select(x => x.ToLowerInvariant()).ToList(), files, deps,
-                _textHelper.CleanMultiline(str(v, "changelog"), 20_000) is { Length: > 0 } c ? c : null);
+            return new ContentVersion(Source, versionElement.GetProperty("id").GetString()!, versionElement.GetProperty("project_id").GetString()!,
+                _textHelper.Clean(readString(versionElement, "name"), 120), _textHelper.Clean(readString(versionElement, "version_number"), 80), readString(versionElement, "version_type") ?? "release",
+                versionElement.GetProperty("date_published").GetDateTimeOffset(), strings(versionElement, "game_versions"),
+                strings(versionElement, "loaders").Select(loader => loader.ToLowerInvariant()).ToList(), files, otherDependencies,
+                _textHelper.CleanMultiline(readString(versionElement, "changelog"), 20_000) is { Length: > 0 } changelog ? changelog : null);
         }
 
         public string[] LoaderCategories(LoaderType loader) => loader switch
@@ -304,16 +304,16 @@ namespace AxoClient.Content
             _ => [_loaderNames.ModrinthId(loader)]
         };
 
-        private bool isLoaderCategory(string c) =>
-            c is "fabric" or "forge" or "neoforge" or "quilt" or "liteloader" or "modloader" or "rift" or "iris" or "optifine"
+        private bool isLoaderCategory(string category) =>
+            category is "fabric" or "forge" or "neoforge" or "quilt" or "liteloader" or "modloader" or "rift" or "iris" or "optifine"
                 or "canvas" or "vanilla" or "minecraft" or "bukkit" or "paper" or "spigot" or "velocity" or "datapack";
 
-        private string? str(JsonElement e, string name) =>
-            e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+        private string? readString(JsonElement element, string name) =>
+            element.TryGetProperty(name, out var valueElement) && valueElement.ValueKind == JsonValueKind.String ? valueElement.GetString() : null;
 
-        private List<string> strings(JsonElement e, string name) =>
-            e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Array
-                ? v.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToList()
+        private List<string> strings(JsonElement element, string name) =>
+            element.TryGetProperty(name, out var arrayElement) && arrayElement.ValueKind == JsonValueKind.Array
+                ? arrayElement.EnumerateArray().Where(arrayItem => arrayItem.ValueKind == JsonValueKind.String).Select(arrayItem => arrayItem.GetString()!).ToList()
                 : [];
     }
 }

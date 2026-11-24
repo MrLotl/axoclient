@@ -19,25 +19,25 @@ namespace AxoClient.Content
             _modrinth = modrinth;
         }
 
-        public async Task<IReadOnlyList<ContentUpdate>> Scan(string instanceId, CancellationToken ct)
+        public async Task<IReadOnlyList<ContentUpdate>> Scan(string instanceId, CancellationToken cancellationToken)
         {
-            var instance = await _instances.Get(instanceId, ct);
-            var doc = await _content.Sync(instanceId, ct);
+            var instance = await _instances.Get(instanceId, cancellationToken);
+            var document = await _content.Sync(instanceId, cancellationToken);
             var updates = new List<ContentUpdate>();
             foreach (var type in Enum.GetValues<ContentType>())
             {
-                var entries = doc.ListOf(type)
-                    .Where(e => e.Source == ContentSource.Modrinth && e.Hashes.Sha1 != null)
+                var entries = document.ListOf(type)
+                    .Where(entry => entry.Source == ContentSource.Modrinth && entry.Hashes.Sha1 != null)
                     // Gesperrte Mods (Mod-Schutz) bekommen keine Updates angeboten
-                    .Where(e => type != ContentType.Mod || !instance.ModLock.IsLocked(e))
+                    .Where(entry => type != ContentType.Mod || !instance.ModLock.IsLocked(entry))
                     .ToList();
                 if (entries.Count == 0)
                 {
                     continue;
                 }
 
-                var latest = await _modrinth.LatestForHashes(entries.Select(e => e.Hashes.Sha1!).ToList(),
-                    instance.Minecraft.Version, instance.Loader.Type, _content.ToKind(type), ct);
+                var latest = await _modrinth.LatestForHashes(entries.Select(entry => entry.Hashes.Sha1!).ToList(),
+                    instance.Minecraft.Version, instance.Loader.Type, _content.ToKind(type), cancellationToken);
                 foreach (var entry in entries)
                 {
                     if (!latest.TryGetValue(entry.Hashes.Sha1!, out var version) || version.Id == entry.VersionId)
@@ -59,10 +59,10 @@ namespace AxoClient.Content
 
         public async Task Apply(string instanceId, IReadOnlyList<ContentUpdate> updates, JobContext job)
         {
-            for (var i = 0; i < updates.Count; i++)
+            for (var index = 0; index < updates.Count; index++)
             {
-                var update = updates[i];
-                job.Report((double)i / updates.Count, new TextRef("content.updating", ("name", update.Name)));
+                var update = updates[index];
+                job.Report((double)index / updates.Count, new TextRef("content.updating", ("name", update.Name)));
                 await _content.Install(instanceId, update.Type, new InstallRequest(update.Source, update.ProjectId, update.NewVersionId), job);
             }
             job.Report(1);

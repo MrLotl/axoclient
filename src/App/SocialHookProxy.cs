@@ -9,14 +9,14 @@ namespace AxoClient.App
     {
         public IGameLaunchHook? Target { get; set; }
 
-        void IGameLaunchHook.OnStarted(LaunchContext ctx, RunningProcess process)
+        void IGameLaunchHook.OnStarted(LaunchContext context, RunningProcess process)
         {
-            Target?.OnStarted(ctx, process);
+            Target?.OnStarted(context, process);
         }
 
-        void IGameLaunchHook.OnExited(LaunchContext ctx, RunningProcess process, int exitCode, bool crashed)
+        void IGameLaunchHook.OnExited(LaunchContext context, RunningProcess process, int exitCode, bool crashed)
         {
-            Target?.OnExited(ctx, process, exitCode, crashed);
+            Target?.OnExited(context, process, exitCode, crashed);
         }
     }
 }

@@ -38,10 +38,10 @@ namespace AxoClient.Servers
             {
                 if (major == 8 ? runtime.Major == 8 : runtime.Major >= major)
                 {
-                    var exe = Path.Combine(Path.GetDirectoryName(runtime.Path)!, "java.exe");
-                    if (File.Exists(exe))
+                    var exePath = Path.Combine(Path.GetDirectoryName(runtime.Path)!, "java.exe");
+                    if (File.Exists(exePath))
                     {
-                        return exe;
+                        return exePath;
                     }
                 }
             }
@@ -51,8 +51,8 @@ namespace AxoClient.Servers
                 $"https://api.adoptium.net/v3/assets/latest/{major}/hotspot?architecture=x64&image_type=jre&os=windows&vendor=eclipse",
                 TimeSpan.FromHours(6), job.Token));
             var package = assets.RootElement.EnumerateArray()
-                .Select(a => a.GetProperty("binary").GetProperty("package"))
-                .FirstOrDefault(p => p.GetProperty("name").GetString()!.EndsWith(".zip"));
+                .Select(asset => asset.GetProperty("binary").GetProperty("package"))
+                .FirstOrDefault(packageElement => packageElement.GetProperty("name").GetString()!.EndsWith(".zip"));
             if (package.ValueKind != JsonValueKind.Object)
             {
                 throw new AxoException("servers.javaUnavailable", new() { ["major"] = major });
@@ -102,9 +102,9 @@ namespace AxoClient.Servers
 
         private string? findOwn(int major)
         {
-            var dir = folder(major);
-            return Directory.Exists(dir)
-                ? Directory.EnumerateFiles(dir, "java.exe", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 4 })
+            var directory = folder(major);
+            return Directory.Exists(directory)
+                ? Directory.EnumerateFiles(directory, "java.exe", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 4 })
                     .FirstOrDefault()
                 : null;
         }

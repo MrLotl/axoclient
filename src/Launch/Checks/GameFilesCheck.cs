@@ -26,38 +26,38 @@ namespace AxoClient.Launch.Checks
         public override string Id => "gameFiles";
         public override LaunchPhase Phase => LaunchPhase.GameFiles;
 
-        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override async Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            if (ctx.Offline)
+            if (context.Offline)
             {
-                return ctx.VersionName != null ? [Ok()] : [blocker()];
+                return context.VersionName != null ? [Ok()] : [blocker()];
             }
 
-            var instance = ctx.Instance;
+            var instance = context.Instance;
             if (instance.Loader.Type != LoaderType.Vanilla && instance.Loader.Version == null)
             {
                 // Loader-Version noch offen: empfohlene eintragen (eindeutig und ungefährlich)
-                var version = await _loaders.ResolveVersion(instance.Loader.Type, instance.Minecraft.Version, null, ct);
+                var version = await _loaders.ResolveVersion(instance.Loader.Type, instance.Minecraft.Version, null, cancellationToken);
                 instance.Loader = instance.Loader with { Version = version };
-                await _instances.Save(instance, ct);
+                await _instances.Save(instance, cancellationToken);
             }
 
             var installed = _installer.InstalledVersionName(instance.Minecraft.Version, instance.Loader.Type, instance.Loader.Version);
-            ctx.VersionName = installed;
-            ctx.NeedsInstall = installed == null || !_installer.IsVersionPresent(installed);
+            context.VersionName = installed;
+            context.NeedsInstall = installed == null || !_installer.IsVersionPresent(installed);
             return [new CheckResult(Id, Severity.AutoFix,
-                new TextRef(ctx.NeedsInstall ? "pipeline.gameFiles.install" : "pipeline.gameFiles.verify"),
+                new TextRef(context.NeedsInstall ? "pipeline.gameFiles.install" : "pipeline.gameFiles.verify"),
                 [new CheckAction("install", new TextRef("pipeline.action.install"), install, true)])];
         }
 
-        private async Task install(LaunchContext ctx, JobContext job) =>
-            ctx.VersionName = await _installer.Install(ctx.GamePath, ctx.Instance.Minecraft.Version, ctx.Instance.Loader.Type,
-                ctx.Instance.Loader.Version, job);
+        private async Task install(LaunchContext context, JobContext job) =>
+            context.VersionName = await _installer.Install(context.GamePath, context.Instance.Minecraft.Version, context.Instance.Loader.Type,
+                context.Instance.Loader.Version, job);
 
         private CheckResult blocker() => new(Id, Severity.Blocker, new TextRef("pipeline.internet.missingFiles"),
-            [new CheckAction("retry", new TextRef("pipeline.action.retry"), (c, _) =>
+            [new CheckAction("retry", new TextRef("pipeline.action.retry"), (context, _) =>
             {
-                c.Offline = false;
+                context.Offline = false;
                 return Task.CompletedTask;
             }, true)], CanSilence: false);
     }

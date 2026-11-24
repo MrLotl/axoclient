@@ -10,18 +10,18 @@ namespace AxoClient.Content
 
         public ContentProviders(IEnumerable<IContentProvider> providers)
         {
-            _byName = providers.ToDictionary(p => p.Source);
+            _byName = providers.ToDictionary(provider => provider.Source);
         }
 
         public IReadOnlyCollection<IContentProvider> All => _byName.Values;
 
         public IContentProvider Get(string source) =>
-            _byName.TryGetValue(source, out var p) && p.IsAvailable
-                ? p
+            _byName.TryGetValue(source, out var value) && value.IsAvailable
+                ? value
                 : throw new AxoException("content.sourceUnavailable", new() { ["source"] = source });
 
         public IContentProvider Get(ContentSource source) => Get(source == ContentSource.CurseForge ? "curseforge" : "modrinth");
 
-        public bool IsAvailable(string source) => _byName.TryGetValue(source, out var p) && p.IsAvailable;
+        public bool IsAvailable(string source) => _byName.TryGetValue(source, out var value) && value.IsAvailable;
     }
 }

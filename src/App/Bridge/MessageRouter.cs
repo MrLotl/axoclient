@@ -32,7 +32,7 @@ namespace AxoClient.App.Bridge
         /// <summary>Handler mit typisierten Daten.</summary>
         public void On<TData>(string type, Func<TData, CancellationToken, Task<object?>> handler)
         {
-            _handlers.Add(type, async (json, ct) =>
+            _handlers.Add(type, async (json, cancellationToken) =>
             {
                 TData data;
                 try
@@ -50,13 +50,13 @@ namespace AxoClient.App.Bridge
                     throw new AxoException("errors.invalidInput");
                 }
 
-                return await handler(data, ct);
+                return await handler(data, cancellationToken);
             });
         }
 
         /// <summary>Handler ohne Daten.</summary>
         public void On(string type, Func<CancellationToken, Task<object?>> handler) =>
-            _handlers.Add(type, (_, ct) => handler(ct));
+            _handlers.Add(type, (_, cancellationToken) => handler(cancellationToken));
 
         /// <summary>Synchroner Handler ohne Daten.</summary>
         public void On(string type, Func<object?> handler) =>
@@ -102,19 +102,19 @@ namespace AxoClient.App.Bridge
             {
                 reply(request.Id, false, null, new TextRef("errors.cancelled"));
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                if (ex is not AxoException)
+                if (exception is not AxoException)
                 {
-                    _appLog.Error($"Bridge {request.Type} fehlgeschlagen", ex);
+                    _appLog.Error($"Bridge {request.Type} fehlgeschlagen", exception);
                 }
 
-                reply(request.Id, false, null, _exceptionHelper.Describe(ex));
+                reply(request.Id, false, null, _exceptionHelper.Describe(exception));
             }
         }
 
-        private void reply(long id, bool ok, object? data, TextRef? error) =>
-            _send(JsonSerializer.Serialize(new { kind = "reply", id, ok, data, error }, _jsonHelper.Compact));
+        private void reply(long id, bool success, object? data, TextRef? error) =>
+            _send(JsonSerializer.Serialize(new { kind = "reply", id, ok = success, data, error }, _jsonHelper.Compact));
 
         /// <summary>Ereignis an die UI.</summary>
         public void Emit(string type, object? data) =>

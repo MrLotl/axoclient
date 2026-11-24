@@ -40,10 +40,10 @@ namespace AxoClient.Instances
             _jsonStoreFactory = jsonStoreFactory;
         }
 
-        void IGameLaunchHook.OnStarted(LaunchContext ctx, RunningProcess process)
+        void IGameLaunchHook.OnStarted(LaunchContext context, RunningProcess process)
         {
-            var session = new Session { Context = ctx };
-            if (ctx.QuickPlay?.Server is { Length: > 0 } server)
+            var session = new Session { Context = context };
+            if (context.QuickPlay?.Server is { Length: > 0 } server)
             {
                 open(session, "server", server);
             }
@@ -53,7 +53,7 @@ namespace AxoClient.Instances
             _sessions[process] = session;
         }
 
-        void IGameLaunchHook.OnExited(LaunchContext ctx, RunningProcess process, int exitCode, bool crashed)
+        void IGameLaunchHook.OnExited(LaunchContext context, RunningProcess process, int exitCode, bool crashed)
         {
             if (!_sessions.TryRemove(process, out var session))
             {
@@ -73,7 +73,7 @@ namespace AxoClient.Instances
             var text = line.Text;
             if (connecting().Match(text) is { Success: true } connect)
             {
-                var port = int.TryParse(connect.Groups[2].Value, out var p) ? p : 25565;
+                var port = int.TryParse(connect.Groups[2].Value, out var parsed) ? parsed : 25565;
                 close(session);
                 open(session, "server", port == 25565 ? connect.Groups[1].Value : $"{connect.Groups[1].Value}:{port}");
             }
@@ -120,24 +120,24 @@ namespace AxoClient.Instances
         }
 
         /// <summary>Die Welt, deren session.lock seit Beginn der Sitzung geschrieben wurde (die neueste).</summary>
-        private string? findWorld(string gameDir, DateTimeOffset since)
+        private string? findWorld(string gameDirectory, DateTimeOffset since)
         {
             try
             {
-                var saves = Path.Combine(gameDir, "saves");
+                var saves = Path.Combine(gameDirectory, "saves");
                 if (!Directory.Exists(saves))
                 {
                     return null;
                 }
 
                 return new DirectoryInfo(saves).EnumerateDirectories()
-                    .Select(d => (Dir: d, Lock: new FileInfo(Path.Combine(d.FullName, "session.lock"))))
-                    .Where(x => x.Lock.Exists && x.Lock.LastWriteTimeUtc >= since.UtcDateTime.AddSeconds(-10))
-                    .OrderByDescending(x => x.Lock.LastWriteTimeUtc)
-                    .Select(x => x.Dir.Name)
+                    .Select(directory => (Dir: directory, Lock: new FileInfo(Path.Combine(directory.FullName, "session.lock"))))
+                    .Where(world => world.Lock.Exists && world.Lock.LastWriteTimeUtc >= since.UtcDateTime.AddSeconds(-10))
+                    .OrderByDescending(world => world.Lock.LastWriteTimeUtc)
+                    .Select(world => world.Dir.Name)
                     .FirstOrDefault();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 return null;
             }
@@ -150,7 +150,7 @@ namespace AxoClient.Instances
             {
                 await _jsonStoreFactory.Create<PlacesLog>(_paths.Fs, _paths.PlacesJson(instanceId)).Update(log =>
                 {
-                    var entry = log.Places.FirstOrDefault(p => p.Kind == kind && string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
+                    var entry = log.Places.FirstOrDefault(place => place.Kind == kind && string.Equals(place.Id, id, StringComparison.OrdinalIgnoreCase));
                     if (entry == null)
                     {
                         log.Places.Add(entry = new PlaceEntry { Kind = kind, Id = id });
@@ -160,9 +160,9 @@ namespace AxoClient.Instances
                     entry.LastPlayed = end;
                 });
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or AxoException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or AxoException)
             {
-                _appLog.Warn("Spielzeit pro Ort konnte nicht gespeichert werden", ex);
+                _appLog.Warn("Spielzeit pro Ort konnte nicht gespeichert werden", exception);
             }
             finally
             {
@@ -170,8 +170,8 @@ namespace AxoClient.Instances
             }
         }
 
-        public Task<PlacesLog> Load(string instanceId, CancellationToken ct = default) =>
-            _jsonStoreFactory.Create<PlacesLog>(_paths.Fs, _paths.PlacesJson(_textHelper.RequireId(instanceId))).Load(ct);
+        public Task<PlacesLog> Load(string instanceId, CancellationToken cancellationToken = default) =>
+            _jsonStoreFactory.Create<PlacesLog>(_paths.Fs, _paths.PlacesJson(_textHelper.RequireId(instanceId))).Load(cancellationToken);
 
         [GeneratedRegex(@"Connecting to ([A-Za-z0-9.\-]+), (\d{1,5})")]
         private partial Regex connecting();

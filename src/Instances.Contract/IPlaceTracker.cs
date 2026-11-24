@@ -5,6 +5,6 @@ namespace AxoClient.Instances.Contract
 {
     public interface IPlaceTracker : IGameLaunchHook
     {
-        Task<PlacesLog> Load(string instanceId, CancellationToken ct = default);
+        Task<PlacesLog> Load(string instanceId, CancellationToken cancellationToken = default);
     }
 }

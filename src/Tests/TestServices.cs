@@ -13,9 +13,9 @@ namespace AxoClient.Tests
     {
         private readonly ServiceProvider _provider;
 
-        public TestServices(string? root = null, IFileSystem? fs = null, HttpMessageHandler? http = null)
+        public TestServices(string? root = null, IFileSystem? fileSystem = null, HttpMessageHandler? http = null)
         {
-            Paths = new AppPaths(root ?? Path.Combine(Path.GetTempPath(), "axo-test-" + Guid.NewGuid().ToString("N")), fs);
+            Paths = new AppPaths(root ?? Path.Combine(Path.GetTempPath(), "axo-test-" + Guid.NewGuid().ToString("N")), fileSystem);
             var services = new ServiceCollection();
             new Startup(Paths).ConfigureServices(services);
             if (http != null)
@@ -33,9 +33,9 @@ namespace AxoClient.Tests
         }
 
         /// <summary>Neues Objekt mit eigenen Argumenten, den Rest liefert der Container.</summary>
-        public T Create<T>(params object[] args)
+        public T Create<T>(params object[] arguments)
         {
-            return ActivatorUtilities.CreateInstance<T>(_provider, args);
+            return ActivatorUtilities.CreateInstance<T>(_provider, arguments);
         }
 
         private sealed class FixedHttpHandlerFactory : IHttpHandlerFactory

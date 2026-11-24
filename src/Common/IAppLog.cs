@@ -2,13 +2,13 @@ namespace AxoClient.Common
 {
     public interface IAppLog
     {
-        void Initialize(string logsDir);
+        void Initialize(string logsDirectory);
 
         void Info(string message);
 
-        void Warn(string message, Exception? ex = null);
+        void Warn(string message, Exception? exception = null);
 
-        void Error(string message, Exception? ex = null);
+        void Error(string message, Exception? exception = null);
 
         string? CurrentFile { get; }
 

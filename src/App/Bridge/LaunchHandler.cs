@@ -46,58 +46,58 @@ namespace AxoClient.App.Bridge
             _logRedactor = logRedactor;
         }
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            r.On<LaunchData>("instances.launch", async (d, _) =>
+            router.On<LaunchData>("instances.launch", async (request, _) =>
             {
-                TextHelper.RequireId(d.Id);
-                var quickPlay = d.World != null || d.Server != null ? new QuickPlay(d.World, d.Server) : null;
-                if (d.Server != null && !_serverPing.IsValidAddress(d.Server))
+                TextHelper.RequireId(request.Id);
+                var quickPlay = request.World != null || request.Server != null ? new QuickPlay(request.World, request.Server) : null;
+                if (request.Server != null && !_serverPing.IsValidAddress(request.Server))
                 {
                     throw new AxoException("servers.addressInvalid");
                 }
 
-                await _settings.UpdateState(s => s.LastInstance = d.Id);
-                return StartJob(_games.Launch(d.Id, quickPlay));
+                await _settings.UpdateState(state => state.LastInstance = request.Id);
+                return StartJob(_games.Launch(request.Id, quickPlay));
             });
 
-            r.On<IdData>("instances.stop", async (d, _) =>
+            router.On<IdData>("instances.stop", async (request, _) =>
             {
-                await _games.Stop(d.Id);
+                await _games.Stop(request.Id);
                 return null;
             });
 
-            r.On("games.running", () => _games.Running);
+            router.On("games.running", () => _games.Running);
 
-            r.On<PromptIdData>("launch.promptShown", (d, _) => Task.FromResult<object?>(_prompt.Shown(d.PromptId)));
-            r.On<ResolveData>("launch.resolve", (d, _) => Task.FromResult<object?>(_prompt.Resolve(d.PromptId,
-                new PromptDecision(d.Choice, d.Actions, d.Silence))));
+            router.On<PromptIdData>("launch.promptShown", (request, _) => Task.FromResult<object?>(_prompt.Shown(request.PromptId)));
+            router.On<ResolveData>("launch.resolve", (request, _) => Task.FromResult<object?>(_prompt.Resolve(request.PromptId,
+                new PromptDecision(request.Choice, request.Actions, request.Silence))));
 
-            r.On<CrashActionData>("crash.action", async (d, _) =>
+            router.On<CrashActionData>("crash.action", async (request, _) =>
             {
-                await _jobs.Run("crash.action", new TextRef("crash.fixing"), job => _crashActions.Run(d.Id, d.Action, d.File, job), d.Id);
+                await _jobs.Run("crash.action", new TextRef("crash.fixing"), job => _crashActions.Run(request.Id, request.Action, request.File, job), request.Id);
                 return null;
             });
 
             // ---- Live-Konsole ----
-            r.On("console.sources", () => _processes.All.Select(p => new
+            router.On("console.sources", () => _processes.All.Select(process => new
             {
-                key = p.Key,
-                kind = p.Key.StartsWith("server:") ? "server" : "instance",
-                id = p.Key[(p.Key.IndexOf(':') + 1)..],
-                running = !p.HasExited,
-                startedAt = p.StartedAt
+                key = process.Key,
+                kind = process.Key.StartsWith("server:") ? "server" : "instance",
+                id = process.Key[(process.Key.IndexOf(':') + 1)..],
+                running = !process.HasExited,
+                startedAt = process.StartedAt
             }).ToList());
 
-            r.On<ConsoleData>("console.lines", (d, _) => Task.FromResult<object?>(
-                _processes.GetIncludingExited(d.Key)?.Lines(Math.Clamp(d.Max, 1, 20_000)) ?? []));
+            router.On<ConsoleData>("console.lines", (request, _) => Task.FromResult<object?>(
+                _processes.GetIncludingExited(request.Key)?.Lines(Math.Clamp(request.Max, 1, 20_000)) ?? []));
 
-            r.On<ConsoleData>("console.copy", (d, _) => Task.FromResult<object?>(_logRedactor.RedactForSharing(
-                string.Join('\n', (_processes.GetIncludingExited(d.Key)?.Lines(Math.Clamp(d.Max, 1, 20_000)) ?? []).Select(l => l.Text)))));
+            router.On<ConsoleData>("console.copy", (request, _) => Task.FromResult<object?>(_logRedactor.RedactForSharing(
+                string.Join('\n', (_processes.GetIncludingExited(request.Key)?.Lines(Math.Clamp(request.Max, 1, 20_000)) ?? []).Select(logLine => logLine.Text)))));
 
-            r.On<CommandData>("console.command", async (d, _) =>
+            router.On<CommandData>("console.command", async (request, _) =>
             {
-                await _localServers.SendCommand(d.Id, d.Command);
+                await _localServers.SendCommand(request.Id, request.Command);
                 return null;
             });
         }

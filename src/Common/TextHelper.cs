@@ -15,20 +15,20 @@ namespace AxoClient.Common
             }
 
             var builder = new StringBuilder(Math.Min(text.Length, maxLength));
-            foreach (var c in text)
+            foreach (var character in text)
             {
                 if (builder.Length >= maxLength)
                 {
                     break;
                 }
 
-                if (c is '\n' or '\t')
+                if (character is '\n' or '\t')
                 {
                     builder.Append(' ');
                 }
-                else if (!char.IsControl(c) && CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.Format)
+                else if (!char.IsControl(character) && CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.Format)
                 {
-                    builder.Append(c);
+                    builder.Append(character);
                 }
             }
             return builder.ToString().Trim();
@@ -43,16 +43,16 @@ namespace AxoClient.Common
             }
 
             var builder = new StringBuilder(Math.Min(text.Length, maxLength));
-            foreach (var c in text)
+            foreach (var character in text)
             {
                 if (builder.Length >= maxLength)
                 {
                     break;
                 }
 
-                if (c == '\n' || (!char.IsControl(c) && CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.Format))
+                if (character == '\n' || (!char.IsControl(character) && CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.Format))
                 {
-                    builder.Append(c);
+                    builder.Append(character);
                 }
             }
             return builder.ToString().Trim();
@@ -73,14 +73,14 @@ namespace AxoClient.Common
             var normalized = lowered.Normalize(NormalizationForm.FormD);
             var builder = new StringBuilder();
             var lastDash = true;
-            foreach (var c in normalized)
+            foreach (var character in normalized)
             {
-                if (c is >= 'a' and <= 'z' or >= '0' and <= '9')
+                if (character is >= 'a' and <= 'z' or >= '0' and <= '9')
                 {
-                    builder.Append(c);
+                    builder.Append(character);
                     lastDash = false;
                 }
-                else if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark && !lastDash)
+                else if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark && !lastDash)
                 {
                     builder.Append('-');
                     lastDash = true;
@@ -95,7 +95,7 @@ namespace AxoClient.Common
 
         /// <summary>Gültige IDs, wie sie von der UI kommen dürfen.</summary>
         public bool IsValidId(string? id) =>
-            !string.IsNullOrEmpty(id) && id.Length <= 64 && id.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '_')
+            !string.IsNullOrEmpty(id) && id.Length <= 64 && id.All(character => character is >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '_')
             && !id.StartsWith('-');
 
         public string RequireId(string? id) =>

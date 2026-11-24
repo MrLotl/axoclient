@@ -23,49 +23,49 @@ namespace AxoClient.Game
 
         public LoaderType Type => LoaderType.Forge;
 
-        public async Task<IReadOnlyList<LoaderVersionInfo>> ListVersions(string mc, CancellationToken ct)
+        public async Task<IReadOnlyList<LoaderVersionInfo>> ListVersions(string minecraftVersion, CancellationToken cancellationToken)
         {
-            var xml = XDocument.Parse(await _api.GetString(Metadata, TimeSpan.FromHours(6), ct));
-            var prefix = mc + "-";
-            var versions = xml.Descendants("version").Select(v => v.Value)
-                .Where(v => v.StartsWith(prefix, StringComparison.Ordinal))
-                .Select(v => v[prefix.Length..].Split('-')[0])
+            var xml = XDocument.Parse(await _api.GetString(Metadata, TimeSpan.FromHours(6), cancellationToken));
+            var prefix = minecraftVersion + "-";
+            var versions = xml.Descendants("version").Select(element => element.Value)
+                .Where(version => version.StartsWith(prefix, StringComparison.Ordinal))
+                .Select(version => version[prefix.Length..].Split('-')[0])
                 .Distinct()
                 .ToList();
             string? recommended = null;
             try
             {
-                using var promos = JsonDocument.Parse(await _api.GetString(Promotions, TimeSpan.FromHours(6), ct));
-                var p = promos.RootElement.GetProperty("promos");
-                recommended = p.TryGetProperty(mc + "-recommended", out var r) ? r.GetString()
-                    : p.TryGetProperty(mc + "-latest", out var l) ? l.GetString() : null;
+                using var promos = JsonDocument.Parse(await _api.GetString(Promotions, TimeSpan.FromHours(6), cancellationToken));
+                var promosElement = promos.RootElement.GetProperty("promos");
+                recommended = promosElement.TryGetProperty(minecraftVersion + "-recommended", out var recommendedElement) ? recommendedElement.GetString()
+                    : promosElement.TryGetProperty(minecraftVersion + "-latest", out var latestElement) ? latestElement.GetString() : null;
             }
-            catch (Exception ex) when (ex is JsonException or KeyNotFoundException)
+            catch (Exception exception) when (exception is JsonException or KeyNotFoundException)
             {
             }
             recommended ??= versions.FirstOrDefault();
-            return versions.Select(v => new LoaderVersionInfo(v, true, v == recommended)).ToList();
+            return versions.Select(version => new LoaderVersionInfo(version, true, version == recommended)).ToList();
         }
 
-        public async Task<string> Install(LoaderInstallContext ctx)
+        public async Task<string> Install(LoaderInstallContext context)
         {
-            ctx.Status.Report("loader.installing:Forge");
-            var forge = new ForgeInstaller(ctx.Launcher);
+            context.Status.Report("loader.installing:Forge");
+            var forge = new ForgeInstaller(context.Launcher);
             var options = new ForgeInstallOptions
             {
-                FileProgress = ctx.Files,
-                ByteProgress = ctx.Bytes,
+                FileProgress = context.Files,
+                ByteProgress = context.Bytes,
                 InstallerOutput = new Progress<string>(_ => { }),
                 SkipIfAlreadyInstalled = true,
-                CancellationToken = ctx.Token
+                CancellationToken = context.Token
             };
-            return _gameVersionHelper.IsSafeVersion(ctx.LoaderVersion)
-                ? await forge.Install(ctx.MinecraftVersion, ctx.LoaderVersion!, options)
-                : await forge.Install(ctx.MinecraftVersion, options);
+            return _gameVersionHelper.IsSafeVersion(context.LoaderVersion)
+                ? await forge.Install(context.MinecraftVersion, context.LoaderVersion!, options)
+                : await forge.Install(context.MinecraftVersion, options);
         }
 
-        public bool IsInstalled(MinecraftPath path, string mc, string? loaderVersion) =>
-            loaderVersion != null && (File.Exists(path.GetVersionJsonPath($"{mc}-forge-{loaderVersion}"))
-                                      || File.Exists(path.GetVersionJsonPath($"{mc}-forge{mc}-{loaderVersion}")));
+        public bool IsInstalled(MinecraftPath path, string minecraftVersion, string? loaderVersion) =>
+            loaderVersion != null && (File.Exists(path.GetVersionJsonPath($"{minecraftVersion}-forge-{loaderVersion}"))
+                                      || File.Exists(path.GetVersionJsonPath($"{minecraftVersion}-forge{minecraftVersion}-{loaderVersion}")));
     }
 }

@@ -21,27 +21,27 @@ namespace AxoClient.Launch.Checks
         public override string Id => "javaArgs";
         public override LaunchPhase Phase => LaunchPhase.Resources;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
-            var args = ctx.Instance.JavaArgs;
-            if (string.IsNullOrWhiteSpace(args))
+            var arguments = context.Instance.JavaArgs;
+            if (string.IsNullOrWhiteSpace(arguments))
             {
                 return Task.FromResult<IReadOnlyList<CheckResult>>([Ok()]);
             }
 
-            if (!_javaArgumentsHelper.IsValid(args))
+            if (!_javaArgumentsHelper.IsValid(arguments))
             {
                 return Task.FromResult<IReadOnlyList<CheckResult>>([new CheckResult(Id, Severity.Blocker, new TextRef("pipeline.javaArgs.invalid"),
-                    [new CheckAction("reset", new TextRef("pipeline.action.resetArgs"), async (c, job) =>
-                        c.Instance = await _instances.Update(c.Instance.Id, new InstanceUpdate(JavaArgs: ""), job.Token), true)],
+                    [new CheckAction("reset", new TextRef("pipeline.action.resetArgs"), async (launchContext, job) =>
+                        launchContext.Instance = await _instances.Update(launchContext.Instance.Id, new InstanceUpdate(JavaArgs: ""), job.Token), true)],
                     CanSilence: false)]);
             }
 
-            if (_javaArgumentsHelper.HasMemoryArg(args))
+            if (_javaArgumentsHelper.HasMemoryArgument(arguments))
             {
                 return Task.FromResult<IReadOnlyList<CheckResult>>([new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.javaArgs.memory"),
-                    [new CheckAction("strip", new TextRef("pipeline.action.preferSlider"), async (c, job) =>
-                        c.Instance = await _instances.Update(c.Instance.Id, new InstanceUpdate(JavaArgs: _javaArgumentsHelper.StripMemory(c.Instance.JavaArgs)),
+                    [new CheckAction("strip", new TextRef("pipeline.action.preferSlider"), async (launchContext, job) =>
+                        launchContext.Instance = await _instances.Update(launchContext.Instance.Id, new InstanceUpdate(JavaArgs: _javaArgumentsHelper.StripMemory(launchContext.Instance.JavaArgs)),
                             job.Token), true)])]);
             }
 

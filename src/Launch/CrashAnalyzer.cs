@@ -26,8 +26,8 @@ namespace AxoClient.Launch
         {
             _jsonHelper = jsonHelper;
             rules ??= LoadEmbeddedRules();
-            _rules = rules.Rules.Select(r => (r, r.Match.Select(m =>
-                new Regex(m, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1))).ToArray())).ToList();
+            _rules = rules.Rules.Select(rule => (rule, rule.Match.Select(patternText =>
+                new Regex(patternText, RegexOptions.IgnoreCase | RegexOptions.Compiled, TimeSpan.FromSeconds(1))).ToArray())).ToList();
         }
 
         public CrashRuleSet LoadEmbeddedRules()
@@ -37,7 +37,7 @@ namespace AxoClient.Launch
             return JsonSerializer.Deserialize<CrashRuleSet>(stream, _jsonHelper.Options)!;
         }
 
-        public IReadOnlyList<CrashRule> Rules => _rules.Select(r => r.Rule).ToList();
+        public IReadOnlyList<CrashRule> Rules => _rules.Select(rule => rule.Rule).ToList();
 
         public CrashAnalysis Analyze(CrashInput input, ContentDocument? content, bool server = false)
         {
@@ -48,9 +48,9 @@ namespace AxoClient.Launch
                 ["log"] = trim(input.LogTail)
             };
             // Nur aktive Mods: deaktivierte können den Absturz nicht ausgelöst haben
-            var mods = content?.Mods.Where(m => m.Enabled && m.Source != ContentSource.AxoClient).ToList() ?? [];
+            var mods = content?.Mods.Where(entry => entry.Enabled && entry.Source != ContentSource.AxoClient).ToList() ?? [];
 
-            foreach (var (rule, patterns) in _rules.Where(r => r.Rule.Server == server))
+            foreach (var (rule, patterns) in _rules.Where(rule => rule.Rule.Server == server))
             {
                 var where = rule.In.Count > 0 ? rule.In : ["crash", "hserr", "log"];
                 foreach (var source in where)
@@ -64,7 +64,7 @@ namespace AxoClient.Launch
                     Match? match = null;
                     try
                     {
-                        match = patterns.Select(p => p.Match(text)).FirstOrDefault(m => m.Success);
+                        match = patterns.Select(pattern => pattern.Match(text)).FirstOrDefault(candidate => candidate.Success);
                     }
                     catch (RegexMatchTimeoutException)
                     {
@@ -83,9 +83,9 @@ namespace AxoClient.Launch
                         "forgeDependency" => FindByForgeDependency(allText, mods),
                         _ => []
                     };
-                    var file = match.Groups["file"] is { Success: true } g ? g.Value : null;
+                    var file = match.Groups["file"] is { Success: true } fileGroup ? fileGroup.Value : null;
                     // Nennt die Regel eine Mod-Datei, ist genau diese Mod gemeint
-                    if (suspects.Count == 0 && file != null && mods.FirstOrDefault(m => m.File.Equals(file, StringComparison.OrdinalIgnoreCase)) is { } byFile)
+                    if (suspects.Count == 0 && file != null && mods.FirstOrDefault(mod => mod.File.Equals(file, StringComparison.OrdinalIgnoreCase)) is { } byFile)
                     {
                         suspects = [new CrashSuspect(byFile.File, byFile.Name)];
                     }
@@ -104,7 +104,7 @@ namespace AxoClient.Launch
                 }
             }
 
-            var recent = markRollback(mods.OrderByDescending(m => m.AddedAt).Take(3).Select(m => new CrashSuspect(m.File, m.Name)).ToList(), mods);
+            var recent = markRollback(mods.OrderByDescending(mod => mod.AddedAt).Take(3).Select(mod => new CrashSuspect(mod.File, mod.Name)).ToList(), mods);
             var stack = markRollback(FindByStacktrace(string.Join('\n', sources.Values), mods), mods);
             return new CrashAnalysis(false, new TextRef("crash.cause.unknown"), null,
                 withRollback(mods.Count > 0 ? ["checkMods"] : [], stack.Count > 0 ? stack : recent), stack, recent,
@@ -112,26 +112,26 @@ namespace AxoClient.Launch
         }
 
         private List<CrashSuspect> markRollback(List<CrashSuspect> suspects, List<ContentEntry> mods) =>
-            suspects.Select(s => s with { CanRollback = mods.Any(m => m.File == s.File && m.Previous != null) }).ToList();
+            suspects.Select(suspect => suspect with { CanRollback = mods.Any(mod => mod.File == suspect.File && mod.Previous != null) }).ToList();
 
         /// <summary>Wurde eine beteiligte Mod gerade aktualisiert, ist das Zurücknehmen die naheliegendste Maßnahme.</summary>
         private IReadOnlyList<string> withRollback(IReadOnlyList<string> actions, List<CrashSuspect> suspects) =>
-            suspects.Any(s => s.CanRollback) && !actions.Contains("rollbackMod") ? ["rollbackMod", .. actions] : actions;
+            suspects.Any(suspect => suspect.CanRollback) && !actions.Contains("rollbackMod") ? ["rollbackMod", .. actions] : actions;
 
         /// <summary>Paketnamen im Stacktrace den Mods zuordnen (Pakete merkt sich der Launcher beim Installieren).</summary>
         internal List<CrashSuspect> FindByStacktrace(string text, List<ContentEntry> mods)
         {
-            var frames = Regex.Matches(text, @"at ([a-zA-Z_][\w$]*(?:\.[a-zA-Z_][\w$]*){2,})\.").Select(m => m.Groups[1].Value)
-                .Where(f => !f.StartsWith("java.") && !f.StartsWith("jdk.") && !f.StartsWith("sun.") && !f.StartsWith("net.minecraft.")
-                            && !f.StartsWith("com.mojang.") && !f.StartsWith("net.fabricmc.loader") && !f.StartsWith("org.spongepowered")
-                            && !f.StartsWith("cpw.mods") && !f.StartsWith("net.neoforged.fml") && !f.StartsWith("net.minecraftforge.fml"))
+            var frames = Regex.Matches(text, @"at ([a-zA-Z_][\w$]*(?:\.[a-zA-Z_][\w$]*){2,})\.").Select(match => match.Groups[1].Value)
+                .Where(frame => !frame.StartsWith("java.") && !frame.StartsWith("jdk.") && !frame.StartsWith("sun.") && !frame.StartsWith("net.minecraft.")
+                            && !frame.StartsWith("com.mojang.") && !frame.StartsWith("net.fabricmc.loader") && !frame.StartsWith("org.spongepowered")
+                            && !frame.StartsWith("cpw.mods") && !frame.StartsWith("net.neoforged.fml") && !frame.StartsWith("net.minecraftforge.fml"))
                 .Take(60)
                 .ToList();
             var hits = new List<CrashSuspect>();
             foreach (var frame in frames)
             {
-                var mod = mods.FirstOrDefault(m => m.Meta?.Packages.Any(p => frame.StartsWith(p + ".", StringComparison.Ordinal)) == true);
-                if (mod != null && hits.All(h => h.File != mod.File))
+                var mod = mods.FirstOrDefault(candidateMod => candidateMod.Meta?.Packages.Any(package => frame.StartsWith(package + ".", StringComparison.Ordinal)) == true);
+                if (mod != null && hits.All(hit => hit.File != mod.File))
                 {
                     hits.Add(new CrashSuspect(mod.File, mod.Name));
                 }
@@ -152,36 +152,36 @@ namespace AxoClient.Launch
         internal List<CrashSuspect> FindByMixin(string text, List<ContentEntry> mods)
         {
             var errorLines = text.Split('\n')
-                .Where(l => !l.TrimStart().StartsWith("at ", StringComparison.Ordinal))
-                .Where(l => mixinErrorLine().IsMatch(l))
+                .Where(part => !part.TrimStart().StartsWith("at ", StringComparison.Ordinal))
+                .Where(part => mixinErrorLine().IsMatch(part))
                 .ToList();
             var primary = new List<string>();
             var others = new List<string>();
             foreach (var line in errorLines)
             {
-                foreach (Match m in Regex.Matches(line, @"Mixin apply for mod ([a-z0-9_]+(?:-[a-z0-9_]+)*) failed"))
+                foreach (Match match in Regex.Matches(line, @"Mixin apply for mod ([a-z0-9_]+(?:-[a-z0-9_]+)*) failed"))
                 {
-                    primary.Add(m.Groups[1].Value);
+                    primary.Add(match.Groups[1].Value);
                 }
 
-                foreach (Match m in Regex.Matches(line, @"from mod ([a-z0-9_]+(?:-[a-z0-9_]+)*)"))
+                foreach (Match match in Regex.Matches(line, @"from mod ([a-z0-9_]+(?:-[a-z0-9_]+)*)"))
                 {
-                    others.Add(m.Groups[1].Value);
+                    others.Add(match.Groups[1].Value);
                 }
             }
 
             var hits = new List<CrashSuspect>();
             void Add(ContentEntry? mod)
             {
-                if (mod != null && hits.All(h => h.File != mod.File))
+                if (mod != null && hits.All(hit => hit.File != mod.File))
                 {
                     hits.Add(new CrashSuspect(mod.File, mod.Name));
                 }
             }
-            ContentEntry? ById(string id) => mods.FirstOrDefault(m => m.Meta != null
-                && (string.Equals(m.Meta.ModId, id, StringComparison.OrdinalIgnoreCase) || m.Meta.Provides.Contains(id, StringComparer.OrdinalIgnoreCase)));
-            ContentEntry? ByConfig(string config) => mods.FirstOrDefault(m => m.Meta?.Mixins.Contains(config, StringComparer.OrdinalIgnoreCase) == true);
-            ContentEntry? ByClass(string cls) => mods.FirstOrDefault(m => m.Meta?.Packages.Any(p => cls.StartsWith(p + ".", StringComparison.Ordinal)) == true);
+            ContentEntry? ById(string id) => mods.FirstOrDefault(mod => mod.Meta != null
+                && (string.Equals(mod.Meta.ModId, id, StringComparison.OrdinalIgnoreCase) || mod.Meta.Provides.Contains(id, StringComparer.OrdinalIgnoreCase)));
+            ContentEntry? ByConfig(string config) => mods.FirstOrDefault(mod => mod.Meta?.Mixins.Contains(config, StringComparer.OrdinalIgnoreCase) == true);
+            ContentEntry? ByClass(string cls) => mods.FirstOrDefault(mod => mod.Meta?.Packages.Any(package => cls.StartsWith(package + ".", StringComparison.Ordinal)) == true);
 
             foreach (var id in primary)
             {
@@ -190,22 +190,22 @@ namespace AxoClient.Launch
             // Gescheiterte Konfiguration ("Mixin [sodium.mixins.json:…] … FAILED")
             foreach (var line in errorLines)
             {
-                foreach (Match m in Regex.Matches(line, @"Mixin \[([A-Za-z0-9_.\-]+\.mixins?\.json)"))
+                foreach (Match match in Regex.Matches(line, @"Mixin \[([A-Za-z0-9_.\-]+\.mixins?\.json)"))
                 {
-                    Add(ByConfig(m.Groups[1].Value));
+                    Add(ByConfig(match.Groups[1].Value));
                 }
             }
             // Konfliktpartner
             foreach (var line in errorLines)
             {
-                foreach (Match m in Regex.Matches(line, @"(?:merged by|already redirected by|conflicts? with) ([a-zA-Z_][\w$]*(?:\.[\w$]+){2,})"))
+                foreach (Match match in Regex.Matches(line, @"(?:merged by|already redirected by|conflicts? with) ([a-zA-Z_][\w$]*(?:\.[\w$]+){2,})"))
                 {
-                    Add(ByClass(m.Groups[1].Value) ?? ByConfig(m.Groups[1].Value));
+                    Add(ByClass(match.Groups[1].Value) ?? ByConfig(match.Groups[1].Value));
                 }
 
-                foreach (Match m in Regex.Matches(line, @"([A-Za-z0-9_.\-]+\.mixins?\.json)"))
+                foreach (Match match in Regex.Matches(line, @"([A-Za-z0-9_.\-]+\.mixins?\.json)"))
                 {
-                    Add(ByConfig(m.Groups[1].Value));
+                    Add(ByConfig(match.Groups[1].Value));
                 }
             }
             foreach (var id in others)
@@ -222,8 +222,8 @@ namespace AxoClient.Launch
         /// <summary>Fabric: "Mod 'X' (x) 1.0 requires …" bzw. "- Mod 'X' (x) … is incompatible".</summary>
         internal List<CrashSuspect> FindByResolution(string text, List<ContentEntry> mods)
         {
-            var ids = Regex.Matches(text, @"Mod '[^']+' \(([a-z0-9_\-]+)\)").Select(m => m.Groups[1].Value).ToHashSet();
-            return mods.Where(m => m.Meta?.ModId != null && ids.Contains(m.Meta.ModId)).Select(m => new CrashSuspect(m.File, m.Name)).ToList();
+            var ids = Regex.Matches(text, @"Mod '[^']+' \(([a-z0-9_\-]+)\)").Select(match => match.Groups[1].Value).ToHashSet();
+            return mods.Where(mod => mod.Meta?.ModId != null && ids.Contains(mod.Meta.ModId)).Select(mod => new CrashSuspect(mod.File, mod.Name)).ToList();
         }
 
         /// <summary>
@@ -232,10 +232,10 @@ namespace AxoClient.Launch
         /// </summary>
         internal List<CrashSuspect> FindByForgeDependency(string text, List<ContentEntry> mods)
         {
-            var ids = Regex.Matches(text, @"Requested by: '([a-z0-9_\-]+)'").Select(m => m.Groups[1].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var names = Regex.Matches(text, @"Mod (.+?) requires ").Select(m => m.Groups[1].Value.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            return mods.Where(m => (m.Meta?.ModId != null && ids.Contains(m.Meta.ModId)) || names.Contains(m.Name))
-                .Select(m => new CrashSuspect(m.File, m.Name)).Take(3).ToList();
+            var ids = Regex.Matches(text, @"Requested by: '([a-z0-9_\-]+)'").Select(match => match.Groups[1].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var names = Regex.Matches(text, @"Mod (.+?) requires ").Select(match => match.Groups[1].Value.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return mods.Where(mod => (mod.Meta?.ModId != null && ids.Contains(mod.Meta.ModId)) || names.Contains(mod.Name))
+                .Select(mod => new CrashSuspect(mod.File, mod.Name)).Take(3).ToList();
         }
 
         /// <summary>Forge/NeoForge: "Suspected Mods: X (x), Y (y)".</summary>
@@ -247,37 +247,37 @@ namespace AxoClient.Launch
                 return [];
             }
 
-            var ids = Regex.Matches(line.Groups[1].Value, @"\(([a-z0-9_\-]+)\)").Select(m => m.Groups[1].Value).ToHashSet();
-            return mods.Where(m => m.Meta?.ModId != null && ids.Contains(m.Meta.ModId)).Select(m => new CrashSuspect(m.File, m.Name)).ToList();
+            var ids = Regex.Matches(line.Groups[1].Value, @"\(([a-z0-9_\-]+)\)").Select(match => match.Groups[1].Value).ToHashSet();
+            return mods.Where(mod => mod.Meta?.ModId != null && ids.Contains(mod.Meta.ModId)).Select(mod => new CrashSuspect(mod.File, mod.Name)).ToList();
         }
 
         private string trim(string? text) =>
             string.IsNullOrEmpty(text) ? "" : text.Length > MaxText ? text[^MaxText..] : text;
 
         /// <summary>Liest neue Crash-Reports und hs_err-Dateien seit dem Start.</summary>
-        public (string? CrashText, string? CrashFile, string? HsErr) CollectFiles(string gameDir, DateTimeOffset since)
+        public (string? CrashText, string? CrashFile, string? HsErr) CollectFiles(string gameDirectory, DateTimeOffset since)
         {
             string? crashText = null, crashFile = null, hsErr = null;
-            var reports = Path.Combine(gameDir, "crash-reports");
+            var reports = Path.Combine(gameDirectory, "crash-reports");
             if (Directory.Exists(reports))
             {
                 var newest = new DirectoryInfo(reports).EnumerateFiles("crash-*.txt")
-                    .Where(f => f.LastWriteTimeUtc >= since.UtcDateTime.AddSeconds(-5))
-                    .OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault();
+                    .Where(file => file.LastWriteTimeUtc >= since.UtcDateTime.AddSeconds(-5))
+                    .OrderByDescending(file => file.LastWriteTimeUtc).FirstOrDefault();
                 if (newest != null)
                 {
                     crashFile = newest.Name;
                     crashText = readLimited(newest.FullName);
                 }
             }
-            var hs = Directory.Exists(gameDir)
-                ? new DirectoryInfo(gameDir).EnumerateFiles("hs_err_pid*.log")
-                    .Where(f => f.LastWriteTimeUtc >= since.UtcDateTime.AddSeconds(-5))
-                    .OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault()
+            var crashLogFile = Directory.Exists(gameDirectory)
+                ? new DirectoryInfo(gameDirectory).EnumerateFiles("hs_err_pid*.log")
+                    .Where(file => file.LastWriteTimeUtc >= since.UtcDateTime.AddSeconds(-5))
+                    .OrderByDescending(file => file.LastWriteTimeUtc).FirstOrDefault()
                 : null;
-            if (hs != null)
+            if (crashLogFile != null)
             {
-                hsErr = readLimited(hs.FullName);
+                hsErr = readLimited(crashLogFile.FullName);
             }
 
             return (crashText, crashFile, hsErr);

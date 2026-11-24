@@ -78,9 +78,9 @@ namespace AxoClient.App.Bridge
         // Quellbild vor dem Zuschnitt; gespeichert wird später nur das kleine zugeschnittene Ergebnis
         private const long MaxPickedImageBytes = 25L * 1024 * 1024;
 
-        public override void Register(MessageRouter r, MainWindow window)
+        public override void Register(MessageRouter router, MainWindow window)
         {
-            r.On("app.init", () => new
+            router.On("app.init", () => new
             {
                 version = _appInfo.Version,
                 shortVersion = _appInfo.ShortVersion,
@@ -101,54 +101,54 @@ namespace AxoClient.App.Bridge
                 presets = _appearance.Presets
             });
 
-            r.On("window.minimize", () =>
+            router.On("window.minimize", () =>
             {
                 window.Minimize();
                 return null;
             });
-            r.On("window.toggleMaximize", () =>
+            router.On("window.toggleMaximize", () =>
             {
                 window.ToggleMaximize();
                 return null;
             });
-            r.On("window.close", () =>
+            router.On("window.close", () =>
             {
                 window.Close();
                 return null;
             });
-            r.On("window.drag", () =>
+            router.On("window.drag", () =>
             {
                 window.Drag();
                 return null;
             });
-            r.On<EdgeData>("window.resize", (d, _) =>
+            router.On<EdgeData>("window.resize", (request, _) =>
             {
-                window.Resize(d.Edge);
+                window.Resize(request.Edge);
                 return Task.FromResult<object?>(null);
             });
-            r.On("window.state", () => new { maximized = window.IsMaximized });
+            router.On("window.state", () => new { maximized = window.IsMaximized });
 
-            r.On<UrlData>("shell.openUrl", (d, _) =>
+            router.On<UrlData>("shell.openUrl", (request, _) =>
             {
-                OpenUrl(d.Url);
+                OpenUrl(request.Url);
                 return Task.FromResult<object?>(null);
             });
 
-            r.On<FolderData>("shell.openFolder", async (d, ct) =>
+            router.On<FolderData>("shell.openFolder", async (request, cancellationToken) =>
             {
-                var p = _paths;
-                string path = d.Kind switch
+                var paths = _paths;
+                string path = request.Kind switch
                 {
-                    "instance" => p.GameDir(TextHelper.RequireId(d.Id)),
-                    "instanceSub" when d.Sub is "mods" or "resourcepacks" or "shaderpacks" or "saves" or "screenshots" or "config" or "logs"
-                        or "crash-reports" => Path.Combine(p.GameDir(TextHelper.RequireId(d.Id)), d.Sub),
-                    "world" => _worlds.WorldDir(TextHelper.RequireId(d.Id), d.Sub ?? ""),
-                    "worldDatapacks" => Directory.CreateDirectory(Path.Combine(_worlds.WorldDir(TextHelper.RequireId(d.Id), d.Sub ?? ""), "datapacks")).FullName,
-                    "server" => p.ServerData(TextHelper.RequireId(d.Id)),
-                    "serverSub" when d.Sub is "plugins" or "mods" or "logs" or "world" => Path.Combine(p.ServerData(TextHelper.RequireId(d.Id)), d.Sub),
-                    "servers" => p.Servers,
-                    "logs" => p.Logs,
-                    "data" => p.Root,
+                    "instance" => paths.GameDirectory(TextHelper.RequireId(request.Id)),
+                    "instanceSub" when request.Sub is "mods" or "resourcepacks" or "shaderpacks" or "saves" or "screenshots" or "config" or "logs"
+                        or "crash-reports" => Path.Combine(paths.GameDirectory(TextHelper.RequireId(request.Id)), request.Sub),
+                    "world" => _worlds.WorldDirectory(TextHelper.RequireId(request.Id), request.Sub ?? ""),
+                    "worldDatapacks" => Directory.CreateDirectory(Path.Combine(_worlds.WorldDirectory(TextHelper.RequireId(request.Id), request.Sub ?? ""), "datapacks")).FullName,
+                    "server" => paths.ServerData(TextHelper.RequireId(request.Id)),
+                    "serverSub" when request.Sub is "plugins" or "mods" or "logs" or "world" => Path.Combine(paths.ServerData(TextHelper.RequireId(request.Id)), request.Sub),
+                    "servers" => paths.Servers,
+                    "logs" => paths.Logs,
+                    "data" => paths.Root,
                     _ => throw new AxoException("errors.invalidInput")
                 };
                 Directory.CreateDirectory(path);
@@ -157,12 +157,12 @@ namespace AxoClient.App.Bridge
                 return null;
             });
 
-            r.On("jobs.list", () => _jobs.Active);
-            r.On<JobData>("jobs.cancel", (d, _) => Task.FromResult<object?>(_jobs.Cancel(d.Id)));
+            router.On("jobs.list", () => _jobs.Active);
+            router.On<JobData>("jobs.cancel", (request, _) => Task.FromResult<object?>(_jobs.Cancel(request.Id)));
 
-            r.On<OpenFileData>("dialog.openFile", async (d, _) =>
+            router.On<OpenFileData>("dialog.openFile", async (request, _) =>
             {
-                (string, string[])[] filters = d.Purpose switch
+                (string, string[])[] filters = request.Purpose switch
                 {
                     "import" => [("Instanzen (.mrpack, .zip)", ["*.mrpack", "*.zip"])],
                     "mod" => [("Mods (.jar)", ["*.jar"])],
@@ -174,18 +174,18 @@ namespace AxoClient.App.Bridge
                     "java" => [("Java (javaw.exe)", ["javaw.exe", "java.exe"])],
                     _ => throw new AxoException("errors.invalidInput")
                 };
-                var files = await window.OpenFile(d.Purpose switch
+                var files = await window.OpenFile(request.Purpose switch
                 {
                     "import" => "Instanz importieren",
                     "java" => "Java auswählen",
                     _ => "Datei auswählen"
-                }, filters, d.Multi);
-                return files.Where(File.Exists).Select(f => new { id = _files.Add(f), name = Path.GetFileName(f), size = new FileInfo(f).Length })
+                }, filters, request.Multi);
+                return files.Where(File.Exists).Select(file => new { id = _files.Add(file), name = Path.GetFileName(file), size = new FileInfo(file).Length })
                     .ToList();
             });
 
             // Bild zum Zuschneiden: nativ gewählt, damit die Auswahl zum Launcher-Fenster gehört und nicht dahinter aufgeht
-            r.On("dialog.openImage", async ct =>
+            router.On("dialog.openImage", async cancellationToken =>
             {
                 var files = await window.OpenFile("Bild auswählen", [("Bilder (.png, .jpg)", ["*.png", "*.jpg", "*.jpeg"])], false);
                 var path = files.FirstOrDefault(File.Exists);
@@ -199,7 +199,7 @@ namespace AxoClient.App.Bridge
                     throw new AxoException("errors.fileTooLarge");
                 }
 
-                var bytes = await File.ReadAllBytesAsync(path, ct);
+                var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
                 if (!_imageFormats.IsPngOrJpeg(bytes))
                 {
                     throw new AxoException("errors.invalidImage");
@@ -208,49 +208,49 @@ namespace AxoClient.App.Bridge
                 return new { name = Path.GetFileName(path), base64 = Convert.ToBase64String(bytes) };
             });
 
-            r.On<SaveFileData>("dialog.saveFile", async (d, _) =>
+            router.On<SaveFileData>("dialog.saveFile", async (request, _) =>
             {
-                (string, string[])[] filters = d.Purpose switch
+                (string, string[])[] filters = request.Purpose switch
                 {
                     "mrpack" => [("Modrinth-Modpack (.mrpack)", ["*.mrpack"])],
                     "backup" => [("Backup (.zip)", ["*.zip"])],
                     "log" => [("Textdatei (.txt)", ["*.txt"])],
                     _ => throw new AxoException("errors.invalidInput")
                 };
-                var name = TextHelper.Clean(d.Name, 80);
+                var name = TextHelper.Clean(request.Name, 80);
                 var path = await window.SaveFile("Speichern unter", _pathGuard.IsSafeFileName(name) ? name : "AxoClient", filters);
                 return path == null ? null : new { id = _files.Add(path), name = Path.GetFileName(path) };
             });
 
-            r.On<UploadData>("files.upload", async (d, ct) =>
+            router.On<UploadData>("files.upload", async (request, cancellationToken) =>
             {
-                var id = await _files.Upload(d.Name, d.Base64, ct);
+                var id = await _files.Upload(request.Name, request.Base64, cancellationToken);
                 return new { id, name = _files.NameOf(id) };
             });
 
             // Texte zum Kopieren immer geschwärzt (Tokens, Spielername, UUID, IP)
-            r.On<TextData>("text.redact", (d, _) => Task.FromResult<object?>(_logRedactor.RedactForSharing(d.Text)));
+            router.On<TextData>("text.redact", (request, _) => Task.FromResult<object?>(_logRedactor.RedactForSharing(request.Text)));
 
             // Zwischenablage, falls der Browser sie im eigenen Schema nicht erlaubt (WinForms braucht einen STA-Thread)
-            r.On<TextData>("clipboard.write", (d, _) =>
+            router.On<TextData>("clipboard.write", (request, _) =>
             {
-                var text = d.Text.Length > 2_000_000 ? d.Text[..2_000_000] : d.Text;
-                var tcs = new TaskCompletionSource<object?>();
+                var text = request.Text.Length > 2_000_000 ? request.Text[..2_000_000] : request.Text;
+                var completionSource = new TaskCompletionSource<object?>();
                 var thread = new Thread(() =>
                 {
                     try
                     {
                         System.Windows.Forms.Clipboard.SetText(text);
-                        tcs.TrySetResult(null);
+                        completionSource.TrySetResult(null);
                     }
-                    catch (Exception ex)
+                    catch (Exception exception)
                     {
-                        tcs.TrySetException(ex);
+                        completionSource.TrySetException(exception);
                     }
                 });
                 thread.SetApartmentState(ApartmentState.STA);
                 thread.Start();
-                return tcs.Task;
+                return completionSource.Task;
             });
         }
     }

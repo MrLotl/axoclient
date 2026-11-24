@@ -16,31 +16,31 @@ namespace AxoClient.Tests
 
         private byte[] createJar(params (string Name, byte[] Data)[] entries)
         {
-            using var ms = new MemoryStream();
-            using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+            using var stream = new MemoryStream();
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
             {
                 foreach (var (name, data) in entries)
                 {
-                    using var s = zip.CreateEntry(name).Open();
-                    s.Write(data);
+                    using var entryStream = zip.CreateEntry(name).Open();
+                    entryStream.Write(data);
                 }
             }
-            return ms.ToArray();
+            return stream.ToArray();
         }
 
         private (IPanoramaService Service, MockFileSystem Fs, AppPaths Paths) setup()
         {
-            var fs = new MockFileSystem();
-            var paths = new AppPaths(Root, fs);
-            return (new TestServices(Root, fs).Get<IPanoramaService>(), fs, paths);
+            var fileSystem = new MockFileSystem();
+            var paths = new AppPaths(Root, fileSystem);
+            return (new TestServices(Root, fileSystem).Get<IPanoramaService>(), fileSystem, paths);
         }
 
         [Fact]
         public void ReadsPanoramaFromVersionJar()
         {
-            var (service, fs, paths) = setup();
-            var jar = fs.Path.Combine(paths.Versions, "1.21.4", "1.21.4.jar");
-            fs.AddFile(jar, new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _png))));
+            var (service, fileSystem, paths) = setup();
+            var jar = fileSystem.Path.Combine(paths.Versions, "1.21.4", "1.21.4.jar");
+            fileSystem.AddFile(jar, new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _png))));
 
             Assert.Equal(_png, service.Get("1.21.4"));
         }
@@ -48,14 +48,14 @@ namespace AxoClient.Tests
         [Fact]
         public void ReadsPanoramaFromAssetIndex()
         {
-            var (service, fs, paths) = setup();
+            var (service, fileSystem, paths) = setup();
             const string hash = "f5e0a5cfbc2e7b1e89094d7882dde106b030ec26";
-            fs.AddFile(fs.Path.Combine(paths.Versions, "1.21.1", "1.21.1.json"), new MockFileData("""{ "id": "1.21.1", "assetIndex": { "id": "17" } }"""));
-            fs.AddFile(fs.Path.Combine(paths.Assets, "indexes", "17.json"), new MockFileData(
+            fileSystem.AddFile(fileSystem.Path.Combine(paths.Versions, "1.21.1", "1.21.1.json"), new MockFileData("""{ "id": "1.21.1", "assetIndex": { "id": "17" } }"""));
+            fileSystem.AddFile(fileSystem.Path.Combine(paths.Assets, "indexes", "17.json"), new MockFileData(
                 """{ "objects": { "minecraft/textures/gui/title/background/panorama_0.png": { "hash": "f5e0a5cfbc2e7b1e89094d7882dde106b030ec26", "size": 4008 } } }"""));
-            fs.AddFile(fs.Path.Combine(paths.Assets, "objects", hash[..2], hash), new MockFileData(_png));
+            fileSystem.AddFile(fileSystem.Path.Combine(paths.Assets, "objects", hash[..2], hash), new MockFileData(_png));
             // Die Jar enthält nur den winzigen Platzhalter, der darf nicht gewinnen
-            fs.AddFile(fs.Path.Combine(paths.Versions, "1.21.1", "1.21.1.jar"), new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _placeholder))));
+            fileSystem.AddFile(fileSystem.Path.Combine(paths.Versions, "1.21.1", "1.21.1.jar"), new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _placeholder))));
 
             Assert.Equal(_png, service.Get("1.21.1"));
         }
@@ -63,37 +63,37 @@ namespace AxoClient.Tests
         [Fact]
         public void PlaceholderInJarGivesNull()
         {
-            var (service, fs, paths) = setup();
-            fs.AddFile(fs.Path.Combine(paths.Versions, "26.2", "26.2.jar"), new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _placeholder))));
+            var (service, fileSystem, paths) = setup();
+            fileSystem.AddFile(fileSystem.Path.Combine(paths.Versions, "26.2", "26.2.jar"), new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _placeholder))));
             Assert.Null(service.Get("26.2"));
         }
 
         [Fact]
         public void MissingJarOrEntryGivesNull()
         {
-            var (service, fs, paths) = setup();
+            var (service, fileSystem, paths) = setup();
             Assert.Null(service.Get("1.21.4"));
 
-            var jar = fs.Path.Combine(paths.Versions, "b1.7.3", "b1.7.3.jar");
-            fs.AddFile(jar, new MockFileData(createJar(("terrain.png", _png))));
+            var jar = fileSystem.Path.Combine(paths.Versions, "b1.7.3", "b1.7.3.jar");
+            fileSystem.AddFile(jar, new MockFileData(createJar(("terrain.png", _png))));
             Assert.Null(service.Get("b1.7.3"));
         }
 
         [Fact]
         public void NotAPngGivesNull()
         {
-            var (service, fs, paths) = setup();
-            var jar = fs.Path.Combine(paths.Versions, "1.20.1", "1.20.1.jar");
-            fs.AddFile(jar, new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", "kein Bild"u8.ToArray()))));
+            var (service, fileSystem, paths) = setup();
+            var jar = fileSystem.Path.Combine(paths.Versions, "1.20.1", "1.20.1.jar");
+            fileSystem.AddFile(jar, new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", "kein Bild"u8.ToArray()))));
             Assert.Null(service.Get("1.20.1"));
         }
 
         [Fact]
         public void FoundAfterJarWasDownloaded()
         {
-            var (service, fs, paths) = setup();
+            var (service, fileSystem, paths) = setup();
             Assert.Null(service.Get("1.21.4"));
-            fs.AddFile(fs.Path.Combine(paths.Versions, "1.21.4", "1.21.4.jar"), new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _png))));
+            fileSystem.AddFile(fileSystem.Path.Combine(paths.Versions, "1.21.4", "1.21.4.jar"), new MockFileData(createJar(("assets/minecraft/textures/gui/title/background/panorama_0.png", _png))));
             Assert.NotNull(service.Get("1.21.4"));
         }
 
@@ -131,7 +131,7 @@ namespace AxoClient.Tests
                 _offline = offline;
             }
 
-            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 Interlocked.Increment(ref Requests);
                 if (_offline)
@@ -162,28 +162,28 @@ namespace AxoClient.Tests
             }
         }
 
-        private (IPanoramaService Service, MockFileSystem Fs, AppPaths Paths) online(FakeMojang mojang, MockFileSystem? fs = null)
+        private (IPanoramaService Service, MockFileSystem Fs, AppPaths Paths) online(FakeMojang mojang, MockFileSystem? fileSystem = null)
         {
-            fs ??= new MockFileSystem();
-            var paths = new AppPaths(Root, fs);
-            var services = new TestServices(Root, fs, mojang);
+            fileSystem ??= new MockFileSystem();
+            var paths = new AppPaths(Root, fileSystem);
+            var services = new TestServices(Root, fileSystem, mojang);
             ((ApiClient)services.Get<IApiClient>()).NoRetryDelay = true;
-            return (services.Get<IPanoramaService>(), fs, paths);
+            return (services.Get<IPanoramaService>(), fileSystem, paths);
         }
 
         [Fact]
         public async Task DownloadsPanoramaOfNeverStartedVersion()
         {
             var mojang = new FakeMojang(_png);
-            var (service, fs, paths) = online(mojang);
+            var (service, fileSystem, paths) = online(mojang);
 
             Assert.Null(service.Get("26.3"));
             Assert.Equal(_png, await service.Fetch("26.3"));
 
             // liegt jetzt im Cache: ein neuer Dienst (z. B. nach einem Neustart) findet es ohne Internet
-            IPanoramaService offline = new TestServices(Root, fs).Get<IPanoramaService>();
+            IPanoramaService offline = new TestServices(Root, fileSystem).Get<IPanoramaService>();
             Assert.Equal(_png, offline.Get("26.3"));
-            Assert.True(fs.File.Exists(fs.Path.Combine(paths.Cache, "panoramas", "26.3_0.png")));
+            Assert.True(fileSystem.File.Exists(fileSystem.Path.Combine(paths.Cache, "panoramas", "26.3_0.png")));
         }
 
         [Fact]

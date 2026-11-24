@@ -35,7 +35,7 @@ namespace AxoClient.App.Overlay
                 return space;
             }
 
-            return _glyphs.TryGetValue(codepoint, out var g) ? g.Advance : 6;
+            return _glyphs.TryGetValue(codepoint, out var value) ? value.Advance : 6;
         }
 
         private (string Ns, string Path) split(string id)
@@ -51,23 +51,23 @@ namespace AxoClient.App.Overlay
                 return;
             }
 
-            var (ns, path) = split(id);
-            var entry = zip.GetEntry($"assets/{ns}/font/{path}.json");
+            var (namespaceName, path) = split(id);
+            var entry = zip.GetEntry($"assets/{namespaceName}/font/{path}.json");
             if (entry == null)
             {
                 return;
             }
 
             using var stream = entry.Open();
-            using var doc = JsonDocument.Parse(stream);
-            if (!doc.RootElement.TryGetProperty("providers", out var providers) || providers.ValueKind != JsonValueKind.Array)
+            using var document = JsonDocument.Parse(stream);
+            if (!document.RootElement.TryGetProperty("providers", out var providers) || providers.ValueKind != JsonValueKind.Array)
             {
                 return;
             }
 
             foreach (var provider in providers.EnumerateArray())
             {
-                var type = provider.TryGetProperty("type", out var t) ? t.GetString() : null;
+                var type = provider.TryGetProperty("type", out var typeElement) ? typeElement.GetString() : null;
                 // "uniform" ist die Unicode-Schrift (Einstellung "Unicode-Schrift erzwingen") – die nutzt das Spiel normal nicht
                 if (provider.TryGetProperty("filter", out var filter) && filter.TryGetProperty("uniform", out var uniform)
                     && uniform.ValueKind == JsonValueKind.True)
@@ -77,15 +77,15 @@ namespace AxoClient.App.Overlay
 
                 switch (type)
                 {
-                    case "reference" when provider.TryGetProperty("id", out var refId) && refId.GetString() is { } r:
-                        loadDefinition(zip, r, depth + 1);
+                    case "reference" when provider.TryGetProperty("id", out var referenceId) && referenceId.GetString() is { } referencedId:
+                        loadDefinition(zip, referencedId, depth + 1);
                         break;
                     case "space" when provider.TryGetProperty("advances", out var advances):
-                        foreach (var a in advances.EnumerateObject())
+                        foreach (var property in advances.EnumerateObject())
                         {
-                            if (a.Name.Length > 0 && a.Value.TryGetSingle(out var adv))
+                            if (property.Name.Length > 0 && property.Value.TryGetSingle(out var adv))
                             {
-                                _spaces.TryAdd(char.ConvertToUtf32(a.Name, 0), adv);
+                                _spaces.TryAdd(char.ConvertToUtf32(property.Name, 0), adv);
                             }
                         }
 
@@ -99,28 +99,28 @@ namespace AxoClient.App.Overlay
 
         private void loadBitmap(ZipArchive zip, JsonElement provider)
         {
-            if (!provider.TryGetProperty("file", out var fileProp) || fileProp.GetString() is not { } file
-                || !provider.TryGetProperty("chars", out var charsProp) || charsProp.ValueKind != JsonValueKind.Array)
+            if (!provider.TryGetProperty("file", out var fileProperty) || fileProperty.GetString() is not { } file
+                || !provider.TryGetProperty("chars", out var charsProperty) || charsProperty.ValueKind != JsonValueKind.Array)
             {
                 return;
             }
 
-            var height = provider.TryGetProperty("height", out var h) && h.TryGetInt32(out var hv) ? hv : 8;
-            var ascent = provider.TryGetProperty("ascent", out var a) && a.TryGetInt32(out var av) ? av : 7;
-            var (ns, path) = split(file);
-            var entry = zip.GetEntry($"assets/{ns}/textures/{path}");
+            var height = provider.TryGetProperty("height", out var heightElement) && heightElement.TryGetInt32(out var parsed) ? parsed : 8;
+            var ascent = provider.TryGetProperty("ascent", out var ascentElement) && ascentElement.TryGetInt32(out var ascentValue) ? ascentValue : 7;
+            var (namespaceName, path) = split(file);
+            var entry = zip.GetEntry($"assets/{namespaceName}/textures/{path}");
             if (entry == null)
             {
                 return;
             }
 
-            var rows = charsProp.EnumerateArray().Select(r => r.GetString() ?? "").Select(codepoints).ToList();
+            var rows = charsProperty.EnumerateArray().Select(rowElement => rowElement.GetString() ?? "").Select(codepoints).ToList();
             if (rows.Count == 0 || rows[0].Length == 0)
             {
                 return;
             }
 
-            int imgW, imgH;
+            int imageWidth, imageHeight;
             byte[] alpha;
             using (var stream = entry.Open())
             using (var copy = new MemoryStream())
@@ -128,20 +128,20 @@ namespace AxoClient.App.Overlay
                 stream.CopyTo(copy);
                 copy.Position = 0;
                 using var bitmap = new System.Drawing.Bitmap(copy);
-                imgW = bitmap.Width;
-                imgH = bitmap.Height;
-                alpha = new byte[imgW * imgH];
-                var data = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, imgW, imgH), System.Drawing.Imaging.ImageLockMode.ReadOnly,
+                imageWidth = bitmap.Width;
+                imageHeight = bitmap.Height;
+                alpha = new byte[imageWidth * imageHeight];
+                var data = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, imageWidth, imageHeight), System.Drawing.Imaging.ImageLockMode.ReadOnly,
                     System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                 try
                 {
-                    var row = new int[imgW];
-                    for (var y = 0; y < imgH; y++)
+                    var row = new int[imageWidth];
+                    for (var y = 0; y < imageHeight; y++)
                     {
-                        System.Runtime.InteropServices.Marshal.Copy(data.Scan0 + y * data.Stride, row, 0, imgW);
-                        for (var x = 0; x < imgW; x++)
+                        System.Runtime.InteropServices.Marshal.Copy(data.Scan0 + y * data.Stride, row, 0, imageWidth);
+                        for (var x = 0; x < imageWidth; x++)
                         {
-                            alpha[y * imgW + x] = (byte)((uint)row[x] >> 24);
+                            alpha[y * imageWidth + x] = (byte)((uint)row[x] >> 24);
                         }
                     }
                 }
@@ -151,20 +151,20 @@ namespace AxoClient.App.Overlay
                 }
             }
 
-            var cellW = imgW / rows[0].Length;
-            var cellH = imgH / rows.Count;
+            var cellW = imageWidth / rows[0].Length;
+            var cellH = imageHeight / rows.Count;
             if (cellW <= 0 || cellH <= 0)
             {
                 return;
             }
 
             var scale = height / (float)cellH;
-            for (var r = 0; r < rows.Count; r++)
+            for (var index = 0; index < rows.Count; index++)
             {
-                for (var c = 0; c < rows[r].Length && c * cellW < imgW; c++)
+                for (var column = 0; column < rows[index].Length && column * cellW < imageWidth; column++)
                 {
-                    var cp = rows[r][c];
-                    if (cp == 0 || _glyphs.ContainsKey(cp))
+                    var codepoint = rows[index][column];
+                    if (codepoint == 0 || _glyphs.ContainsKey(codepoint))
                     {
                         continue;
                     }
@@ -175,7 +175,7 @@ namespace AxoClient.App.Overlay
                     {
                         for (var x = 0; x < cellW; x++)
                         {
-                            var value = alpha[(r * cellH + y) * imgW + c * cellW + x];
+                            var value = alpha[(index * cellH + y) * imageWidth + column * cellW + x];
                             glyph[y * cellW + x] = value;
                             if (value != 0)
                             {
@@ -184,7 +184,7 @@ namespace AxoClient.App.Overlay
                         }
                     }
                     // Wie Minecraft: Breite = rechteste gesetzte Spalte, Vorschub = Breite × Maßstab (gerundet) + 1
-                    _glyphs[cp] = new Glyph(glyph, cellW, cellH, scale, 7 - ascent, (int)(0.5F + width * scale) + 1);
+                    _glyphs[codepoint] = new Glyph(glyph, cellW, cellH, scale, 7 - ascent, (int)(0.5F + width * scale) + 1);
                 }
             }
         }
@@ -192,9 +192,9 @@ namespace AxoClient.App.Overlay
         private int[] codepoints(string text)
         {
             var list = new List<int>();
-            for (var i = 0; i < text.Length; i += char.IsSurrogatePair(text, i) ? 2 : 1)
+            for (var index = 0; index < text.Length; index += char.IsSurrogatePair(text, index) ? 2 : 1)
             {
-                list.Add(char.ConvertToUtf32(text, i));
+                list.Add(char.ConvertToUtf32(text, index));
             }
 
             return list.ToArray();

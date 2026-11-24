@@ -23,27 +23,27 @@ namespace AxoClient.Launch.Checks
         public override string Id => "unknownFiles";
         public override LaunchPhase Phase => LaunchPhase.Content;
 
-        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext ctx, CancellationToken ct)
+        public override Task<IReadOnlyList<CheckResult>> Run(LaunchContext context, CancellationToken cancellationToken)
         {
             var unknown = 0;
             foreach (var type in Enum.GetValues<ContentType>())
             {
-                var dir = Path.Combine(ctx.GameDir, _contentFolders.Of(type));
-                if (!Directory.Exists(dir))
+                var directory = Path.Combine(context.GameDir, _contentFolders.Of(type));
+                if (!Directory.Exists(directory))
                 {
                     continue;
                 }
 
-                var known = ctx.Content.ListOf(type).Select(e => e.File).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                unknown += Directory.EnumerateFiles(dir).Select(Path.GetFileName)
-                    .Count(f => _content.IsContentFile(type, f!) && !known.Contains(_content.BaseName(f!))
-                                                                       && !_axoMod.IsAxoModFile(f!));
+                var known = context.Content.ListOf(type).Select(entry => entry.File).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                unknown += Directory.EnumerateFiles(directory).Select(Path.GetFileName)
+                    .Count(fileName => _content.IsContentFile(type, fileName!) && !known.Contains(_content.BaseName(fileName!))
+                                                                       && !_axoMod.IsAxoModFile(fileName!));
             }
             IReadOnlyList<CheckResult> results = unknown == 0
                 ? [Ok()]
                 : [new CheckResult(Id, Severity.AutoFix, new TextRef("pipeline.content.unknown", ("count", unknown)),
-                    [new CheckAction("register", new TextRef("pipeline.action.register"), async (c, job) =>
-                        c.Content = await _content.Sync(c.Instance.Id, job.Token), true)])];
+                    [new CheckAction("register", new TextRef("pipeline.action.register"), async (launchContext, job) =>
+                        launchContext.Content = await _content.Sync(launchContext.Instance.Id, job.Token), true)])];
             return Task.FromResult(results);
         }
     }

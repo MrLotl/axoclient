@@ -37,7 +37,7 @@ namespace AxoClient.Social
             {
                 lock (_lock)
                 {
-                    return _local.Concat(_remote).OrderByDescending(n => n.Created).Take(100).ToList();
+                    return _local.Concat(_remote).OrderByDescending(notification => notification.Created).Take(100).ToList();
                 }
             }
         }
@@ -48,7 +48,7 @@ namespace AxoClient.Social
             {
                 lock (_lock)
                 {
-                    return _local.Count(n => !n.Read) + _remote.Count(n => !n.Read);
+                    return _local.Count(notification => !notification.Read) + _remote.Count(notification => !notification.Read);
                 }
             }
         }
@@ -67,7 +67,7 @@ namespace AxoClient.Social
             {
                 if (dedupeKey != null)
                 {
-                    _local.RemoveAll(n => n.Id == dedupeKey);
+                    _local.RemoveAll(notification => notification.Id == dedupeKey);
                 }
 
                 _local.Add(item);
@@ -85,17 +85,17 @@ namespace AxoClient.Social
             var fresh = new List<NotificationItem>();
             lock (_lock)
             {
-                _remote = remote.Select(r =>
+                _remote = remote.Select(notification =>
                 {
-                    var item = new NotificationItem("s:" + r.Id, r.Kind, new TextRef("notifications." + r.Kind, r.Data),
-                        DateTimeOffset.FromUnixTimeMilliseconds(r.Created), r.Read, r.Data, true);
-                    if (_known.Add(item.Id) && !r.Read)
+                    var item = new NotificationItem("s:" + notification.Id, notification.Kind, new TextRef("notifications." + notification.Kind, notification.Data),
+                        DateTimeOffset.FromUnixTimeMilliseconds(notification.Created), notification.Read, notification.Data, true);
+                    if (_known.Add(item.Id) && !notification.Read)
                     {
                         fresh.Add(item);
                     }
 
                     return item;
-                }).Where(n => _settings.Current.Notifications.Types.IsEnabled(n.Type)).ToList();
+                }).Where(notification => _settings.Current.Notifications.Types.IsEnabled(notification.Type)).ToList();
             }
             foreach (var item in fresh)
             {
@@ -112,12 +112,12 @@ namespace AxoClient.Social
         {
             lock (_lock)
             {
-                for (var i = 0; i < _local.Count; i++)
+                for (var index = 0; index < _local.Count; index++)
                 {
-                    _local[i] = _local[i] with { Read = true };
+                    _local[index] = _local[index] with { Read = true };
                 }
 
-                _remote = _remote.Select(n => n with { Read = true }).ToList();
+                _remote = _remote.Select(notification => notification with { Read = true }).ToList();
             }
             _events.Publish("notifications.changed", new { unread = 0 });
         }
@@ -127,7 +127,7 @@ namespace AxoClient.Social
         {
             lock (_lock)
             {
-                _local.RemoveAll(n => n.Data?.GetValueOrDefault("instanceId") is string id && id == instanceId);
+                _local.RemoveAll(notification => notification.Data?.GetValueOrDefault("instanceId") is string id && id == instanceId);
             }
 
             _events.Publish("notifications.changed", new { unread = UnreadCount });
@@ -137,8 +137,8 @@ namespace AxoClient.Social
         {
             lock (_lock)
             {
-                _local.RemoveAll(n => n.Id == id);
-                _remote.RemoveAll(n => n.Id == id);
+                _local.RemoveAll(notification => notification.Id == id);
+                _remote.RemoveAll(notification => notification.Id == id);
             }
             _events.Publish("notifications.changed", new { unread = UnreadCount });
         }
@@ -147,13 +147,13 @@ namespace AxoClient.Social
         {
             _events.Publish("notification.new", item);
             _events.Publish("notifications.changed", new { unread = UnreadCount });
-            var n = _settings.Current.Notifications;
-            if (!n.WindowsToasts || !IsInBackground())
+            var notifications = _settings.Current.Notifications;
+            if (!notifications.WindowsToasts || !IsInBackground())
             {
                 return;
             }
 
-            if (n.QuietWhilePlaying && IsPlaying() && !(item.Type == "invite" && n.InvitesWhilePlaying))
+            if (notifications.QuietWhilePlaying && IsPlaying() && !(item.Type == "invite" && notifications.InvitesWhilePlaying))
             {
                 return;
             }

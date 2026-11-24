@@ -37,40 +37,40 @@ namespace AxoClient.Accounts
 
         public AccountType Type => AccountType.Microsoft;
 
-        public async Task<GameSession> Login(CancellationToken ct)
+        public async Task<GameSession> Login(CancellationToken cancellationToken)
         {
             var account = _login.AccountManager.NewAccount();
             try
             {
                 // Das Anmeldefenster von CmlLib braucht einen STA-Thread mit eigener Nachrichtenschleife
-                var session = await runOnStaThread(() => _login.AuthenticateInteractively(account, ct));
+                var session = await runOnStaThread(() => _login.AuthenticateInteractively(account, cancellationToken));
                 return toSession(session);
             }
-            catch (Exception ex) when (ex is not AxoException)
+            catch (Exception exception) when (exception is not AxoException)
             {
-                throw translate(ex);
+                throw translate(exception);
             }
         }
 
-        public async Task<GameSession> Refresh(string uuid, CancellationToken ct)
+        public async Task<GameSession> Refresh(string uuid, CancellationToken cancellationToken)
         {
             var account = find(uuid) ?? throw new AxoException("auth.expired");
             try
             {
-                return toSession(await _login.AuthenticateSilently(account, ct));
+                return toSession(await _login.AuthenticateSilently(account, cancellationToken));
             }
-            catch (Exception ex) when (ex is not OperationCanceledException and not AxoException)
+            catch (Exception exception) when (exception is not OperationCanceledException and not AxoException)
             {
-                _appLog.Warn("Stilles Erneuern der Anmeldung fehlgeschlagen", ex);
-                throw ex is HttpRequestException { StatusCode: null } ? new AxoException("errors.offline") : new AxoException("auth.expired");
+                _appLog.Warn("Stilles Erneuern der Anmeldung fehlgeschlagen", exception);
+                throw exception is HttpRequestException { StatusCode: null } ? new AxoException("errors.offline") : new AxoException("auth.expired");
             }
         }
 
-        public async Task SignOut(string uuid, CancellationToken ct)
+        public async Task SignOut(string uuid, CancellationToken cancellationToken)
         {
             if (find(uuid) is { } account)
             {
-                await _login.Signout(account, ct);
+                await _login.Signout(account, cancellationToken);
             }
         }
 
@@ -80,7 +80,7 @@ namespace AxoClient.Accounts
         {
             var compact = uuid.Replace("-", "");
             return _login.AccountManager.GetAccounts().OfType<JEGameAccount>()
-                .FirstOrDefault(a => a.Profile?.UUID?.Replace("-", "").Equals(compact, StringComparison.OrdinalIgnoreCase) == true);
+                .FirstOrDefault(account => account.Profile?.UUID?.Replace("-", "").Equals(compact, StringComparison.OrdinalIgnoreCase) == true);
         }
 
         private GameSession toSession(MSession session)
@@ -93,10 +93,10 @@ namespace AxoClient.Accounts
             return new GameSession(_uuidHelper.FormatUuid(session.UUID), session.Username, session.AccessToken, session.Xuid, AccountType.Microsoft);
         }
 
-        private AxoException translate(Exception ex)
+        private AxoException translate(Exception exception)
         {
-            var message = ex.ToString();
-            if (ex is OperationCanceledException || message.Contains("user_canceled", StringComparison.OrdinalIgnoreCase)
+            var message = exception.ToString();
+            if (exception is OperationCanceledException || message.Contains("user_canceled", StringComparison.OrdinalIgnoreCase)
                                                  || message.Contains("canceled", StringComparison.OrdinalIgnoreCase))
             {
                 return new AxoException("auth.cancelled");
@@ -113,13 +113,13 @@ namespace AxoClient.Accounts
                 return new AxoException("auth.noMinecraft");
             }
 
-            if (ex is HttpRequestException { StatusCode: null })
+            if (exception is HttpRequestException { StatusCode: null })
             {
                 return new AxoException("errors.offline");
             }
 
-            _appLog.Error("Microsoft-Anmeldung fehlgeschlagen", ex);
-            return new AxoException("auth.failed", inner: ex);
+            _appLog.Error("Microsoft-Anmeldung fehlgeschlagen", exception);
+            return new AxoException("auth.failed", inner: exception);
         }
 
         private System.Text.Json.JsonSerializerOptions xboxGameAccountManagerDefaults() => new()
@@ -129,7 +129,7 @@ namespace AxoClient.Accounts
 
         private Task<T> runOnStaThread<T>(Func<Task<T>> work)
         {
-            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var completionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             var thread = new Thread(() =>
             {
                 try
@@ -141,18 +141,18 @@ namespace AxoClient.Accounts
                     _ = task.ContinueWith(_ => context.Complete(), TaskScheduler.Default);
                     context.RunUntilComplete();
 #pragma warning disable VSTHRD002 // Der Task ist hier bereits abgeschlossen
-                    tcs.TrySetResult(task.GetAwaiter().GetResult());
+                    completionSource.TrySetResult(task.GetAwaiter().GetResult());
 #pragma warning restore VSTHRD002
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    tcs.TrySetException(ex);
+                    completionSource.TrySetException(exception);
                 }
             })
             { IsBackground = true, Name = "MicrosoftLogin" };
             thread.SetApartmentState(ApartmentState.STA);
             thread.Start();
-            return tcs.Task;
+            return completionSource.Task;
         }
 
         /// <summary>Minimale Nachrichtenschleife für den Anmelde-Thread.</summary>
@@ -160,9 +160,9 @@ namespace AxoClient.Accounts
         {
             private readonly System.Collections.Concurrent.BlockingCollection<(SendOrPostCallback, object?)> _queue = new();
 
-            public override void Post(SendOrPostCallback d, object? state) => _queue.TryAdd((d, state));
+            public override void Post(SendOrPostCallback callback, object? state) => _queue.TryAdd((callback, state));
 
-            public override void Send(SendOrPostCallback d, object? state) => d(state);
+            public override void Send(SendOrPostCallback callback, object? state) => callback(state);
 
             public void Complete() => _queue.CompleteAdding();
 

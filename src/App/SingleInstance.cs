@@ -24,13 +24,13 @@ namespace AxoClient.App
         public event Action<string[]>? Activated;
 
         /// <summary>Erster Launcher dieses Benutzers? Sonst bekommt der erste die Argumente und dieser beendet sich.</summary>
-        public bool TryAcquire(string[] args)
+        public bool TryAcquire(string[] arguments)
         {
             var mutex = new Mutex(initiallyOwned: true, $"Local\\{_name}", out var created);
             if (!created)
             {
                 mutex.Dispose();
-                notifyFirst(args);
+                notifyFirst(arguments);
                 return false;
             }
             _mutex = mutex;
@@ -38,16 +38,16 @@ namespace AxoClient.App
             return true;
         }
 
-        private void notifyFirst(string[] args)
+        private void notifyFirst(string[] arguments)
         {
             try
             {
                 using var pipe = new NamedPipeClientStream(".", _name, PipeDirection.Out);
                 pipe.Connect(2000);
-                var bytes = Encoding.UTF8.GetBytes(string.Join('\n', args.Prepend("activate")));
+                var bytes = Encoding.UTF8.GetBytes(string.Join('\n', arguments.Prepend("activate")));
                 pipe.Write(bytes);
             }
-            catch (Exception ex) when (ex is IOException or TimeoutException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or TimeoutException or UnauthorizedAccessException)
             {
             }
         }
@@ -73,9 +73,9 @@ namespace AxoClient.App
                 {
                     return;
                 }
-                catch (IOException ex)
+                catch (IOException exception)
                 {
-                    _appLog.Warn("Named Pipe", ex);
+                    _appLog.Warn("Named Pipe", exception);
                     await Task.Delay(500);
                 }
             }

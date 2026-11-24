@@ -56,7 +56,7 @@ namespace AxoClient.DataModel.Instances
             }
             else if (adoptCurrent || Level == ModLockLevel.Off || PackMods.Count == 0)
             {
-                PackMods = currentMods.Where(m => m.Source != ContentSource.AxoClient).Select(KeyOf).Distinct().Order().ToList();
+                PackMods = currentMods.Where(currentMod => currentMod.Source != ContentSource.AxoClient).Select(KeyOf).Distinct().Order().ToList();
             }
 
             Level = level;

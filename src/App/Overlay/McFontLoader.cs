@@ -23,9 +23,9 @@ namespace AxoClient.App.Overlay
                 var font = new McFont(zip);
                 return font.IsEmpty ? null : font;
             }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or JsonException or UnauthorizedAccessException)
             {
-                _appLog.Warn("Minecraft-Schrift für das private Overlay nicht lesbar: " + jarPath, ex);
+                _appLog.Warn("Minecraft-Schrift für das private Overlay nicht lesbar: " + jarPath, exception);
                 return null;
             }
         }

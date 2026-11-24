@@ -124,7 +124,7 @@ namespace AxoClient.App
                 contentType = _imageFormats.MimeOf(bytes);
                 return new MemoryStream(bytes);
             }
-            catch (Exception ex) when (ex is UriFormatException or IOException or AxoException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is UriFormatException or IOException or AxoException or UnauthorizedAccessException)
             {
                 contentType = "text/plain";
                 return new MemoryStream();

@@ -9,11 +9,11 @@ namespace AxoClient.Servers.Contract
 
         IServerSoftware Software(ServerSoftware type);
 
-        Task<IReadOnlyList<ServerVersionInfo>> Versions(ServerSoftware type, CancellationToken ct);
+        Task<IReadOnlyList<ServerVersionInfo>> Versions(ServerSoftware type, CancellationToken cancellationToken);
 
-        Task<IReadOnlyList<ServerView>> List(CancellationToken ct = default);
+        Task<IReadOnlyList<ServerView>> List(CancellationToken cancellationToken = default);
 
-        Task<LocalServer> Get(string id, CancellationToken ct = default);
+        Task<LocalServer> Get(string id, CancellationToken cancellationToken = default);
 
         string? IconPath(string id);
 
@@ -23,19 +23,19 @@ namespace AxoClient.Servers.Contract
         /// Servericon (<c>server-icon.png</c> im Serverordner, muss für Minecraft genau 64 × 64 PNG sein) oder Banner
         /// (nur für den Launcher). <paramref name="data"/> null entfernt das Bild.
         /// </summary>
-        Task SetImage(string id, bool banner, byte[]? data, CancellationToken ct = default);
+        Task SetImage(string id, bool banner, byte[]? data, CancellationToken cancellationToken = default);
 
-        Task<LocalServer> Create(ServerRequest request, CancellationToken ct = default);
+        Task<LocalServer> Create(ServerRequest request, CancellationToken cancellationToken = default);
 
         /// <summary>Neuen Server anlegen und den Inhalt eines vorhandenen Server-Ordners hineinkopieren.</summary>
         Task<LocalServer> Import(ServerRequest request, string folder, JobContext job);
 
-        Task<LocalServer> Update(string id, ServerRequest request, CancellationToken ct = default);
+        Task<LocalServer> Update(string id, ServerRequest request, CancellationToken cancellationToken = default);
 
         /// <summary>Nächster freier Port ab 25565 (für "Server erstellen").</summary>
-        Task<int> NextFreePort(CancellationToken ct = default);
+        Task<int> NextFreePort(CancellationToken cancellationToken = default);
 
-        Task Delete(string id, CancellationToken ct = default);
+        Task Delete(string id, CancellationToken cancellationToken = default);
 
         Task Start(string id);
 

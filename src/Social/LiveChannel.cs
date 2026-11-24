@@ -66,7 +66,7 @@ namespace AxoClient.Social
         /// Eigenes Emote an alle anderen im Raum (null = abbrechen). Eigene Emotes (<c>c_…</c>) schicken ihre Animation mit, damit
         /// andere sie ohne Import sehen. Ohne Verbindung passiert nichts.
         /// </summary>
-        public async Task SendEmote(string? emote, string? anim = null, string? animation = null)
+        public async Task SendEmote(string? emote, string? otherAnimation = null, string? animation = null)
         {
             if (emote != null && !emoteId().IsMatch(emote))
             {
@@ -80,8 +80,8 @@ namespace AxoClient.Social
             }
 
             var message = emote != null && emote.StartsWith("c_", StringComparison.Ordinal)
-                ? anim is { Length: > 0 and <= EmoteLibrary.MaxAnimationChars }
-                    ? JsonSerializer.Serialize(new { type = "emote", emote, anim, animation = animation ?? "default" }, _jsonHelper.Compact)
+                ? otherAnimation is { Length: > 0 and <= EmoteLibrary.MaxAnimationChars }
+                    ? JsonSerializer.Serialize(new { type = "emote", emote, anim = otherAnimation, animation = animation ?? "default" }, _jsonHelper.Compact)
                     : null
                 : JsonSerializer.Serialize(new { type = "emote", emote }, _jsonHelper.Compact);
             if (message != null)
@@ -91,10 +91,10 @@ namespace AxoClient.Social
         }
 
         /// <summary>Eigene offene Welt bekannt machen (Version, Loader, Mods) oder mit <c>null</c> zurückziehen.</summary>
-        public async Task SendWorld(object? info)
+        public async Task SendWorld(object? worldInfo)
         {
-            var message = JsonSerializer.Serialize(new { type = "world", info }, _jsonHelper.Compact);
-            _worldMessage = info == null ? null : message;
+            var message = JsonSerializer.Serialize(new { type = "world", info = worldInfo }, _jsonHelper.Compact);
+            _worldMessage = worldInfo == null ? null : message;
             if (_socket is { State: WebSocketState.Open } socket)
             {
                 await sendText(socket, message, CancellationToken.None);
@@ -105,7 +105,7 @@ namespace AxoClient.Social
         /// Schaut kurz in den Raum einer Adresse (ohne selbst etwas zu senden) und liefert die Welt-Infos des Gastgebers, falls
         /// dort jemand eine offene Welt bekannt gemacht hat.
         /// </summary>
-        public async Task<JsonElement?> PeekWorld(string address, TimeSpan wait, CancellationToken ct)
+        public async Task<JsonElement?> PeekWorld(string address, TimeSpan wait, CancellationToken cancellationToken)
         {
             if (!_client.CanUse)
             {
@@ -114,7 +114,7 @@ namespace AxoClient.Social
 
             try
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(wait + TimeSpan.FromSeconds(4));
                 using var socket = await connect(address, peek: true, timeout.Token);
                 var deadline = DateTimeOffset.UtcNow + wait;
@@ -136,42 +136,42 @@ namespace AxoClient.Social
                         break;
                     }
 
-                    using var doc = JsonDocument.Parse(text);
-                    if (doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("type", out var t)
-                                                                          && t.GetString() == "world"
-                                                                          && doc.RootElement.TryGetProperty("info", out var info)
-                                                                          && info.ValueKind == JsonValueKind.Object)
+                    using var document = JsonDocument.Parse(text);
+                    if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("type", out var type)
+                                                                          && type.GetString() == "world"
+                                                                          && document.RootElement.TryGetProperty("info", out var worldInfo)
+                                                                          && worldInfo.ValueKind == JsonValueKind.Object)
                     {
-                        return info.Clone();
+                        return worldInfo.Clone();
                     }
                 }
                 return null;
             }
-            catch (Exception ex) when (ex is WebSocketException or HttpRequestException or IOException or AxoException
+            catch (Exception exception) when (exception is WebSocketException or HttpRequestException or IOException or AxoException
                                            or OperationCanceledException or JsonException)
             {
                 return null;
             }
         }
 
-        private async Task run(string server, CancellationToken ct)
+        private async Task run(string server, CancellationToken cancellationToken)
         {
             var delay = TimeSpan.FromSeconds(2);
-            while (!ct.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 var connectedAt = DateTimeOffset.UtcNow;
                 try
                 {
-                    await connectAndReceive(server, ct);
+                    await connectAndReceive(server, cancellationToken);
                 }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
-                catch (Exception ex) when (ex is WebSocketException or HttpRequestException or IOException or AxoException
+                catch (Exception exception) when (exception is WebSocketException or HttpRequestException or IOException or AxoException
                                                or OperationCanceledException)
                 {
-                    _appLog.Info($"Echtzeit-Kanal getrennt: {ex.Message}");
+                    _appLog.Info($"Echtzeit-Kanal getrennt: {exception.Message}");
                 }
                 // Lief die Verbindung eine Weile, gleich wieder kurz warten; sonst immer länger (bis 1 Minute)
                 delay = DateTimeOffset.UtcNow - connectedAt > TimeSpan.FromMinutes(1)
@@ -179,7 +179,7 @@ namespace AxoClient.Social
                     : TimeSpan.FromSeconds(Math.Min(60, delay.TotalSeconds * 2));
                 try
                 {
-                    await Task.Delay(delay, ct);
+                    await Task.Delay(delay, cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -188,9 +188,9 @@ namespace AxoClient.Social
             }
         }
 
-        private async Task<ClientWebSocket> connect(string server, bool peek, CancellationToken ct)
+        private async Task<ClientWebSocket> connect(string server, bool peek, CancellationToken cancellationToken)
         {
-            var token = await _client.Token(ct);
+            var token = await _client.Token(cancellationToken);
             var socket = new ClientWebSocket();
             socket.Options.SetRequestHeader("Authorization", "Bearer " + token);
             socket.Options.SetRequestHeader("X-AxoClient-Version", _appInfo.Version);
@@ -200,7 +200,7 @@ namespace AxoClient.Social
                 .Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase);
             try
             {
-                await socket.ConnectAsync(new Uri($"{baseUrl}/live?server={Uri.EscapeDataString(server)}{(peek ? "&peek=1" : "")}"), ct);
+                await socket.ConnectAsync(new Uri($"{baseUrl}/live?server={Uri.EscapeDataString(server)}{(peek ? "&peek=1" : "")}"), cancellationToken);
                 return socket;
             }
             catch (WebSocketException) when (socket.HttpStatusCode == HttpStatusCode.Unauthorized)
@@ -229,13 +229,13 @@ namespace AxoClient.Social
             _appInfo = appInfo;
         }
 
-        private async Task<string?> receiveText(ClientWebSocket socket, CancellationToken ct)
+        private async Task<string?> receiveText(ClientWebSocket socket, CancellationToken cancellationToken)
         {
             var buffer = new byte[8192];
             using var message = new MemoryStream();
             while (true)
             {
-                var result = await socket.ReceiveAsync(buffer, ct);
+                var result = await socket.ReceiveAsync(buffer, cancellationToken);
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     return null;
@@ -243,7 +243,7 @@ namespace AxoClient.Social
 
                 if (message.Length + result.Count <= MaxMessageBytes)
                 {
-                    await message.WriteAsync(buffer.AsMemory(0, result.Count), ct);
+                    await message.WriteAsync(buffer.AsMemory(0, result.Count), cancellationToken);
                 }
 
                 if (!result.EndOfMessage)
@@ -260,22 +260,22 @@ namespace AxoClient.Social
             }
         }
 
-        private async Task connectAndReceive(string server, CancellationToken ct)
+        private async Task connectAndReceive(string server, CancellationToken cancellationToken)
         {
-            using var socket = await connect(server, peek: false, ct);
+            using var socket = await connect(server, peek: false, cancellationToken);
             _socket = socket;
             if (_worldMessage is { } world)
             {
-                await sendText(socket, world, ct);
+                await sendText(socket, world, cancellationToken);
             }
 
-            using var pingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using var pingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _ = ping(socket, pingCts.Token);
             try
             {
-                while (socket.State == WebSocketState.Open && !ct.IsCancellationRequested)
+                while (socket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
                 {
-                    var text = await receiveText(socket, ct);
+                    var text = await receiveText(socket, cancellationToken);
                     if (text == null)
                     {
                         break;
@@ -298,7 +298,7 @@ namespace AxoClient.Social
                     {
                         await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", CancellationToken.None);
                     }
-                    catch (Exception ex) when (ex is WebSocketException or IOException)
+                    catch (Exception exception) when (exception is WebSocketException or IOException)
                     {
                     }
                 }
@@ -306,32 +306,32 @@ namespace AxoClient.Social
         }
 
         /// <summary>"ping" hält die Verbindung offen; der Dienst antwortet mit "pong", ohne den Raum aufzuwecken.</summary>
-        private async Task ping(ClientWebSocket socket, CancellationToken ct)
+        private async Task ping(ClientWebSocket socket, CancellationToken cancellationToken)
         {
             try
             {
-                while (!ct.IsCancellationRequested && socket.State == WebSocketState.Open)
+                while (!cancellationToken.IsCancellationRequested && socket.State == WebSocketState.Open)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(30), ct);
-                    await sendText(socket, "ping", ct);
+                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                    await sendText(socket, "ping", cancellationToken);
                 }
             }
-            catch (Exception ex) when (ex is OperationCanceledException or WebSocketException or IOException)
+            catch (Exception exception) when (exception is OperationCanceledException or WebSocketException or IOException)
             {
             }
         }
 
-        private async Task sendText(ClientWebSocket socket, string text, CancellationToken ct)
+        private async Task sendText(ClientWebSocket socket, string text, CancellationToken cancellationToken)
         {
-            await _sendLock.WaitAsync(ct);
+            await _sendLock.WaitAsync(cancellationToken);
             try
             {
                 if (socket.State == WebSocketState.Open)
                 {
-                    await socket.SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text, true, ct);
+                    await socket.SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text, true, cancellationToken);
                 }
             }
-            catch (Exception ex) when (ex is WebSocketException or IOException or ObjectDisposedException)
+            catch (Exception exception) when (exception is WebSocketException or IOException or ObjectDisposedException)
             {
             }
             finally
@@ -349,8 +349,8 @@ namespace AxoClient.Social
 
             try
             {
-                using var doc = JsonDocument.Parse(text);
-                var root = doc.RootElement;
+                using var document = JsonDocument.Parse(text);
+                var root = document.RootElement;
                 if (root.ValueKind != JsonValueKind.Object)
                 {
                     return;
@@ -363,9 +363,9 @@ namespace AxoClient.Social
                     return;
                 }
 
-                if (type == "world" && root.TryGetProperty("info", out var info) && info.ValueKind == JsonValueKind.Object)
+                if (type == "world" && root.TryGetProperty("info", out var worldInfo) && worldInfo.ValueKind == JsonValueKind.Object)
                 {
-                    WorldReceived?.Invoke(uuid, info.Clone());
+                    WorldReceived?.Invoke(uuid, worldInfo.Clone());
                     return;
                 }
                 if (type != "emote")
@@ -373,31 +373,31 @@ namespace AxoClient.Social
                     return;
                 }
 
-                var emote = root.TryGetProperty("emote", out var e) && e.ValueKind == JsonValueKind.String ? e.GetString() : null;
+                var emote = root.TryGetProperty("emote", out var emoteElement) && emoteElement.ValueKind == JsonValueKind.String ? emoteElement.GetString() : null;
                 if (emote != null && !emoteId().IsMatch(emote))
                 {
                     return;
                 }
 
-                string? anim = null, animation = null;
+                string? otherAnimation = null, animation = null;
                 if (emote != null && emote.StartsWith("c_", StringComparison.Ordinal))
                 {
-                    anim = root.TryGetProperty("anim", out var a) && a.ValueKind == JsonValueKind.String ? a.GetString() : null;
-                    animation = root.TryGetProperty("animation", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
-                    if (anim is not { Length: > 0 and <= EmoteLibrary.MaxAnimationChars })
+                    otherAnimation = root.TryGetProperty("anim", out var animationElement) && animationElement.ValueKind == JsonValueKind.String ? animationElement.GetString() : null;
+                    animation = root.TryGetProperty("animation", out var rootValue) && rootValue.ValueKind == JsonValueKind.String ? rootValue.GetString() : null;
+                    if (otherAnimation is not { Length: > 0 and <= EmoteLibrary.MaxAnimationChars })
                     {
                         return;
                     }
                     // Nur gültiges JSON weiterreichen; geprüft wird beim Empfänger
-                    using var check = JsonDocument.Parse(anim);
+                    using var check = JsonDocument.Parse(otherAnimation);
                     if (check.RootElement.ValueKind != JsonValueKind.Object)
                     {
                         return;
                     }
                 }
-                EmoteReceived?.Invoke(new RemoteEmote(uuid, emote, anim, animation));
+                EmoteReceived?.Invoke(new RemoteEmote(uuid, emote, otherAnimation, animation));
             }
-            catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
+            catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException)
             {
             }
         }

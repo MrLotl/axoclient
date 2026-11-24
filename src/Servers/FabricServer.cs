@@ -19,19 +19,19 @@ namespace AxoClient.Servers
 
         public override ServerSoftware Type => ServerSoftware.Fabric;
 
-        public override async Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken ct)
+        public override async Task<IReadOnlyList<ServerVersionInfo>> ListVersions(CancellationToken cancellationToken)
         {
-            using var json = JsonDocument.Parse(await _api.GetString(Meta + "game", TimeSpan.FromHours(1), ct));
+            using var json = JsonDocument.Parse(await _api.GetString(Meta + "game", TimeSpan.FromHours(1), cancellationToken));
             return json.RootElement.EnumerateArray()
-                .Select(v => new ServerVersionInfo(v.GetProperty("version").GetString()!, v.GetProperty("stable").GetBoolean())).ToList();
+                .Select(versionElement => new ServerVersionInfo(versionElement.GetProperty("version").GetString()!, versionElement.GetProperty("stable").GetBoolean())).ToList();
         }
 
-        public override async Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken ct)
+        public override async Task<DownloadRequest> ResolveJar(string version, string targetPath, CancellationToken cancellationToken)
         {
-            using var loaders = JsonDocument.Parse(await _api.GetString(Meta + "loader", TimeSpan.FromHours(6), ct));
-            var loader = loaders.RootElement.EnumerateArray().First(l => l.GetProperty("stable").GetBoolean()).GetProperty("version").GetString();
-            using var installers = JsonDocument.Parse(await _api.GetString(Meta + "installer", TimeSpan.FromHours(6), ct));
-            var installer = installers.RootElement.EnumerateArray().First(i => i.GetProperty("stable").GetBoolean()).GetProperty("version").GetString();
+            using var loaders = JsonDocument.Parse(await _api.GetString(Meta + "loader", TimeSpan.FromHours(6), cancellationToken));
+            var loader = loaders.RootElement.EnumerateArray().First(loaderElement => loaderElement.GetProperty("stable").GetBoolean()).GetProperty("version").GetString();
+            using var installers = JsonDocument.Parse(await _api.GetString(Meta + "installer", TimeSpan.FromHours(6), cancellationToken));
+            var installer = installers.RootElement.EnumerateArray().First(installerElement => installerElement.GetProperty("stable").GetBoolean()).GetProperty("version").GetString();
             // Fabric liefert für die Server-Jar keinen Hash; HTTPS von meta.fabricmc.net ist die Absicherung
             return new DownloadRequest($"{Meta}loader/{Uri.EscapeDataString(version)}/{loader}/{installer}/server/jar", targetPath);
         }

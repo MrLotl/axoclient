@@ -16,7 +16,7 @@ namespace AxoClient.Game
         protected override string ProfilePrefix => "quilt-loader";
 
         /// <summary>Quilt markiert Betas nur über "-beta" im Namen; neue MC-Versionen haben oft nur Betas.</summary>
-        protected override string? PickRecommended(string mc, List<(string Version, bool Stable)> versions) =>
-            versions.FirstOrDefault(v => !v.Version.Contains('-')).Version ?? versions.FirstOrDefault().Version;
+        protected override string? PickRecommended(string minecraftVersion, List<(string Version, bool Stable)> versions) =>
+            versions.FirstOrDefault(version => !version.Version.Contains('-')).Version ?? versions.FirstOrDefault().Version;
     }
 }

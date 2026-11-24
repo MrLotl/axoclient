@@ -35,22 +35,22 @@ namespace AxoClient.Diagnostics
 
         public string Area => "network";
 
-        public async Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken ct)
+        public async Task<IReadOnlyList<DiagnosticItem>> Run(CancellationToken cancellationToken)
         {
-            var tasks = _targets.Select(async t =>
+            var tasks = _targets.Select(async target =>
             {
                 var watch = Stopwatch.StartNew();
                 try
                 {
-                    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     timeout.CancelAfter(TimeSpan.FromSeconds(8));
-                    using var response = await _api.Http.GetAsync(t.Url, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+                    using var response = await _api.Http.GetAsync(target.Url, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
                     return new DiagnosticItem(Area, (int)response.StatusCode < 500 ? DiagnosticStatus.Ok : DiagnosticStatus.Warning,
-                        new TextRef("diagnostics.reachable", ("name", t.Name), ("ms", watch.ElapsedMilliseconds)));
+                        new TextRef("diagnostics.reachable", ("name", target.Name), ("ms", watch.ElapsedMilliseconds)));
                 }
-                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+                catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
                 {
-                    return new DiagnosticItem(Area, DiagnosticStatus.Error, new TextRef("diagnostics.unreachable", ("name", t.Name)),
+                    return new DiagnosticItem(Area, DiagnosticStatus.Error, new TextRef("diagnostics.unreachable", ("name", target.Name)),
                         Solution: new TextRef("diagnostics.unreachable.solution"));
                 }
             });

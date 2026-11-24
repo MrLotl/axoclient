@@ -70,29 +70,29 @@ namespace AxoClient.Updates
         {
             _loop?.Cancel();
             _loop = new CancellationTokenSource();
-            var ct = _loop.Token;
+            var cancellationToken = _loop.Token;
             _ = Task.Run(async () =>
             {
-                while (!ct.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
-                        await Check(ct);
+                        await Check(cancellationToken);
                         if (_pending != null && _settings.Current.Updates.Auto && !_downloaded)
                         {
-                            await Download(null, ct);
+                            await Download(null, cancellationToken);
                         }
                     }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    catch (Exception exception) when (exception is not OperationCanceledException)
                     {
-                        _appLog.Warn("Update-Prüfung fehlgeschlagen", ex);
+                        _appLog.Warn("Update-Prüfung fehlgeschlagen", exception);
                     }
-                    await Task.Delay(_interval, ct);
+                    await Task.Delay(_interval, cancellationToken);
                 }
-            }, ct);
+            }, cancellationToken);
         }
 
-        public async Task<UpdateView?> Check(CancellationToken ct = default)
+        public async Task<UpdateView?> Check(CancellationToken cancellationToken = default)
         {
             if (!IsInstalled)
             {
@@ -101,17 +101,17 @@ namespace AxoClient.Updates
 
             var beta = _settings.Current.Updates.Channel == UpdateChannel.Beta;
             var newest = (beta
-                    ? await _api.GetJson<List<GithubRelease>>($"{_apiBase}/releases?per_page=20", ct: ct, configure: accept)
-                    : [await _api.GetJson<GithubRelease>($"{_apiBase}/releases/latest", ct: ct, configure: accept)])
+                    ? await _api.GetJson<List<GithubRelease>>($"{_apiBase}/releases?per_page=20", cancellationToken: cancellationToken, configure: accept)
+                    : [await _api.GetJson<GithubRelease>($"{_apiBase}/releases/latest", cancellationToken: cancellationToken, configure: accept)])
                 .Select(toRelease)
                 .OfType<Release>()
-                .MaxBy(r => r.Version);
+                .MaxBy(release => release.Version);
 
             var current = ParseVersion(_appInfo.Version) ?? new Version(0, 0, 0);
-            var info = newest != null && newest.Version > current ? newest : null;
-            var isNew = info != null && info.Version != _pending?.Version;
-            _pending = info;
-            if (info == null)
+            var newerRelease = newest != null && newest.Version > current ? newest : null;
+            var isNew = newerRelease != null && newerRelease.Version != _pending?.Version;
+            _pending = newerRelease;
+            if (newerRelease == null)
             {
                 return null;
             }
@@ -123,13 +123,13 @@ namespace AxoClient.Updates
                 _events.Publish("notify", new
                 {
                     type = "launcherUpdate",
-                    text = new TextRef("notifications.launcherUpdate", ("version", info.Version.ToString(3)))
+                    text = new TextRef("notifications.launcherUpdate", ("version", newerRelease.Version.ToString(3)))
                 });
             }
             return Available;
         }
 
-        public async Task Download(IProgress<double>? progress, CancellationToken ct)
+        public async Task Download(IProgress<double>? progress, CancellationToken cancellationToken)
         {
             if (_pending == null)
             {
@@ -138,7 +138,7 @@ namespace AxoClient.Updates
 
             var asset = _pending.Asset;
             await _downloads.Download(new DownloadRequest(asset.BrowserDownloadUrl, DownloadPath, Size: asset.Size, Sha256: asset.Sha256),
-                progress, ct);
+                progress, cancellationToken);
             _downloaded = true;
             _events.Publish("update.available", Available);
         }
@@ -179,35 +179,35 @@ namespace AxoClient.Updates
             {
                 _installLocation.ReplaceExe(DownloadPath, copy: false);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _appLog.Warn("Update beim Beenden einsetzen", ex);
+                _appLog.Warn("Update beim Beenden einsetzen", exception);
             }
         }
 
         private void accept(HttpRequestMessage request) => request.Headers.Accept.ParseAdd("application/vnd.github+json");
 
-        private Release? toRelease(GithubRelease r)
+        private Release? toRelease(GithubRelease githubRelease)
         {
-            if (r.Draft || ParseVersion(r.TagName) is not { } version)
+            if (githubRelease.Draft || ParseVersion(githubRelease.TagName) is not { } version)
             {
                 return null;
             }
 
-            var asset = r.Assets?.FirstOrDefault(a => a.Name == AssetName);
+            var asset = githubRelease.Assets?.FirstOrDefault(githubAsset => githubAsset.Name == AssetName);
             if (asset == null || !asset.BrowserDownloadUrl.StartsWith("https://", StringComparison.Ordinal))
             {
                 return null;
             }
 
-            return new Release(version, r.Body, asset);
+            return new Release(version, githubRelease.Body, asset);
         }
 
         /// <summary>"v1.2.3", "1.2.3-dev" → 1.2.3.</summary>
         internal Version? ParseVersion(string? text)
         {
             var core = (text ?? "").TrimStart('v', 'V').Split('-', '+')[0];
-            return Version.TryParse(core, out var v) ? new Version(v.Major, v.Minor, Math.Max(0, v.Build)) : null;
+            return Version.TryParse(core, out var parsed) ? new Version(parsed.Major, parsed.Minor, Math.Max(0, parsed.Build)) : null;
         }
 
         private sealed record Release(Version Version, string? Notes, GithubAsset Asset);

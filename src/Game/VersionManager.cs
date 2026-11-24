@@ -27,26 +27,26 @@ namespace AxoClient.Game
             [property: JsonPropertyName("releaseTime")] DateTimeOffset ReleaseTime,
             string? Sha1);
 
-        public async Task<IReadOnlyList<GameVersionInfo>> List(CancellationToken ct = default)
+        public async Task<IReadOnlyList<GameVersionInfo>> List(CancellationToken cancellationToken = default)
         {
-            var manifest = await _api.GetJson<Manifest>(ManifestUrl, TimeSpan.FromHours(1), ct);
-            return manifest.Versions.Select(v => new GameVersionInfo(v.Id, v.Type switch
+            var manifest = await _api.GetJson<Manifest>(ManifestUrl, TimeSpan.FromHours(1), cancellationToken);
+            return manifest.Versions.Select(version => new GameVersionInfo(version.Id, version.Type switch
             {
                 "release" => VersionType.Release,
                 "snapshot" => VersionType.Snapshot,
                 _ => VersionType.Old
-            }, v.ReleaseTime)).ToList();
+            }, version.ReleaseTime)).ToList();
         }
 
-        public async Task<string> LatestRelease(CancellationToken ct = default) =>
-            (await _api.GetJson<Manifest>(ManifestUrl, TimeSpan.FromHours(1), ct)).Latest.Release;
+        public async Task<string> LatestRelease(CancellationToken cancellationToken = default) =>
+            (await _api.GetJson<Manifest>(ManifestUrl, TimeSpan.FromHours(1), cancellationToken)).Latest.Release;
 
         /// <summary>Adresse der Versionsdatei (JSON) bei Mojang, oder <c>null</c>, wenn es die Version nicht gibt.</summary>
-        public async Task<string?> UrlOf(string version, CancellationToken ct = default) =>
-            (await _api.GetJson<Manifest>(ManifestUrl, TimeSpan.FromHours(1), ct)).Versions.FirstOrDefault(v => v.Id == version)?.Url;
+        public async Task<string?> UrlOf(string version, CancellationToken cancellationToken = default) =>
+            (await _api.GetJson<Manifest>(ManifestUrl, TimeSpan.FromHours(1), cancellationToken)).Versions.FirstOrDefault(manifestVersion => manifestVersion.Id == version)?.Url;
 
-        public async Task<VersionType?> TypeOf(string version, CancellationToken ct = default) =>
-            (await List(ct)).FirstOrDefault(v => v.Id == version)?.Type;
+        public async Task<VersionType?> TypeOf(string version, CancellationToken cancellationToken = default) =>
+            (await List(cancellationToken)).FirstOrDefault(gameVersion => gameVersion.Id == version)?.Type;
 
         /// <summary>"1.21.4" → (1, 21, 4); "26.1" → (26, 1, 0). Snapshots liefern <c>null</c>.</summary>
     }

@@ -19,9 +19,9 @@ namespace AxoClient.Social
         ];
 
         public string Filter(string text) =>
-            string.Join('\n', text.Split('\n').Select(l => l.TrimEnd('\r'))
-                .Where(l => l.IndexOf(':') is > 0 and var colon && _allowedPrefixes.Any(p => l[..colon].StartsWith(p, StringComparison.Ordinal))
-                            && l.Length < 200 && !l.Contains('\\') && !l.Contains('/'))
+            string.Join('\n', text.Split('\n').Select(part => part.TrimEnd('\r'))
+                .Where(line => line.IndexOf(':') is > 0 and var colon && _allowedPrefixes.Any(allowedPrefix => line[..colon].StartsWith(allowedPrefix, StringComparison.Ordinal))
+                            && line.Length < 200 && !line.Contains('\\') && !line.Contains('/'))
                 .Take(400));
     }
 }
