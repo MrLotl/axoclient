@@ -55,7 +55,12 @@
     }
   }
 
-  const needsFile = (action: string) => action === 'disableMod' || action === 'updateMod';
+  const needsFile = (action: string) => action === 'disableMod' || action === 'updateMod' || action === 'rollbackMod';
+  // Zurücknehmen nur für Mods anbieten, die gerade aktualisiert wurden
+  const targets = (action: string) => {
+    const list = a.suspects.length ? a.suspects : a.recentlyAdded;
+    return action === 'rollbackMod' ? list.filter((s) => s.canRollback) : list;
+  };
 </script>
 
 <Dialog title={t('crash.title')} subtitle={crash.instanceName} icon="warning" tone="danger" role="alertdialog" width={580} {onclose}>
@@ -81,7 +86,7 @@
       <div class="actions">
         {#each a.actions as action (action)}
           {#if needsFile(action)}
-            {#each a.suspects.length ? a.suspects : a.recentlyAdded as s (s.file)}
+            {#each targets(action) as s (s.file)}
               <button class="btn btn-second sm" disabled={phase === 'fixing'} onclick={() => run(action, s.file)}>
                 {t(`crash.actions.${action}`)}: {s.name}
               </button>

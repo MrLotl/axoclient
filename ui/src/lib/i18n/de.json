@@ -373,6 +373,7 @@
       "checkMods": "Mods beim nächsten Start prüfen",
       "disableMod": "Mod deaktivieren",
       "updateMod": "Mod aktualisieren",
+      "rollbackMod": "Update zurücknehmen",
       "keepNewest": "Beim Start bereinigen",
       "updateDriver": "Treiber aktualisieren",
       "disableShaders": "Shader deaktivieren",
@@ -457,6 +458,10 @@
       "emptyText": "Shader brauchen eine Shader-Mod wie Iris. Die Prüfung vor dem Start hilft dabei.",
       "dropHint": ".zip-Dateien hier ablegen"
     },
+    "datapacks": {
+      "search": "Datapacks durchsuchen …",
+      "add": "Datapacks hinzufügen"
+    },
     "disabledCount": "{count} deaktiviert",
     "openFolder": "Ordner öffnen",
     "size": "Größe",
@@ -484,6 +489,10 @@
     "shareNamed": "{name} senden",
     "cannotShareLocal": "Lokale Dateien ohne bekannte Quelle können nicht gesendet werden.",
     "changeVersion": "Version ändern",
+    "rollback": "Zurück zu {version}",
+    "rollbackNamed": "{name} zurück auf {version}",
+    "rolledBack": "„{name}“ ist wieder auf {version}",
+    "noPrevious": "Die vorige Version ist nicht mehr vorhanden.",
     "changeVersionTitle": "Version von {name}",
     "currentVersion": "Installiert: {version}",
     "allMcVersions": "Auch Versionen für andere Minecraft-Versionen zeigen",
@@ -662,6 +671,22 @@
       "modsMismatch": "Die {count} Mods wurden nicht übernommen, weil sie für {loader} {version} gedacht sind.",
       "modrinthFailed": "{count} Mods konnten nicht von Modrinth geladen werden. Über „Mods hinzufügen“ lassen sie sich nachinstallieren."
     }
+  },
+  "datapacks": {
+    "title": "Datapacks",
+    "manage": "Datapacks von {name}",
+    "add": "Hinzufügen",
+    "openFolder": "Datapack-Ordner öffnen",
+    "empty": "Diese Welt hat noch keine Datapacks.",
+    "emptyHint": "Datapacks ändern Spielregeln, Weltgenerierung oder fügen Abenteuer hinzu. Minecraft schaltet neue Packs beim nächsten Laden der Welt ein.",
+    "folder": "Ordner",
+    "enabledNamed": "{name} aktiv",
+    "removeNamed": "{name} entfernen",
+    "removeTitle": "Datapack „{name}“ entfernen?",
+    "removeText": "Der Datapack landet im Papierkorb. Was er in der Welt schon erzeugt hat, bleibt bestehen.",
+    "worldgenNote": "Packs für die Weltgenerierung wirken nur in noch nicht erkundeten Gebieten.",
+    "noZip": "Diese Version enthält keinen Datapack als .zip-Datei.",
+    "folderToggle": "Entpackte Datapacks (Ordner) lassen sich nur entfernen, nicht ausschalten."
   },
   "worlds": {
     "notFound": "Die Welt gibt es nicht mehr.",

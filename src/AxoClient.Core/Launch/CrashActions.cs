@@ -87,6 +87,9 @@ public sealed class CrashActions(
                     File.Move(path, path + $".axoclient-backup-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true);
                 break;
             }
+            case "rollbackMod":
+                await content.RollbackAsync(instanceId, ContentType.Mod, RequireFile(file), job.Token);
+                break;
             case "cleanCache":
             {
                 // Nur, was der Launcher jederzeit neu holen kann: Caches und alte Logs. Welten und Backups bleiben.

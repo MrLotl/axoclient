@@ -21,6 +21,8 @@ public static partial class Handlers
 
     private sealed record RemoveData(string Id, ContentType Type, List<string> Files);
 
+    private sealed record RollbackData(string Id, ContentType Type, string File);
+
     private sealed record AddFilesData(string Id, ContentType Type, List<string> FileRefs);
 
     private sealed record VersionsForData(string Id, ContentType Type, string File, bool All = false);
@@ -72,6 +74,15 @@ public static partial class Handlers
         r.On<EnableData>("content.setEnabled", async (d, ct) =>
         {
             await host.Content.SetEnabledAsync(d.Id, d.Type, d.File, d.Enabled, ct);
+            return await host.Content.ListAsync(d.Id, d.Type, ct);
+        });
+
+        // Letztes Update zurücknehmen: die vorige Datei liegt in previous/
+        r.On<RollbackData>("content.rollback", async (d, ct) =>
+        {
+            if (host.Games.IsRunning(d.Id))
+                throw new AxoException("instances.running");
+            await host.Content.RollbackAsync(d.Id, d.Type, d.File, ct);
             return await host.Content.ListAsync(d.Id, d.Type, ct);
         });
 

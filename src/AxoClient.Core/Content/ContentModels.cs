@@ -48,6 +48,12 @@ public sealed class ContentEntry
     public string? IconUrl { get; set; }
     public string? Author { get; set; }
 
+    /// <summary>
+    /// Stand vor dem letzten Update bzw. Versionswechsel, um ihn zurückzuholen. Die Datei liegt in
+    /// <c>instances/&lt;id&gt;/previous/&lt;ordner&gt;/</c>; es gibt immer nur eine Stufe.
+    /// </summary>
+    public ContentEntry? Previous { get; set; }
+
     [JsonIgnore]
     public string DiskName => Enabled ? File : File + ".disabled";
 }

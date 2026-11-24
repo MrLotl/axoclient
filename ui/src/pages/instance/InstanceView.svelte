@@ -219,7 +219,7 @@
       {:else if tab === 'shaders'}
         <ContentTab instance={details.instance} type="shaderPack" bind:count={counts.shaders} />
       {:else if tab === 'worlds'}
-        <WorldsTab instanceId={id} />
+        <WorldsTab instanceId={id} instance={details.instance} />
       {:else if tab === 'servers'}
         <ServersTab instanceId={id} bind:count={counts.servers} />
       {:else if tab === 'shots'}

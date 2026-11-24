@@ -24,6 +24,7 @@ public sealed class CurseForgeProvider(ApiClient api, string serviceUrl, bool en
         ProjectKind.Mod => 6,
         ProjectKind.ResourcePack => 12,
         ProjectKind.ShaderPack => 6552,
+        ProjectKind.DataPack => 6945,
         _ => 4471
     };
 

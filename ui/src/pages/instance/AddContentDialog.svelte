@@ -11,10 +11,18 @@
   import { compactNumber, ago } from '../../lib/util/format';
   import type { ContentItem, ContentProject, ContentType, ContentVersion, Instance, JobInfo, SearchPage, SearchSort } from '../../lib/types';
 
-  let { instance, type, installed, onclose }: { instance: Instance; type: ContentType; installed: ContentItem[]; onclose: () => void } = $props();
+  // Datapacks gehören zu einer Welt: dann ist world gesetzt und type 'dataPack'
+  let {
+    instance,
+    type,
+    installed,
+    world = null,
+    onclose
+  }: { instance: Instance; type: ContentType | 'dataPack'; installed: { projectId: string | null }[]; world?: string | null; onclose: () => void } = $props();
+  const isDatapack = $derived(type === 'dataPack');
 
-  const kind = $derived(type === 'mod' ? 'mod' : type === 'resourcePack' ? 'resourcePack' : 'shaderPack');
-  const key = $derived(type === 'mod' ? 'mods' : type === 'resourcePack' ? 'packs' : 'shaders');
+  const kind = $derived(type === 'mod' ? 'mod' : type === 'resourcePack' ? 'resourcePack' : type === 'dataPack' ? 'dataPack' : 'shaderPack');
+  const key = $derived(type === 'mod' ? 'mods' : type === 'resourcePack' ? 'packs' : type === 'dataPack' ? 'datapacks' : 'shaders');
 
   let source = $state(app.ui?.contentSource.addMods ?? 'modrinth');
   let sort = $state<SearchSort>(app.ui?.sort.addMods ?? 'popular');
@@ -71,7 +79,8 @@
   const categories: Record<string, string[]> = {
     mod: ['optimization', 'utility', 'adventure', 'technology', 'magic', 'decoration', 'storage', 'worldgen', 'library', 'equipment', 'food', 'mobs'],
     resourcePack: ['vanilla-like', 'realistic', 'simplistic', 'cartoon', 'decoration', 'combat', 'gui', 'tweaks'],
-    shaderPack: ['vanilla-like', 'realistic', 'fantasy', 'semi-realistic', 'cartoon', 'potato', 'low', 'medium', 'high']
+    shaderPack: ['vanilla-like', 'realistic', 'fantasy', 'semi-realistic', 'cartoon', 'potato', 'low', 'medium', 'high'],
+    dataPack: ['worldgen', 'adventure', 'game-mechanics', 'utility', 'mobs', 'equipment', 'magic', 'decoration']
   };
 
   async function search(reset = true) {
@@ -101,7 +110,7 @@
     search();
     // Fertige Installationen markieren
     return on<JobInfo>('job.changed', (job) => {
-      if (job.kind !== 'content.install' || job.subject !== instance.id || job.state === 'running') return;
+      if (job.kind !== (isDatapack ? 'datapack.install' : 'content.install') || job.subject !== instance.id || job.state === 'running') return;
       for (const [id, state] of Object.entries(installing)) {
         if (state !== 'busy') continue;
         if (job.state === 'succeeded') installing[id] = 'done';
@@ -119,7 +128,8 @@
     installing[project.id] = 'busy';
     versionsFor = null;
     try {
-      await call('content.install', { instanceId: instance.id, type, source, projectId: project.id, versionId });
+      if (isDatapack) await call('datapacks.install', { instanceId: instance.id, world, source, projectId: project.id, versionId });
+      else await call('content.install', { instanceId: instance.id, type, source, projectId: project.id, versionId });
     } catch (e) {
       delete installing[project.id];
       app.error(e);

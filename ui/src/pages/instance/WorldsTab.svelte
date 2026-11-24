@@ -13,9 +13,12 @@
   import Segmented from '../../lib/components/Segmented.svelte';
   import { ago, bytes } from '../../lib/util/format';
   import { upload } from '../../lib/util/files';
-  import type { BackupInfo, JobInfo, WorldInfo } from '../../lib/types';
+  import type { BackupInfo, Instance, JobInfo, WorldInfo } from '../../lib/types';
+  import DatapacksDialog from './DatapacksDialog.svelte';
 
-  let { instanceId }: { instanceId: string } = $props();
+  let { instanceId, instance = null }: { instanceId: string; instance?: Instance | null } = $props();
+  // Welt, deren Datapacks gerade bearbeitet werden
+  let datapacksFor = $state<WorldInfo | null>(null);
   let worlds = $state<WorldInfo[]>([]);
   let backups = $state<BackupInfo[]>([]);
   let loaded = $state(false);
@@ -160,6 +163,9 @@
           </div>
           <div class="w-actions">
             <button class="icon-btn small" aria-label={t('worlds.backupNamed', { name: w.name })} title={t('worlds.backup')} onclick={() => backup(w)}><Icon name="archive" size={14} /></button>
+            {#if instance}
+              <button class="icon-btn small" aria-label={t('datapacks.manage', { name: w.name })} title={t('datapacks.title')} onclick={() => (datapacksFor = w)}><Icon name="puzzle" size={14} /></button>
+            {/if}
             <button class="icon-btn small" aria-label={t('worlds.openFolder')} title={t('common.openFolder')} onclick={() => call('shell.openFolder', { kind: 'world', id: instanceId, sub: w.folder })}><Icon name="folder" size={14} /></button>
             <button class="icon-btn small" aria-label={t('worlds.deleteNamed', { name: w.name })} title={t('common.delete')} onclick={() => remove(w)}><Icon name="trash" size={14} /></button>
             <div class="grow"></div>
@@ -168,6 +174,10 @@
         </article>
       {/each}
     </div>
+  {/if}
+
+  {#if instance && datapacksFor}
+    <DatapacksDialog {instance} world={datapacksFor} onclose={() => (datapacksFor = null)} />
   {/if}
 
   <DropOverlay icon="import" hint={t('worlds.dropHint')} inset={0} accept={(f) => /\.zip$/i.test(f.name)} {ondrop} />

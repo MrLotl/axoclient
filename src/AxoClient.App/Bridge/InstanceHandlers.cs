@@ -1,4 +1,5 @@
 using AxoClient.Core.Common;
+using AxoClient.Core.Content;
 using AxoClient.Core.Game;
 using AxoClient.Core.Instances;
 
@@ -35,6 +36,10 @@ public static partial class Handlers
     private sealed record WorldImportData(string Id, List<string> FileRefs);
 
     private sealed record BackupFileData(string Id, string File);
+
+    private sealed record DatapackInstallData(string InstanceId, string World, string Source, string ProjectId, string? VersionId);
+
+    private sealed record DatapackFileData(string Id, string World, string File, bool Enabled = true);
 
     private sealed record ServerAddData(string Id, string Name, string Address, int? Index);
 
@@ -229,6 +234,23 @@ public static partial class Handlers
             if (host.Games.IsRunning(d.Id))
                 throw new AxoException("instances.running");
             return await host.Jobs.RunAsync("world.backupAll", new TextRef("worlds.backingUpAll"), job => host.Worlds.BackupAllAsync(d.Id, job), d.Id);
+        });
+        // ---- Datapacks (je Welt) ----
+        r.On<WorldData>("datapacks.list", async (d, ct) => await host.Datapacks.ListAsync(d.Id, d.Folder, ct));
+        r.On<DatapackInstallData>("datapacks.install", (d, _) => Task.FromResult<object?>(StartJob(host.Jobs.RunAsync("datapack.install",
+            new TextRef("content.installing"),
+            job => host.Datapacks.InstallAsync(d.InstanceId, d.World, new InstallRequest(d.Source, d.ProjectId, d.VersionId), job), d.InstanceId))));
+        r.On<DatapackFileData>("datapacks.setEnabled", async (d, ct) =>
+        {
+            await host.Datapacks.SetEnabledAsync(d.Id, d.World, d.File, d.Enabled);
+            return await host.Datapacks.ListAsync(d.Id, d.World, ct);
+        });
+        r.On<DatapackFileData>("datapacks.remove", async (d, ct) =>
+        {
+            if (host.Games.IsRunning(d.Id))
+                throw new AxoException("instances.running");
+            await host.Datapacks.RemoveAsync(d.Id, d.World, d.File, ct);
+            return await host.Datapacks.ListAsync(d.Id, d.World, ct);
         });
         r.On<IdData>("worlds.backups", (d, _) => Task.FromResult<object?>(host.Worlds.ListBackups(d.Id)));
         r.On<BackupFileData>("worlds.restore", async (d, _) =>

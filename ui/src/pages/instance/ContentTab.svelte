@@ -95,10 +95,22 @@
   );
   const flipMs = $derived(reducedMotion() || shown.length > 120 ? 0 : DUR.slow);
   const disabledCount = $derived(items.filter((i) => !i.enabled).length);
+  // Platz für den Zurücknehmen-Knopf nur, wenn ihn überhaupt eine Zeile braucht
+  const anyRollback = $derived(items.some((i) => i.previousVersion));
 
   async function toggle(item: ContentItem) {
     try {
       items = await call<ContentItem[]>('content.setEnabled', { id: instance.id, type, file: item.file, enabled: !item.enabled });
+    } catch (e) {
+      app.error(e);
+    }
+  }
+
+  async function rollback(item: ContentItem) {
+    try {
+      items = await call<ContentItem[]>('content.rollback', { id: instance.id, type, file: item.file });
+      app.toast(t('content.rolledBack', { name: item.name, version: item.previousVersion ?? '' }), 'success');
+      scan();
     } catch (e) {
       app.error(e);
     }
@@ -239,6 +251,9 @@
               {#if m.source === 'modrinth' || m.source === 'curseforge'}
                 <button class="icon-btn small" aria-label={t('content.changeVersion')} title={t('content.changeVersion')} onclick={() => (dialog = { version: m })}><Icon name="swap" size={14} /></button>
               {/if}
+              {#if m.previousVersion}
+                <button class="icon-btn small" aria-label={t('content.rollbackNamed', { name: m.name, version: m.previousVersion })} title={t('content.rollback', { version: m.previousVersion })} onclick={() => rollback(m)}><Icon name="restore" size={14} /></button>
+              {/if}
               <div class="grow"></div>
               <Toggle checked={m.enabled} label={t('content.enabledNamed', { name: m.name })} onchange={() => toggle(m)} />
             {:else}
@@ -269,6 +284,11 @@
               {#if m.source === 'modrinth' || m.source === 'curseforge'}
                 <button class="icon-btn small" aria-label={t('content.changeVersion')} title={t('content.changeVersion')} onclick={() => (dialog = { version: m })}><Icon name="swap" size={14} /></button>
               {:else}
+                <span class="slot"></span>
+              {/if}
+              {#if m.previousVersion}
+                <button class="icon-btn small" aria-label={t('content.rollbackNamed', { name: m.name, version: m.previousVersion })} title={t('content.rollback', { version: m.previousVersion })} onclick={() => rollback(m)}><Icon name="restore" size={14} /></button>
+              {:else if anyRollback}
                 <span class="slot"></span>
               {/if}
               <Toggle checked={m.enabled} label={t('content.enabledNamed', { name: m.name })} onchange={() => toggle(m)} />

@@ -21,13 +21,15 @@ public sealed class ModrinthProvider(ApiClient api) : IContentProvider
         ProjectKind.Mod => "mod",
         ProjectKind.ResourcePack => "resourcepack",
         ProjectKind.ShaderPack => "shader",
+        ProjectKind.DataPack => "datapack",
         _ => "modpack"
     };
 
     public async Task<SearchPage> SearchAsync(SearchQuery query, CancellationToken ct)
     {
         var projectType = ProjectType(query.Kind);
-        var facets = new List<string[]> { new[] { $"project_type:{projectType}" } };
+        // Datapacks sind bei Modrinth meist Projekte vom Typ "mod" mit dem Loader "datapack"
+        var facets = new List<string[]> { query.Kind == ProjectKind.DataPack ? ["categories:datapack"] : new[] { $"project_type:{projectType}" } };
         if (query.MinecraftVersion != null)
             facets.Add([$"versions:{query.MinecraftVersion}"]);
         if (query.Loader is { } loader && loader != LoaderType.Vanilla && query.Kind is ProjectKind.Mod or ProjectKind.Modpack)
@@ -134,6 +136,8 @@ public sealed class ModrinthProvider(ApiClient api) : IContentProvider
             url += $"&game_versions={Uri.EscapeDataString(JsonSerializer.Serialize(new[] { minecraftVersion }))}";
         if (loader is { } l && l != LoaderType.Vanilla && kind is ProjectKind.Mod or ProjectKind.Modpack)
             url += $"&loaders={Uri.EscapeDataString(JsonSerializer.Serialize(LoaderCategories(l)))}";
+        else if (kind == ProjectKind.DataPack)
+            url += $"&loaders={Uri.EscapeDataString("[\"datapack\"]")}";
         else if (kind == ProjectKind.ShaderPack)
             url += $"&loaders={Uri.EscapeDataString("[\"iris\",\"optifine\",\"canvas\",\"vanilla\"]")}";
         using var json = JsonDocument.Parse(await api.GetStringAsync(url, VersionCache, ct));

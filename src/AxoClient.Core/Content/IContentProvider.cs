@@ -7,7 +7,10 @@ public enum ProjectKind
     Mod,
     ResourcePack,
     ShaderPack,
-    Modpack
+    Modpack,
+
+    /// <summary>Datapack für eine Welt (bei Modrinth Projekte mit dem Loader "datapack").</summary>
+    DataPack
 }
 
 public enum SearchSort

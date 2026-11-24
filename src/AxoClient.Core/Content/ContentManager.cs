@@ -20,7 +20,8 @@ public sealed record ContentItem(
     long Size,
     DateTimeOffset AddedAt,
     bool Locked,
-    bool ModLocked);
+    bool ModLocked,
+    string? PreviousVersion = null);
 
 /// <summary>Was installiert werden soll: eine Version aus einer Quelle.</summary>
 public sealed record InstallRequest(string Source, string ProjectId, string? VersionId = null);
@@ -66,7 +67,8 @@ public sealed class ContentManager(
             .OrderBy(e => e.Source == ContentSource.AxoClient ? 0 : 1)
             .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
             .Select(e => new ContentItem(e.File, e.Name, e.Version, e.Enabled, e.Source, e.ProjectId, e.VersionId, e.IconUrl,
-                e.Author, e.Size, e.AddedAt, e.Source == ContentSource.AxoClient, type == ContentType.Mod && modLock.IsLocked(e)))
+                e.Author, e.Size, e.AddedAt, e.Source == ContentSource.AxoClient, type == ContentType.Mod && modLock.IsLocked(e),
+                e.Previous != null ? e.Previous.Version ?? e.Previous.File : null))
             .ToList();
     }
 
@@ -342,10 +344,13 @@ public sealed class ContentManager(
             foreach (var (entry, itemType) in entries)
             {
                 var list = d.ListOf(itemType);
-                // Alte Datei desselben Projekts ersetzen (Update/Version ändern)
+                // Alte Datei desselben Projekts ersetzen (Update/Version ändern). Sie wandert nach previous/, damit sich
+                // das Update rückgängig machen lässt.
                 foreach (var old in list.Where(e => e.ProjectId == entry.ProjectId && e.File != entry.File).ToList())
                 {
-                    TryDelete(Path.Combine(Folder(instanceId, itemType), old.DiskName));
+                    entry.Previous = KeepAsPrevious(instanceId, itemType, old) ? old : null;
+                    if (entry.Previous == null)
+                        TryDelete(Path.Combine(Folder(instanceId, itemType), old.DiskName));
                     list.Remove(old);
                 }
                 list.RemoveAll(e => e.File.Equals(entry.File, StringComparison.OrdinalIgnoreCase));
@@ -440,6 +445,8 @@ public sealed class ContentManager(
                 else if (Directory.Exists(Path.Combine(Folder(instanceId, type), entry.File)))
                     Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(Path.Combine(Folder(instanceId, type), entry.File),
                         Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                if (entry.Previous != null)
+                    TryDelete(Path.Combine(PreviousDir(instanceId, type), entry.Previous.File));
                 list.Remove(entry);
             }
         }, ct);
@@ -576,4 +583,72 @@ public sealed class ContentManager(
     }
 
     public bool SupportsMods(Instance instance) => LoaderNames.SupportsMods(instance.Loader.Type);
+
+    private string PreviousDir(string instanceId, ContentType type) =>
+        Path.Combine(Path.GetDirectoryName(instances.GameDir(instanceId))!, "previous", ContentFolders.Of(type));
+
+    /// <summary>Alte Datei nach <c>previous/</c> verschieben (eine Stufe: die davor verschwindet). False, wenn das nicht ging.</summary>
+    private bool KeepAsPrevious(string instanceId, ContentType type, ContentEntry old)
+    {
+        var from = Path.Combine(Folder(instanceId, type), old.DiskName);
+        if (!File.Exists(from))
+            return false;
+        try
+        {
+            var dir = PreviousDir(instanceId, type);
+            Directory.CreateDirectory(dir);
+            if (old.Previous != null)
+                TryDelete(Path.Combine(dir, old.Previous.File));
+            File.Move(from, Path.Combine(dir, old.File), overwrite: true);
+            old.Previous = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warn($"Vorige Version nicht aufbewahrt: {old.File}", ex);
+            return false;
+        }
+    }
+
+    /// <summary>Letztes Update bzw. letzten Versionswechsel eines Inhalts zurücknehmen.</summary>
+    public async Task RollbackAsync(string instanceId, ContentType type, string file, CancellationToken ct = default)
+    {
+        var modLock = (await instances.GetAsync(instanceId, ct)).ModLock;
+        await ChangeAsync(instanceId, doc =>
+        {
+            var entry = Find(doc, type, file);
+            if (type == ContentType.Mod)
+                modLock.ThrowIfLocked(entry);
+            var previous = entry.Previous ?? throw new AxoException("content.noPrevious");
+            var stored = Path.Combine(PreviousDir(instanceId, type), previous.File);
+            if (!File.Exists(stored))
+            {
+                entry.Previous = null;
+                throw new AxoException("content.noPrevious");
+            }
+            var dir = Folder(instanceId, type);
+            var target = Path.Combine(dir, previous.DiskName);
+            try
+            {
+                File.Move(stored, target, overwrite: true);
+                if (!previous.File.Equals(entry.File, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(Path.Combine(dir, entry.File));
+                    File.Delete(Path.Combine(dir, entry.File + ".disabled"));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                throw new AxoException("content.fileInUse", new() { ["name"] = entry.Name }, ex);
+            }
+            var info = new FileInfo(target);
+            previous.Modified = info.LastWriteTimeUtc;
+            previous.Size = info.Length;
+            previous.Previous = null;
+            var list = doc.ListOf(type);
+            list[list.IndexOf(entry)] = previous;
+            // Mit der alten Version neu prüfen lassen
+            doc.CheckedAt = null;
+        }, ct);
+    }
 }

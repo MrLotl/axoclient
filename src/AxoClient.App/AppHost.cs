@@ -55,6 +55,7 @@ public sealed class AppHost : IAsyncDisposable
         Modrinth = new ModrinthProvider(Api);
         Providers = new ContentProviders([Modrinth, new CurseForgeProvider(Api, AppInfo.ServiceUrl, AppInfo.CurseForgeEnabled)]);
         Content = new ContentManager(Instances, Providers, Downloads, Events);
+        Datapacks = new DatapackManager(paths, Instances, Worlds, Providers, Downloads);
         Updates = new UpdateScanner(Instances, Content, Modrinth);
         Modpacks = new ModpackManager(paths, Instances, Content, Providers, Modrinth, Downloads, Api);
         Backups = new InstanceBackup(paths, Instances, Content, Modpacks);
@@ -158,6 +159,7 @@ public sealed class AppHost : IAsyncDisposable
     public ModrinthProvider Modrinth { get; }
     public ContentProviders Providers { get; }
     public ContentManager Content { get; }
+    public DatapackManager Datapacks { get; }
     public UpdateScanner Updates { get; }
     public ModpackManager Modpacks { get; }
     public InstanceBackup Backups { get; }

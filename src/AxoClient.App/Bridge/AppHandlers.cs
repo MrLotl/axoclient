@@ -91,6 +91,7 @@ public static partial class Handlers
                 "instanceSub" when d.Sub is "mods" or "resourcepacks" or "shaderpacks" or "saves" or "screenshots" or "config" or "logs"
                     or "crash-reports" => Path.Combine(p.GameDir(Text.RequireId(d.Id)), d.Sub),
                 "world" => host.Worlds.WorldDir(Text.RequireId(d.Id), d.Sub ?? ""),
+                "worldDatapacks" => Directory.CreateDirectory(Path.Combine(host.Worlds.WorldDir(Text.RequireId(d.Id), d.Sub ?? ""), "datapacks")).FullName,
                 "server" => p.ServerData(Text.RequireId(d.Id)),
                 "serverSub" when d.Sub is "plugins" or "mods" or "logs" or "world" => Path.Combine(p.ServerData(Text.RequireId(d.Id)), d.Sub),
                 "servers" => p.Servers,

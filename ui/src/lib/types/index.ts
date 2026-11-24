@@ -127,6 +127,20 @@ export interface ActivityLog {
   days: Record<string, number>;
 }
 
+/** Datapack einer Welt (saves/<welt>/datapacks) */
+export interface DatapackItem {
+  file: string;
+  name: string;
+  version: string | null;
+  enabled: boolean;
+  isFolder: boolean;
+  source: ContentSource;
+  projectId: string | null;
+  iconUrl: string | null;
+  author: string | null;
+  size: number;
+}
+
 export interface ContentItem {
   file: string;
   name: string;
@@ -141,6 +155,8 @@ export interface ContentItem {
   addedAt: string;
   locked: boolean;
   modLocked: boolean;
+  /** Version vor dem letzten Update; dann lässt es sich zurücknehmen */
+  previousVersion: string | null;
 }
 
 export interface ContentProject {
@@ -283,8 +299,8 @@ export interface CrashAnalysis {
   cause: TextRef;
   ruleId: string | null;
   actions: string[];
-  suspects: { file: string; name: string }[];
-  recentlyAdded: { file: string; name: string }[];
+  suspects: { file: string; name: string; canRollback: boolean }[];
+  recentlyAdded: { file: string; name: string; canRollback: boolean }[];
   configFile: string | null;
   crashReportFile: string | null;
   exitCode: number;

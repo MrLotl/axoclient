@@ -29,7 +29,8 @@ public sealed class CrashRuleSet
 /// <summary>Material für die Analyse: Exit-Code, Crash-Report bzw. hs_err und die letzten Log-Zeilen.</summary>
 public sealed record CrashInput(int ExitCode, string? CrashReport, string? HsErr, string LogTail, string? CrashReportFile);
 
-public sealed record CrashSuspect(string File, string Name);
+/// <summary><paramref name="CanRollback"/>: die Mod wurde aktualisiert, die vorige Version liegt noch bereit.</summary>
+public sealed record CrashSuspect(string File, string Name, bool CanRollback = false);
 
 public sealed record CrashAnalysis(
     bool KnownCause,
@@ -120,16 +121,25 @@ public sealed partial class CrashAnalyzer
                 var cause = rule.FindMod == "mixin" && suspects.Count >= 2
                     ? TextRef.Of("crash.cause.mixinConflict", ("mod", suspects[0].Name), ("other", suspects[1].Name))
                     : TextRef.Of(rule.Cause, ("file", file), ("mod", suspects.FirstOrDefault()?.Name));
+                suspects = MarkRollback(suspects, mods);
                 return new CrashAnalysis(true, cause,
-                    rule.Id, rule.Actions, suspects, [], file, input.CrashReportFile, input.ExitCode);
+                    rule.Id, WithRollback(rule.Actions, suspects), suspects, [], file, input.CrashReportFile, input.ExitCode);
             }
         }
 
-        var recent = mods.OrderByDescending(m => m.AddedAt).Take(3).Select(m => new CrashSuspect(m.File, m.Name)).ToList();
-        var stack = FindByStacktrace(string.Join('\n', sources.Values), mods);
-        return new CrashAnalysis(false, new TextRef("crash.cause.unknown"), null, mods.Count > 0 ? ["checkMods"] : [], stack, recent,
+        var recent = MarkRollback(mods.OrderByDescending(m => m.AddedAt).Take(3).Select(m => new CrashSuspect(m.File, m.Name)).ToList(), mods);
+        var stack = MarkRollback(FindByStacktrace(string.Join('\n', sources.Values), mods), mods);
+        return new CrashAnalysis(false, new TextRef("crash.cause.unknown"), null,
+            WithRollback(mods.Count > 0 ? ["checkMods"] : [], stack.Count > 0 ? stack : recent), stack, recent,
             null, input.CrashReportFile, input.ExitCode);
     }
+
+    private static List<CrashSuspect> MarkRollback(List<CrashSuspect> suspects, List<ContentEntry> mods) =>
+        suspects.Select(s => s with { CanRollback = mods.Any(m => m.File == s.File && m.Previous != null) }).ToList();
+
+    /// <summary>Wurde eine beteiligte Mod gerade aktualisiert, ist das Zurücknehmen die naheliegendste Maßnahme.</summary>
+    private static IReadOnlyList<string> WithRollback(IReadOnlyList<string> actions, List<CrashSuspect> suspects) =>
+        suspects.Any(s => s.CanRollback) && !actions.Contains("rollbackMod") ? ["rollbackMod", .. actions] : actions;
 
     /// <summary>Paketnamen im Stacktrace den Mods zuordnen (Pakete merkt sich der Launcher beim Installieren).</summary>
     internal static List<CrashSuspect> FindByStacktrace(string text, List<ContentEntry> mods)
