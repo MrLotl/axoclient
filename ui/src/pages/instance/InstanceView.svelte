@@ -238,8 +238,7 @@
     padding: 0 12px 0 8px;
     border: 0;
     border-radius: var(--radius-m);
-    background: rgba(10, 11, 13, 0.5);
-    backdrop-filter: blur(6px);
+    background: rgba(10, 11, 13, 0.6);
     color: var(--text);
     font-size: 13px;
     font-weight: 600;
@@ -283,8 +282,7 @@
     padding: 0;
     border: 0;
     border-radius: var(--radius-m);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.12);
     color: var(--text-strong);
     display: flex;
     align-items: center;

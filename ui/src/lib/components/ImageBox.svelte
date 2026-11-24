@@ -102,7 +102,7 @@
   class:editable
   class:empty={!shown && !name}
   class:dashed={dashed && !shown}
-  style="width: {css(width)}; height: {css(height)}; border-radius: {radius}px"
+  style="width: {css(width)}; height: {css(height)}; border-radius: {radius}px; clip-path: inset(0 round {radius}px)"
   use:dropFiles={{ accept: isImage, ondrop: (f) => startCrop(f[0]!), disabled: !(editable || droppable) || !onchange }}>
   {#if shown}
     <img src={url} alt="" class:pixelated class:blur onerror={() => (failedUrl = url)} use:fadeLoad={url} />
@@ -276,9 +276,8 @@
     height: 34px;
     padding: 0;
     border: 0;
-    border-radius: 9px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(8px);
+    border-radius: var(--radius-m);
+    background: rgba(10, 11, 13, 0.62);
     color: #f2f2f2;
     display: flex;
     align-items: center;

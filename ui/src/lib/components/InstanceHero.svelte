@@ -82,7 +82,8 @@
     flex-shrink: 0;
     border-radius: var(--radius-xl);
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    /* Ecken sicher abschneiden, auch wenn darin Grafikebenen liegen */
+    clip-path: inset(0 round var(--radius-xl));
     background: var(--accent-soft-strong), var(--field);
   }
   .art {
