@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\DataModel\DataModel.csproj" />
+    <ProjectReference Include="..\Accounts.Contract\Accounts.Contract.csproj" />
+    <ProjectReference Include="..\Game.Contract\Game.Contract.csproj" />
+    <ProjectReference Include="..\Instances.Contract\Instances.Contract.csproj" />
+    <ProjectReference Include="..\Launch.Contract\Launch.Contract.csproj" />
+    <ProjectReference Include="..\Social.Contract\Social.Contract.csproj" />
+    <ProjectReference Include="..\Diagnostics.Contract\Diagnostics.Contract.csproj" />
+  </ItemGroup>
+
+</Project>

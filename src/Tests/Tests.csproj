@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="System.IO.Abstractions.TestingHelpers" Version="22.3.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Data\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\DataModel\DataModel.csproj" />
+    <ProjectReference Include="..\Accounts.Contract\Accounts.Contract.csproj" />
+    <ProjectReference Include="..\Accounts\Accounts.csproj" />
+    <ProjectReference Include="..\Settings.Contract\Settings.Contract.csproj" />
+    <ProjectReference Include="..\Settings\Settings.csproj" />
+    <ProjectReference Include="..\Game.Contract\Game.Contract.csproj" />
+    <ProjectReference Include="..\Game\Game.csproj" />
+    <ProjectReference Include="..\Instances.Contract\Instances.Contract.csproj" />
+    <ProjectReference Include="..\Instances\Instances.csproj" />
+    <ProjectReference Include="..\Content.Contract\Content.Contract.csproj" />
+    <ProjectReference Include="..\Content\Content.csproj" />
+    <ProjectReference Include="..\Import.Contract\Import.Contract.csproj" />
+    <ProjectReference Include="..\Import\Import.csproj" />
+    <ProjectReference Include="..\Launch.Contract\Launch.Contract.csproj" />
+    <ProjectReference Include="..\Launch\Launch.csproj" />
+    <ProjectReference Include="..\Servers.Contract\Servers.Contract.csproj" />
+    <ProjectReference Include="..\Servers\Servers.csproj" />
+    <ProjectReference Include="..\Skins.Contract\Skins.Contract.csproj" />
+    <ProjectReference Include="..\Skins\Skins.csproj" />
+    <ProjectReference Include="..\Social.Contract\Social.Contract.csproj" />
+    <ProjectReference Include="..\Social\Social.csproj" />
+    <ProjectReference Include="..\Integrations.Contract\Integrations.Contract.csproj" />
+    <ProjectReference Include="..\Integrations\Integrations.csproj" />
+    <ProjectReference Include="..\Diagnostics.Contract\Diagnostics.Contract.csproj" />
+    <ProjectReference Include="..\Diagnostics\Diagnostics.csproj" />
+    <ProjectReference Include="..\Updates.Contract\Updates.Contract.csproj" />
+    <ProjectReference Include="..\Updates\Updates.csproj" />
+    <ProjectReference Include="..\App\App.csproj" />
+  </ItemGroup>
+
+</Project>

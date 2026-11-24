@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\DataModel\DataModel.csproj" />
+    <ProjectReference Include="..\Accounts.Contract\Accounts.Contract.csproj" />
+    <ProjectReference Include="..\Instances.Contract\Instances.Contract.csproj" />
+    <ProjectReference Include="..\Skins.Contract\Skins.Contract.csproj" />
+  </ItemGroup>
+
+</Project>

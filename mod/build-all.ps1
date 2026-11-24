@@ -1,7 +1,7 @@
 ﻿# Baut die AxoMod für alle unterstützten Minecraft-Versionen, legt die Jars in
-# src/AxoClient.Game/Resources/axomod ab und schreibt dort axomod-versions.json (mit SHA-256).
+# src/Game/Resources/axomod ab und schreibt dort axomod-versions.json (mit SHA-256).
 # Der Launcher bettet beides ein und legt die passende Jar beim Spielstart in die Instanz.
-# Läuft automatisch bei jedem dotnet build (Ziel BuildAxoMod in AxoClient.Game.csproj), sobald sich unter mod/ etwas ändert.
+# Läuft automatisch bei jedem dotnet build (Ziel BuildAxoMod in Game.csproj), sobald sich unter mod/ etwas ändert.
 #
 # Aufruf:  .\build-all.ps1            alle Versionen
 #          .\build-all.ps1 1.21.8     nur diese (Manifest wird trotzdem aus allen vorhandenen Jars erzeugt)
@@ -9,7 +9,7 @@ param([string[]] $Only)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
-$target = Join-Path (Split-Path $PSScriptRoot) 'src\AxoClient.Game\Resources\axomod'
+$target = Join-Path (Split-Path $PSScriptRoot) 'src\Game\Resources\axomod'
 New-Item -ItemType Directory -Force $target | Out-Null
 $modVersion = (Get-Content gradle.properties | Select-String '^mod_version=(.*)$').Matches[0].Groups[1].Value
 

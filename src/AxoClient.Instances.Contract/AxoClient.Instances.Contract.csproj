@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\AxoClient.Common\AxoClient.Common.csproj" />
-    <ProjectReference Include="..\AxoClient.DataModel\AxoClient.DataModel.csproj" />
-    <ProjectReference Include="..\AxoClient.Launch.Contract\AxoClient.Launch.Contract.csproj" />
-  </ItemGroup>
-
-</Project>

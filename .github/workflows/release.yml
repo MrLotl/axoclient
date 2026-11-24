@@ -63,7 +63,7 @@ jobs:
 
       - name: Launcher-Tests
         shell: pwsh
-        run: dotnet test src/AxoClient.Tests -c Release -p:SkipMod=true -p:SkipUi=true
+        run: dotnet test src/Tests -c Release -p:SkipMod=true -p:SkipUi=true
 
       - name: Mod bauen
         shell: pwsh
@@ -72,7 +72,7 @@ jobs:
       - name: Launcher bauen
         shell: pwsh
         run: |
-          dotnet publish src/AxoClient.App -c Release -r win-x64 -p:Version=$env:VERSION -p:SkipMod=true -o publish
+          dotnet publish src/App -c Release -r win-x64 -p:Version=$env:VERSION -p:SkipMod=true -o publish
           Copy-Item publish/AxoClient.exe AxoClient-Setup.exe
 
       - name: Auf GitHub veröffentlichen

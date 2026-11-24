@@ -1,0 +1,93 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>AxoClient</AssemblyName>
+    <RootNamespace>AxoClient.App</RootNamespace>
+    <ApplicationIcon>Assets\axoclient.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <UiDir>$(MSBuildProjectDirectory)\..\..\ui</UiDir>
+  </PropertyGroup>
+
+  <!-- Veröffentlichung als eine einzige EXE (= AxoClient-Setup.exe): dotnet publish -c Release -r win-x64 -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\DataModel\DataModel.csproj" />
+    <ProjectReference Include="..\Accounts.Contract\Accounts.Contract.csproj" />
+    <ProjectReference Include="..\Accounts\Accounts.csproj" />
+    <ProjectReference Include="..\Settings.Contract\Settings.Contract.csproj" />
+    <ProjectReference Include="..\Settings\Settings.csproj" />
+    <ProjectReference Include="..\Game.Contract\Game.Contract.csproj" />
+    <ProjectReference Include="..\Game\Game.csproj" />
+    <ProjectReference Include="..\Instances.Contract\Instances.Contract.csproj" />
+    <ProjectReference Include="..\Instances\Instances.csproj" />
+    <ProjectReference Include="..\Content.Contract\Content.Contract.csproj" />
+    <ProjectReference Include="..\Content\Content.csproj" />
+    <ProjectReference Include="..\Import.Contract\Import.Contract.csproj" />
+    <ProjectReference Include="..\Import\Import.csproj" />
+    <ProjectReference Include="..\Launch.Contract\Launch.Contract.csproj" />
+    <ProjectReference Include="..\Launch\Launch.csproj" />
+    <ProjectReference Include="..\Servers.Contract\Servers.Contract.csproj" />
+    <ProjectReference Include="..\Servers\Servers.csproj" />
+    <ProjectReference Include="..\Skins.Contract\Skins.Contract.csproj" />
+    <ProjectReference Include="..\Skins\Skins.csproj" />
+    <ProjectReference Include="..\Social.Contract\Social.Contract.csproj" />
+    <ProjectReference Include="..\Social\Social.csproj" />
+    <ProjectReference Include="..\Integrations.Contract\Integrations.Contract.csproj" />
+    <ProjectReference Include="..\Integrations\Integrations.csproj" />
+    <ProjectReference Include="..\Diagnostics.Contract\Diagnostics.Contract.csproj" />
+    <ProjectReference Include="..\Diagnostics\Diagnostics.csproj" />
+    <ProjectReference Include="..\Updates.Contract\Updates.Contract.csproj" />
+    <ProjectReference Include="..\Updates\Updates.csproj" />
+  </ItemGroup>
+
+  <!-- Die Svelte-Oberfläche wird von Vite nach wwwroot gebaut und als Ressource eingebettet.
+       So liefert das Fenster nur mitgelieferte Dateien aus (Sicherheit: keine fremden Seiten).
+       Inkrementell: Vite läuft nur, wenn sich etwas unter ui/ geändert hat. -->
+  <ItemGroup>
+    <UiSource Include="$(UiDir)\src\**\*;$(UiDir)\public\**\*;$(UiDir)\index.html;$(UiDir)\package.json;$(UiDir)\vite.config.ts" />
+    <!-- Damit Visual Studio/Rider den Build nicht als "aktuell" überspringen, wenn sich nur die Oberfläche geändert hat -->
+    <UpToDateCheckInput Include="@(UiSource)" />
+    <UpToDateCheckInput Include="wwwroot\**\*" />
+  </ItemGroup>
+
+  <Target Name="BuildUi" BeforeTargets="BeforeBuild" Condition="'$(SkipUi)' != 'true'" Inputs="@(UiSource)" Outputs="wwwroot\index.html">
+    <Exec Command="npm ci" WorkingDirectory="$(UiDir)" Condition="!Exists('$(UiDir)\node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(UiDir)" />
+    <!-- Vite schreibt index.html evtl. mit gleichem Inhalt; Zeitstempel setzen, damit Inputs/Outputs stimmen -->
+    <Touch Files="wwwroot\index.html" />
+  </Target>
+
+  <Target Name="EmbedUi" BeforeTargets="PrepareForBuild" AfterTargets="BuildUi">
+    <ItemGroup>
+      <_UiFile Include="wwwroot\**\*" />
+      <EmbeddedResource Include="@(_UiFile)" LogicalName="$([System.String]::Copy('wwwroot/%(_UiFile.RecursiveDir)%(_UiFile.Filename)%(_UiFile.Extension)').Replace('\', '/'))" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <!-- Eingebettet statt daneben kopiert: die veröffentlichte AxoClient.exe ist eine einzige Datei -->
+    <EmbeddedResource Include="Assets\axoclient.ico" LogicalName="axoclient.ico" />
+  </ItemGroup>
+
+</Project>

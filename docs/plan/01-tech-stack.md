@@ -17,24 +17,24 @@ Die Logik läuft in C# (.NET), das Fenster in Photino.NET und die Oberfläche in
 ```
 AxoClient/
 ├─ src/
-│  ├─ AxoClient.Common/              Hilfsklassen und Infrastruktur (Pfade, JSON, Log, Downloads, Jobs, Prozesse)
-│  ├─ AxoClient.DataModel/           alle Modelle (Records, Enums, Dokumente), je Bereich ein Ordner
-│  ├─ AxoClient.Accounts.Contract/   Interfaces des Bereichs
-│  ├─ AxoClient.Accounts/            Umsetzung des Bereichs
-│  ├─ AxoClient.Settings(.Contract)/
-│  ├─ AxoClient.Game(.Contract)/
-│  ├─ AxoClient.Instances(.Contract)/
-│  ├─ AxoClient.Content(.Contract)/
-│  ├─ AxoClient.Import(.Contract)/
-│  ├─ AxoClient.Launch(.Contract)/
-│  ├─ AxoClient.Servers(.Contract)/
-│  ├─ AxoClient.Skins(.Contract)/
-│  ├─ AxoClient.Social(.Contract)/
-│  ├─ AxoClient.Integrations(.Contract)/
-│  ├─ AxoClient.Diagnostics(.Contract)/
-│  ├─ AxoClient.Updates(.Contract)/
-│  ├─ AxoClient.App/                 Photino-Fenster, Bridge-Handler, Startup (Dependency Injection)
-│  └─ AxoClient.Tests/
+│  ├─ Common/              Hilfsklassen und Infrastruktur (Pfade, JSON, Log, Downloads, Jobs, Prozesse)
+│  ├─ DataModel/           alle Modelle (Records, Enums, Dokumente), je Bereich ein Ordner
+│  ├─ Accounts.Contract/   Interfaces des Bereichs
+│  ├─ Accounts/            Umsetzung des Bereichs
+│  ├─ Settings(.Contract)/
+│  ├─ Game(.Contract)/
+│  ├─ Instances(.Contract)/
+│  ├─ Content(.Contract)/
+│  ├─ Import(.Contract)/
+│  ├─ Launch(.Contract)/
+│  ├─ Servers(.Contract)/
+│  ├─ Skins(.Contract)/
+│  ├─ Social(.Contract)/
+│  ├─ Integrations(.Contract)/
+│  ├─ Diagnostics(.Contract)/
+│  ├─ Updates(.Contract)/
+│  ├─ App/                 Photino-Fenster, Bridge-Handler, Startup (Dependency Injection)
+│  └─ Tests/
 └─ ui/
    └─ src/
       ├─ lib/components/
@@ -44,11 +44,11 @@ AxoClient/
       └─ pages/
 ```
 
-Jeder Bereich besteht aus zwei Projekten: `AxoClient.<Bereich>.Contract` enthält nur die Interfaces (z. B. `IInstanceManager`),
-`AxoClient.<Bereich>` die Klassen dazu. Ein Bereich kennt andere Bereiche nur über deren Contract, nie über die Umsetzung –
-so gibt es keine Kreise zwischen den Projekten. Modelle, die mehrere Bereiche teilen, liegen in `AxoClient.DataModel`.
+Jeder Bereich besteht aus zwei Projekten: `<Bereich>.Contract` enthält nur die Interfaces (z. B. `IInstanceManager`),
+`<Bereich>` die Klassen dazu. Ordner und Projekte heißen ohne Präfix, Namespaces und DLLs mit (`AxoClient.Instances`). Ein Bereich kennt andere Bereiche nur über deren Contract, nie über die Umsetzung –
+so gibt es keine Kreise zwischen den Projekten. Modelle, die mehrere Bereiche teilen, liegen in `DataModel`.
 
-`AxoClient.App` ist die Kompositionswurzel: `Startup.ConfigureServices` meldet alle Dienste beim Service-Container an, die
+`App` ist die Kompositionswurzel: `Startup.ConfigureServices` meldet alle Dienste beim Service-Container an, die
 Klassen bekommen ihre Abhängigkeiten über den Konstruktor. Statische Klassen und Methoden gibt es nicht (Ausnahmen:
 `Main` und die Windows-API-Deklarationen); Hilfsfunktionen stecken in eigenen Hilfsklassen mit Interface
 (`ITextHelper`, `IPathGuard`, `IGameVersionHelper` …) oder in Basisklassen (`LaunchCheck`, `ServerSoftwareBase`, `BridgeHandler`).

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\DataModel\DataModel.csproj" />
+    <ProjectReference Include="..\Accounts.Contract\Accounts.Contract.csproj" />
+    <ProjectReference Include="..\Settings.Contract\Settings.Contract.csproj" />
+    <ProjectReference Include="..\Game.Contract\Game.Contract.csproj" />
+    <ProjectReference Include="..\Instances.Contract\Instances.Contract.csproj" />
+    <ProjectReference Include="..\Content.Contract\Content.Contract.csproj" />
+    <ProjectReference Include="..\Launch.Contract\Launch.Contract.csproj" />
+    <ProjectReference Include="..\Skins.Contract\Skins.Contract.csproj" />
+    <ProjectReference Include="..\Social.Contract\Social.Contract.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Animationen der eingebauten Emotes, direkt aus der Mod (eine Quelle): für die Vorschaubilder im Launcher -->
+    <EmbeddedResource Include="..\..\mod\src\emote26\resources\assets\axoclient\player_animations\emotes.json"
+                      LogicalName="emotes/builtin.json" Link="Resources\emotes\builtin.json" />
+  </ItemGroup>
+
+</Project>

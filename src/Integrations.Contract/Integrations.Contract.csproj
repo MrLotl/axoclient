@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Launch.Contract\Launch.Contract.csproj" />
+  </ItemGroup>
+
+</Project>

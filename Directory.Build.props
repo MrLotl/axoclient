@@ -1,6 +1,9 @@
 <Project>
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- Ordner und Projekte heißen ohne Präfix (z. B. "Game"), Namespaces und DLLs mit ("AxoClient.Game") -->
+    <RootNamespace>AxoClient.$(MSBuildProjectName)</RootNamespace>
+    <AssemblyName>AxoClient.$(MSBuildProjectName)</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
