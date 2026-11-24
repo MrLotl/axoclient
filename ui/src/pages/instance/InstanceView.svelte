@@ -129,7 +129,7 @@
       iconUrl={s.hasIcon ? `${s.iconUrl}&r=${imageVersion}` : null}
       bannerUrl={s.bannerUrl ? `${s.bannerUrl}&r=${imageVersion}` : null}
       label={t('instance.label')}
-      fallbackArt={artLayers(id, details.instance.minecraft.version, app.settings?.appearance.versionPanorama ?? true)}
+      fallbackArt={artLayers(details.summary.artSeed ?? id, details.instance.minecraft.version, app.settings?.appearance.versionPanorama ?? true)}
       onicon={(b64) => saveImage(false, b64)}
       onbanner={(b64) => saveImage(true, b64)}>
       {#snippet top()}

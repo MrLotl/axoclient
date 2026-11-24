@@ -85,8 +85,11 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
             instance.Loader.Version, $"/axo/instance-icon/{instance.Id}?v={version}",
             hasBanner && !instance.Images.BannerAuto ? $"/axo/instance-banner/{instance.Id}?v={version}" : null,
             hasIcon, playtime.LastPlayed, playtime.TotalSeconds, processes.Get(ProcessKey(instance.Id)) != null, modCount,
-            instance.CreatedAt, instance.ModLock.Level);
+            instance.CreatedAt, instance.ModLock.Level, instance.Images.ArtSeed ?? instance.Id);
     }
+
+    private static bool IsSafeSeed(string? seed) =>
+        seed is { Length: > 0 and <= 64 } && seed.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
 
     private long ImageVersion(string id)
     {
@@ -120,7 +123,9 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
                 Loader = new LoaderRef(request.Loader, request.Loader == LoaderType.Vanilla ? null : request.LoaderVersion),
                 MemoryMb = request.MemoryMb is { } mb ? Math.Clamp(mb, 512, 65536) : null,
                 Origin = new InstanceOrigin { Type = origin },
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                // Farbverlauf so, wie er beim Erstellen zu sehen war (nur harmlose Zeichen, sonst aus der ID)
+                Images = new InstanceImages { ArtSeed = IsSafeSeed(request.ArtSeed) ? request.ArtSeed : null }
             };
 
             var dir = paths.Instance(id);
@@ -176,7 +181,8 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
         }
         copy.Images = new InstanceImages
         {
-            Icon = source.Images.Icon, Banner = source.Images.Banner, BannerAuto = source.Images.BannerAuto
+            Icon = source.Images.Icon, Banner = source.Images.Banner, BannerAuto = source.Images.BannerAuto,
+            ArtSeed = source.Images.ArtSeed ?? source.Id
         };
         if (File.Exists(paths.ContentJson(sourceId)))
             File.Copy(paths.ContentJson(sourceId), paths.ContentJson(copy.Id), overwrite: true);

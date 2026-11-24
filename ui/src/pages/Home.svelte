@@ -210,7 +210,7 @@
             ondragend={onTileDragEnd}
             title={inst.name}
             animate:flip={{ duration: flipMs }}>
-            <span class="art" style="background-image: {artLayers(inst.id, inst.minecraftVersion, app.settings?.appearance.versionPanorama ?? true)}">
+            <span class="art" style="background-image: {artLayers(inst.artSeed ?? inst.id, inst.minecraftVersion, app.settings?.appearance.versionPanorama ?? true)}">
               {#if n < 9}<i class="key">{n + 1}</i>{/if}
               {#if inst.hasIcon}<img class="ico" src={inst.iconUrl} alt="" draggable="false" />{/if}
               {#if inst.running}<i class="live">{t('common.running')}</i>{/if}

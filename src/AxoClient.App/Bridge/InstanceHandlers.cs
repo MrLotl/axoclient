@@ -14,7 +14,7 @@ public static partial class Handlers
 
     private sealed record LoaderVersionsData(LoaderType Loader, string Minecraft);
 
-    private sealed record CreateData(string Name, string Minecraft, LoaderType Loader, string? LoaderVersion, int? MemoryMb, string? IconRef);
+    private sealed record CreateData(string Name, string Minecraft, LoaderType Loader, string? LoaderVersion, int? MemoryMb, string? IconRef, string? ArtSeed = null);
 
     private sealed record UpdateData(string Id, string? Name, string? Minecraft, LoaderType? Loader, string? LoaderVersion, int? MemoryMb,
         bool ResetMemory, string? JavaArgs, bool? BannerAuto, bool? AxoMod);
@@ -130,7 +130,7 @@ public static partial class Handlers
             var loaderVersion = d.Loader == LoaderType.Vanilla
                 ? null
                 : await host.Loaders.ResolveVersionAsync(d.Loader, d.Minecraft, d.LoaderVersion, ct);
-            var instance = await host.Instances.CreateAsync(new CreateInstanceRequest(d.Name, d.Minecraft, d.Loader, loaderVersion, d.MemoryMb),
+            var instance = await host.Instances.CreateAsync(new CreateInstanceRequest(d.Name, d.Minecraft, d.Loader, loaderVersion, d.MemoryMb, ArtSeed: d.ArtSeed),
                 ct: ct);
             var type = await host.Versions.TypeOfAsync(d.Minecraft, ct);
             if (type is { } t && t != VersionType.Release)

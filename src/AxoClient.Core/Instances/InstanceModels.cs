@@ -30,6 +30,9 @@ public sealed class InstanceImages
     public string? Icon { get; set; }
     public string? Banner { get; set; }
     public bool BannerAuto { get; set; } = true;
+
+    /// <summary>Startwert für den Farbverlauf ohne Banner/Panorama; wird beim Erstellen einmal festgelegt.</summary>
+    public string? ArtSeed { get; set; }
 }
 
 /// <summary><c>instances/&lt;id&gt;/instance.json</c></summary>
@@ -72,7 +75,8 @@ public sealed record InstanceSummary(
     bool Running,
     int ModCount,
     DateTimeOffset CreatedAt,
-    ModLockLevel ModLock);
+    ModLockLevel ModLock,
+    string ArtSeed);
 
 public sealed record CreateInstanceRequest(
     string Name,
@@ -80,7 +84,8 @@ public sealed record CreateInstanceRequest(
     LoaderType Loader,
     string? LoaderVersion,
     int? MemoryMb = null,
-    string? CopyFrom = null);
+    string? CopyFrom = null,
+    string? ArtSeed = null);
 
 public sealed record InstanceUpdate(
     string? Name = null,

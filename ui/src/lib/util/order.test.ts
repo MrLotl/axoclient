@@ -17,6 +17,7 @@ const inst = (id: string, lastPlayed: string | null, extra: Partial<InstanceSumm
   modCount: 0,
   createdAt: '2026-01-01T00:00:00Z',
   modLock: 'off',
+  artSeed: id,
   ...extra
 });
 

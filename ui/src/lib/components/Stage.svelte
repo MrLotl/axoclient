@@ -31,7 +31,7 @@
   const motion = $derived(app.settings?.appearance.stageMotion ?? true);
 
   // Eigenes Banner > Panorama der Minecraft-Version (aus den Spieldateien) > Farbverlauf
-  const bg = $derived(current?.bannerUrl ? `url('${current.bannerUrl}')` : artLayers(current?.id ?? 'axoclient', current?.minecraftVersion, panorama));
+  const bg = $derived(current?.bannerUrl ? `url('${current.bannerUrl}')` : artLayers(current?.artSeed ?? current?.id ?? 'axoclient', current?.minecraftVersion, panorama));
 </script>
 
 <div class="stage" class:dim class:still={!motion} aria-hidden="true">

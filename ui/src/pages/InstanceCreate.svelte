@@ -1,5 +1,7 @@
 <script lang="ts">
   import { artLayers } from '../lib/util/art';
+  // Farbverlauf einmal beim Öffnen festlegen: ändert sich nicht beim Tippen und bleibt nach dem Erstellen gleich
+  const artSeed = crypto.randomUUID().replaceAll('-', '').slice(0, 16);
   import { app } from '../lib/stores/app.svelte';
   import { call } from '../lib/bridge/bridge';
   import { t } from '../lib/i18n';
@@ -88,7 +90,8 @@
           loader,
           loaderVersion: loader === 'vanilla' ? null : loaderVersion,
           memoryMb: ownMemory ? memory : null,
-          iconRef: null
+          iconRef: null,
+          artSeed
         });
         if (icon) await call('instances.setImage', { id: created.id, banner: false, base64: icon.base64, fileRef: null });
         if (banner) await call('instances.setImage', { id: created.id, banner: true, base64: banner.base64, fileRef: null });
@@ -125,7 +128,7 @@
           name={name || '?'}
           iconUrl={icon?.url ?? null}
           bannerUrl={banner?.url ?? null}
-          fallbackArt={artLayers(name || 'neue-instanz', minecraft, app.settings?.appearance.versionPanorama ?? true)}
+          fallbackArt={artLayers(artSeed, minecraft, app.settings?.appearance.versionPanorama ?? true)}
           height={170}
           iconSize={72}
           label={t('create.preview')}

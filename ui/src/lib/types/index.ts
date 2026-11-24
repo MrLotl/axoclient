@@ -89,6 +89,8 @@ export interface InstanceSummary {
   modCount: number;
   createdAt: string;
   modLock: ModLockLevel;
+  /** Startwert des Farbverlaufs, einmal beim Erstellen festgelegt */
+  artSeed: string;
 }
 
 export interface Instance {

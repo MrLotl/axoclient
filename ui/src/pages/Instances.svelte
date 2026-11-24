@@ -110,7 +110,7 @@
   }
 
   function art(i: InstanceSummary) {
-    return artLayers(i.id, i.minecraftVersion, app.settings?.appearance.versionPanorama ?? true);
+    return artLayers(i.artSeed ?? i.id, i.minecraftVersion, app.settings?.appearance.versionPanorama ?? true);
   }
 
   function badge(i: InstanceSummary) {
