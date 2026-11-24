@@ -1,5 +1,8 @@
 using System.IO.Abstractions.TestingHelpers;
 using System.IO.Compression;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using AxoClient.Core.Common;
 using AxoClient.Core.Game;
 
@@ -112,6 +115,81 @@ public class PanoramaTests
     [InlineData("24w14a")]
     [InlineData("1.20.1-pre2")]
     public void AcceptsNormalVersionNames(string version) => Assert.True(PanoramaService.IsValidVersion(version));
+
+    /// <summary>Nachgebauter Mojang-Server: Versionsliste, Versionsdatei, Asset-Index und Bild.</summary>
+    private sealed class FakeMojang(byte[] image, string? overrideHash = null, bool offline = false) : HttpMessageHandler
+    {
+        public int Requests;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Interlocked.Increment(ref Requests);
+            if (offline)
+                throw new HttpRequestException("offline");
+            var url = request.RequestUri!.ToString();
+            var hash = overrideHash ?? Convert.ToHexStringLower(SHA1.HashData(image));
+            string? json = url switch
+            {
+                _ when url.Contains("version_manifest") => """{ "latest": { "release": "26.3", "snapshot": "26.3" }, "versions": [ { "id": "26.3", "type": "release", "url": "https://piston-meta.mojang.com/v1/26.3.json", "releaseTime": "2026-11-01T00:00:00Z" } ] }""",
+                _ when url.EndsWith("/26.3.json") => """{ "assetIndex": { "id": "33", "url": "https://piston-meta.mojang.com/v1/33.json" } }""",
+                _ when url.EndsWith("/33.json") => $$"""{ "objects": { "minecraft/textures/gui/title/background/panorama_0.png": { "hash": "{{hash}}", "size": {{image.Length}} } } }""",
+                _ => null
+            };
+            if (json != null)
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") });
+            if (url.StartsWith("https://resources.download.minecraft.net/", StringComparison.Ordinal))
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(image) });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+
+    private static (PanoramaService Service, MockFileSystem Fs, AppPaths Paths) Online(FakeMojang mojang, MockFileSystem? fs = null)
+    {
+        fs ??= new MockFileSystem();
+        var paths = new AppPaths(Root, fs);
+        var api = new ApiClient(mojang, fs, paths.ApiCache) { NoRetryDelay = true };
+        return (new PanoramaService(paths, api, new VersionManager(api)), fs, paths);
+    }
+
+    [Fact]
+    public async Task DownloadsPanoramaOfNeverStartedVersion()
+    {
+        var mojang = new FakeMojang(Png);
+        var (service, fs, paths) = Online(mojang);
+
+        Assert.Null(service.Get("26.3"));
+        Assert.Equal(Png, await service.FetchAsync("26.3"));
+
+        // liegt jetzt im Cache: ein neuer Dienst (z. B. nach einem Neustart) findet es ohne Internet
+        var offline = new PanoramaService(new AppPaths(Root, fs));
+        Assert.Equal(Png, offline.Get("26.3"));
+        Assert.True(fs.File.Exists(fs.Path.Combine(paths.Cache, "panoramas", "26.3_0.png")));
+    }
+
+    [Fact]
+    public async Task RejectsImageWithWrongChecksum()
+    {
+        var (service, _, _) = Online(new FakeMojang(Png, overrideHash: new string('a', 40)));
+        Assert.Null(await service.FetchAsync("26.3"));
+    }
+
+    [Fact]
+    public async Task UnknownVersionGivesNull()
+    {
+        var (service, _, _) = Online(new FakeMojang(Png));
+        Assert.Null(await service.FetchAsync("99.9"));
+    }
+
+    [Fact]
+    public async Task OfflineGivesNullAndDoesNotRetryAtOnce()
+    {
+        var mojang = new FakeMojang(Png, offline: true);
+        var (service, _, _) = Online(mojang);
+        Assert.Null(await service.FetchAsync("26.3"));
+        var after = mojang.Requests;
+        Assert.Null(await service.FetchAsync("26.3"));
+        Assert.Equal(after, mojang.Requests);
+    }
 
     [Fact]
     public void RejectsInvalidFace()

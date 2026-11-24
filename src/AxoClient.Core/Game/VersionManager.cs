@@ -33,6 +33,10 @@ public sealed class VersionManager(ApiClient api)
     public async Task<string> LatestReleaseAsync(CancellationToken ct = default) =>
         (await api.GetJsonAsync<Manifest>(ManifestUrl, TimeSpan.FromHours(1), ct)).Latest.Release;
 
+    /// <summary>Adresse der Versionsdatei (JSON) bei Mojang, oder <c>null</c>, wenn es die Version nicht gibt.</summary>
+    public async Task<string?> UrlOfAsync(string version, CancellationToken ct = default) =>
+        (await api.GetJsonAsync<Manifest>(ManifestUrl, TimeSpan.FromHours(1), ct)).Versions.FirstOrDefault(v => v.Id == version)?.Url;
+
     public async Task<VersionType?> TypeOfAsync(string version, CancellationToken ct = default) =>
         (await ListAsync(ct)).FirstOrDefault(v => v.Id == version)?.Type;
 

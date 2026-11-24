@@ -69,7 +69,8 @@ internal sealed class SchemeHandler(AppHost host)
                 "skin-file" when parts.Length == 1 => ReadFile(host.Skins.FilePath(parts[0])),
                 "cape-file" when parts.Length == 1 => ReadFile(host.Capes.FilePath(parts[0])),
                 // Titelbild-Panorama einer Minecraft-Version, direkt aus deren Spieldatei
-                "panorama" when parts.Length == 1 => host.Panoramas.Get(parts[0]),
+                // (noch nie gestartete Versionen: nur das Panorama-Bild bei Mojang nachladen)
+                "panorama" when parts.Length == 1 => host.Panoramas.Get(parts[0]) ?? RunSync(() => host.Panoramas.FetchAsync(parts[0])),
                 // Skin eines Spielers (für Köpfe): erst Cache, sonst Mojang
                 "head" when parts.Length == 1 => RunSync(() => host.Skins.PlayerSkinAsync(parts[0], CancellationToken.None)),
                 _ => null
