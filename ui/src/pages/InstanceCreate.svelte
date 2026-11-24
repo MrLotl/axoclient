@@ -8,7 +8,6 @@
   import { t } from '../lib/i18n';
   import DropZone from '../lib/components/DropZone.svelte';
   import Icon from '../lib/components/Icon.svelte';
-  import FormSection from '../lib/components/FormSection.svelte';
   import VersionPicker from '../lib/components/VersionPicker.svelte';
   import MemorySlider from '../lib/components/MemorySlider.svelte';
   import Toggle from '../lib/components/Toggle.svelte';
@@ -109,11 +108,6 @@
 </script>
 
 <div class="page">
-  <div class="head">
-    <button class="icon-btn" aria-label={t('common.back')} onclick={() => app.back()}><Icon name="chevronLeft" /></button>
-    <h1>{t('create.title')}</h1>
-  </div>
-
   {#if created}
     <div class="done">
       <ImageBox url={icon ? `/axo/instance-icon/${created.id}` : null} name={created.name} width={72} radius={16} />
@@ -125,15 +119,15 @@
       </div>
     </div>
   {:else}
-    <div class="body">
-      {#if start === 'empty'}
-        <!-- Vorschau ohne Banner: Instanzbild und Name stehen auf der Bühne, dahinter die Welt der gewählten Version -->
-        <div class="preview" aria-label={t('create.preview')}>
+    <div class="column">
+      <!-- Kopf wie bei einer Instanz: Bild und Name stehen auf der Bühne, dahinter die Welt der gewählten Version -->
+      <header class="preview" aria-label={t('create.preview')}>
+        {#if start === 'empty'}
           <span class="picon">
             <ImageBox
               url={icon?.url ?? null}
               name={name || '?'}
-              width={80}
+              width={76}
               radius={12}
               editable
               removable={!!icon}
@@ -142,151 +136,112 @@
               removeLabel={t('instance.removeIcon')}
               onchange={(base64, url) => (icon = base64 && url ? { base64, url } : null)} />
           </span>
-          <div class="titles">
-            <h2 class="truncate" class:placeholder={!name.trim()}>{name.trim() || t('create.previewName')}</h2>
-            {#if minecraft}<span class="glass">{versionLabel(minecraft, loader)}</span>{/if}
-          </div>
-        </div>
-      {/if}
-
-      <FormSection title={t('create.start')} subtitle={t('create.startHint')}>
-            <div class="starts">
-              {#each starts as s (s.id)}
-                <button
-                  class="start"
-                  class:on={start === s.id}
-                  aria-pressed={start === s.id}
-                  onclick={() => (s.id === 'modpack' ? app.navigate({ page: 'modpacks' }) : (start = s.id))}>
-                  <span class="s-icon"><Icon name={s.icon} size={18} /></span>
-                  <span class="s-title">{t(s.title)}</span>
-                  <span class="s-text">{t(s.text)}</span>
-                </button>
-              {/each}
-            </div>
-      </FormSection>
-
-      <div class="cols" class:single={start !== 'empty'}>
+        {/if}
+        <div class="titles">
+          <span class="eyebrow">{start === 'import' ? t('create.title') : t('create.preview')}</span>
           {#if start === 'import'}
-            <FormSection title={t('create.importTitle')}>
-              <DropZone accept={(f) => /\.(mrpack|zip)$/i.test(f.name)} padding={28} ondrop={ondrop}>
-                <Icon name="import" size={24} />
-                {#if importRef}
-                  <span class="file">{importRef.name}</span>
-                {:else}
-                  <span><button class="link" onclick={chooseFile}>{t('create.chooseFile')}</button> {t('create.orDrop')}</span>
-                {/if}
-                <span class="hint">{t('create.importFormats')}</span>
-              </DropZone>
-              {#if importJob}<p class="hint">{t('instances.importing', { file: importRef?.name ?? '' })}</p>{/if}
-              <button class="other-launcher" onclick={() => (app.dialog = { kind: 'import' })}>
-                <span class="s-icon"><Icon name="search" size={16} /></span>
-                <span class="col grow" style="gap: 2px; text-align: left">
-                  <strong>{t('create.fromLauncher')}</strong>
-                  <span class="hint">{t('create.fromLauncherText')}</span>
-                </span>
-                <Icon name="chevronRight" size={14} />
-              </button>
-            </FormSection>
+            <h1 class="truncate">{t('create.importTitle')}</h1>
           {:else}
-            <FormSection title={t('create.general')} subtitle={t('create.generalHint')}>
-              <label class="label">
-                <span>{t('create.name')}</span>
-                <span class="field"><input bind:value={name} maxlength="60" placeholder={t('create.namePlaceholder')} data-autofocus /></span>
-              </label>
-              {#if start === 'copy'}
-                <div class="label">
-                  <span>{t('create.copyFrom')}</span>
-                  <Select bind:value={copyFrom} label={t('create.copyFrom')} options={app.instances.map((i) => ({ value: i.id, label: `${i.name} · ${versionLabel(i.minecraftVersion, i.loader)}` }))} />
-                  <span class="hint">{t('create.copyNote')}</span>
-                </div>
-              {:else}
-                <VersionPicker bind:loader bind:minecraft bind:loaderVersion />
-              {/if}
-            </FormSection>
+            <h1 class="truncate" class:placeholder={!name.trim()}>{name.trim() || t('create.previewName')}</h1>
           {/if}
+          {#if start === 'empty' && minecraft}<span class="glass">{versionLabel(minecraft, loader)}</span>{/if}
+        </div>
+      </header>
 
-        {#if start === 'empty'}
-            <FormSection title={t('instance.settings.performance')} subtitle={t('instance.settings.performanceHint')}>
+      <!-- Ausgangspunkt als kompakte Leiste; die Erklärung steht darunter -->
+      <div class="starts" role="tablist" aria-label={t('create.start')}>
+        {#each starts as s (s.id)}
+          <button
+            class="start"
+            class:on={start === s.id}
+            role="tab"
+            aria-selected={start === s.id}
+            title={t(s.text)}
+            onclick={() => (s.id === 'modpack' ? app.navigate({ page: 'modpacks' }) : (start = s.id))}>
+            <Icon name={s.icon} size={15} />{t(s.title)}
+            {#if s.id === 'modpack'}<Icon name="chevronRight" size={12} />{/if}
+          </button>
+        {/each}
+      </div>
+
+      <div class="panel">
+        {#if start === 'import'}
+          <DropZone accept={(f) => /\.(mrpack|zip)$/i.test(f.name)} padding={28} ondrop={ondrop}>
+            <Icon name="import" size={24} />
+            {#if importRef}
+              <span class="file">{importRef.name}</span>
+            {:else}
+              <span><button class="link" onclick={chooseFile}>{t('create.chooseFile')}</button> {t('create.orDrop')}</span>
+            {/if}
+            <span class="hint">{t('create.importFormats')}</span>
+          </DropZone>
+          {#if importJob}<p class="hint">{t('instances.importing', { file: importRef?.name ?? '' })}</p>{/if}
+          <button class="other-launcher" onclick={() => (app.dialog = { kind: 'import' })}>
+            <span class="s-icon"><Icon name="search" size={16} /></span>
+            <span class="col grow" style="gap: 2px; text-align: left">
+              <strong>{t('create.fromLauncher')}</strong>
+              <span class="hint">{t('create.fromLauncherText')}</span>
+            </span>
+            <Icon name="chevronRight" size={14} />
+          </button>
+        {:else}
+          <label class="label">
+            <span>{t('create.name')}</span>
+            <span class="field"><input bind:value={name} maxlength="60" placeholder={t('create.namePlaceholder')} data-autofocus /></span>
+          </label>
+          {#if start === 'copy'}
+            <div class="label">
+              <span>{t('create.copyFrom')}</span>
+              <Select bind:value={copyFrom} label={t('create.copyFrom')} options={app.instances.map((i) => ({ value: i.id, label: `${i.name} · ${versionLabel(i.minecraftVersion, i.loader)}` }))} />
+              <span class="hint">{t('create.copyNote')}</span>
+            </div>
+          {:else}
+            <VersionPicker bind:loader bind:minecraft bind:loaderVersion />
+            <div class="memory">
               <div class="row" style="justify-content: space-between">
-                <span style="font-size: 13.5px">{t('instance.settings.ownMemory')}</span>
+                <span class="col" style="gap: 3px">
+                  <span class="m-title">{t('instance.settings.ownMemory')}</span>
+                  {#if !ownMemory}
+                    <span class="hint">{t('instance.settings.memoryDefault', { gb: ((app.settings?.defaults.memoryMb ?? 4096) / 1024).toLocaleString('de-DE') })}</span>
+                  {/if}
+                </span>
                 <Toggle bind:checked={ownMemory} label={t('instance.settings.ownMemory')} />
               </div>
-              {#if ownMemory}
-                <MemorySlider bind:value={memory} />
-              {:else}
-                <p class="hint">{t('instance.settings.memoryDefault', { gb: ((app.settings?.defaults.memoryMb ?? 4096) / 1024).toLocaleString('de-DE') })}</p>
-              {/if}
-            </FormSection>
+              {#if ownMemory}<MemorySlider bind:value={memory} />{/if}
+            </div>
+          {/if}
         {/if}
+
+        <div class="footer">
+          <button class="btn btn-ghost" onclick={() => app.back()}>{t('common.cancel')}</button>
+          <button class="btn btn-grad" disabled={!canCreate} onclick={create}>
+            {#if busy || copyJob}<span class="spinner"></span>{/if}{start === 'import' ? t('create.importButton') : t('create.create')}
+          </button>
+        </div>
       </div>
-    </div>
-    <div class="footer">
-      <button class="btn btn-ghost" onclick={() => app.back()}>{t('common.cancel')}</button>
-      <button class="btn btn-grad" disabled={!canCreate} onclick={create}>
-        {#if busy || copyJob}<span class="spinner"></span>{/if}{start === 'import' ? t('create.importButton') : t('create.create')}
-      </button>
     </div>
   {/if}
 </div>
 
-
 <style>
   .page {
     height: 100%;
-    padding: 24px 28px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .head {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  h1 {
-    font-family: var(--display);
-    font-size: 40px;
-    font-weight: 700;
-    line-height: 0.95;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
-    color: var(--text-strong);
-  }
-  .body {
-    flex-grow: 1;
-    min-height: 0;
     overflow-y: auto;
-    padding-bottom: 16px;
+    padding: 12px 28px 28px;
+  }
+  /* Eine schmale Spalte statt über die ganze Breite gezogener Kästen */
+  .column {
+    max-width: 760px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
-  .cols {
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-    gap: 16px;
-    align-items: stretch;
-  }
-  .cols.single {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .starts {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-  }
-  @media (max-width: 1100px) {
-    .starts {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  /* Vorschau des Instanz-Kopfs, direkt auf der Bühne */
   .preview {
-    min-height: 150px;
+    min-height: 120px;
     display: flex;
     align-items: flex-end;
     gap: 16px;
-    padding: 0 2px 6px;
+    padding: 0 2px 4px;
   }
   .picon {
     flex-shrink: 0;
@@ -299,9 +254,9 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 6px;
   }
-  .titles h2 {
+  .titles h1 {
     max-width: 100%;
     font-family: var(--display);
     font-size: 44px;
@@ -311,35 +266,67 @@
     color: var(--text-strong);
     text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
   }
-  .titles h2.placeholder {
+  .titles h1.placeholder {
     color: rgba(255, 255, 255, 0.45);
   }
-  .start {
-    padding: 14px;
-    border: 0;
-    border-radius: 12px;
-    background: var(--panel-2);
-    box-shadow: inset 0 0 0 1px var(--line-2);
+  .starts {
+    padding: 4px;
+    border-radius: var(--radius-l);
+    background: var(--glass);
     display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto;
-    column-gap: 12px;
-    row-gap: 3px;
-    text-align: left;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .start {
+    height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--radius-m);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    white-space: nowrap;
     cursor: pointer;
-    color: var(--text);
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
   .start:hover {
-    background: var(--panel-3);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
   }
   .start.on {
-    background: var(--accent-soft);
-    box-shadow: inset 0 0 0 1.5px var(--accent-ring);
+    background: #fff;
+    color: #0a0b0d;
+  }
+  .panel {
+    padding: 20px;
+    border-radius: var(--radius-xl);
+    background: var(--glass);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .memory {
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .m-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
   }
   .s-icon {
-    grid-row: span 2;
     width: 36px;
     height: 36px;
+    flex-shrink: 0;
     border-radius: 9px;
     background: var(--accent-soft-strong);
     color: var(--accent-text);
@@ -347,16 +334,7 @@
     align-items: center;
     justify-content: center;
   }
-  .s-title {
-    font-size: 13.5px;
-    font-weight: 600;
-  }
-  .s-text {
-    font-size: 12px;
-    color: var(--muted-2);
-  }
   .other-launcher {
-    margin-top: 12px;
     width: 100%;
     padding: 12px 14px;
     border: 0;
@@ -386,15 +364,14 @@
     cursor: pointer;
   }
   .footer {
-    flex-shrink: 0;
-    padding: 14px 0 20px;
+    padding-top: 16px;
     border-top: 1px solid var(--line);
     display: flex;
     justify-content: flex-end;
     gap: 8px;
   }
   .done {
-    flex-grow: 1;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
