@@ -9,3 +9,7 @@ src/AxoClient.App/wwwroot/
 Releases/
 TestResults/
 .claude/
+
+# Build-Ausgaben (werden lokal bzw. in der Release-Action erzeugt)
+publish/
+out/

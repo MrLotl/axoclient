@@ -52,6 +52,19 @@ jobs:
           java-version: 25
           cache: gradle
 
+      # Erst prüfen, dann bauen: schlägt ein Test fehl, wird nichts veröffentlicht
+      - name: Oberfläche prüfen
+        shell: pwsh
+        working-directory: ui
+        run: |
+          npm ci
+          npm run check
+          npm test
+
+      - name: Launcher-Tests
+        shell: pwsh
+        run: dotnet test src/AxoClient.Tests -c Release -p:SkipMod=true
+
       - name: Mod bauen
         shell: pwsh
         run: ./mod/build-all.ps1
