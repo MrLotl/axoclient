@@ -566,7 +566,6 @@
     "noFavorites": "Noch keine Favoriten. Markiere Instanzen mit dem Stern, dann stehen sie immer oben.",
     "noLoader": "Keine Instanz mit diesem Loader.",
     "sortLabel": "Sortieren",
-    "dragHint": "Tipp: Instanzen per Ziehen in die gewünschte Reihenfolge bringen – sie gilt auch im Regal auf der Startseite.",
     "sort": {
       "custom": "Eigene",
       "recent": "Zuletzt",

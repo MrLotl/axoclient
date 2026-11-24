@@ -209,7 +209,6 @@
         ]}
         onchange={(v) => app.updateUiState({ instances: v })} />
     </div>
-    {#if canDrag}<p class="drag-hint">{t('instances.dragHint')}</p>{/if}
 
     {#if list.length === 0}
       <p class="none">{query.trim() ? t('instances.noMatch', { query: query.trim() }) : filter === 'favorites' ? t('instances.noFavorites') : t('instances.noLoader')}</p>
@@ -670,11 +669,6 @@
     object-fit: cover;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  }
-  .drag-hint {
-    margin: -10px 0 -6px;
-    font-size: 12px;
-    color: var(--faint);
   }
   .nm {
     min-width: 0;

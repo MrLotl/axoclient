@@ -135,7 +135,6 @@
   {#if details && s}
     <!-- Kopf direkt auf der Bühne: der Hintergrund der Instanz ist die Welt dahinter (Panorama, Verlauf oder eigenes Bild) -->
     <header class="ihead">
-      <button class="back" onclick={() => app.back()}><Icon name="chevronLeft" />{t('common.back')}</button>
       <div class="irow">
         <span class="icon">
           <ImageBox
@@ -267,12 +266,7 @@
     position: relative;
     z-index: 2;
     flex-shrink: 0;
-    min-height: 210px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 16px;
-    padding-top: 4px;
+    padding-top: 12px;
   }
   .irow {
     display: flex;
@@ -292,24 +286,6 @@
   }
   h1 {
     text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
-  }
-  .back {
-    align-self: flex-start;
-    height: 30px;
-    padding: 0 12px 0 8px;
-    border: 0;
-    border-radius: var(--radius-m);
-    background: rgba(10, 11, 13, 0.6);
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-  }
-  .back:hover {
-    background: rgba(0, 0, 0, 0.55);
   }
   .titles {
     flex-grow: 1;
