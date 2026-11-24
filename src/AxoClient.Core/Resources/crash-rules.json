@@ -20,6 +20,38 @@
       "actions": ["javaAuto"]
     },
     {
+      "id": "wrongJavaFabric",
+      "match": ["requires [^\\n]*\\(java\\)", "requires [^\\n]* of java\\b"],
+      "cause": "crash.cause.wrongJava",
+      "actions": ["javaAuto"]
+    },
+    {
+      "id": "diskFull",
+      "match": ["No space left on device", "There is not enough space on the disk", "nicht genügend Speicherplatz"],
+      "cause": "crash.cause.diskFull",
+      "actions": ["cleanCache"]
+    },
+    {
+      "id": "wrongLoaderMod",
+      "match": ["(?<file>[^\\s'\\\\/]+\\.jar)'? is a (?:Fabric|Quilt|Forge|NeoForge) mod and cannot be loaded"],
+      "cause": "crash.cause.wrongLoader",
+      "actions": ["disableMod", "checkMods"]
+    },
+    {
+      "id": "forgeMissingDependency",
+      "match": ["Missing or unsupported mandatory dependencies", "Currently, [^\\n]+ is not installed"],
+      "cause": "crash.cause.dependency",
+      "actions": ["checkMods", "disableMod"],
+      "findMod": "forgeDependency"
+    },
+    {
+      "id": "worldCorrupt",
+      "match": ["Exception reading [^\\n]*level\\.dat", "Failed to (?:read|load) level data", "Couldn't load level data"],
+      "in": ["crash", "log"],
+      "cause": "crash.cause.worldCorrupt",
+      "actions": ["openWorlds"]
+    },
+    {
       "id": "modCorrupt",
       "match": ["java\\.util\\.zip\\.ZipException", "zip END header not found", "Failed to read mod file", "NoClassDefFoundError"],
       "cause": "crash.cause.modCorrupt",

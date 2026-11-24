@@ -223,6 +223,13 @@ public static partial class Handlers
         r.On<IdData>("worlds.list", async (d, ct) => await host.Worlds.ListAsync(d.Id, ct));
         r.On<WorldData>("worlds.backup", (d, _) => Task.FromResult<object?>(StartJob(host.Jobs.RunAsync("world.backup",
             new TextRef("worlds.backingUp"), job => host.Worlds.BackupAsync(d.Id, d.Folder, job), d.Id))));
+        // Vor einem Wechsel von Version oder Loader: wartet, bis alle Welten gesichert sind
+        r.On<IdData>("worlds.backupAll", async (d, _) =>
+        {
+            if (host.Games.IsRunning(d.Id))
+                throw new AxoException("instances.running");
+            return await host.Jobs.RunAsync("world.backupAll", new TextRef("worlds.backingUpAll"), job => host.Worlds.BackupAllAsync(d.Id, job), d.Id);
+        });
         r.On<IdData>("worlds.backups", (d, _) => Task.FromResult<object?>(host.Worlds.ListBackups(d.Id)));
         r.On<BackupFileData>("worlds.restore", async (d, _) =>
             await host.Jobs.RunAsync("world.restore", new TextRef("worlds.restoring"), job => host.Worlds.RestoreBackupAsync(d.Id, d.File, job), d.Id));

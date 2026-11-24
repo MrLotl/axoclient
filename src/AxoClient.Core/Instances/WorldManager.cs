@@ -109,6 +109,33 @@ public sealed class WorldManager(AppPaths paths)
         return new BackupInfo(file, folder, DateTimeOffset.Now, new FileInfo(target).Length);
     }
 
+    /// <summary>
+    /// Alle Welten sichern, z. B. vor einem Wechsel von Version oder Loader: Minecraft wandelt Welten beim ersten Öffnen
+    /// um, und fehlende Mods entfernen ihre Blöcke. Bricht ab, bevor das Laufwerk vollläuft.
+    /// </summary>
+    public async Task<int> BackupAllAsync(string instanceId, JobContext job)
+    {
+        var saves = SavesDir(instanceId);
+        var worlds = Directory.Exists(saves)
+            ? Directory.EnumerateDirectories(saves).Where(d => File.Exists(Path.Combine(d, "level.dat"))).ToList()
+            : [];
+        if (worlds.Count == 0)
+            return 0;
+        var backups = paths.InstanceBackups(instanceId);
+        Directory.CreateDirectory(backups);
+        // ZIP ist meist kleiner als die Welt; die volle Größe plus Puffer ist auf der sicheren Seite
+        var needed = worlds.Sum(DirectorySize) + (512L << 20);
+        var root = Path.GetPathRoot(Path.GetFullPath(backups));
+        if (root != null && new DriveInfo(root).AvailableFreeSpace < needed)
+            throw new AxoException(TextRef.Of("worlds.backupNoSpace", ("gb", Math.Ceiling(needed / 1e8) / 10)));
+        for (var i = 0; i < worlds.Count; i++)
+        {
+            job.Status("worlds.backingUpOf", ("index", i + 1), ("count", worlds.Count));
+            await BackupAsync(instanceId, Path.GetFileName(worlds[i]), job.Sub((double)i / worlds.Count, (double)(i + 1) / worlds.Count));
+        }
+        return worlds.Count;
+    }
+
     public IReadOnlyList<BackupInfo> ListBackups(string instanceId)
     {
         var dir = paths.InstanceBackups(Text.RequireId(instanceId));

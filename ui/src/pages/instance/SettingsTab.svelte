@@ -35,6 +35,8 @@
   let saving = $state(false);
   // Beim Wechsel von Version oder Loader die Mods gleich mit umstellen
   let adaptMods = $state(true);
+  // Und die Welten vorher sichern: Minecraft wandelt sie beim ersten Öffnen in der neuen Version um
+  let backupWorlds = $state(true);
   const setupChanged = $derived(minecraft !== original.minecraft.version || loader !== original.loader.type);
   const canAdapt = $derived(loader !== 'vanilla' && original.loader.type !== 'vanilla' && (details.instance.modLock?.level ?? 'off') !== 'full');
 
@@ -69,6 +71,11 @@
     saving = true;
     const adaptAfter = setupChanged && canAdapt && adaptMods;
     try {
+      // Erst sichern, dann wechseln: scheitert das Backup, bleibt alles beim Alten
+      if (setupChanged && backupWorlds && details.worlds > 0) {
+        const count = await call<number>('worlds.backupAll', { id: original.id });
+        if (count > 0) app.toast(t('instance.settings.backedUp', { count }), 'success');
+      }
       await call('instances.update', {
         id: original.id,
         name,
@@ -179,6 +186,10 @@
         </div>
         {#if setupChanged}
           <div class="adapt" transition:expand>
+            {#if details.worlds > 0}
+              <Checkbox bind:checked={backupWorlds} label={t('instance.settings.backupWorlds', { count: details.worlds })} />
+              {#if backupWorlds}<p class="note calm"><Icon name="info" size={14} />{t('instance.settings.backupWorldsHint')}</p>{/if}
+            {/if}
             {#if canAdapt}
               <Checkbox bind:checked={adaptMods} label={t('instance.settings.adaptMods')} />
             {/if}

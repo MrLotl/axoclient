@@ -81,7 +81,8 @@ public sealed class AppHost : IAsyncDisposable
             new JavaArgsCheck(Instances)
         ], Prompt, Instances, Installer, Settings);
         CrashAnalyzer = new CrashAnalyzer();
-        CrashActions = new CrashActions(Instances, Content, Installer, Updates, Settings);
+        Storage = new StorageService(paths, Instances);
+        CrashActions = new CrashActions(Instances, Content, Installer, Updates, Settings, Storage);
 
         // Erweiterungen rund um den Spielstart
         PlayActivity = new GameActivity(Settings);
@@ -124,7 +125,6 @@ public sealed class AppHost : IAsyncDisposable
             Activity, CrashAnalyzer, new PortForwarding(), Events);
 
         LauncherUpdates = new UpdateService(Settings, Events, Api, Downloads, paths, () => Processes.AnyRunning());
-        Storage = new StorageService(paths, Instances);
         Diagnostics = new DiagnosticsService(
         [
             new SystemDiagnostic(paths), new PathDiagnostic(paths), new JavaDiagnostic(Java), new NetworkDiagnostic(Api),

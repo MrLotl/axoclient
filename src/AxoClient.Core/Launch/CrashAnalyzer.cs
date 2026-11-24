@@ -15,7 +15,7 @@ public sealed class CrashRule
     public string Cause { get; set; } = "";
     public List<string> Actions { get; set; } = [];
 
-    /// <summary><c>stacktrace</c>, <c>mixin</c> oder <c>fabricResolution</c>.</summary>
+    /// <summary><c>stacktrace</c>, <c>mixin</c>, <c>fabricResolution</c> oder <c>forgeDependency</c>.</summary>
     public string? FindMod { get; set; }
     public bool Server { get; set; }
 }
@@ -106,12 +106,16 @@ public sealed partial class CrashAnalyzer
                     "mixin" => FindByMixin(allText, mods),
                     "fabricResolution" => FindByResolution(allText, mods),
                     "stacktrace" => FindByStacktrace(allText, mods),
+                    "forgeDependency" => FindByForgeDependency(allText, mods),
                     _ => []
                 };
+                var file = match.Groups["file"] is { Success: true } g ? g.Value : null;
+                // Nennt die Regel eine Mod-Datei, ist genau diese Mod gemeint
+                if (suspects.Count == 0 && file != null && mods.FirstOrDefault(m => m.File.Equals(file, StringComparison.OrdinalIgnoreCase)) is { } byFile)
+                    suspects = [new CrashSuspect(byFile.File, byFile.Name)];
                 // Forge/NeoForge nennen verdächtige Mods selbst
                 if (suspects.Count == 0)
                     suspects = FindForgeSuspects(sources["crash"], mods);
-                var file = match.Groups["file"] is { Success: true } g ? g.Value : null;
                 // Zwei Mods beißen sich: beide nennen, statt nur "verträgt sich nicht"
                 var cause = rule.FindMod == "mixin" && suspects.Count >= 2
                     ? TextRef.Of("crash.cause.mixinConflict", ("mod", suspects[0].Name), ("other", suspects[1].Name))
@@ -207,6 +211,18 @@ public sealed partial class CrashAnalyzer
     {
         var ids = Regex.Matches(text, @"Mod '[^']+' \(([a-z0-9_\-]+)\)").Select(m => m.Groups[1].Value).ToHashSet();
         return mods.Where(m => m.Meta?.ModId != null && ids.Contains(m.Meta.ModId)).Select(m => new CrashSuspect(m.File, m.Name)).ToList();
+    }
+
+    /// <summary>
+    /// Forge/NeoForge, fehlende Abhängigkeit: die Mod, die etwas verlangt ("Requested by: 'x'" bzw. "Mod X requires …"),
+    /// nicht die fehlende – die ist ja gerade nicht installiert.
+    /// </summary>
+    internal static List<CrashSuspect> FindByForgeDependency(string text, List<ContentEntry> mods)
+    {
+        var ids = Regex.Matches(text, @"Requested by: '([a-z0-9_\-]+)'").Select(m => m.Groups[1].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var names = Regex.Matches(text, @"Mod (.+?) requires ").Select(m => m.Groups[1].Value.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return mods.Where(m => (m.Meta?.ModId != null && ids.Contains(m.Meta.ModId)) || names.Contains(m.Name))
+            .Select(m => new CrashSuspect(m.File, m.Name)).Take(3).ToList();
     }
 
     /// <summary>Forge/NeoForge: "Suspected Mods: X (x), Y (y)".</summary>

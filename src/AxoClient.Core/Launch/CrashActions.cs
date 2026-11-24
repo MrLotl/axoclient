@@ -1,5 +1,6 @@
 using AxoClient.Core.Common;
 using AxoClient.Core.Content;
+using AxoClient.Core.Diagnostics;
 using AxoClient.Core.Game;
 using AxoClient.Core.Instances;
 
@@ -13,7 +14,8 @@ public sealed class CrashActions(
     ContentManager content,
     GameInstaller installer,
     UpdateScanner updates,
-    SettingsService settings)
+    SettingsService settings,
+    StorageService storage)
 {
     public async Task RunAsync(string instanceId, string action, string? file, JobContext job)
     {
@@ -83,6 +85,16 @@ public sealed class CrashActions(
                 var path = PathGuard.Combine(configDir, RequireFile(file));
                 if (File.Exists(path))
                     File.Move(path, path + $".axoclient-backup-{DateTime.Now:yyyyMMdd-HHmmss}", overwrite: true);
+                break;
+            }
+            case "cleanCache":
+            {
+                // Nur, was der Launcher jederzeit neu holen kann: Caches und alte Logs. Welten und Backups bleiben.
+                storage.CleanCache();
+                storage.CleanLogs();
+                var root = Path.GetPathRoot(Path.GetFullPath(instances.GameDir(instanceId)));
+                if (root != null && new DriveInfo(root).AvailableFreeSpace < 1L << 30)
+                    throw new AxoException("crash.diskStillFull");
                 break;
             }
             default:

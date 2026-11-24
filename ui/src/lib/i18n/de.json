@@ -341,6 +341,7 @@
     "fixed": "Erledigt",
     "fixedText": "Die Maßnahme wurde ausgeführt. Versuche es erneut.",
     "noUpdate": "Für diese Mod gibt es kein passendes Update.",
+    "diskStillFull": "Cache und Logs sind gelöscht, aber es ist immer noch weniger als 1 GB frei. Lösche Dateien oder alte Welten, um Platz zu schaffen.",
     "cause": {
       "outOfMemory": "Minecraft ist der Arbeitsspeicher ausgegangen.",
       "heapTooLarge": "Es ist mehr Arbeitsspeicher eingestellt, als Java bekommen kann.",
@@ -355,6 +356,9 @@
       "shader": "Das Shaderpack ist nicht kompatibel.",
       "config": "Die Konfiguration „{file}“ ist beschädigt.",
       "natives": "Spieldateien sind unvollständig.",
+      "wrongLoader": "„{file}“ ist für einen anderen Mod-Loader gebaut und lässt sich hier nicht laden.",
+      "diskFull": "Auf dem Laufwerk ist kein Speicherplatz mehr frei.",
+      "worldCorrupt": "Eine Welt ist beschädigt und lässt sich nicht laden.",
       "serverEula": "Die EULA wurde nicht akzeptiert.",
       "serverPort": "Der Port ist bereits belegt.",
       "serverPlugin": "Ein Plugin macht Probleme: {file}",
@@ -375,7 +379,9 @@
       "resetConfig": "Konfiguration zurücksetzen",
       "acceptEula": "EULA akzeptieren",
       "changePort": "Anderen Port wählen",
-      "disablePlugin": "Plugin deaktivieren"
+      "disablePlugin": "Plugin deaktivieren",
+      "cleanCache": "Cache und alte Logs löschen",
+      "openWorlds": "Backup wiederherstellen"
     }
   },
   "notifications": {
@@ -660,6 +666,9 @@
   "worlds": {
     "notFound": "Die Welt gibt es nicht mehr.",
     "backingUp": "Sichere Welt …",
+    "backingUpAll": "Sichere Welten vor dem Versionswechsel …",
+    "backingUpOf": "Sichere Welt {index} von {count} …",
+    "backupNoSpace": "Für die Backups ist nicht genug Platz frei (etwa {gb} GB nötig). Schaffe Platz oder wechsle ohne Backup.",
     "restoring": "Stelle Welt wieder her …",
     "search": "Welten durchsuchen …",
     "count": "{count} Welten",
@@ -1094,6 +1103,9 @@
       "generalHint": "Name, Mod-Loader und Spielversion",
       "name": "Name",
       "versionChangeNote": "Beim Wechsel von Version oder Loader passen Mods eventuell nicht mehr. Die Prüfung vor dem Start zeigt, was zu tun ist.",
+      "backupWorlds": "Welten vorher sichern ({count})",
+      "backupWorldsHint": "Minecraft wandelt Welten beim ersten Öffnen in der neuen Version um. Mit Backup kannst du jederzeit zurück (Tab „Welten“).",
+      "backedUp": "{count} Welten gesichert",
       "adaptMods": "Mods automatisch anpassen",
       "adaptModsHint": "Mods von Modrinth und CurseForge werden auf die passende Version umgestellt. Mods ohne passende Version werden deaktiviert, nicht gelöscht.",
       "adaptDone": "Mods angepasst: {updated} umgestellt, {disabled} deaktiviert.",

@@ -39,6 +39,12 @@
       call('shell.openUrl', { url: 'https://www.google.com/search?q=Grafiktreiber+aktualisieren' });
       return;
     }
+    // Welten-Tab mit den Backups zum Wiederherstellen
+    if (action === 'openWorlds') {
+      onclose();
+      app.navigate({ page: 'instance', id: crash.instanceId, tab: 'worlds' });
+      return;
+    }
     phase = 'fixing';
     try {
       await call('crash.action', { id: crash.instanceId, action, file: file ?? a.configFile ?? a.suspects[0]?.file ?? null });
