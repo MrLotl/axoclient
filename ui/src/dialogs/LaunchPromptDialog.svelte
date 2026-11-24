@@ -99,8 +99,8 @@
   .issue {
     padding: 12px 14px;
     border-radius: 12px;
-    background: #242424;
-    box-shadow: inset 0 0 0 1px #343434;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--panel-3);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -145,7 +145,7 @@
     height: 30px;
     padding: 0 10px;
     border-radius: 8px;
-    background: #2e2e2e;
+    background: var(--panel-2);
     color: var(--text-2);
     font-size: 12.5px;
     display: flex;
@@ -162,7 +162,7 @@
     width: 12px;
     height: 12px;
     border-radius: 6px;
-    box-shadow: inset 0 0 0 1.5px #6a6a6a;
+    box-shadow: inset 0 0 0 1.5px var(--faint);
   }
   .opt.on .radio {
     background: var(--accent);

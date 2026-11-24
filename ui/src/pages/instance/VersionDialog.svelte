@@ -94,7 +94,7 @@
     width: 14px;
     height: 14px;
     border-radius: 7px;
-    box-shadow: inset 0 0 0 1.5px #6a6a6a;
+    box-shadow: inset 0 0 0 1.5px var(--faint);
     flex-shrink: 0;
   }
   .ver.on .radio {

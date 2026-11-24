@@ -85,7 +85,7 @@
 <div class="tab">
   <div class="toolbar">
     <label class="field search">
-      <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
+      <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
       <input type="search" bind:value={query} placeholder={t('screenshots.search')} aria-label={t('screenshots.search')} />
     </label>
     <span class="summary">{t('screenshots.count', { count: shots.length })}</span>
@@ -176,7 +176,7 @@
     border: 0;
     border-radius: 10px;
     overflow: hidden;
-    background: #1a1a1a;
+    background: var(--field);
     cursor: zoom-in;
   }
   .shot img {
@@ -209,7 +209,7 @@
     gap: 10px;
     color: var(--muted-2);
     border-radius: 12px;
-    box-shadow: inset 0 0 0 1.5px #2f2f2f;
+    box-shadow: inset 0 0 0 1.5px var(--panel-3);
   }
   .lightbox {
     position: fixed;

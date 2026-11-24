@@ -59,8 +59,8 @@
     overflow: auto;
     padding: 10px 0;
     border-radius: 12px;
-    background: #191919;
-    box-shadow: inset 0 0 0 1px #2a2a2a;
+    background: var(--field);
+    box-shadow: inset 0 0 0 1px var(--panel-2);
     font-family: var(--mono);
     font-size: 12px;
     line-height: 1.6;
@@ -77,7 +77,7 @@
     background: rgba(255, 255, 255, 0.03);
   }
   .time {
-    color: #5f5f5f;
+    color: var(--faint);
     flex-shrink: 0;
   }
   .lvl {
@@ -93,12 +93,12 @@
     color: var(--red);
   }
   .debug .lvl {
-    color: #6b6b6b;
+    color: var(--faint);
   }
   .thread {
     width: 110px;
     flex-shrink: 0;
-    color: #6b6b6b;
+    color: var(--faint);
   }
   .text {
     color: #cfcfcf;

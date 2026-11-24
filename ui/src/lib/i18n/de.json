@@ -3,11 +3,11 @@
     "name": "AxoClient",
     "loading": "Wird geladen …",
     "nav": {
-      "home": "Home",
+      "home": "Spielen",
       "instances": "Instanzen",
-      "localServers": "Lokale Server",
+      "localServers": "Server",
       "skins": "Skins",
-      "console": "Live-Konsole",
+      "console": "Konsole",
       "settings": "Einstellungen",
       "main": "Hauptnavigation"
     },
@@ -20,7 +20,49 @@
     "bell": "Benachrichtigungen",
     "bellUnread": "Benachrichtigungen ({count} neu)",
     "updateAvailable": "Update verfügbar",
-    "accountMenu": "Account-Menü öffnen"
+    "accountMenu": "Account-Menü öffnen",
+    "onlineCount": "{count} online"
+  },
+  "palette": {
+    "open": "Schnellsuche öffnen (Strg + K)",
+    "short": "Suchen",
+    "key": "Strg K",
+    "title": "Schnellsuche",
+    "placeholder": "Wohin willst du? Instanz, Freund, Server, Aktion …",
+    "empty": "Nichts gefunden für „{query}“",
+    "hintMove": "↑↓ auswählen",
+    "hintRun": "Enter ausführen",
+    "hintClose": "Esc schließen",
+    "groups": {
+      "instances": "Instanzen",
+      "friends": "Freunde",
+      "servers": "Lokale Server",
+      "pages": "Seiten",
+      "actions": "Aktionen"
+    },
+    "acts": {
+      "play": "Spielen",
+      "join": "Beitreten",
+      "open": "Öffnen",
+      "start": "Starten",
+      "run": "Ausführen"
+    },
+    "items": {
+      "newInstance": "Neue Instanz erstellen",
+      "newInstanceSub": "Version, Loader und Mods wählen",
+      "modpacks": "Modpacks durchsuchen",
+      "modpacksSub": "Fertige Sammlungen installieren",
+      "import": "Instanzen importieren",
+      "importSub": "Aus anderen Launchern übernehmen",
+      "addFriend": "Freund hinzufügen",
+      "addFriendSub": "Per Minecraft-Name",
+      "notifications": "Benachrichtigungen ansehen",
+      "skins": "Skins & Capes",
+      "settings": "Einstellungen",
+      "diagnostics": "Diagnose starten",
+      "storage": "Speicher aufräumen",
+      "console": "Live-Konsole"
+    }
   },
   "accounts": {
     "title": "Accounts",
@@ -897,7 +939,18 @@
     "createFirst": "Erste Instanz erstellen",
     "instance": "Instanz",
     "skinModel": "3D-Modell des aktiven Skins",
-    "stopGame": "Spiel beenden"
+    "stopGame": "Spiel beenden",
+    "continue": "Weiterspielen · {when}",
+    "neverPlayed": "Noch nicht gespielt",
+    "played": "{time} gespielt",
+    "friendPlaying": "{name} spielt gerade auf {server}",
+    "joinFriend": "Mitspielen",
+    "details": "Details",
+    "addMods": "Mods hinzufügen",
+    "yourInstances": "Deine Instanzen",
+    "keysHint": "Tasten 1–9",
+    "emptyEyebrow": "Los geht’s",
+    "emptyTitle": "Erste Instanz erstellen"
   },
   "friends": {
     "title": "Freunde",

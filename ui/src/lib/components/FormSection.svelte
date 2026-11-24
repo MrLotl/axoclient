@@ -26,8 +26,12 @@
     gap: 3px;
   }
   h2 {
-    font-size: 15px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--text-strong);
   }
   .head span {

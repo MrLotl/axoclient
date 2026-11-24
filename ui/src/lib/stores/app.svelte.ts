@@ -76,6 +76,8 @@ class AppState {
   maximized = $state(false);
   /** Offener globaler Dialog (Startseite und Titelleiste). */
   dialog = $state<null | { kind: string; data?: any }>(null);
+  /** Schnellsuche (Strg + K) */
+  paletteOpen = $state(false);
 
   get activeAccount(): AccountView | undefined {
     return this.accounts.find((a) => a.active);

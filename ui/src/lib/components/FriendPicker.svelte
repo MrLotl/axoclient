@@ -22,7 +22,7 @@
 
 <div class="picker">
   <span class="field search">
-    <span style="color: #7a7a7a; display: flex"><Icon name="search" /></span>
+    <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
     <input bind:value={query} placeholder={t('share.searchFriends')} aria-label={t('share.searchFriends')} />
   </span>
   <div class="list" role="listbox" aria-multiselectable="true" aria-label={t('friends.title')}>
@@ -103,7 +103,7 @@
     width: 18px;
     height: 18px;
     border-radius: 5px;
-    box-shadow: inset 0 0 0 1.5px #555;
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.22);
     display: flex;
     align-items: center;
     justify-content: center;

@@ -59,7 +59,7 @@
     padding: 10px 10px 12px 14px;
     border-radius: 12px;
     background: var(--panel-2);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 0 0 1px #3c3c3c;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--line-2);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -86,7 +86,7 @@
   .bar {
     height: 6px;
     border-radius: 3px;
-    background: #333333;
+    background: var(--panel-3);
     overflow: hidden;
   }
   .bar span {

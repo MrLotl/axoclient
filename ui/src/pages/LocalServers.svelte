@@ -250,8 +250,13 @@
     gap: 12px;
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .running {
     display: flex;
@@ -265,7 +270,7 @@
     width: 7px;
     height: 7px;
     border-radius: 4px;
-    background: #555;
+    background: rgba(255,255,255,0.22);
   }
   .running.on .dot,
   .status.on .dot {
@@ -304,7 +309,7 @@
     background:
       radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent-from) 18%, transparent), transparent 60%),
       radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--accent-to) 14%, transparent), transparent 60%),
-      #2a2a2a;
+      var(--panel-2);
   }
   .cover-img {
     position: absolute;
@@ -320,7 +325,7 @@
     height: 64px;
     border-radius: 14px;
     overflow: hidden;
-    background: #333;
+    background: var(--panel-3);
     color: var(--muted-2);
     display: flex;
     align-items: center;
@@ -347,8 +352,13 @@
     min-height: 44px;
   }
   h2 {
-    font-size: 16px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .ver {
     font-size: 13px;
@@ -363,7 +373,7 @@
     height: 24px;
     padding: 0 10px;
     border-radius: 12px;
-    background: #333;
+    background: var(--panel-3);
     color: var(--muted);
     font-size: 11.5px;
     font-weight: 600;
@@ -397,7 +407,7 @@
     padding: 11px 13px;
     border: 0;
     border-radius: 10px;
-    background: #2a2a2a;
+    background: var(--panel-2);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
     color: var(--text);
     display: flex;
@@ -445,7 +455,7 @@
   .ram {
     height: 5px;
     border-radius: 3px;
-    background: #3a3a3a;
+    background: var(--line-2);
     overflow: hidden;
   }
   .ram span {
@@ -465,7 +475,7 @@
   .bar {
     height: 4px;
     border-radius: 2px;
-    background: #3a3a3a;
+    background: var(--line-2);
     overflow: hidden;
   }
   .bar span {
@@ -518,7 +528,7 @@
     border: 0;
     border-radius: 14px;
     background: transparent;
-    box-shadow: inset 0 0 0 1.5px #343434;
+    box-shadow: inset 0 0 0 1.5px var(--panel-3);
     color: var(--text);
     display: flex;
     flex-direction: column;

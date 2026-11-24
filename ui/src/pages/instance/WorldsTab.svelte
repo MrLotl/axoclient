@@ -118,7 +118,7 @@
 <div class="tab">
   <div class="toolbar">
     <label class="field search">
-      <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
+      <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
       <input type="search" bind:value={query} placeholder={t('worlds.search')} aria-label={t('worlds.search')} />
     </label>
     <Segmented bind:value={view} label={t('common.view')} options={[{ value: 'grid', icon: 'grid', aria: t('common.gridView') }, { value: 'list', icon: 'list', aria: t('common.listView') }]} />
@@ -253,7 +253,7 @@
   }
   .card:hover,
   .row-card:hover {
-    background: #2f2f2f;
+    background: var(--panel-3);
   }
   /* Vorschaubild der Welt (icon.png), ohne Bild das Karten-Symbol */
   .shot {
@@ -261,7 +261,7 @@
     flex-shrink: 0;
     border-radius: 6px;
     overflow: hidden;
-    background: #1c1c1c;
+    background: var(--field);
     color: var(--muted-2);
     display: flex;
     align-items: center;
@@ -334,7 +334,7 @@
     width: 30px;
     height: 30px;
     border-radius: 7px;
-    background: #353535;
+    background: var(--panel-4);
     color: var(--muted);
   }
   .icon-btn.small:hover {
@@ -361,6 +361,6 @@
     gap: 10px;
     color: var(--muted-2);
     border-radius: 12px;
-    box-shadow: inset 0 0 0 1.5px #2f2f2f;
+    box-shadow: inset 0 0 0 1.5px var(--panel-3);
   }
 </style>

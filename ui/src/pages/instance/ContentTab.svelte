@@ -161,7 +161,7 @@
 <div class="tab">
   <div class="toolbar">
     <label class="field search">
-      <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
+      <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
       <input type="search" bind:value={query} placeholder={t(`content.${key}.search`)} aria-label={t(`content.${key}.search`)} />
     </label>
     <Segmented bind:value={view} label={t('common.view')} options={[{ value: 'grid', icon: 'grid', aria: t('common.gridView') }, { value: 'list', icon: 'list', aria: t('common.listView') }]} onchange={(v) => app.updateUiState({ content: v })} />
@@ -175,7 +175,7 @@
       oninput={(e) => setSize(parseFloat(e.currentTarget.value))}
       aria-label={t('content.size')}
       title={t('content.size')}
-      style="background: linear-gradient(90deg, var(--accent-from), var(--accent-to)) 0 / {size * 100}% 100% no-repeat, #3a3a3a" />
+      style="background: linear-gradient(90deg, var(--accent-from), var(--accent-to)) 0 / {size * 100}% 100% no-repeat, var(--line-2)" />
     <span class="summary truncate">
       {t(`content.${key}.count`, { count: items.filter((i) => i.source !== 'axoclient').length })}{disabledCount ? ` · ${t('content.disabledCount', { count: disabledCount })}` : ''}
     </span>
@@ -361,7 +361,7 @@
     transition: background-color 0.12s ease, opacity 0.12s ease;
   }
   .card:hover {
-    background: #2f2f2f;
+    background: var(--panel-3);
   }
   .card:hover .icon {
     transform: scale(1.05);
@@ -388,7 +388,7 @@
     aspect-ratio: 16 / 9;
     border-radius: 8px;
     overflow: hidden;
-    background: #1c1c1c;
+    background: var(--field);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -509,7 +509,7 @@
     transition: background-color 0.12s ease, opacity 0.12s ease;
   }
   .row:hover {
-    background: #2f2f2f;
+    background: var(--panel-3);
   }
   .row-icon {
     width: calc(32px + var(--k) * 64px);
@@ -564,7 +564,7 @@
     border-radius: 11px;
     border: none;
     padding: 0;
-    background: #3a3a3a;
+    background: var(--line-2);
     color: var(--text);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
     display: flex;
@@ -620,7 +620,7 @@
     gap: 10px;
     text-align: center;
     border-radius: 12px;
-    box-shadow: inset 0 0 0 1.5px #2f2f2f;
+    box-shadow: inset 0 0 0 1.5px var(--panel-3);
   }
   .empty-icon {
     width: 48px;

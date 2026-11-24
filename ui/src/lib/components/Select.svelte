@@ -148,8 +148,8 @@
     margin: -6px -6px 4px;
     padding: 0 12px;
     border-radius: 12px 12px 0 0;
-    background: #2a2a2a;
-    box-shadow: inset 0 -1px 0 #363636;
+    background: var(--panel-2);
+    box-shadow: inset 0 -1px 0 var(--panel-4);
     gap: 8px;
   }
   .filter input {

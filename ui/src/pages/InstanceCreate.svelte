@@ -231,8 +231,13 @@
     gap: 12px;
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .body {
     flex-grow: 1;

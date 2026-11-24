@@ -81,16 +81,16 @@
     gap: 10px;
     padding: 8px 10px;
     border-radius: 9px;
-    background: #242424;
-    box-shadow: inset 0 0 0 1px #363636;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--panel-4);
   }
   .icon {
     width: 28px;
     height: 28px;
     flex-shrink: 0;
     border-radius: 7px;
-    background: #333;
-    color: #bdbdbd;
+    background: var(--panel-3);
+    color: var(--text-2);
     display: flex;
     align-items: center;
     justify-content: center;

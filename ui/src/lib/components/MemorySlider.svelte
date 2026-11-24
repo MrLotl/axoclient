@@ -24,7 +24,7 @@
     step="512"
     bind:value
     aria-label={t('memory.label')}
-    style="background: linear-gradient(90deg, var(--accent-from), var(--accent-to)) 0 / {pct}% 100% no-repeat, #3a3a3a" />
+    style="background: linear-gradient(90deg, var(--accent-from), var(--accent-to)) 0 / {pct}% 100% no-repeat, var(--line-2)" />
   <div class="scale"><span>1 GB</span><span>{max / 1024} GB</span></div>
 </div>
 

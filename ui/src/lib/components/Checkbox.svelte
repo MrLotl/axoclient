@@ -32,7 +32,7 @@
     width: 18px;
     height: 18px;
     border-radius: 5px;
-    box-shadow: inset 0 0 0 1.5px #555;
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.22);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -41,7 +41,7 @@
     transition: background 0.12s ease;
   }
   .chk:hover .box:not(.on) {
-    box-shadow: inset 0 0 0 1.5px #6a6a6a;
+    box-shadow: inset 0 0 0 1.5px var(--faint);
   }
   .box.on {
     background: var(--accent);

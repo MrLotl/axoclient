@@ -61,25 +61,29 @@
 </button>
 
 <style>
+  /* Bühne: weißer Knopf in Titelschrift, beim Start Fortschritt, solange das Spiel läuft grün */
   .play {
     position: relative;
     width: 100%;
     border: 0;
-    border-radius: 10px;
-    background: var(--accent);
-    color: #fff;
-    font-size: 17px;
+    border-radius: var(--radius-m);
+    background: var(--text-strong);
+    color: #0d0d0f;
+    font-family: var(--display);
+    font-size: 22px;
     font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
     overflow: hidden;
-    transition: filter 0.12s ease, transform 0.12s ease, color 0.2s ease;
+    transition: transform 0.15s var(--ease-out), box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
   }
   .play.compact {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.08em;
   }
-  .play:not(:disabled):hover {
-    filter: brightness(1.12);
+  .play:not(:disabled):not(.busy):not(.running):hover {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-light) 28%, transparent), 0 10px 36px color-mix(in srgb, var(--accent-light) 40%, transparent);
   }
   .play:not(:disabled):active {
     transform: scale(0.98);
@@ -89,19 +93,24 @@
     cursor: default;
   }
   .play.busy {
-    background: #3a3a3a;
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--text-strong);
+    backdrop-filter: blur(8px);
   }
-  /* Solange das Spiel läuft: "Spiel beenden" einfach rot */
   .play.running {
-    background: color-mix(in srgb, var(--red) 78%, #8a1c14);
-    color: #fff;
+    background: var(--green);
+    color: #0b130e;
+  }
+  .play.running:hover {
+    background: color-mix(in srgb, var(--red) 80%, #ffffff);
+    color: #1b0805;
   }
   .fill {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    background: var(--accent);
+    background: rgba(255, 255, 255, 0.24);
     transition: width 0.4s var(--ease-out);
   }
   .shine {
@@ -116,17 +125,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 0 16px;
+    gap: 12px;
+    padding: 0 18px;
+    white-space: nowrap;
   }
   .stage {
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.06em;
     max-width: 300px;
   }
   .pct {
-    font-size: 15px;
-    font-weight: 700;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     opacity: 0.85;
     white-space: nowrap;

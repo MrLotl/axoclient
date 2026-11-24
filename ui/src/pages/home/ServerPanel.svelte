@@ -123,8 +123,13 @@
     justify-content: space-between;
   }
   h2 {
+    font-family: var(--display);
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .list {
     min-height: 0;
@@ -159,7 +164,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #3a3a3a;
+    background: var(--line-2);
     color: var(--muted-2);
   }
   .text {

@@ -201,7 +201,7 @@
     font-size: 12px;
   }
   .dashed {
-    outline: 1.5px dashed #4a4a4a;
+    outline: 1.5px dashed rgba(255,255,255,0.18);
     outline-offset: -1.5px;
   }
   .editable.dashed:hover {

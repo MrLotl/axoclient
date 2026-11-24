@@ -86,7 +86,7 @@
     padding: 34px 36px;
     border-radius: 20px;
     background: rgba(42, 42, 42, 0.85);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 0 0 1px #363636;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--panel-4);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -94,8 +94,13 @@
     text-align: center;
   }
   h1 {
-    font-size: 26px;
-    font-weight: 800;
+    font-family: var(--display);
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .lead {
     font-size: 14px;
@@ -113,7 +118,7 @@
     padding: 10px 12px;
     border: 0;
     border-radius: 12px;
-    background: #2e2e2e;
+    background: var(--panel-2);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -121,7 +126,7 @@
     color: var(--text);
   }
   .acc:hover {
-    background: #353535;
+    background: var(--panel-4);
   }
   .go {
     display: flex;

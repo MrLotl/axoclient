@@ -132,7 +132,7 @@
     color: var(--muted);
     padding: 10px 12px;
     border-radius: 10px;
-    background: #262626;
+    background: var(--panel);
   }
   .warn {
     color: var(--yellow);

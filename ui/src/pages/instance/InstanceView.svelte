@@ -253,10 +253,13 @@
     gap: 8px;
   }
   h1 {
-    font-size: 28px;
+    font-family: var(--display);
+    font-size: 52px;
     font-weight: 700;
-    letter-spacing: -0.4px;
-    color: #fff;
+    line-height: 0.95;
+    letter-spacing: 0em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .chips {
     display: flex;
@@ -292,7 +295,7 @@
     height: 38px;
     display: flex;
     gap: 4px;
-    border-bottom: 1px solid #2f2f2f;
+    border-bottom: 1px solid var(--panel-3);
   }
   .tab {
     position: relative;
@@ -337,7 +340,7 @@
     font-size: 11px;
     line-height: 18px;
     text-align: center;
-    background: #2c2c2c;
+    background: var(--panel-2);
     color: var(--muted-2);
   }
   .tab[aria-current='page'] .count {
@@ -371,7 +374,7 @@
     display: flex;
     align-items: center;
     gap: 22px;
-    border-bottom: 1px solid #2f2f2f;
+    border-bottom: 1px solid var(--panel-3);
   }
   .skel-body {
     flex-grow: 1;

@@ -107,7 +107,7 @@
 
   <div class="filters">
     <label class="field search">
-      <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
+      <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
       <input
         type="search"
         bind:value={query}
@@ -227,8 +227,13 @@
     gap: 12px;
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .search {
     flex-grow: 1;
@@ -279,7 +284,7 @@
   .thumb {
     position: relative;
     aspect-ratio: 16 / 7;
-    background: #1c1c1c;
+    background: var(--field);
     overflow: hidden;
   }
   .row-card .thumb {
@@ -330,8 +335,13 @@
     padding: 0;
   }
   h2 {
-    font-size: 15px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .by {
     font-size: 12px;

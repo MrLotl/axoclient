@@ -172,8 +172,13 @@
     gap: 12px;
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .tab-pane {
     flex-grow: 1;
@@ -197,7 +202,7 @@
     align-items: center;
     justify-content: center;
     gap: 14px;
-    background: radial-gradient(120% 70% at 50% 85%, #383838 0%, #2c2c2c 55%, #252525 100%);
+    background: radial-gradient(120% 70% at 50% 85%, var(--panel-4) 0%, var(--panel-2) 55%, var(--panel) 100%);
   }
   .stage-label {
     font-size: 13px;
@@ -243,7 +248,7 @@
     border-radius: 11px;
     border: none;
     padding: 0;
-    background: #3a3a3a;
+    background: var(--line-2);
     color: var(--text);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
     display: flex;
@@ -274,7 +279,7 @@
     height: 252px;
     border: 0;
     border-radius: 8px;
-    background: #1f1f1f;
+    background: var(--surface);
     display: flex;
     align-items: center;
     justify-content: center;

@@ -633,15 +633,20 @@
     width: 230px;
     flex-shrink: 0;
     padding: 24px 12px 20px 20px;
-    border-right: 1px solid #2a2a2a;
+    border-right: 1px solid var(--panel-2);
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
     margin: 0 0 14px 8px;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .nav {
     height: 38px;
@@ -715,8 +720,13 @@
     gap: 14px;
   }
   h2 {
-    font-size: 18px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   h3 {
     margin-top: 10px;
@@ -746,7 +756,7 @@
   .item {
     min-height: 60px;
     padding: 12px 0;
-    border-bottom: 1px solid #303030;
+    border-bottom: 1px solid var(--panel-3);
     display: flex;
     align-items: center;
     gap: 16px;
@@ -821,7 +831,7 @@
     box-shadow: inset 0 0 0 2px var(--accent-text);
   }
   .preset:not(.on):hover {
-    background: #2f2f2f;
+    background: var(--panel-3);
   }
   .swatch {
     aspect-ratio: 16 / 7;
@@ -859,7 +869,7 @@
   }
   .preset.add {
     background: transparent;
-    outline: 1.5px dashed #444;
+    outline: 1.5px dashed rgba(255,255,255,0.16);
     outline-offset: -1.5px;
     color: var(--muted);
   }
@@ -931,7 +941,7 @@
   .mock-tabs {
     display: flex;
     gap: 22px;
-    border-bottom: 1px solid #303030;
+    border-bottom: 1px solid var(--panel-3);
     font-size: 13px;
     font-weight: 600;
     color: var(--muted);
@@ -951,7 +961,7 @@
   .mock-bar {
     height: 8px;
     border-radius: 4px;
-    background: #3a3a3a;
+    background: var(--line-2);
     overflow: hidden;
   }
   .mock-bar span {
@@ -977,11 +987,11 @@
     overflow: hidden;
     display: flex;
     gap: 2px;
-    background: #333;
+    background: var(--panel-3);
   }
   .diag {
     padding: 10px 0;
-    border-bottom: 1px solid #303030;
+    border-bottom: 1px solid var(--panel-3);
     display: flex;
     gap: 10px;
   }

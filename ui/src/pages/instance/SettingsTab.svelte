@@ -377,7 +377,7 @@
     width: 30px;
     height: 30px;
     border-radius: 8px;
-    background: #353535;
+    background: var(--panel-4);
     color: var(--muted);
     display: flex;
     align-items: center;

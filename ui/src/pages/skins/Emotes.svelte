@@ -296,7 +296,7 @@
     inset: 26px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
-    box-shadow: inset 0 0 0 1px #3a3a3a;
+    box-shadow: inset 0 0 0 1px var(--line-2);
   }
   .slot {
     position: absolute;
@@ -306,11 +306,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #6b6b6b;
-    box-shadow: inset 0 0 0 1.5px #444;
+    color: var(--faint);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.16);
   }
   .slot.filled {
-    background: #333;
+    background: var(--panel-3);
     color: #d9d9d9;
     box-shadow: none;
   }
@@ -321,8 +321,8 @@
     width: 96px;
     height: 96px;
     border-radius: 50%;
-    background: #242424;
-    box-shadow: inset 0 0 0 1px #3a3a3a;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--line-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -390,7 +390,7 @@
     position: relative;
     height: 132px;
     border-radius: 8px;
-    background: #1f1f1f;
+    background: var(--surface);
     color: #ecc6f2;
     display: flex;
     align-items: center;
@@ -504,7 +504,7 @@
     position: relative;
     height: 92px;
     border-radius: 8px;
-    background: #1f1f1f;
+    background: var(--surface);
     color: #ecc6f2;
     display: flex;
     align-items: center;

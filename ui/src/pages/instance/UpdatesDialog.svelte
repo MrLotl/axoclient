@@ -104,7 +104,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #333;
+    background: var(--panel-3);
     color: var(--muted-2);
   }
   .name {

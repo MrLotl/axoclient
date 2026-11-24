@@ -520,7 +520,7 @@
     display: flex;
     padding: 12px;
     border-radius: 12px;
-    background: #1c1c1c;
+    background: var(--field);
   }
   .canvas canvas {
     /* mittig, beim Hineinzoomen trotzdem bis an jeden Rand scrollbar */

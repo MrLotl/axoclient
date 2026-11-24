@@ -154,7 +154,7 @@
     border-radius: 20px;
     background: rgba(42, 42, 42, 0.85);
     backdrop-filter: blur(10px);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 0 0 1px #363636;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--panel-4);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -170,9 +170,13 @@
     color: var(--accent-text);
   }
   h1 {
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: -0.6px;
+    font-family: var(--display);
+    font-size: 72px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   h1.small {
     font-size: 24px;
@@ -200,7 +204,7 @@
   .feature {
     padding: 12px;
     border-radius: 12px;
-    background: #2e2e2e;
+    background: var(--panel-2);
     display: flex;
     gap: 12px;
     align-items: center;
@@ -258,7 +262,7 @@
   .block {
     padding: 14px 16px;
     border-radius: 12px;
-    background: #2e2e2e;
+    background: var(--panel-2);
     display: flex;
     flex-direction: column;
     gap: 8px;

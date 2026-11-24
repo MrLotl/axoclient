@@ -41,7 +41,7 @@
     padding: 12px 12px 12px 14px;
     border-radius: 14px;
     background: var(--panel-2);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), inset 0 0 0 1px #3c3c3c;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), inset 0 0 0 1px var(--line-2);
     display: flex;
     align-items: center;
     gap: 10px;

@@ -170,7 +170,7 @@
     max-height: calc(100vh - 80px);
     border-radius: 16px;
     background: var(--panel);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px #363636;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 1px var(--panel-4);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -211,8 +211,12 @@
     gap: 4px;
   }
   h2 {
-    font-size: 17px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     color: var(--text-strong);
   }
   .sub {

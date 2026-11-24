@@ -46,7 +46,7 @@
       ]}
       onchange={(v) => app.updateUiState({ instances: v })} />
     <span class="field search">
-      <span style="color: #7a7a7a; display: flex"><Icon name="search" /></span>
+      <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
       <input bind:value={query} placeholder={t('instances.search')} aria-label={t('instances.search')} />
     </span>
     <div class="grow"></div>
@@ -120,8 +120,13 @@
     gap: 12px;
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .search {
     height: 36px;
@@ -153,7 +158,7 @@
   }
   /* Karte hebt sich beim Hovern leicht an, das Bild zoomt minimal */
   .card:hover {
-    background: #2f2f2f;
+    background: var(--panel-3);
     transform: translateY(-2px);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
@@ -169,7 +174,7 @@
     aspect-ratio: 16 / 9;
     border-radius: 8px;
     overflow: hidden;
-    background: #1a1a1a;
+    background: var(--field);
     border: 0;
     padding: 0;
     cursor: pointer;
@@ -247,7 +252,7 @@
     transition: background-color 0.12s ease;
   }
   .row-card:hover {
-    background: #2f2f2f;
+    background: var(--panel-3);
   }
   .row-open {
     flex-grow: 1;

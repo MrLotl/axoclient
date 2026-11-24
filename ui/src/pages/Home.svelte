@@ -9,13 +9,14 @@
   import { call, on } from '../lib/bridge/bridge';
   import { t } from '../lib/i18n';
   import Icon from '../lib/components/Icon.svelte';
+  import Head from '../lib/components/Head.svelte';
   import SkinViewer from '../lib/components/SkinViewer.svelte';
   import PlayButton from '../lib/components/PlayButton.svelte';
-  import ImageBox from '../lib/components/ImageBox.svelte';
   import FriendsPanel from './home/FriendsPanel.svelte';
   import ServerPanel from './home/ServerPanel.svelte';
-  import { versionLabel } from '../lib/util/format';
-  import { pop, fadeSlide, DUR } from '../lib/util/motion';
+  import { loaderName, ago, duration } from '../lib/util/format';
+  import { landscape } from '../lib/util/art';
+  import { fadeSlide, DUR } from '../lib/util/motion';
   import type { MojangProfile } from '../lib/types';
 
   let skinAnimation = $state<'idle' | 'wave'>('idle');
@@ -32,18 +33,23 @@
     };
   });
 
-  let pickerOpen = $state(false);
   let profile = $state<MojangProfile | null>(null);
-  let viewerHeight = $state(480);
-  let stageWidth = $state(800);
-  let stage: HTMLDivElement | undefined = $state();
-  let card: HTMLDivElement | undefined = $state();
+  let leftHeight = $state(700);
 
+  // Regal: zuletzt gespielte Instanzen zuerst
+  const shelf = $derived(
+    [...app.instances].sort((a, b) => (b.lastPlayed ?? b.createdAt).localeCompare(a.lastPlayed ?? a.createdAt))
+  );
   const selectedId = $derived(
-    app.ui?.lastInstance && app.instances.some((i) => i.id === app.ui!.lastInstance) ? app.ui.lastInstance : (app.instances[0]?.id ?? null)
+    app.ui?.lastInstance && app.instances.some((i) => i.id === app.ui!.lastInstance) ? app.ui.lastInstance : (shelf[0]?.id ?? null)
   );
   const current = $derived(app.instances.find((i) => i.id === selectedId) ?? null);
   const account = $derived(app.activeAccount);
+  // Ein Freund, dem man gerade nachjoinen kann, steht direkt unter dem Titel
+  const joinable = $derived(app.social.friends.find((f) => f.relation === 'friends' && f.state === 'ingame' && f.join) ?? null);
+
+  // 3D-Skin wächst mit dem Fenster, bleibt aber über dem Regal
+  const viewerHeight = $derived(Math.round(Math.max(180, Math.min(360, leftHeight - 400))));
 
   async function loadProfile() {
     if (!account || account.type !== 'microsoft') {
@@ -60,24 +66,10 @@
   onMount(() => {
     loadProfile();
     const offs = [on('skins.changed', loadProfile), on('accounts.changed', loadProfile)];
-    // 3D-Ansicht wächst mit dem Fenster, bleibt aber immer ganz sichtbar (Höhe minus Startkarte, Breite des Bereichs)
-    const observer = new ResizeObserver(() => {
-      if (!stage) return;
-      const free = stage.clientHeight - 56 - 24 - (card?.offsetHeight ?? 152);
-      const byWidth = (stage.clientWidth - 40) / 0.62;
-      stageWidth = stage.clientWidth - 40;
-      viewerHeight = Math.round(Math.max(140, Math.min(720, free, byWidth)));
-    });
-    if (stage) observer.observe(stage);
-    if (card) observer.observe(card);
-    return () => {
-      offs.forEach((o) => o());
-      observer.disconnect();
-    };
+    return () => offs.forEach((o) => o());
   });
 
   async function pick(id: string) {
-    pickerOpen = false;
     if (app.ui) app.ui.lastInstance = id;
     try {
       await call('instances.get', { id });
@@ -86,80 +78,92 @@
     }
   }
 
+  // Tasten 1–9 wählen eine Instanz aus dem Regal, Enter startet
+  function onkeydown(e: KeyboardEvent) {
+    if (app.dialog || app.paletteOpen || e.ctrlKey || e.altKey || e.metaKey) return;
+    const el = document.activeElement as HTMLElement | null;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+    if (/^[1-9]$/.test(e.key)) {
+      const target = shelf[Number(e.key) - 1];
+      if (target) pick(target.id);
+    }
+  }
+
   const activeCape = $derived(profile?.capes.find((c) => c.active)?.url ?? null);
 </script>
 
-<svelte:window
-  onmousedown={(e) => {
-    if (pickerOpen && !(e.target as HTMLElement).closest('.launch-card')) pickerOpen = false;
-  }}
-  onkeydown={(e) => {
-    if (e.key === 'Escape') pickerOpen = false;
-  }} />
+<svelte:window {onkeydown} />
 
 <div class="home">
-  <div class="stage" bind:this={stage}>
-    {#key account?.uuid}
-      <SkinViewer
-        skin={account ? `/axo/head/${account.uuid.replaceAll('-', '')}?v=${profile?.skinUrl ?? ''}` : null}
-        cape={activeCape}
-        model={profile?.model === 'slim' ? 'slim' : 'default'}
-        width={Math.round(Math.min(viewerHeight * 1.05, Math.max(viewerHeight * 0.62, stageWidth)))}
-        height={viewerHeight}
-        animate={skinAnimation}
-        label={t('home.skinModel')} />
-    {/key}
-
-    <div class="launch-card" bind:this={card} in:fadeSlide|global={{ y: 14, delay: 40, duration: DUR.slow }}>
-      {#if pickerOpen}
-        <div
-          class="picker menu"
-          role="listbox"
-          aria-label={t('home.chooseInstance')}
-          in:pop={{ origin: 'bottom center', scale: 0.96, y: 8, duration: DUR.med }}
-          out:pop={{ origin: 'bottom center', scale: 0.98, y: 6, duration: DUR.fast }}>
-          <span class="section-label" style="padding: 6px 8px 4px">{t('home.chooseInstance')}</span>
-          <div class="picker-list">
-            {#each app.instances as inst (inst.id)}
-              <button class="menu-item pick" class:active={inst.id === selectedId} role="option" aria-selected={inst.id === selectedId} onclick={() => pick(inst.id)}>
-                <ImageBox url={inst.hasIcon ? inst.iconUrl : null} name={inst.name} width={32} radius={7} />
-                <span class="pick-name truncate">{inst.name}</span>
-                <span class="pick-ver">{versionLabel(inst.minecraftVersion, inst.loader)}</span>
-              </button>
-            {/each}
-          </div>
-          <div class="menu-sep"></div>
-          <button class="menu-item" onclick={() => app.navigate({ page: 'instanceCreate' })}>
-            <span style="color: var(--accent-text)"><Icon name="plus" /></span>{t('instances.new')}
-          </button>
-        </div>
-      {/if}
-
-      {#if current}
-        <button class="current" aria-haspopup="listbox" aria-expanded={pickerOpen} aria-label={t('home.chooseInstance')} onclick={() => (pickerOpen = !pickerOpen)}>
-          {#key current.id}
-            <span class="current-swap" in:fadeSlide={{ y: 6, duration: DUR.med }}>
-              <ImageBox url={current.hasIcon ? current.iconUrl : null} name={current.name} width={36} />
-              <span class="current-text">
-                <span class="current-label">{t('home.instance')}</span>
-                <span class="current-name truncate">{current.name} <span class="current-ver">· {versionLabel(current.minecraftVersion, current.loader)}</span></span>
-              </span>
-            </span>
-          {/key}
-          <span class="chev" class:down={!pickerOpen}><Icon name="chevronUp" /></span>
-        </button>
-      {:else}
-        <button class="current empty" onclick={() => app.navigate({ page: 'instanceCreate' })}>
-          <span class="plus"><Icon name="plus" size={18} /></span>
-          <span class="current-text">
-            <span class="current-label">{t('home.instance')}</span>
-            <span class="current-name">{t('home.createFirst')}</span>
-          </span>
-        </button>
-      {/if}
-
-      <PlayButton instanceId={current?.id ?? null} />
+  <div class="left" bind:clientHeight={leftHeight}>
+    <div class="skin" style="bottom: {shelf.length ? 176 : 40}px">
+      {#key account?.uuid}
+        <SkinViewer
+          skin={account ? `/axo/head/${account.uuid.replaceAll('-', '')}?v=${profile?.skinUrl ?? ''}` : null}
+          cape={activeCape}
+          model={profile?.model === 'slim' ? 'slim' : 'default'}
+          width={Math.round(viewerHeight * 0.75)}
+          height={viewerHeight}
+          animate={skinAnimation}
+          label={t('home.skinModel')} />
+      {/key}
     </div>
+
+    {#if current}
+      {#key current.id}
+        <div class="hero" in:fadeSlide={{ y: 12, duration: DUR.slow }}>
+          <span class="eyebrow">{current.lastPlayed ? t('home.continue', { when: ago(current.lastPlayed) }) : t('home.neverPlayed')}</span>
+          <h1 class="display title">{current.name}</h1>
+          <p class="meta">
+            <span>Minecraft <b>{current.minecraftVersion}</b></span>
+            <span>{loaderName(current.loader)}</span>
+            {#if current.modCount}<span>{t('instances.mods', { count: current.modCount })}</span>{/if}
+            {#if current.totalSeconds > 0}<span>{@html t('home.played', { time: `<b>${duration(current.totalSeconds)}</b>` })}</span>{/if}
+          </p>
+          {#if joinable}
+            <div class="with">
+              <Head uuid={joinable.uuid} size={24} radius={12} />
+              <span>{t('home.friendPlaying', { name: joinable.name, server: joinable.join ?? '' })}</span>
+              <button class="link" onclick={() => joinable?.join && app.joinAddress(joinable.join)}>{t('home.joinFriend')} →</button>
+            </div>
+          {/if}
+          <div class="actions">
+            <div class="play"><PlayButton instanceId={current.id} height={54} /></div>
+            <button class="btn btn-ghost lg" onclick={() => app.navigate({ page: 'instance', id: current!.id })}>{t('home.details')}</button>
+            <button class="btn btn-ghost lg" onclick={() => app.navigate({ page: 'instance', id: current!.id, tab: 'mods' })}>{t('home.addMods')}</button>
+          </div>
+        </div>
+      {/key}
+    {:else}
+      <div class="hero" in:fadeSlide={{ y: 12, duration: DUR.slow }}>
+        <span class="eyebrow">{t('home.emptyEyebrow')}</span>
+        <h1 class="display title">{t('home.emptyTitle')}</h1>
+        <p class="meta">{t('instances.emptyText')}</p>
+        <div class="actions">
+          <button class="btn btn-grad lg" onclick={() => app.navigate({ page: 'instanceCreate' })}><Icon name="plus" />{t('instances.new')}</button>
+          <button class="btn btn-ghost lg" onclick={() => app.navigate({ page: 'modpacks' })}>{t('instances.browseModpacks')}</button>
+        </div>
+      </div>
+    {/if}
+
+    {#if shelf.length}
+      <div class="shelf-head"><b>{t('home.yourInstances')}</b><span>{t('home.keysHint')}</span></div>
+      <div class="shelf" role="listbox" aria-label={t('home.chooseInstance')}>
+        {#each shelf as inst, n (inst.id)}
+          <button class="tile" class:on={inst.id === selectedId} role="option" aria-selected={inst.id === selectedId} onclick={() => pick(inst.id)} title={inst.name}>
+            <span class="art" class:pixel={!inst.hasIcon} style="background-image: url('{inst.hasIcon ? inst.iconUrl : landscape(inst.id)}')">
+              {#if n < 9}<i class="key">{n + 1}</i>{/if}
+              {#if inst.running}<i class="live">{t('common.running')}</i>{/if}
+            </span>
+            <b class="truncate">{inst.name}</b>
+          </button>
+        {/each}
+        <button class="tile new" onclick={() => app.navigate({ page: 'instanceCreate' })}>
+          <span class="art"><Icon name="plus" size={20} /></span>
+          <b>{t('instances.new')}</b>
+        </button>
+      </div>
+    {/if}
   </div>
 
   <aside class="side" in:fadeSlide|global={{ x: 16, y: 0, delay: 80, duration: DUR.slow }}>
@@ -170,133 +174,219 @@
 
 <style>
   .home {
-    position: relative;
     height: 100%;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 28px;
+    padding: 8px 32px 20px;
   }
-  .stage {
-    flex-grow: 1;
-    min-width: 0;
-    padding: 28px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 24px;
-  }
-  .launch-card {
+  .left {
     position: relative;
-    width: 460px;
-    max-width: calc(100% - 40px);
-    padding: 16px;
-    border-radius: 14px;
-    background: var(--panel);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .current-swap {
-    flex-grow: 1;
     min-width: 0;
     display: flex;
-    align-items: center;
-    gap: inherit;
+    flex-direction: column;
+    justify-content: flex-end;
   }
-  .picker {
+  .skin {
     position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 136px;
-    z-index: 5;
-    background: #2f2f2f;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 1px #3a3a3a;
-    max-height: 420px;
+    right: 24px;
+    z-index: 0;
+    filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.5));
+    pointer-events: auto;
   }
-  .picker-list {
-    overflow-y: auto;
+  .hero {
+    position: relative;
+    z-index: 1;
+    max-width: 600px;
+    margin-bottom: 22px;
+  }
+  .title {
+    font-size: 74px;
+    line-height: 0.9;
+    margin: 8px 0 12px;
+    text-wrap: balance;
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.45);
+    overflow-wrap: anywhere;
+  }
+  .meta {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 15px;
+    color: var(--muted);
   }
-  .pick {
-    height: 46px;
-    padding: 0 8px;
-  }
-  .pick-name {
-    flex-grow: 1;
-    min-width: 0;
-    font-size: 13.5px;
+  .meta :global(b) {
+    color: var(--text-strong);
     font-weight: 600;
   }
-  .pick-ver {
-    font-size: 12px;
-    color: var(--muted-2);
+  .with {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .link {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--accent-text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
     white-space: nowrap;
   }
-  .current {
-    height: 52px;
-    padding: 0 14px 0 10px;
-    border: 0;
-    border-radius: 10px;
-    background: var(--panel-3);
+  .link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .actions {
     display: flex;
     align-items: center;
     gap: 12px;
-    cursor: pointer;
-    text-align: left;
-    transition: background-color 0.12s ease;
+    margin-top: 20px;
   }
-  .current:hover {
-    background: #3a3a3a;
+  .actions .btn.lg {
+    height: 54px;
   }
-  .current-text {
-    flex-grow: 1;
-    min-width: 0;
+  .play {
+    width: 240px;
+    flex-shrink: 0;
+  }
+  .shelf-head {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .shelf-head b {
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .shelf {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 4px 4px;
+    margin: -6px -4px 0;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
+  }
+  .tile {
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    width: 140px;
   }
-  .current-label {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--muted-2);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
+  .art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 140px;
+    height: 79px;
+    border-radius: var(--radius-s);
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+    transition: width var(--dur-med) var(--ease-out), height var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) ease;
   }
-  .current-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text);
+  .art.pixel {
+    image-rendering: pixelated;
   }
-  .current-ver {
-    color: var(--muted-2);
-    font-weight: 400;
+  .tile b {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
   }
-  .chev {
-    display: flex;
-    color: var(--text-2);
-    transition: transform 0.15s ease;
+  .tile:hover .art {
+    transform: translateY(-3px);
   }
-  .chev.down {
-    transform: rotate(180deg);
+  .tile.on {
+    width: 168px;
   }
-  .plus {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: var(--accent-soft-strong);
-    color: var(--accent-text);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .tile.on .art {
+    width: 168px;
+    height: 94px;
+    box-shadow: 0 0 0 2px var(--text-strong), 0 0 34px color-mix(in srgb, var(--accent-light) 50%, transparent);
+  }
+  .tile.on b {
+    color: var(--text-strong);
+  }
+  .key {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    line-height: 16px;
+    padding: 0 5px;
+    border-radius: 4px;
+    color: var(--text-strong);
+    background: rgba(10, 11, 13, 0.6);
+  }
+  .live {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    font-style: normal;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 16px;
+    padding: 0 6px;
+    border-radius: 4px;
+    color: #0b130e;
+    background: var(--green);
+  }
+  .tile.new .art {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed var(--line-2);
+    box-shadow: none;
+    color: var(--muted);
+  }
+  .tile.new:hover .art {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-strong);
   }
   .side {
-    width: 300px;
-    flex-shrink: 0;
-    margin: 20px 20px 20px 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    min-height: 0;
+    gap: 14px;
+    padding-top: 6px;
+  }
+  .side :global(.panel) {
+    background: var(--glass);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  }
+  @media (max-width: 1240px) {
+    .title {
+      font-size: 60px;
+    }
+    .home {
+      grid-template-columns: minmax(0, 1fr) 290px;
+    }
   }
 </style>

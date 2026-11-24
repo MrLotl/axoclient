@@ -93,8 +93,12 @@
     gap: 6px;
   }
   h2 {
-    font-size: 18px;
+    font-family: var(--display);
+    font-size: 26px;
     font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     color: var(--text-strong);
   }
   .versions {
@@ -112,7 +116,7 @@
     line-height: 22px;
   }
   .old {
-    background: #333;
+    background: var(--panel-3);
     color: var(--muted);
   }
   .new {
@@ -172,7 +176,7 @@
   .bar {
     height: 6px;
     border-radius: 3px;
-    background: #333;
+    background: var(--panel-3);
     overflow: hidden;
   }
   .bar span {

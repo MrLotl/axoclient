@@ -3,7 +3,8 @@
   import { app } from './lib/stores/app.svelte';
   import { t } from './lib/i18n';
   import TitleBar from './lib/components/TitleBar.svelte';
-  import Sidebar from './lib/components/Sidebar.svelte';
+  import Stage from './lib/components/Stage.svelte';
+  import CommandPalette from './lib/components/CommandPalette.svelte';
   import Toasts from './lib/components/Toasts.svelte';
   import ResizeHandles from './lib/components/ResizeHandles.svelte';
   import JobBar from './lib/components/JobBar.svelte';
@@ -61,6 +62,7 @@
   </div>
 {:else if fullscreenPage}
   <div class="shell" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
+    <Stage />
     <TitleBar minimal />
     {#key app.route.page}
       <div class="full-slot" in:fadeSlide={{ y: 10, duration: DUR.slow }}>
@@ -71,9 +73,9 @@
   <GlobalDialogs />
 {:else}
   <div class="shell" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
+    <Stage dim={app.route.page !== 'home'} />
     <TitleBar />
     <div class="frame">
-      <Sidebar />
       <main class="content">
         {#key app.route.page + (app.route.id ?? '')}
           <!-- Alte und neue Seite liegen kurz übereinander: die alte blendet aus, die neue gleitet herein -->
@@ -104,6 +106,7 @@
     </div>
   </div>
   <GlobalDialogs />
+  <CommandPalette />
 {/if}
 
 <Toasts />
@@ -111,6 +114,7 @@
 <style>
   .shell,
   .boot {
+    position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -124,6 +128,8 @@
     color: var(--muted);
   }
   .frame {
+    position: relative;
+    z-index: 1;
     flex-grow: 1;
     min-height: 0;
     display: flex;
@@ -132,8 +138,7 @@
     position: relative;
     flex-grow: 1;
     min-width: 0;
-    background: var(--surface);
-    border-top-left-radius: 18px;
+    background: transparent;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -143,6 +148,8 @@
     inset: 0;
   }
   .full-slot {
+    position: relative;
+    z-index: 1;
     flex-grow: 1;
     min-height: 0;
     display: flex;

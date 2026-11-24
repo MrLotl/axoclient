@@ -25,7 +25,7 @@
     display: inline-block;
     flex-shrink: 0;
     overflow: hidden;
-    background: #3a3a3a;
+    background: var(--line-2);
     image-rendering: pixelated;
   }
   .dim {

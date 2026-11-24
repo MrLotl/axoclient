@@ -78,7 +78,7 @@
     flex-shrink: 0;
     border-radius: 14px;
     overflow: hidden;
-    background: var(--accent-soft-strong), #1a1a1a;
+    background: var(--accent-soft-strong), var(--field);
   }
   .shade {
     position: absolute;

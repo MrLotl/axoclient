@@ -24,7 +24,7 @@
     padding: 0;
     border: 0;
     border-radius: 10px;
-    background: #4a4a4a;
+    background: rgba(255,255,255,0.18);
     cursor: pointer;
     flex-shrink: 0;
     transition: background 0.15s ease;

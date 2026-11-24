@@ -212,8 +212,12 @@
     gap: 10px;
   }
   h2 {
-    font-size: 17px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--text-strong);
   }
   .list {
@@ -272,8 +276,8 @@
   .share {
     padding: 10px;
     border-radius: 10px;
-    background: #262626;
-    box-shadow: inset 0 0 0 1px #363636;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--panel-4);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -287,7 +291,7 @@
     width: 32px;
     height: 32px;
     border-radius: 6px;
-    background: #333;
+    background: var(--panel-3);
     color: var(--muted);
     display: flex;
     align-items: center;
@@ -313,8 +317,8 @@
     height: 20px;
     padding: 0 7px;
     border-radius: 6px;
-    background: #333;
-    color: #bdbdbd;
+    background: var(--panel-3);
+    color: var(--text-2);
     font-size: 10.5px;
     font-weight: 600;
     line-height: 20px;

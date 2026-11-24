@@ -101,7 +101,7 @@
     width: 286px;
     flex-shrink: 0;
     position: relative;
-    background: radial-gradient(120% 70% at 50% 85%, #383838 0%, #2c2c2c 55%, #252525 100%);
+    background: radial-gradient(120% 70% at 50% 85%, var(--panel-4) 0%, var(--panel-2) 55%, var(--panel) 100%);
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -135,8 +135,12 @@
     gap: 5px;
   }
   h2 {
-    font-size: 19px;
+    font-family: var(--display);
+    font-size: 32px;
     font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     color: var(--text-strong);
   }
   .status {

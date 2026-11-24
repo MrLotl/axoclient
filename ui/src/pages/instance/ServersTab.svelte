@@ -142,7 +142,7 @@
 <div class="tab">
   <div class="toolbar">
     <label class="field search">
-      <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
+      <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
       <input type="search" bind:value={query} placeholder={t('servers.search')} aria-label={t('servers.search')} />
     </label>
     <span class="summary">{t('servers.count', { count: servers.length })}</span>
@@ -247,7 +247,7 @@
   .row.lifted {
     position: relative;
     z-index: 2;
-    background: #333;
+    background: var(--panel-3);
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4), inset 0 0 0 1px var(--accent-ring);
   }
   .row {
@@ -266,7 +266,7 @@
     border: 0;
     border-radius: 6px;
     background: transparent;
-    color: #5f5f5f;
+    color: var(--faint);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -288,7 +288,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #3a3a3a;
+    background: var(--line-2);
     color: var(--muted-2);
   }
   .text {
@@ -331,6 +331,6 @@
     gap: 10px;
     color: var(--muted-2);
     border-radius: 12px;
-    box-shadow: inset 0 0 0 1.5px #2f2f2f;
+    box-shadow: inset 0 0 0 1.5px var(--panel-3);
   }
 </style>

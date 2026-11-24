@@ -185,7 +185,7 @@
         <span class="big">{fmt(week.total)}</span>
         <div class="bars" aria-hidden="true">
           {#each week.bars as b, i (i)}
-            <span style="height: {Math.max(3, (b.minutes / maxWeek) * 30)}px; background: {b.minutes ? 'var(--accent)' : '#3a3a3a'}"></span>
+            <span style="height: {Math.max(3, (b.minutes / maxWeek) * 30)}px; background: {b.minutes ? 'var(--accent)' : 'var(--line-2)'}"></span>
           {/each}
         </div>
       </div>
@@ -203,7 +203,7 @@
         <div class="size-bar" aria-hidden="true">
           <span style="width: {(size.worlds / totalSize) * 100}%; background: var(--accent-from)"></span>
           <span style="width: {(size.mods / totalSize) * 100}%; background: var(--accent-to)"></span>
-          <span class="grow" style="background: #4a4a4a"></span>
+          <span class="grow" style="background: rgba(255,255,255,0.18)"></span>
         </div>
         <span class="small">{t('instance.overview.sizeParts', { worlds: bytes(size.worlds), mods: bytes(size.mods), rest: bytes(size.rest) })}</span>
       {/if}
@@ -449,7 +449,7 @@
     flex-shrink: 0;
     border-radius: 7px;
     overflow: hidden;
-    background: #3a3a3a;
+    background: var(--line-2);
     color: var(--muted-2);
     display: flex;
     align-items: center;
@@ -483,7 +483,7 @@
     height: 4px;
     margin-top: 2px;
     border-radius: 2px;
-    background: #3a3a3a;
+    background: var(--line-2);
     overflow: hidden;
   }
   .p-bar span {
@@ -516,8 +516,13 @@
     gap: 12px;
   }
   h2 {
+    font-family: var(--display);
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .month-nav {
     display: flex;
@@ -596,7 +601,7 @@
     flex-shrink: 0;
   }
   .cell.future {
-    box-shadow: inset 0 0 0 1px #2e2e2e;
+    box-shadow: inset 0 0 0 1px var(--panel-2);
   }
   .cell.today,
   .day.today {
@@ -624,7 +629,7 @@
     font-variant-numeric: tabular-nums;
   }
   .day.future {
-    box-shadow: inset 0 0 0 1px #2e2e2e;
+    box-shadow: inset 0 0 0 1px var(--panel-2);
   }
   .num {
     font-size: 12px;
@@ -644,7 +649,7 @@
   }
   .hover {
     flex-grow: 1;
-    color: #bdbdbd;
+    color: var(--text-2);
   }
   .levels {
     display: flex;

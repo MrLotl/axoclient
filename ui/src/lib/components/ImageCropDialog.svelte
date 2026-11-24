@@ -156,8 +156,8 @@
     position: relative;
     overflow: hidden;
     border-radius: 12px;
-    background: repeating-conic-gradient(#2a2a2a 0% 25%, #303030 0% 50%) 0 0 / 16px 16px;
-    box-shadow: inset 0 0 0 1px #3a3a3a;
+    background: repeating-conic-gradient(var(--panel-2) 0% 25%, var(--panel-3) 0% 50%) 0 0 / 16px 16px;
+    box-shadow: inset 0 0 0 1px var(--line-2);
     cursor: grab;
     touch-action: none;
   }

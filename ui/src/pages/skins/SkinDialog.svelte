@@ -106,7 +106,7 @@
     height: 340px;
     flex-shrink: 0;
     border-radius: 12px;
-    background: radial-gradient(120% 70% at 50% 85%, #383838 0%, #2c2c2c 55%, #252525 100%);
+    background: radial-gradient(120% 70% at 50% 85%, var(--panel-4) 0%, var(--panel-2) 55%, var(--panel) 100%);
     display: flex;
     align-items: center;
     justify-content: center;

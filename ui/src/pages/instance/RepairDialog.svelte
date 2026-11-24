@@ -134,8 +134,8 @@
   .issue {
     padding: 10px 12px;
     border-radius: 10px;
-    background: #242424;
-    box-shadow: inset 0 0 0 1px #343434;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--panel-3);
     display: flex;
     gap: 10px;
     color: var(--yellow);

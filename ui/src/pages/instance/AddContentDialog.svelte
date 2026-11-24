@@ -216,7 +216,7 @@
     <div class="results">
       <div class="search-row">
         <label class="field">
-          <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
+          <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
           <input bind:value={query} oninput={onQuery} placeholder={t(`content.${key}.search`)} data-autofocus />
         </label>
         <select class="select" bind:value={sort} onchange={() => { app.updateUiState({ sortAddMods: sort }); search(); }} aria-label={t('content.sort')}>
@@ -289,8 +289,12 @@
     gap: 12px;
   }
   h2 {
-    font-size: 17px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     color: var(--text-strong);
   }
   .for {
@@ -332,7 +336,7 @@
     position: relative;
     aspect-ratio: 16 / 7;
     border-radius: 12px 12px 0 0;
-    background: #1c1c1c;
+    background: var(--field);
     overflow: hidden;
   }
   .banner {
@@ -361,7 +365,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #333;
+    background: var(--panel-3);
     color: var(--muted-2);
   }
   .c-info {
@@ -486,7 +490,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #333;
+    background: var(--panel-3);
     color: var(--muted-2);
   }
   .p-text {

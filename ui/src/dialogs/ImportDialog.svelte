@@ -348,7 +348,7 @@
     flex-shrink: 0;
   }
   .nav-item:hover {
-    background: #303030;
+    background: var(--panel-3);
   }
   .nav-item.active {
     background: var(--accent-soft);

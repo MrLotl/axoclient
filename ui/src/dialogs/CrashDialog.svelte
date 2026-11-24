@@ -113,8 +113,8 @@
   .done {
     padding: 12px;
     border-radius: 12px;
-    background: #242424;
-    box-shadow: inset 0 0 0 1px #343434;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 1px var(--panel-3);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -196,9 +196,9 @@
     overflow: auto;
     padding: 12px;
     border-radius: 10px;
-    background: #1a1a1a;
-    box-shadow: inset 0 0 0 1px #303030;
-    color: #bdbdbd;
+    background: var(--field);
+    box-shadow: inset 0 0 0 1px var(--panel-3);
+    color: var(--text-2);
     font-family: var(--mono);
     font-size: 11.5px;
     line-height: 1.55;

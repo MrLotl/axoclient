@@ -227,7 +227,7 @@
     align-items: center;
     justify-content: center;
     gap: 14px;
-    background: radial-gradient(120% 70% at 50% 85%, #383838 0%, #2c2c2c 55%, #252525 100%);
+    background: radial-gradient(120% 70% at 50% 85%, var(--panel-4) 0%, var(--panel-2) 55%, var(--panel) 100%);
   }
   .sections {
     flex-grow: 1;
@@ -249,8 +249,13 @@
     gap: 3px;
   }
   h2 {
-    font-size: 15px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .capes {
     display: flex;
@@ -284,7 +289,7 @@
     background-size: 640% 200%;
     background-position: 1.85% 6.25%;
     image-rendering: pixelated;
-    background-color: #1f1f1f;
+    background-color: var(--surface);
   }
   .cape-img.small {
     width: 25px;
@@ -349,7 +354,7 @@
     padding: 0;
     border: 0;
     border-radius: 6px;
-    background: #3a3a3a;
+    background: var(--line-2);
     color: var(--text-2);
     display: flex;
     align-items: center;

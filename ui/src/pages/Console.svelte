@@ -137,7 +137,7 @@
         options={sources.map((s) => ({ value: s.key, label: `${label(s)}`, hint: s.running ? t('common.running') : t('console.ended'), badge: s.kind === 'server' ? 'Server' : undefined }))} />
     {/if}
     <label class="field search">
-      <span style="color: #8a8a8a; display: flex"><Icon name="search" /></span>
+      <span style="color: var(--muted-2); display: flex"><Icon name="search" /></span>
       <input type="search" bind:value={search} placeholder={t('console.search')} aria-label={t('console.search')} />
     </label>
     <div class="levels" role="group" aria-label={t('console.filter')}>
@@ -187,8 +187,13 @@
     gap: 12px;
   }
   h1 {
-    font-size: 20px;
-    font-weight: 600;
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-strong);
   }
   .search {
     width: 240px;
@@ -209,14 +214,14 @@
     border: 0;
     border-radius: 7px;
     background: transparent;
-    color: #6b6b6b;
+    color: var(--faint);
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     font-family: var(--mono);
   }
   .lvl[aria-pressed='true'] {
-    background: #333;
+    background: var(--panel-3);
     color: #5f9cff;
   }
   .lvl.warn[aria-pressed='true'] {
@@ -236,7 +241,7 @@
   }
   .command {
     height: 44px;
-    background: #191919;
+    background: var(--field);
     font-family: var(--mono);
   }
   .command input {
