@@ -92,7 +92,7 @@
   function cropped(base64: string) {
     if (cropping) URL.revokeObjectURL(cropping);
     cropping = null;
-    const mime = aspect >= 2 ? 'image/jpeg' : 'image/png';
+    const mime = aspect >= 1.5 ? 'image/jpeg' : 'image/png';
     onchange?.(base64, `data:${mime};base64,${base64}`);
   }
 </script>

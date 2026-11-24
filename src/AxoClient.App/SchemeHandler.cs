@@ -71,6 +71,9 @@ internal sealed class SchemeHandler(AppHost host)
                 // Titelbild-Panorama einer Minecraft-Version, direkt aus deren Spieldatei
                 // (noch nie gestartete Versionen: nur das Panorama-Bild bei Mojang nachladen)
                 "panorama" when parts.Length == 1 => host.Panoramas.Get(parts[0]) ?? RunSync(() => host.Panoramas.FetchAsync(parts[0])),
+                // Weitere Blickrichtungen: /axo/panorama/<Version>/<0–3>
+                "panorama" when parts.Length == 2 && int.TryParse(parts[1], out var face) && face is >= 0 and <= 3 =>
+                    host.Panoramas.Get(parts[0], face) ?? RunSync(() => host.Panoramas.FetchAsync(parts[0], face)),
                 // Skin eines Spielers (für Köpfe): erst Cache, sonst Mojang
                 "head" when parts.Length == 1 => RunSync(() => host.Skins.PlayerSkinAsync(parts[0], CancellationToken.None)),
                 _ => null

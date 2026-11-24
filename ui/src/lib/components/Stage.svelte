@@ -1,11 +1,12 @@
 <script lang="ts">
   import { app } from '../stores/app.svelte';
   import { fadeOnly } from '../util/motion';
-  import { artLayers, grain, panoramaUrl } from '../util/art';
+  import { backdrop, grain, gradient, panoramaUrl } from '../util/art';
 
   // Die Bühne zeigt die Welt der gerade gewählten Instanz hinter der ganzen Oberfläche.
   // Auf der Startseite offen, auf allen anderen Seiten stark abgedunkelt.
-  let { dim = false }: { dim?: boolean } = $props();
+  // home: Welt offen · instance: oben sichtbar, unten dunkel (Kopf der Instanz liegt darauf) · page: stark abgedunkelt
+  let { mode = 'page' }: { mode?: 'home' | 'instance' | 'page' } = $props();
 
   const current = $derived.by(() => {
     if (app.route.page === 'instance' && app.route.id) return app.instances.find((i) => i.id === app.route.id) ?? null;
@@ -20,7 +21,7 @@
   $effect(() => {
     if (!panorama) return;
     for (const i of app.instances) {
-      const url = panoramaUrl(i.minecraftVersion);
+      const url = i.bannerUrl || i.gradientOnly ? null : panoramaUrl(i.minecraftVersion, i.panoramaView ?? 0);
       if (!url || decoded.has(url)) continue;
       decoded.add(url);
       const img = new Image();
@@ -30,11 +31,11 @@
   });
   const motion = $derived(app.settings?.appearance.stageMotion ?? true);
 
-  // Eigenes Banner > Panorama der Minecraft-Version (aus den Spieldateien) > Farbverlauf
-  const bg = $derived(current?.bannerUrl ? `url('${current.bannerUrl}')` : artLayers(current?.artSeed ?? current?.id ?? 'axoclient', current?.minecraftVersion, panorama));
+  // Vorschau (z. B. beim Erstellen) > eigenes Hintergrundbild > Panorama der Version > Farbverlauf
+  const bg = $derived(app.stageOverride ?? (current ? backdrop(current, panorama) : gradient('axoclient')));
 </script>
 
-<div class="stage" class:dim class:still={!motion} aria-hidden="true">
+<div class="stage {mode}" class:still={!motion} aria-hidden="true">
   <!-- Alter und neuer Hintergrund blenden ineinander, statt kurz schwarz zu werden -->
   {#key bg}
     <div class="bg" style="background-image: {bg}" in:fadeOnly={{ duration: 600 }} out:fadeOnly={{ duration: 600 }}></div>
@@ -70,8 +71,14 @@
       linear-gradient(180deg, rgba(8, 9, 11, 0.7) 0%, transparent 16%);
     transition: background var(--dur-slow) ease;
   }
-  .dim .shade {
+  .page .shade {
     background: linear-gradient(180deg, rgba(8, 9, 11, 0.78) 0%, rgba(8, 9, 11, 0.93) 34%, rgba(8, 9, 11, 0.97) 100%);
+  }
+  /* Instanz: die Welt steht oben hinter Titel und Knöpfen, darunter wird es für die Inhalte dunkel */
+  .instance .shade {
+    background:
+      linear-gradient(90deg, rgba(8, 9, 11, 0.6) 0%, rgba(8, 9, 11, 0.15) 55%, transparent 100%),
+      linear-gradient(180deg, rgba(8, 9, 11, 0.45) 0%, rgba(8, 9, 11, 0.05) 12%, rgba(8, 9, 11, 0.35) 27%, rgba(8, 9, 11, 0.9) 42%, rgba(8, 9, 11, 0.97) 100%);
   }
   .grain {
     position: absolute;

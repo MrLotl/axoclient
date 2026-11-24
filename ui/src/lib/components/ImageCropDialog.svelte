@@ -25,7 +25,7 @@
     oncancel: () => void;
   } = $props();
 
-  const frameW = $derived(aspect >= 2 ? 600 : 300);
+  const frameW = $derived(aspect >= 1.5 ? 600 : 300);
   const frameH = $derived(Math.round(frameW / aspect));
 
   let img: HTMLImageElement | undefined = $state();
@@ -107,8 +107,8 @@
     const ctx = canvas.getContext('2d')!;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, x * factor, y * factor, drawW * factor, drawH * factor);
-    // Breite Banner als JPEG (Fotos, klein), Icons als PNG (Transparenz, Pixelart)
-    const type = aspect >= 2 ? 'image/jpeg' : 'image/png';
+    // Breite Bilder (Hintergründe, Banner) als JPEG (Fotos, klein), Icons als PNG (Transparenz, Pixelart)
+    const type = aspect >= 1.5 ? 'image/jpeg' : 'image/png';
     const dataUrl = canvas.toDataURL(type, 0.9);
     busy = false;
     onconfirm(dataUrl.slice(dataUrl.indexOf(',') + 1));

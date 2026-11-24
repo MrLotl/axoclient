@@ -6,7 +6,7 @@
   import Icon from '../lib/components/Icon.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import { loaderName, ago, duration } from '../lib/util/format';
-  import { artLayers } from '../lib/util/art';
+  import { backdrop } from '../lib/util/art';
   import { orderInstances, moveId } from '../lib/util/order';
   import { upload } from '../lib/util/files';
   import { flip } from 'svelte/animate';
@@ -110,7 +110,7 @@
   }
 
   function art(i: InstanceSummary) {
-    return artLayers(i.artSeed ?? i.id, i.minecraftVersion, app.settings?.appearance.versionPanorama ?? true);
+    return backdrop(i, app.settings?.appearance.versionPanorama ?? true);
   }
 
   function badge(i: InstanceSummary) {

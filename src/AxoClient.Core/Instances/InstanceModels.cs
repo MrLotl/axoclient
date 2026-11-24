@@ -33,6 +33,12 @@ public sealed class InstanceImages
 
     /// <summary>Startwert für den Farbverlauf ohne Banner/Panorama; wird beim Erstellen einmal festgelegt.</summary>
     public string? ArtSeed { get; set; }
+
+    /// <summary>Hintergrund ohne eigenes Bild: nur der Farbverlauf statt des Panoramas.</summary>
+    public bool GradientOnly { get; set; }
+
+    /// <summary>Blickrichtung im Panorama (0–3 = die vier Seiten um den Spieler).</summary>
+    public int PanoramaView { get; set; }
 }
 
 /// <summary><c>instances/&lt;id&gt;/instance.json</c></summary>
@@ -76,7 +82,9 @@ public sealed record InstanceSummary(
     int ModCount,
     DateTimeOffset CreatedAt,
     ModLockLevel ModLock,
-    string ArtSeed);
+    string ArtSeed,
+    bool GradientOnly,
+    int PanoramaView);
 
 public sealed record CreateInstanceRequest(
     string Name,

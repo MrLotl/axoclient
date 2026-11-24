@@ -91,6 +91,10 @@ export interface InstanceSummary {
   modLock: ModLockLevel;
   /** Startwert des Farbverlaufs, einmal beim Erstellen festgelegt */
   artSeed: string;
+  /** Hintergrund nur Farbverlauf statt Panorama */
+  gradientOnly: boolean;
+  /** Blickrichtung im Panorama, 0–3 */
+  panoramaView: number;
 }
 
 export interface Instance {

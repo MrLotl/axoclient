@@ -20,6 +20,8 @@ public static partial class Handlers
         bool ResetMemory, string? JavaArgs, bool? BannerAuto, bool? AxoMod);
 
     private sealed record ImageData(string Id, bool Banner, string? FileRef, string? Base64);
+
+    private sealed record BackdropData(string Id, bool GradientOnly, int PanoramaView);
     private sealed record ModLockData(string Id, AxoClient.Core.Instances.ModLockLevel Level, bool AdoptCurrent = false);
 
     private sealed record CopyData(string Id, string Name);
@@ -175,6 +177,13 @@ public static partial class Handlers
             byte[]? bytes = d.FileRef != null ? await File.ReadAllBytesAsync(ctx.Files.Resolve(d.FileRef), ct)
                 : d.Base64 != null ? Convert.FromBase64String(d.Base64) : null;
             await host.Instances.SetImageAsync(d.Id, d.Banner, bytes, ct);
+            return null;
+        });
+
+        // Hintergrund: Panorama (Blickrichtung) oder Farbverlauf; ein eigenes Bild setzt instances.setImage (banner)
+        r.On<BackdropData>("instances.setBackdrop", async (d, ct) =>
+        {
+            await host.Instances.SetBackdropAsync(d.Id, d.GradientOnly, d.PanoramaView, ct);
             return null;
         });
 

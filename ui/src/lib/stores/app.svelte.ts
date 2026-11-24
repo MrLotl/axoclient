@@ -78,6 +78,8 @@ class AppState {
   dialog = $state<null | { kind: string; data?: any }>(null);
   /** Schnellsuche (Strg + K) */
   paletteOpen = $state(false);
+  /** Hintergrund der Bühne vorübergehend vorgeben (z. B. Vorschau beim Erstellen einer Instanz) */
+  stageOverride = $state<string | null>(null);
 
   get activeAccount(): AccountView | undefined {
     return this.accounts.find((a) => a.active);

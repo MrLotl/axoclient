@@ -63,7 +63,7 @@
   </div>
 {:else if fullscreenPage}
   <div class="shell" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
-    <Stage />
+    <Stage mode="home" />
     <TitleBar minimal />
     {#key app.route.page}
       <div class="full-slot" in:fadeSlide={{ y: 10, duration: DUR.slow }}>
@@ -74,7 +74,7 @@
   <GlobalDialogs />
 {:else}
   <div class="shell" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
-    <Stage dim={app.route.page !== 'home'} />
+    <Stage mode={app.route.page === 'home' ? 'home' : app.route.page === 'instance' || app.route.page === 'instanceCreate' ? 'instance' : 'page'} />
     <TitleBar />
     <div class="frame">
       <main class="content">

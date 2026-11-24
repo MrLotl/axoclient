@@ -1,5 +1,6 @@
 <script lang="ts">
   import { artLayers } from '../lib/util/art';
+  import { onDestroy } from 'svelte';
   // Farbverlauf einmal beim Öffnen festlegen: ändert sich nicht beim Tippen und bleibt nach dem Erstellen gleich
   const artSeed = crypto.randomUUID().replaceAll('-', '').slice(0, 16);
   import { app } from '../lib/stores/app.svelte';
@@ -12,7 +13,6 @@
   import MemorySlider from '../lib/components/MemorySlider.svelte';
   import Toggle from '../lib/components/Toggle.svelte';
   import ImageBox from '../lib/components/ImageBox.svelte';
-  import InstanceHero from '../lib/components/InstanceHero.svelte';
   import Select from '../lib/components/Select.svelte';
   import { upload } from '../lib/util/files';
   import { versionLabel } from '../lib/util/format';
@@ -47,7 +47,11 @@
     { id: 'modpack', icon: 'download', title: 'create.modpack', text: 'create.modpackText' }
   ];
 
-  let banner = $state<{ base64: string; url: string } | null>(null);
+  // Vorschau des Hintergrunds direkt auf der Bühne (Panorama der gewählten Version, sonst Farbverlauf)
+  $effect(() => {
+    app.stageOverride = start === 'empty' ? artLayers(artSeed, minecraft, app.settings?.appearance.versionPanorama ?? true) : null;
+  });
+  onDestroy(() => (app.stageOverride = null));
 
   async function chooseFile() {
     try {
@@ -94,7 +98,6 @@
           artSeed
         });
         if (icon) await call('instances.setImage', { id: created.id, banner: false, base64: icon.base64, fileRef: null });
-        if (banner) await call('instances.setImage', { id: created.id, banner: true, base64: banner.base64, fileRef: null });
       }
       await app.refreshInstances();
     } catch (e) {
@@ -124,21 +127,26 @@
   {:else}
     <div class="body">
       {#if start === 'empty'}
-        <InstanceHero
-          name={name || '?'}
-          iconUrl={icon?.url ?? null}
-          bannerUrl={banner?.url ?? null}
-          fallbackArt={artLayers(artSeed, minecraft, app.settings?.appearance.versionPanorama ?? true)}
-          height={170}
-          iconSize={72}
-          label={t('create.preview')}
-          onicon={(base64, url) => (icon = base64 && url ? { base64, url } : null)}
-          onbanner={(base64, url) => (banner = base64 && url ? { base64, url } : null)}>
+        <!-- Vorschau ohne Banner: Instanzbild und Name stehen auf der Bühne, dahinter die Welt der gewählten Version -->
+        <div class="preview" aria-label={t('create.preview')}>
+          <span class="picon">
+            <ImageBox
+              url={icon?.url ?? null}
+              name={name || '?'}
+              width={80}
+              radius={12}
+              editable
+              removable={!!icon}
+              cropTitle={t('instance.settings.icon')}
+              editLabel={t('instance.editIcon')}
+              removeLabel={t('instance.removeIcon')}
+              onchange={(base64, url) => (icon = base64 && url ? { base64, url } : null)} />
+          </span>
           <div class="titles">
             <h2 class="truncate" class:placeholder={!name.trim()}>{name.trim() || t('create.previewName')}</h2>
             {#if minecraft}<span class="glass">{versionLabel(minecraft, loader)}</span>{/if}
           </div>
-        </InstanceHero>
+        </div>
       {/if}
 
       <FormSection title={t('create.start')} subtitle={t('create.startHint')}>
@@ -272,7 +280,19 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
-  /* Vorschau des Instanz-Kopfs */
+  /* Vorschau des Instanz-Kopfs, direkt auf der Bühne */
+  .preview {
+    min-height: 150px;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 0 2px 6px;
+  }
+  .picon {
+    flex-shrink: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
   .titles {
     flex-grow: 1;
     min-width: 0;
@@ -283,10 +303,13 @@
   }
   .titles h2 {
     max-width: 100%;
-    font-size: 26px;
+    font-family: var(--display);
+    font-size: 44px;
     font-weight: 700;
-    letter-spacing: -0.4px;
-    color: #fff;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--text-strong);
+    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
   }
   .titles h2.placeholder {
     color: rgba(255, 255, 255, 0.45);

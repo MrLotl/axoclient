@@ -20,19 +20,39 @@ export function gradient(seed: string): string {
   );
 }
 
-/** Adresse des Panoramas einer Minecraft-Version, oder null bei unbrauchbarem Versionsnamen. */
-export function panoramaUrl(minecraft: string | null | undefined): string | null {
+/** Adresse des Panoramas einer Minecraft-Version (Blickrichtung 0–3), oder null bei unbrauchbarem Versionsnamen. */
+export function panoramaUrl(minecraft: string | null | undefined, view = 0): string | null {
   if (!minecraft || !/^[A-Za-z0-9._-]{1,64}$/.test(minecraft) || minecraft.includes('..')) return null;
-  return `/axo/panorama/${encodeURIComponent(minecraft)}`;
+  const base = `/axo/panorama/${encodeURIComponent(minecraft)}`;
+  return view > 0 && view <= 3 ? `${base}/${view}` : base;
 }
 
 /**
  * Hintergrund für eine Instanz als CSS-Wert: oben das Panorama, darunter der Farbverlauf.
  * Fehlt das Panorama (Version noch nie gestartet), zeigt der Browser einfach den Verlauf.
  */
-export function artLayers(seed: string, minecraft: string | null | undefined, panorama = true): string {
-  const url = panorama ? panoramaUrl(minecraft) : null;
+export function artLayers(seed: string, minecraft: string | null | undefined, panorama = true, view = 0): string {
+  const url = panorama ? panoramaUrl(minecraft, view) : null;
   return url ? `url('${url}'), ${gradient(seed)}` : gradient(seed);
+}
+
+type BackdropSource = {
+  id: string;
+  artSeed?: string;
+  minecraftVersion: string;
+  bannerUrl: string | null;
+  gradientOnly?: boolean;
+  panoramaView?: number;
+};
+
+/**
+ * Hintergrund einer Instanz als CSS-Wert, überall gleich (Bühne, Regal, Kacheln):
+ * eigenes Hintergrundbild > Panorama der Version (gewählte Blickrichtung) > Farbverlauf.
+ */
+export function backdrop(i: BackdropSource, panorama = true): string {
+  const seed = i.artSeed ?? i.id;
+  if (i.bannerUrl) return `url('${i.bannerUrl}'), ${gradient(seed)}`;
+  return artLayers(seed, i.minecraftVersion, panorama && !i.gradientOnly, i.panoramaView ?? 0);
 }
 
 let grainUrl = '';

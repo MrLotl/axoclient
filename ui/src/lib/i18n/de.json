@@ -23,6 +23,19 @@
     "accountMenu": "Account-Menü öffnen",
     "onlineCount": "{count} online"
   },
+  "backdrop": {
+    "title": "Hintergrund",
+    "change": "Hintergrund ändern",
+    "panorama": "Panorama der Version",
+    "panoramaHint": "Aus den Spieldateien von Minecraft {version}",
+    "view": "Blick {n}",
+    "gradient": "Farbverlauf",
+    "custom": "Eigenes Bild",
+    "choose": "Bild wählen …",
+    "replace": "Anderes Bild …",
+    "cropTitle": "Hintergrundbild zuschneiden",
+    "saved": "Hintergrund geändert"
+  },
   "palette": {
     "open": "Schnellsuche öffnen (Strg + K)",
     "short": "Suchen",

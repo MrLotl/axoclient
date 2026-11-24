@@ -18,6 +18,8 @@ const inst = (id: string, lastPlayed: string | null, extra: Partial<InstanceSumm
   createdAt: '2026-01-01T00:00:00Z',
   modLock: 'off',
   artSeed: id,
+  gradientOnly: false,
+  panoramaView: 0,
   ...extra
 });
 

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { fadeOnly } from '../../lib/util/motion';
-  import { artLayers } from '../../lib/util/art';
   import { onMount } from 'svelte';
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
@@ -8,7 +7,8 @@
   import Icon from '../../lib/components/Icon.svelte';
   import PlayButton from '../../lib/components/PlayButton.svelte';
   import { versionLabel } from '../../lib/util/format';
-  import InstanceHero from '../../lib/components/InstanceHero.svelte';
+  import ImageBox from '../../lib/components/ImageBox.svelte';
+  import BackdropPicker from '../../lib/components/BackdropPicker.svelte';
   import Overview from './Overview.svelte';
   import ContentTab from './ContentTab.svelte';
   import WorldsTab from './WorldsTab.svelte';
@@ -65,8 +65,17 @@
     count('shots', 'screenshots.list', { id });
   }
 
-  // Instanzbild und Banner direkt im Kopf bearbeiten (Zuschneiden übernimmt ImageBox)
+  // Instanzbild im Kopf bearbeiten (Zuschneiden übernimmt ImageBox), Hintergrund über das Bild-Menü
   let imageVersion = $state(0);
+  let backdropOpen = $state(false);
+
+  async function backdropChanged() {
+    imageVersion++;
+    backdropOpen = false;
+    await app.refreshInstances();
+    await load();
+    app.toast(t('backdrop.saved'), 'success');
+  }
 
   async function saveImage(banner: boolean, base64: string | null) {
     try {
@@ -124,47 +133,69 @@
 
 <div class="page">
   {#if details && s}
-    <InstanceHero
-      name={details.instance.name}
-      iconUrl={s.hasIcon ? `${s.iconUrl}&r=${imageVersion}` : null}
-      bannerUrl={s.bannerUrl ? `${s.bannerUrl}&r=${imageVersion}` : null}
-      label={t('instance.label')}
-      fallbackArt={artLayers(details.summary.artSeed ?? id, details.instance.minecraft.version, app.settings?.appearance.versionPanorama ?? true)}
-      onicon={(b64) => saveImage(false, b64)}
-      onbanner={(b64) => saveImage(true, b64)}>
-      {#snippet top()}
-        <button class="back" onclick={() => app.back()}><Icon name="chevronLeft" />{t('common.back')}</button>
-      {/snippet}
-      <div class="titles">
-        <h1 class="truncate">{details.instance.name}</h1>
-        <div class="chips">
-          <span class="glass">{versionLabel(details.instance.minecraft.version, details.instance.loader.type)}</span>
-          {#if s.modCount > 0}<span class="glass">{t('instances.mods', { count: s.modCount })}</span>{/if}
-          {#if details.instance.origin.type === 'modpack' && details.instance.origin.versionName}
-            <span class="glass">{t('instance.modpackVersion', { version: details.instance.origin.versionName })}</span>
-          {/if}
-          {#if details.instance.modLock?.level && details.instance.modLock.level !== 'off'}
-            <span class="glass lock" title={t(`modLock.levels.${details.instance.modLock.level}.text`)}>
-              <Icon name="lock" size={11} />{t(`modLock.levels.${details.instance.modLock.level}.name`)}
-            </span>
+    <!-- Kopf direkt auf der Bühne: der Hintergrund der Instanz ist die Welt dahinter (Panorama, Verlauf oder eigenes Bild) -->
+    <header class="ihead">
+      <button class="back" onclick={() => app.back()}><Icon name="chevronLeft" />{t('common.back')}</button>
+      <div class="irow">
+        <span class="icon">
+          <ImageBox
+            url={s.hasIcon ? `${s.iconUrl}&r=${imageVersion}` : null}
+            name={details.instance.name}
+            width={92}
+            radius={12}
+            editable
+            removable={s.hasIcon}
+            cropTitle={t('instance.settings.icon')}
+            editLabel={t('instance.editIcon')}
+            removeLabel={t('instance.removeIcon')}
+            onchange={(b64) => saveImage(false, b64)} />
+        </span>
+        <div class="titles">
+          <h1 class="truncate">{details.instance.name}</h1>
+          <div class="chips">
+            <span class="glass">{versionLabel(details.instance.minecraft.version, details.instance.loader.type)}</span>
+            {#if s.modCount > 0}<span class="glass">{t('instances.mods', { count: s.modCount })}</span>{/if}
+            {#if details.instance.origin.type === 'modpack' && details.instance.origin.versionName}
+              <span class="glass">{t('instance.modpackVersion', { version: details.instance.origin.versionName })}</span>
+            {/if}
+            {#if details.instance.modLock?.level && details.instance.modLock.level !== 'off'}
+              <span class="glass lock" title={t(`modLock.levels.${details.instance.modLock.level}.text`)}>
+                <Icon name="lock" size={11} />{t(`modLock.levels.${details.instance.modLock.level}.name`)}
+              </span>
+            {/if}
+          </div>
+        </div>
+        <div class="backdrop-area">
+          <button
+            class="hero-btn"
+            class:open={backdropOpen}
+            aria-label={t('backdrop.change')}
+            title={t('backdrop.change')}
+            aria-haspopup="dialog"
+            aria-expanded={backdropOpen}
+            onclick={() => (backdropOpen = !backdropOpen)}>
+            <Icon name="image" size={18} stroke={1.6} />
+          </button>
+          {#if backdropOpen}
+            <BackdropPicker instance={s} onclose={() => (backdropOpen = false)} onchanged={backdropChanged} />
           {/if}
         </div>
+        <button class="hero-btn" aria-label={t('instance.share')} title={t('instance.share')} onclick={() => (app.dialog = { kind: 'share', data: { mode: 'instance', instanceId: id } })}>
+          <Icon name="send" size={18} stroke={1.6} />
+        </button>
+        <button
+          class="hero-btn"
+          aria-label={t('transfer.button')}
+          title={t('transfer.button')}
+          onclick={() => (app.dialog = { kind: 'import', data: { target: { id, name: details!.instance.name, loader: details!.instance.loader.type, minecraftVersion: details!.instance.minecraft.version } } })}>
+          <Icon name="import" size={18} stroke={1.6} />
+        </button>
+        <button class="hero-btn" aria-label={t('instance.openFolder')} title={t('instance.openFolder')} onclick={() => call('shell.openFolder', { kind: 'instance', id })}>
+          <Icon name="folder" size={18} stroke={1.6} />
+        </button>
+        <div style="width: 200px"><PlayButton instanceId={id} height={50} /></div>
       </div>
-      <button class="hero-btn" aria-label={t('instance.share')} title={t('instance.share')} onclick={() => (app.dialog = { kind: 'share', data: { mode: 'instance', instanceId: id } })}>
-        <Icon name="send" size={18} stroke={1.6} />
-      </button>
-      <button
-        class="hero-btn"
-        aria-label={t('transfer.button')}
-        title={t('transfer.button')}
-        onclick={() => (app.dialog = { kind: 'import', data: { target: { id, name: details!.instance.name, loader: details!.instance.loader.type, minecraftVersion: details!.instance.minecraft.version } } })}>
-        <Icon name="import" size={18} stroke={1.6} />
-      </button>
-      <button class="hero-btn" aria-label={t('instance.openFolder')} title={t('instance.openFolder')} onclick={() => call('shell.openFolder', { kind: 'instance', id })}>
-        <Icon name="folder" size={18} stroke={1.6} />
-      </button>
-      <div style="width: 200px"><PlayButton instanceId={id} height={50} /></div>
-    </InstanceHero>
+    </header>
 
     <nav class="tabs" aria-label={t('instance.areas')} bind:this={tabsNav}>
       {#if indicator}
@@ -231,6 +262,36 @@
     flex-direction: column;
     gap: 16px;
     min-height: 0;
+  }
+  .ihead {
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 4px;
+  }
+  .irow {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+  }
+  .icon {
+    flex-shrink: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+  .backdrop-area {
+    position: relative;
+  }
+  .hero-btn.open {
+    background: rgba(255, 255, 255, 0.22);
+  }
+  h1 {
+    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
   }
   .back {
     align-self: flex-start;

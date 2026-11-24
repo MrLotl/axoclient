@@ -15,7 +15,7 @@
   import FriendsPanel from './home/FriendsPanel.svelte';
   import ServerPanel from './home/ServerPanel.svelte';
   import { loaderName, ago, duration } from '../lib/util/format';
-  import { artLayers } from '../lib/util/art';
+  import { backdrop } from '../lib/util/art';
   import { orderInstances, moveId } from '../lib/util/order';
   import { fadeOnly } from '../lib/util/motion';
   import { flip } from 'svelte/animate';
@@ -210,7 +210,7 @@
             ondragend={onTileDragEnd}
             title={inst.name}
             animate:flip={{ duration: flipMs }}>
-            <span class="art" style="background-image: {artLayers(inst.artSeed ?? inst.id, inst.minecraftVersion, app.settings?.appearance.versionPanorama ?? true)}">
+            <span class="art" style="background-image: {backdrop(inst, app.settings?.appearance.versionPanorama ?? true)}">
               {#if n < 9}<i class="key">{n + 1}</i>{/if}
               {#if inst.hasIcon}<img class="ico" src={inst.iconUrl} alt="" draggable="false" />{/if}
               {#if inst.running}<i class="live">{t('common.running')}</i>{/if}

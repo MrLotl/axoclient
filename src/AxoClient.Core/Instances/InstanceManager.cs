@@ -85,7 +85,8 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
             instance.Loader.Version, $"/axo/instance-icon/{instance.Id}?v={version}",
             hasBanner && !instance.Images.BannerAuto ? $"/axo/instance-banner/{instance.Id}?v={version}" : null,
             hasIcon, playtime.LastPlayed, playtime.TotalSeconds, processes.Get(ProcessKey(instance.Id)) != null, modCount,
-            instance.CreatedAt, instance.ModLock.Level, instance.Images.ArtSeed ?? instance.Id);
+            instance.CreatedAt, instance.ModLock.Level, instance.Images.ArtSeed ?? instance.Id,
+            instance.Images.GradientOnly, Math.Clamp(instance.Images.PanoramaView, 0, 3));
     }
 
     private static bool IsSafeSeed(string? seed) =>
@@ -182,7 +183,9 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
         copy.Images = new InstanceImages
         {
             Icon = source.Images.Icon, Banner = source.Images.Banner, BannerAuto = source.Images.BannerAuto,
-            ArtSeed = source.Images.ArtSeed ?? source.Id
+            ArtSeed = source.Images.ArtSeed ?? source.Id,
+            GradientOnly = source.Images.GradientOnly,
+            PanoramaView = source.Images.PanoramaView
         };
         if (File.Exists(paths.ContentJson(sourceId)))
             File.Copy(paths.ContentJson(sourceId), paths.ContentJson(copy.Id), overwrite: true);
@@ -252,7 +255,24 @@ public sealed class InstanceManager(AppPaths paths, EventHub events, ProcessRunn
         Publish();
     }
 
-    /// <summary>Speichert Instanz- oder Bannerbild. Nur PNG und JPEG, höchstens 5 MB.</summary>
+    /// <summary>
+    /// Hintergrund ohne eigenes Bild: Panorama der Version (Blickrichtung 0–3) oder nur Farbverlauf.
+    /// Ein eigenes Hintergrundbild wird dabei entfernt.
+    /// </summary>
+    public async Task SetBackdropAsync(string id, bool gradientOnly, int panoramaView, CancellationToken ct = default)
+    {
+        var instance = await GetAsync(id, ct);
+        var banner = Path.Combine(paths.Instance(id), "banner.png");
+        if (File.Exists(banner))
+            File.Delete(banner);
+        instance.Images.Banner = null;
+        instance.Images.BannerAuto = true;
+        instance.Images.GradientOnly = gradientOnly;
+        instance.Images.PanoramaView = Math.Clamp(panoramaView, 0, 3);
+        await SaveAsync(instance, ct);
+    }
+
+    /// <summary>Speichert Instanzbild oder eigenes Hintergrundbild (intern „banner“). Nur PNG und JPEG, höchstens 5 MB.</summary>
     public async Task SetImageAsync(string id, bool banner, byte[]? data, CancellationToken ct = default)
     {
         var instance = await GetAsync(id, ct);
