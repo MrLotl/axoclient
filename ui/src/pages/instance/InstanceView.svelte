@@ -33,6 +33,9 @@
 
   // Nie endlos drehen: nach 15 s ohne Antwort eine Meldung mit Zurück/Erneut versuchen zeigen
   let slow = $state(false);
+  // Nach echtem Speichern wird der Einstellungen-Tab mit den neuen Werten frisch aufgebaut
+  let settingsVersion = $state(0);
+
   async function load() {
     const timer = details ? undefined : setTimeout(() => (slow = true), 15000);
     try {
@@ -191,7 +194,7 @@
       {:else if tab === 'shots'}
         <ScreenshotsTab instanceId={id} bind:count={counts.shots} />
       {:else if tab === 'settings'}
-        {#key details.instance}<SettingsTab {details} onsaved={load} />{/key}
+        {#key details.instance.id + ':' + settingsVersion}<SettingsTab {details} onsaved={async () => { await load(); settingsVersion++; }} onrefresh={load} />{/key}
       {/if}
     </div>
     {/key}

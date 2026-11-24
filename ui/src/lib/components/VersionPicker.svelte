@@ -30,18 +30,27 @@
     }
   }
 
+  let loadingLoader = $state(false);
+  let loaderToken = 0;
   async function loadLoaderVersions() {
-    loaderVersions = [];
+    const token = ++loaderToken;
     if (loader === 'vanilla' || !minecraft) {
+      loaderVersions = [];
       loaderVersion = null;
+      loadingLoader = false;
       return;
     }
+    loadingLoader = true;
     try {
-      loaderVersions = await call('loaders.versions', { loader, minecraft });
+      const list = await call<typeof loaderVersions>('loaders.versions', { loader, minecraft });
+      if (token !== loaderToken) return;
+      loaderVersions = list;
       if (!loaderVersion || !loaderVersions.some((v) => v.version === loaderVersion))
         loaderVersion = (loaderVersions.find((v) => v.recommended) ?? loaderVersions[0])?.version ?? null;
     } catch {
-      loaderVersions = [];
+      if (token === loaderToken) loaderVersions = [];
+    } finally {
+      if (token === loaderToken) loadingLoader = false;
     }
   }
 
@@ -55,7 +64,7 @@
 
   const shown = $derived(versions.filter((v) => !axoOnly || v.axo));
   const unsupported = $derived(!!minecraft && app.axoModVersions.length > 0 && !app.axoModVersions.includes(minecraft));
-  const noLoaderVersion = $derived(loader !== 'vanilla' && minecraft && loaderVersions.length === 0);
+  const noLoaderVersion = $derived(loader !== 'vanilla' && !!minecraft && !loadingLoader && loaderVersions.length === 0);
 </script>
 
 <div class="picker">

@@ -11,7 +11,7 @@
   import type { FileRef, InstanceDetails, LoaderType, ModLockLevel } from '../../lib/types';
   import { expand } from '../../lib/util/motion';
 
-  let { details, onsaved }: { details: InstanceDetails; onsaved: () => void } = $props();
+  let { details, onsaved, onrefresh }: { details: InstanceDetails; onsaved: () => void; onrefresh?: () => void } = $props();
 
   const original = details.instance;
   let name = $state(original.name);
@@ -36,7 +36,7 @@
   // Beim Wechsel von Version oder Loader die Mods gleich mit umstellen
   let adaptMods = $state(true);
   const setupChanged = $derived(minecraft !== original.minecraft.version || loader !== original.loader.type);
-  const canAdapt = $derived(loader !== 'vanilla' && original.loader.type !== 'vanilla' && (original.modLock?.level ?? 'off') !== 'full');
+  const canAdapt = $derived(loader !== 'vanilla' && original.loader.type !== 'vanilla' && (details.instance.modLock?.level ?? 'off') !== 'full');
 
   async function adapt() {
     try {
@@ -104,7 +104,8 @@
       await call('instances.setModLock', { id: original.id, level, adoptCurrent });
       lockLevel = level;
       if (adoptCurrent) app.toast(t('modLock.adopted'), 'success');
-      onsaved();
+      // Nur die Daten auffrischen: kein Neuaufbau des Tabs, kein Sprung beim Scrollen
+      (onrefresh ?? onsaved)();
     } catch (e) {
       app.error(e);
     } finally {
@@ -222,7 +223,7 @@
         </div>
         {#if lockLevel === 'pack'}
           <div class="row between" transition:expand>
-            <span class="hint">{t('modLock.packCount', { count: original.modLock?.packMods.length ?? 0 })}</span>
+            <span class="hint">{t('modLock.packCount', { count: details.instance.modLock?.packMods.length ?? 0 })}</span>
             <button class="btn btn-flat sm" disabled={lockBusy} onclick={() => setLock('pack', true)}>{t('modLock.adopt')}</button>
           </div>
         {/if}

@@ -49,7 +49,16 @@
   const joinable = $derived(app.social.friends.find((f) => f.relation === 'friends' && f.state === 'ingame' && f.join) ?? null);
 
   // 3D-Skin wächst mit dem Fenster, bleibt aber über dem Regal
-  const viewerHeight = $derived(Math.round(Math.max(180, Math.min(360, leftHeight - 400))));
+  const viewerHeight = $derived(Math.round(Math.max(260, Math.min(600, leftHeight * 0.82))));
+  const skinWidth = $derived(Math.round(viewerHeight * 0.62));
+
+  // Mausrad scrollt das Regal seitwärts
+  function onShelfWheel(e: WheelEvent) {
+    const el = e.currentTarget as HTMLElement;
+    if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    el.scrollLeft += e.deltaY;
+  }
 
   async function loadProfile() {
     if (!account || account.type !== 'microsoft') {
@@ -96,13 +105,13 @@
 
 <div class="home">
   <div class="left" bind:clientHeight={leftHeight}>
-    <div class="skin" style="bottom: {shelf.length ? 176 : 40}px">
+    <div class="skin" style="width: {skinWidth}px">
       {#key account?.uuid}
         <SkinViewer
           skin={account ? `/axo/head/${account.uuid.replaceAll('-', '')}?v=${profile?.skinUrl ?? ''}` : null}
           cape={activeCape}
           model={profile?.model === 'slim' ? 'slim' : 'default'}
-          width={Math.round(viewerHeight * 0.75)}
+          width={skinWidth}
           height={viewerHeight}
           animate={skinAnimation}
           label={t('home.skinModel')} />
@@ -147,8 +156,8 @@
     {/if}
 
     {#if shelf.length}
-      <div class="shelf-head"><b>{t('home.yourInstances')}</b><span>{t('home.keysHint')}</span></div>
-      <div class="shelf" role="listbox" aria-label={t('home.chooseInstance')}>
+      <div class="shelf-head" style="max-width: calc(100% - {skinWidth}px)"><b>{t('home.yourInstances')}</b><span>{t('home.keysHint')}</span></div>
+      <div class="shelf" role="listbox" aria-label={t('home.chooseInstance')} style="max-width: calc(100% - {skinWidth - 8}px)" onwheel={onShelfWheel}>
         {#each shelf as inst, n (inst.id)}
           <button class="tile" class:on={inst.id === selectedId} role="option" aria-selected={inst.id === selectedId} onclick={() => pick(inst.id)} title={inst.name}>
             <span class="art" class:pixel={!inst.hasIcon} style="background-image: url('{inst.hasIcon ? inst.iconUrl : landscape(inst.id)}')">
@@ -189,7 +198,10 @@
   }
   .skin {
     position: absolute;
-    right: 24px;
+    right: 0;
+    bottom: -4px;
+    display: flex;
+    justify-content: center;
     z-index: 0;
     filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.5));
     pointer-events: auto;
@@ -283,8 +295,9 @@
     padding: 6px 4px 4px;
     margin: -6px -4px 0;
     scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
-    mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 90px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 90px), transparent);
+    padding-right: 90px;
   }
   .tile {
     flex: 0 0 auto;
