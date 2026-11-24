@@ -37,7 +37,8 @@
   });
 
   let profile = $state<MojangProfile | null>(null);
-  let leftHeight = $state(700);
+  // Fensterhöhe minus Titelleiste und Ränder – stimmt schon vor der ersten Messung, der Skin springt nicht
+  let leftHeight = $state(typeof window === 'undefined' ? 700 : Math.max(400, window.innerHeight - 92));
 
   // Regal: zuletzt gespielte Instanzen zuerst
   // Regal: gleiche Reihenfolge wie auf der Instanzen-Seite (auch die eigene, per Ziehen festgelegte)

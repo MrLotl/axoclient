@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app } from '../stores/app.svelte';
   import { fadeOnly } from '../util/motion';
-  import { artLayers, grain } from '../util/art';
+  import { artLayers, grain, panoramaUrl } from '../util/art';
 
   // Die Bühne zeigt die Welt der gerade gewählten Instanz hinter der ganzen Oberfläche.
   // Auf der Startseite offen, auf allen anderen Seiten stark abgedunkelt.
@@ -14,6 +14,20 @@
   });
 
   const panorama = $derived(app.settings?.appearance.versionPanorama ?? true);
+
+  // Panoramas aller Versionen einmal im Hintergrund laden und dekodieren (bleibt im Bildspeicher)
+  const decoded = new Set<string>();
+  $effect(() => {
+    if (!panorama) return;
+    for (const i of app.instances) {
+      const url = panoramaUrl(i.minecraftVersion);
+      if (!url || decoded.has(url)) continue;
+      decoded.add(url);
+      const img = new Image();
+      img.src = url;
+      img.decode?.().catch(() => {});
+    }
+  });
   const motion = $derived(app.settings?.appearance.stageMotion ?? true);
 
   // Eigenes Banner > Panorama der Minecraft-Version (aus den Spieldateien) > Farbverlauf

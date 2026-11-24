@@ -108,7 +108,10 @@ internal sealed class UiServer(SchemeHandler content) : IDisposable
         var bytes = await ReadAllAsync(body, ct);
         var status = isAxo && bytes.Length == 0 ? 404 : 200;
         // Gebaute Dateien unter /assets/ tragen einen Hash im Namen und ändern sich nie
-        var immutable = !isAxo && target.StartsWith("/assets/", StringComparison.Ordinal);
+        // Panoramas und Bilder mit Versionsangabe (?v=…) bleiben unter derselben Adresse gleich: zwischenspeichern,
+        // sonst lädt und dekodiert die Oberfläche sie bei jedem Seitenwechsel neu (sichtbares Nachladen)
+        var immutable = status == 200 && ((!isAxo && target.StartsWith("/assets/", StringComparison.Ordinal))
+            || (isAxo && (target.StartsWith("/axo/panorama/", StringComparison.Ordinal) || target.Contains("?v=", StringComparison.Ordinal))));
         await WriteAsync(stream, status, type, method == "HEAD" ? [] : bytes, immutable, keepAlive, ct, bytes.Length);
         return keepAlive;
     }
