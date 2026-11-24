@@ -15,7 +15,7 @@
   import FriendsPanel from './home/FriendsPanel.svelte';
   import ServerPanel from './home/ServerPanel.svelte';
   import { loaderName, ago, duration } from '../lib/util/format';
-  import { landscape } from '../lib/util/art';
+  import { artLayers } from '../lib/util/art';
   import { fadeSlide, DUR } from '../lib/util/motion';
   import type { MojangProfile } from '../lib/types';
 
@@ -160,7 +160,7 @@
       <div class="shelf" role="listbox" aria-label={t('home.chooseInstance')} style="max-width: calc(100% - {skinWidth - 8}px)" onwheel={onShelfWheel}>
         {#each shelf as inst, n (inst.id)}
           <button class="tile" class:on={inst.id === selectedId} role="option" aria-selected={inst.id === selectedId} onclick={() => pick(inst.id)} title={inst.name}>
-            <span class="art" class:pixel={!inst.hasIcon} style="background-image: url('{inst.hasIcon ? inst.iconUrl : landscape(inst.id)}')">
+            <span class="art" class:pixel={!inst.hasIcon} style="background-image: {inst.hasIcon ? `url('${inst.iconUrl}')` : artLayers(inst.id, inst.minecraftVersion, app.settings?.appearance.versionPanorama ?? true)}">
               {#if n < 9}<i class="key">{n + 1}</i>{/if}
               {#if inst.running}<i class="live">{t('common.running')}</i>{/if}
             </span>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { landscape } from '../lib/util/art';
+  import { artLayers } from '../lib/util/art';
   import { app } from '../lib/stores/app.svelte';
   import { call } from '../lib/bridge/bridge';
   import { t } from '../lib/i18n';
@@ -125,7 +125,7 @@
           name={name || '?'}
           iconUrl={icon?.url ?? null}
           bannerUrl={banner?.url ?? null}
-          fallbackArt={landscape(name || 'neue-instanz')}
+          fallbackArt={artLayers(name || 'neue-instanz', minecraft, app.settings?.appearance.versionPanorama ?? true)}
           height={170}
           iconSize={72}
           label={t('create.preview')}

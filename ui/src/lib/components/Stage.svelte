@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from '../stores/app.svelte';
-  import { landscape, grain } from '../util/art';
+  import { artLayers, grain } from '../util/art';
 
   // Die Bühne zeigt die Welt der gerade gewählten Instanz hinter der ganzen Oberfläche.
   // Auf der Startseite offen, auf allen anderen Seiten stark abgedunkelt.
@@ -12,17 +12,20 @@
     return (last ? app.instances.find((i) => i.id === last) : null) ?? app.instances[0] ?? null;
   });
 
-  // Banner > Instanzbild (weichgezeichnet) > erzeugte Pixel-Landschaft
+  const panorama = $derived(app.settings?.appearance.versionPanorama ?? true);
+  const motion = $derived(app.settings?.appearance.stageMotion ?? true);
+
+  // Eigenes Banner > Panorama der Minecraft-Version (aus den Spieldateien) > Instanzbild weichgezeichnet > Pixel-Landschaft
   const bg = $derived.by(() => {
-    if (current?.bannerUrl) return { url: current.bannerUrl, kind: 'photo' };
-    if (current?.hasIcon) return { url: current.iconUrl, kind: 'icon' };
-    return { url: landscape(current?.id ?? 'axoclient'), kind: 'pixel' };
+    if (current?.bannerUrl) return { css: `url('${current.bannerUrl}')`, kind: 'photo' };
+    if (current?.hasIcon && !panorama) return { css: `url('${current.iconUrl}')`, kind: 'icon' };
+    return { css: artLayers(current?.id ?? 'axoclient', current?.minecraftVersion, panorama), kind: 'pixel' };
   });
 </script>
 
-<div class="stage" class:dim aria-hidden="true">
-  {#key bg.url}
-    <div class="bg {bg.kind}" style="background-image: url('{bg.url}')"></div>
+<div class="stage" class:dim class:still={!motion} aria-hidden="true">
+  {#key bg.css}
+    <div class="bg {bg.kind}" style="background-image: {bg.css}"></div>
   {/key}
   <div class="shade"></div>
   <div class="grain" style="background-image: url('{grain()}')"></div>
@@ -77,6 +80,9 @@
     position: absolute;
     inset: 0;
     background: radial-gradient(ellipse at 40% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+  }
+  .still .bg {
+    animation: stage-fade 0.7s ease-out;
   }
   @media (prefers-reduced-motion: reduce) {
     .bg {

@@ -27,7 +27,7 @@
     height?: number;
     iconSize?: number;
     label?: string;
-    /** Bild hinter dem Kopf, solange es weder Banner noch Instanzbild gibt (z. B. die Pixel-Landschaft) */
+    /** CSS-Hintergrund hinter dem Kopf, solange es weder Banner noch Instanzbild gibt (Panorama bzw. Pixel-Landschaft) */
     fallbackArt?: string | null;
     onicon?: (base64: string | null, url: string | null) => void;
     onbanner?: (base64: string | null, url: string | null) => void;
@@ -52,7 +52,7 @@
     editLabel={t('instance.editBanner')}
     removeLabel={t('instance.settings.bannerAuto')}
     onchange={onbanner}>
-    {#if !bannerUrl && !iconUrl && fallbackArt}<div class="art" style="background-image: url('{fallbackArt}')"></div>{/if}
+    {#if !bannerUrl && !iconUrl && fallbackArt}<div class="art" style="background-image: {fallbackArt}"></div>{/if}
     <div class="shade"></div>
     <div class="content" class:has-top={!!top}>
       {@render top?.()}

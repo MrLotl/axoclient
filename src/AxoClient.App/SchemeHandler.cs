@@ -68,6 +68,8 @@ internal sealed class SchemeHandler(AppHost host)
                 "server-banner-local" when parts.Length == 1 => ReadFile(host.LocalServers.BannerPath(parts[0])),
                 "skin-file" when parts.Length == 1 => ReadFile(host.Skins.FilePath(parts[0])),
                 "cape-file" when parts.Length == 1 => ReadFile(host.Capes.FilePath(parts[0])),
+                // Titelbild-Panorama einer Minecraft-Version, direkt aus deren Spieldatei
+                "panorama" when parts.Length == 1 => host.Panoramas.Get(parts[0]),
                 // Skin eines Spielers (für Köpfe): erst Cache, sonst Mojang
                 "head" when parts.Length == 1 => RunSync(() => host.Skins.PlayerSkinAsync(parts[0], CancellationToken.None)),
                 _ => null

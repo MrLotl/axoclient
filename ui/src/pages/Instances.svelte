@@ -6,7 +6,7 @@
   import Icon from '../lib/components/Icon.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
   import { loaderName, ago, duration } from '../lib/util/format';
-  import { landscape } from '../lib/util/art';
+  import { artLayers } from '../lib/util/art';
   import { upload } from '../lib/util/files';
   import { flip } from 'svelte/animate';
   import { fadeSlide, fadeOut, pop, stagger, reducedMotion, DUR } from '../lib/util/motion';
@@ -67,7 +67,7 @@
   }
 
   function art(i: InstanceSummary) {
-    return i.hasIcon ? i.iconUrl : landscape(i.id);
+    return i.hasIcon ? `url('${i.iconUrl}')` : artLayers(i.id, i.minecraftVersion, app.settings?.appearance.versionPanorama ?? true);
   }
 
   function badge(i: InstanceSummary) {
@@ -174,7 +174,7 @@
             role="button"
             tabindex="0"
             aria-label={t('instances.open', { name: i.name })}
-            style="background-image: url('{art(i)}')"
+            style="background-image: {art(i)}"
             onclick={() => app.navigate({ page: 'instance', id: i.id })}
             onkeydown={(e) => e.key === 'Enter' && app.navigate({ page: 'instance', id: i.id })}
             animate:flip={{ duration: flipMs }}
@@ -238,7 +238,7 @@
                 onclick={(e) => { e.stopPropagation(); toggleFavorite(i.id); }}>
                 <Icon name={favorites.has(i.id) ? 'starFill' : 'star'} size={15} />
               </button>
-              <img class="thumb" class:pixel={!i.hasIcon} src={art(i)} alt="" />
+              <span class="thumb" class:pixel={!i.hasIcon} style="background-image: {art(i)}"></span>
               <span class="nm"><b class="truncate">{i.name}</b><small class="truncate">{badge(i)}</small></span>
               <span class="c m">{i.minecraftVersion}</span>
               <span class="c">{loaderName(i.loader)}</span>
@@ -576,11 +576,13 @@
     color: var(--text-strong);
   }
   .thumb {
+    display: block;
     width: var(--th);
     aspect-ratio: 16 / 9;
     max-width: 100%;
     border-radius: 4px;
-    object-fit: cover;
+    background-size: cover;
+    background-position: center;
   }
   .thumb.pixel {
     image-rendering: pixelated;

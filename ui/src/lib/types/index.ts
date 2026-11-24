@@ -34,7 +34,7 @@ export interface LauncherSettings {
   defaults: { memoryMb: number; java: string };
   integrations: { discordRpc: boolean; discordShow: 'always' | 'playing'; friendJoinRelay: boolean; tablistIcon: boolean; streamerMode: boolean };
   social: { showOnline: boolean; allowJoin: boolean };
-  appearance: { preset: string; accent: AccentGradient; customGradients: CustomGradient[]; waveOnStart: boolean };
+  appearance: { preset: string; accent: AccentGradient; customGradients: CustomGradient[]; waveOnStart: boolean; versionPanorama: boolean; stageMotion: boolean };
   notifications: {
     windowsToasts: boolean;
     quietWhilePlaying: boolean;

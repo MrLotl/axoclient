@@ -100,6 +100,7 @@ public sealed class AppHost : IAsyncDisposable
 
         Mojang = new MojangApi(Api, Accounts);
         Skins = new SkinManager(paths, Mojang, Accounts, Events);
+        Panoramas = new PanoramaService(paths);
         Capes = new CapeManager(paths, Accounts, Events);
         CapeService = new CapeService(Online, Capes, Accounts);
         // Laufende Spiele zeigen das neue Axo-Cape sofort, ohne auf die nächste Abfrage beim Dienst zu warten
@@ -181,6 +182,7 @@ public sealed class AppHost : IAsyncDisposable
     public DiscordIntegration Discord { get; }
     public MojangApi Mojang { get; }
     public SkinManager Skins { get; }
+    public PanoramaService Panoramas { get; }
     public CapeManager Capes { get; }
     public CapeService CapeService { get; }
     public LocalServerManager LocalServers { get; }

@@ -87,6 +87,12 @@ public sealed class AppearanceSettings
 
     /// <summary>Skin auf der Startseite winkt einmal nach dem Start des Launchers.</summary>
     public bool WaveOnStart { get; set; } = true;
+
+    /// <summary>Hintergrund der Startseite: Titelbild-Panorama der Minecraft-Version aus den Spieldateien.</summary>
+    public bool VersionPanorama { get; set; } = true;
+
+    /// <summary>Hintergrund bewegt sich langsam (Zoom).</summary>
+    public bool StageMotion { get; set; } = true;
 }
 
 public sealed class NotificationTypes

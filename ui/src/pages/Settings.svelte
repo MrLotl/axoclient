@@ -412,6 +412,14 @@
             <div class="text"><span class="name">{t('settings.waveOnStart')}</span><span class="desc">{t('settings.waveOnStartHint')}</span></div>
             <Toggle checked={s.appearance.waveOnStart} label={t('settings.waveOnStart')} onchange={(v) => set((x) => (x.appearance.waveOnStart = v))} />
           </div>
+          <div class="item">
+            <div class="text"><span class="name">{t('settings.versionPanorama')}</span><span class="desc">{t('settings.versionPanoramaHint')}</span></div>
+            <Toggle checked={s.appearance.versionPanorama} label={t('settings.versionPanorama')} onchange={(v) => set((x) => (x.appearance.versionPanorama = v))} />
+          </div>
+          <div class="item">
+            <div class="text"><span class="name">{t('settings.stageMotion')}</span><span class="desc">{t('settings.stageMotionHint')}</span></div>
+            <Toggle checked={s.appearance.stageMotion} label={t('settings.stageMotion')} onchange={(v) => set((x) => (x.appearance.stageMotion = v))} />
+          </div>
         </div>
         <h3>{t('settings.samplePreview')}</h3>
         <div class="sample" aria-hidden="true">

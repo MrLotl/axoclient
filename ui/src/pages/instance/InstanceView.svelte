@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { landscape } from '../../lib/util/art';
+  import { artLayers } from '../../lib/util/art';
   import { onMount } from 'svelte';
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
@@ -128,7 +128,7 @@
       iconUrl={s.hasIcon ? `${s.iconUrl}&r=${imageVersion}` : null}
       bannerUrl={s.bannerUrl ? `${s.bannerUrl}&r=${imageVersion}` : null}
       label={t('instance.label')}
-      fallbackArt={landscape(id)}
+      fallbackArt={artLayers(id, details.instance.minecraft.version, app.settings?.appearance.versionPanorama ?? true)}
       onicon={(b64) => saveImage(false, b64)}
       onbanner={(b64) => saveImage(true, b64)}>
       {#snippet top()}

@@ -129,6 +129,17 @@ export function landscape(seed: string): string {
   return url;
 }
 
+/**
+ * Hintergrund für eine Instanz als CSS-Wert: zuerst das Titelbild-Panorama ihrer Minecraft-Version
+ * (aus den Spieldateien), darunter die Pixel-Landschaft. Fehlt das Panorama, zeigt der Browser
+ * einfach die untere Ebene.
+ */
+export function artLayers(seed: string, minecraft: string | null | undefined, panorama = true): string {
+  const land = `url('${landscape(seed)}')`;
+  if (!panorama || !minecraft || !/^[A-Za-z0-9._-]{1,64}$/.test(minecraft) || minecraft.includes('..')) return land;
+  return `url('/axo/panorama/${encodeURIComponent(minecraft)}'), ${land}`;
+}
+
 let grainUrl = '';
 /** Feines Filmkorn (160 × 160, wird gekachelt). */
 export function grain(): string {
