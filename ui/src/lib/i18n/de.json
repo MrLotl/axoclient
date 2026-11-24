@@ -543,7 +543,35 @@
     "mods": "{count} Mods",
     "emptyTitle": "Noch keine Instanzen",
     "emptyText": "Eine Instanz ist eine eigene Minecraft-Installation mit Version, Mods und Welten. Lege eine neue an oder installiere ein Modpack.",
-    "dropHint": ".mrpack oder AxoClient-Backup hier ablegen"
+    "dropHint": ".mrpack oder AxoClient-Backup hier ablegen",
+    "library": "Bibliothek · {count} Instanzen",
+    "all": "Alle",
+    "favorites": "Favoriten",
+    "favorite": "{name} als Favorit markieren",
+    "unfavorite": "{name} nicht mehr als Favorit",
+    "noMatch": "Keine Instanz passt zu „{query}“.",
+    "noFavorites": "Noch keine Favoriten. Markiere Instanzen mit dem Stern, dann stehen sie immer oben.",
+    "noLoader": "Keine Instanz mit diesem Loader.",
+    "sortLabel": "Sortieren",
+    "sort": {
+      "recent": "Zuletzt",
+      "name": "Name",
+      "playtime": "Spielzeit",
+      "mods": "Mods"
+    },
+    "size": "Größe",
+    "gridSize": "Kachelgröße",
+    "listSize": "Zeilenhöhe",
+    "col": {
+      "name": "Name",
+      "version": "Version",
+      "loader": "Loader",
+      "mods": "Mods",
+      "playtime": "Spielzeit",
+      "last": "Zuletzt"
+    },
+    "never": "noch nie",
+    "starting": "Startet …"
   },
   "import": {
     "unknownFormat": "Unbekanntes Format. Unterstützt werden .mrpack, AxoClient-Backups und ZIP-Exporte anderer Launcher.",

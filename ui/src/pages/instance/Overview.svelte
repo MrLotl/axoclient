@@ -202,7 +202,7 @@
       {#if size && totalSize > 0}
         <div class="size-bar" aria-hidden="true">
           <span style="width: {(size.worlds / totalSize) * 100}%; background: var(--accent-from)"></span>
-          <span style="width: {(size.mods / totalSize) * 100}%; background: var(--accent-to)"></span>
+          <span style="width: {(size.mods / totalSize) * 100}%; background: color-mix(in srgb, var(--accent-light) 55%, transparent)"></span>
           <span class="grow" style="background: rgba(255,255,255,0.18)"></span>
         </div>
         <span class="small">{t('instance.overview.sizeParts', { worlds: bytes(size.worlds), mods: bytes(size.mods), rest: bytes(size.rest) })}</span>

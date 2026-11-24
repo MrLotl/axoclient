@@ -166,6 +166,9 @@ public sealed class LauncherSettings : IVersionedDocument
 public sealed class ViewState
 {
     public string Instances { get; set; } = "grid";
+
+    /// <summary>Größe der Kacheln bzw. Zeilen auf der Instanzen-Seite, 0 = klein bis 1 = groß</summary>
+    public double InstancesSize { get; set; } = 0.5;
     public string LocalServers { get; set; } = "list";
     public string Modpacks { get; set; } = "grid";
 
@@ -182,6 +185,9 @@ public sealed class SortState
 {
     public string Modpacks { get; set; } = "popular";
     public string AddMods { get; set; } = "popular";
+
+    /// <summary>Instanzen-Seite: recent, name, playtime oder mods</summary>
+    public string Instances { get; set; } = "recent";
 }
 
 public sealed class SourceState
@@ -198,6 +204,9 @@ public sealed class UiState : IVersionedDocument
     public ViewState Views { get; set; } = new();
     public SortState Sort { get; set; } = new();
     public SourceState ContentSource { get; set; } = new();
+
+    /// <summary>Als Favorit markierte Instanzen (stehen immer oben)</summary>
+    public List<string> Favorites { get; set; } = [];
 
     [JsonIgnore]
     public static readonly string[] ViewModes = ["grid", "list"];

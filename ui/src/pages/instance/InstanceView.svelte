@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { landscape } from '../../lib/util/art';
   import { onMount } from 'svelte';
   import { app } from '../../lib/stores/app.svelte';
   import { call, on } from '../../lib/bridge/bridge';
@@ -124,6 +125,7 @@
       iconUrl={s.hasIcon ? `${s.iconUrl}&r=${imageVersion}` : null}
       bannerUrl={s.bannerUrl ? `${s.bannerUrl}&r=${imageVersion}` : null}
       label={t('instance.label')}
+      fallbackArt={landscape(id)}
       onicon={(b64) => saveImage(false, b64)}
       onbanner={(b64) => saveImage(true, b64)}>
       {#snippet top()}
@@ -157,7 +159,7 @@
       <button class="hero-btn" aria-label={t('instance.openFolder')} title={t('instance.openFolder')} onclick={() => call('shell.openFolder', { kind: 'instance', id })}>
         <Icon name="folder" size={18} stroke={1.6} />
       </button>
-      <div style="width: 170px"><PlayButton instanceId={id} height={44} compact /></div>
+      <div style="width: 200px"><PlayButton instanceId={id} height={50} /></div>
     </InstanceHero>
 
     <nav class="tabs" aria-label={t('instance.areas')} bind:this={tabsNav}>
@@ -220,7 +222,7 @@
 <style>
   .page {
     height: 100%;
-    padding: 24px 28px;
+    padding: 8px 32px 20px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -231,12 +233,12 @@
     height: 30px;
     padding: 0 12px 0 8px;
     border: 0;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.35);
+    border-radius: var(--radius-m);
+    background: rgba(10, 11, 13, 0.5);
     backdrop-filter: blur(6px);
     color: var(--text);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -276,10 +278,10 @@
     height: 44px;
     padding: 0;
     border: 0;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-m);
+    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(8px);
-    color: #f2f2f2;
+    color: var(--text-strong);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -292,20 +294,24 @@
   .tabs {
     position: relative;
     flex-shrink: 0;
-    height: 38px;
+    height: 40px;
     display: flex;
-    gap: 4px;
-    border-bottom: 1px solid var(--panel-3);
+    gap: 22px;
+    border-bottom: 1px solid var(--line);
   }
   .tab {
     position: relative;
-    height: 38px;
-    padding: 0 12px;
+    height: 40px;
+    padding: 0;
     border: 0;
     background: transparent;
     cursor: pointer;
-    font-size: 13px;
+    font-family: var(--display);
+    font-size: 15px;
     font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -326,7 +332,7 @@
     bottom: -1px;
     height: 2px;
     border-radius: 2px;
-    background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+    background: var(--text-strong);
     pointer-events: none;
   }
   .indicator.ready {
@@ -336,16 +342,19 @@
     min-width: 18px;
     height: 18px;
     padding: 0 5px;
-    border-radius: 9px;
-    font-size: 11px;
+    border-radius: var(--radius-s);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0;
     line-height: 18px;
     text-align: center;
-    background: var(--panel-2);
+    background: rgba(255, 255, 255, 0.07);
     color: var(--muted-2);
   }
   .tab[aria-current='page'] .count {
-    background: color-mix(in srgb, var(--accent-from) 18%, transparent);
-    color: var(--accent-text);
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--text-strong);
   }
   .tab-body {
     flex-grow: 1;

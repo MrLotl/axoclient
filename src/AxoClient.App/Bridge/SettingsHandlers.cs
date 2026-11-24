@@ -9,7 +9,8 @@ public static partial class Handlers
     private sealed record SettingsData(LauncherSettings Settings);
 
     private sealed record StateData(string? Instances, string? LocalServers, string? Modpacks, string? SortModpacks, string? SortAddMods,
-        string? Content = null, double? ContentGridSize = null, double? ContentListSize = null);
+        string? Content = null, double? ContentGridSize = null, double? ContentListSize = null,
+        double? InstancesSize = null, string? SortInstances = null, string? Favorite = null);
 
     private sealed record AccentData(string From, string To, int Angle);
 
@@ -35,6 +36,7 @@ public static partial class Handlers
             static string? View(string? v) => v is "grid" or "list" ? v : null;
             static string? Sort(string? v) => v is "popular" or "relevance" or "newest" or "updated" ? v : null;
             static double? Size(double? v) => v is { } n && double.IsFinite(n) ? Math.Clamp(n, 0, 1) : null;
+            static string? InstanceSort(string? v) => v is "recent" or "name" or "playtime" or "mods" ? v : null;
             await host.Settings.UpdateStateAsync(s =>
             {
                 s.Views.Instances = View(d.Instances) ?? s.Views.Instances;
@@ -45,6 +47,13 @@ public static partial class Handlers
                 s.Views.ContentListSize = Size(d.ContentListSize) ?? s.Views.ContentListSize;
                 s.Sort.Modpacks = Sort(d.SortModpacks) ?? s.Sort.Modpacks;
                 s.Sort.AddMods = Sort(d.SortAddMods) ?? s.Sort.AddMods;
+                s.Views.InstancesSize = Size(d.InstancesSize) ?? s.Views.InstancesSize;
+                s.Sort.Instances = InstanceSort(d.SortInstances) ?? s.Sort.Instances;
+                // Favorit umschalten; nur echte Instanz-IDs, höchstens 200 Einträge
+                if (d.Favorite is { Length: > 0 and <= 64 } fav)
+                {
+                    if (!s.Favorites.Remove(fav) && s.Favorites.Count < 200) s.Favorites.Add(fav);
+                }
             });
             return host.Settings.State;
         });

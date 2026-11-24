@@ -175,7 +175,7 @@
       oninput={(e) => setSize(parseFloat(e.currentTarget.value))}
       aria-label={t('content.size')}
       title={t('content.size')}
-      style="background: linear-gradient(90deg, var(--accent-from), var(--accent-to)) 0 / {size * 100}% 100% no-repeat, var(--line-2)" />
+      style="background: linear-gradient(var(--accent-light), var(--accent-light)) 0 / {size * 100}% 100% no-repeat, var(--line-2)" />
     <span class="summary truncate">
       {t(`content.${key}.count`, { count: items.filter((i) => i.source !== 'axoclient').length })}{disabledCount ? ` · ${t('content.disabledCount', { count: disabledCount })}` : ''}
     </span>

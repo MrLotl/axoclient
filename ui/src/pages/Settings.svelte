@@ -640,7 +640,7 @@
   }
   h1 {
     font-family: var(--display);
-    font-size: 40px;
+    font-size: 30px;
     font-weight: 700;
     margin: 0 0 14px 8px;
     line-height: 0.95;

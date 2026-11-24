@@ -50,15 +50,19 @@ export interface UiState {
   lastInstance: string | null;
   views: {
     instances: 'grid' | 'list';
+    instancesSize: number;
     localServers: 'grid' | 'list';
     modpacks: 'grid' | 'list';
     content: 'grid' | 'list';
     contentGridSize: number;
     contentListSize: number;
   };
-  sort: { modpacks: SearchSort; addMods: SearchSort };
+  sort: { modpacks: SearchSort; addMods: SearchSort; instances: InstanceSort };
   contentSource: { addMods: string; modpacks: string };
+  favorites: string[];
 }
+
+export type InstanceSort = 'recent' | 'name' | 'playtime' | 'mods';
 
 export interface AccountView {
   uuid: string;

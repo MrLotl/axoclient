@@ -15,6 +15,7 @@
     height = 200,
     iconSize = 84,
     label = '',
+    fallbackArt = null,
     onicon,
     onbanner,
     top,
@@ -26,6 +27,8 @@
     height?: number;
     iconSize?: number;
     label?: string;
+    /** Bild hinter dem Kopf, solange es weder Banner noch Instanzbild gibt (z. B. die Pixel-Landschaft) */
+    fallbackArt?: string | null;
     onicon?: (base64: string | null, url: string | null) => void;
     onbanner?: (base64: string | null, url: string | null) => void;
     top?: Snippet;
@@ -39,7 +42,7 @@
     blur={!bannerUrl}
     width="100%"
     height="100%"
-    radius={14}
+    radius={10}
     editable={!!onbanner}
     removable={!!bannerUrl}
     editButton="corner"
@@ -49,6 +52,7 @@
     editLabel={t('instance.editBanner')}
     removeLabel={t('instance.settings.bannerAuto')}
     onchange={onbanner}>
+    {#if !bannerUrl && !iconUrl && fallbackArt}<div class="art" style="background-image: url('{fallbackArt}')"></div>{/if}
     <div class="shade"></div>
     <div class="content" class:has-top={!!top}>
       {@render top?.()}
@@ -58,7 +62,7 @@
             url={iconUrl}
             {name}
             width={iconSize}
-            radius={18}
+            radius={10}
             editable={!!onicon}
             removable={!!iconUrl}
             cropTitle={t('instance.settings.icon')}
@@ -76,14 +80,22 @@
   .hero {
     position: relative;
     flex-shrink: 0;
-    border-radius: 14px;
+    border-radius: var(--radius-xl);
     overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
     background: var(--accent-soft-strong), var(--field);
+  }
+  .art {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center 70%;
+    image-rendering: pixelated;
   }
   .shade {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(24, 24, 24, 0.94) 0%, rgba(24, 24, 24, 0.72) 45%, rgba(24, 24, 24, 0.35) 100%);
+    background: linear-gradient(90deg, rgba(8, 9, 11, 0.92) 0%, rgba(8, 9, 11, 0.6) 45%, rgba(8, 9, 11, 0.2) 100%), linear-gradient(0deg, rgba(8, 9, 11, 0.7) 0%, transparent 60%);
   }
   .content {
     position: absolute;
@@ -104,7 +116,7 @@
   }
   .icon {
     flex-shrink: 0;
-    border-radius: 18px;
+    border-radius: var(--radius-xl);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   }
 </style>

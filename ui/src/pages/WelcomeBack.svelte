@@ -71,11 +71,10 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: var(--surface);
-    border-top-left-radius: 18px;
-    border-top-right-radius: 18px;
+    background: transparent;
   }
   .glow {
+    display: none;
     position: absolute;
     inset: 0;
     background: radial-gradient(60% 50% at 50% 20%, color-mix(in srgb, var(--accent-from) 14%, transparent), transparent 70%);
@@ -84,9 +83,9 @@
     position: relative;
     width: 480px;
     padding: 34px 36px;
-    border-radius: 20px;
-    background: rgba(42, 42, 42, 0.85);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--panel-4);
+    border-radius: var(--radius-xl);
+    background: var(--glass-strong);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 0 0 1px var(--line-2);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -95,7 +94,7 @@
   }
   h1 {
     font-family: var(--display);
-    font-size: 64px;
+    font-size: 56px;
     font-weight: 700;
     line-height: 0.95;
     letter-spacing: 0em;

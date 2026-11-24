@@ -54,8 +54,8 @@
   .seg {
     position: relative;
     padding: 3px;
-    border-radius: 10px;
-    background: var(--panel);
+    border-radius: var(--radius-m);
+    background: rgba(255, 255, 255, 0.07);
     display: flex;
     gap: 2px;
     flex-shrink: 0;
@@ -65,9 +65,8 @@
     top: 3px;
     bottom: 3px;
     left: 0;
-    border-radius: 8px;
-    background: var(--accent-soft);
-    box-shadow: inset 0 0 0 1px var(--accent-ring);
+    border-radius: var(--radius-s);
+    background: var(--text-strong);
     pointer-events: none;
   }
   .pill.animate {
@@ -80,7 +79,7 @@
     height: 30px;
     padding: 0 14px;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--radius-s);
     background: transparent;
     color: var(--muted-2);
     font-size: 13px;
@@ -100,7 +99,7 @@
     color: var(--text-2);
   }
   .seg-btn[aria-pressed='true'] {
-    color: var(--accent-text);
+    color: #0d0d0f;
   }
   @media (prefers-reduced-motion: reduce) {
     .pill.animate {
