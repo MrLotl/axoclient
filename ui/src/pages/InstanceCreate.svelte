@@ -232,6 +232,7 @@
   /* Eine schmale Spalte statt über die ganze Breite gezogener Kästen */
   .column {
     max-width: 760px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 14px;
