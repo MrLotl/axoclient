@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AxoClient.Common\AxoClient.Common.csproj" />
+    <ProjectReference Include="..\AxoClient.DataModel\AxoClient.DataModel.csproj" />
+    <ProjectReference Include="..\AxoClient.Accounts.Contract\AxoClient.Accounts.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Settings.Contract\AxoClient.Settings.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Instances.Contract\AxoClient.Instances.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Content.Contract\AxoClient.Content.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Launch.Contract\AxoClient.Launch.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Skins.Contract\AxoClient.Skins.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Social.Contract\AxoClient.Social.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Integrations.Contract\AxoClient.Integrations.Contract.csproj" />
+  </ItemGroup>
+
+</Project>

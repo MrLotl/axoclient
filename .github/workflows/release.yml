@@ -63,7 +63,7 @@ jobs:
 
       - name: Launcher-Tests
         shell: pwsh
-        run: dotnet test src/AxoClient.Tests -c Release -p:SkipMod=true
+        run: dotnet test src/AxoClient.Tests -c Release -p:SkipMod=true -p:SkipUi=true
 
       - name: Mod bauen
         shell: pwsh

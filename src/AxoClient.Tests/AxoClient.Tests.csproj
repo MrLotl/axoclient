@@ -21,7 +21,35 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AxoClient.Core\AxoClient.Core.csproj" />
+    <ProjectReference Include="..\AxoClient.Common\AxoClient.Common.csproj" />
+    <ProjectReference Include="..\AxoClient.DataModel\AxoClient.DataModel.csproj" />
+    <ProjectReference Include="..\AxoClient.Accounts.Contract\AxoClient.Accounts.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Accounts\AxoClient.Accounts.csproj" />
+    <ProjectReference Include="..\AxoClient.Settings.Contract\AxoClient.Settings.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Settings\AxoClient.Settings.csproj" />
+    <ProjectReference Include="..\AxoClient.Game.Contract\AxoClient.Game.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Game\AxoClient.Game.csproj" />
+    <ProjectReference Include="..\AxoClient.Instances.Contract\AxoClient.Instances.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Instances\AxoClient.Instances.csproj" />
+    <ProjectReference Include="..\AxoClient.Content.Contract\AxoClient.Content.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Content\AxoClient.Content.csproj" />
+    <ProjectReference Include="..\AxoClient.Import.Contract\AxoClient.Import.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Import\AxoClient.Import.csproj" />
+    <ProjectReference Include="..\AxoClient.Launch.Contract\AxoClient.Launch.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Launch\AxoClient.Launch.csproj" />
+    <ProjectReference Include="..\AxoClient.Servers.Contract\AxoClient.Servers.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Servers\AxoClient.Servers.csproj" />
+    <ProjectReference Include="..\AxoClient.Skins.Contract\AxoClient.Skins.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Skins\AxoClient.Skins.csproj" />
+    <ProjectReference Include="..\AxoClient.Social.Contract\AxoClient.Social.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Social\AxoClient.Social.csproj" />
+    <ProjectReference Include="..\AxoClient.Integrations.Contract\AxoClient.Integrations.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Integrations\AxoClient.Integrations.csproj" />
+    <ProjectReference Include="..\AxoClient.Diagnostics.Contract\AxoClient.Diagnostics.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Diagnostics\AxoClient.Diagnostics.csproj" />
+    <ProjectReference Include="..\AxoClient.Updates.Contract\AxoClient.Updates.Contract.csproj" />
+    <ProjectReference Include="..\AxoClient.Updates\AxoClient.Updates.csproj" />
+    <ProjectReference Include="..\AxoClient.App\AxoClient.App.csproj" />
   </ItemGroup>
 
 </Project>

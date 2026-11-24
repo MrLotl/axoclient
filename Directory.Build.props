@@ -10,8 +10,12 @@
     <Company>AxoClient</Company>
     <!-- .Result und .Wait() sind verboten (Grundregel "Alles asynchron") -->
     <WarningsAsErrors>$(WarningsAsErrors);VSTHRD002;VSTHRD103;CS4014</WarningsAsErrors>
+    <!-- Stilregeln aus .editorconfig (Klammern, Namen, Namespaces) gelten auch beim Bauen -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Die Tests dürfen interne Hilfsmethoden aller Projekte prüfen -->
+    <InternalsVisibleTo Include="AxoClient.Tests" />
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" PrivateAssets="all" />
   </ItemGroup>
 </Project>

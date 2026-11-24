@@ -1,0 +1,199 @@
+using System.Text.RegularExpressions;
+using AxoClient.Launch.Contract;
+
+namespace AxoClient.Launch
+{
+    /// <summary>
+    /// Prüft Versionsbedingungen aus Mod-Metadaten: Fabric/Quilt-Prädikate (<c>&gt;=1.21</c>, <c>~1.21.4</c>, <c>1.21.x</c>,
+    /// <c>*</c>, mit <c>||</c> und Leerzeichen für UND) sowie Maven-Bereiche (<c>[1.20.1,1.21)</c>).
+    /// Unbekannte Schreibweisen gelten als erfüllt, damit es keine falschen Warnungen gibt.
+    /// </summary>
+    public partial class VersionRange : IVersionRange
+    {
+        /// <param name="unknown">Ergebnis für Schreibweisen, die nicht verstanden werden.</param>
+        public bool Satisfies(string version, string? range, bool unknown = true)
+        {
+            if (string.IsNullOrWhiteSpace(range))
+            {
+                return true;
+            }
+            // ">= 1.21.2" gehört zusammen; sonst würde das Leerzeichen als UND gelesen und "1.21.2" als genaue Version
+            range = operatorSpace().Replace(range.Trim(), "$1");
+            try
+            {
+                if (range[0] is '[' or '(')
+                {
+                    return mavenSatisfies(version, range);
+                }
+
+                return range.Split("||").Any(alternative => alternative.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .All(predicate => predicateSatisfies(version, predicate.Trim(), unknown)));
+            }
+            catch (FormatException)
+            {
+                return unknown;
+            }
+        }
+
+        /// <summary>
+        /// Wie <see cref="Satisfies"/>, aber nachsichtig: nennt die Bedingung eine Version derselben Reihe (z. B. 1.21.x
+        /// für 1.21.1), gilt sie als erfüllt. Viele Mods schreiben "[1.21, 1.21.1)" und meinen "bis 1.21.1"; der Loader
+        /// startet sie trotzdem. Gewarnt wird nur, wenn die Mod für eine ganz andere Reihe ist (z. B. 1.20 auf 1.21).
+        /// </summary>
+        public bool SatisfiesLoosely(string version, string? range)
+        {
+            if (Satisfies(version, range))
+            {
+                return true;
+            }
+
+            int[] own;
+            try
+            {
+                own = getParts(version);
+            }
+            catch (FormatException)
+            {
+                return true;
+            }
+            foreach (Match token in versionToken().Matches(range ?? ""))
+            {
+                try
+                {
+                    var p = getParts(token.Value);
+                    if (p[0] == own[0] && p[1] == own[1])
+                    {
+                        return true;
+                    }
+                }
+                catch (FormatException)
+                {
+                }
+            }
+            return false;
+        }
+
+        [GeneratedRegex(@"\d+\.\d+(?:\.\d+)?")]
+        private partial Regex versionToken();
+
+        private bool predicateSatisfies(string version, string predicate, bool unknown)
+        {
+            if (predicate is "*" or "" or "x" or "X")
+            {
+                return true;
+            }
+
+            var match = predicatePattern().Match(predicate);
+            if (!match.Success)
+            {
+                return unknown;
+            }
+
+            var op = match.Groups[1].Value;
+            var target = match.Groups[2].Value;
+
+            if (target.Contains('x') || target.Contains('X') || target.EndsWith(".*"))
+            {
+                var prefix = target.Split('.').TakeWhile(p => p is not ("x" or "X" or "*")).ToArray();
+                var parts = getParts(version);
+                return prefix.Select((p, i) => i < parts.Length && parts[i].ToString() == p).All(b => b);
+            }
+
+            var cmp = Compare(version, target);
+            return op switch
+            {
+                ">=" => cmp >= 0,
+                ">" => cmp > 0,
+                "<=" => cmp <= 0,
+                "<" => cmp < 0,
+                "=" or "" => cmp == 0 || (op == "" && isPrefix(target, version)),
+                "~" => cmp >= 0 && sameMinor(version, target),
+                "^" => cmp >= 0 && getParts(version)[0] == getParts(target)[0],
+                _ => unknown
+            };
+        }
+
+        private bool isPrefix(string target, string version) =>
+            version.StartsWith(target + ".", StringComparison.Ordinal) && getParts(target).Length < 3;
+
+        private bool sameMinor(string a, string b)
+        {
+            var pa = getParts(a);
+            var pb = getParts(b);
+            return pa[0] == pb[0] && pa[1] == pb[1];
+        }
+
+        private bool mavenSatisfies(string version, string range)
+        {
+            // Mehrere Bereiche: [1.0,1.1),[1.2,)
+            foreach (var part in mavenParts().Matches(range).Select(m => m.Value))
+            {
+                var inclusiveLow = part[0] == '[';
+                var inclusiveHigh = part[^1] == ']';
+                var inner = part[1..^1].Split(',');
+                if (inner.Length == 1)
+                {
+                    if (Compare(version, inner[0].Trim()) == 0)
+                    {
+                        return true;
+                    }
+
+                    continue;
+                }
+                var low = inner[0].Trim();
+                var high = inner[1].Trim();
+                var okLow = low.Length == 0 || (inclusiveLow ? Compare(version, low) >= 0 : Compare(version, low) > 0);
+                var okHigh = high.Length == 0 || (inclusiveHigh ? Compare(version, high) <= 0 : Compare(version, high) < 0);
+                if (okLow && okHigh)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public int Compare(string a, string b)
+        {
+            var pa = getParts(a);
+            var pb = getParts(b);
+            for (var i = 0; i < 3; i++)
+            {
+                if (pa[i] != pb[i])
+                {
+                    return pa[i].CompareTo(pb[i]);
+                }
+            }
+            // Vorabversionen (-beta, -rc) sind kleiner als die fertige Version; nach "+" folgen nur Build-Angaben
+            var preA = a.Split('+')[0].Contains('-');
+            var preB = b.Split('+')[0].Contains('-');
+            return preA == preB ? 0 : preA ? -1 : 1;
+        }
+
+        private int[] getParts(string version)
+        {
+            var core = version.Split('-', '+')[0];
+            var parts = core.Split('.').Select(p => int.TryParse(new string(p.TakeWhile(char.IsDigit).ToArray()), out var n) ? n : 0)
+                .ToList();
+            if (parts.Count == 0)
+            {
+                throw new FormatException();
+            }
+
+            while (parts.Count < 3)
+            {
+                parts.Add(0);
+            }
+
+            return parts.ToArray();
+        }
+
+        [GeneratedRegex(@"^(>=|<=|>|<|=|~|\^)?\s*([0-9][0-9A-Za-z.\-+*]*)$")]
+        private partial Regex predicatePattern();
+
+        [GeneratedRegex(@"(>=|<=|>|<|=|~|\^)\s+")]
+        private partial Regex operatorSpace();
+
+        [GeneratedRegex(@"[\[\(][^\]\)]*[\]\)]")]
+        private partial Regex mavenParts();
+    }
+}

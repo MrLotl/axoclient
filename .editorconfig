@@ -14,8 +14,47 @@ indent_size = 2
 # Nur die Regeln, die wir wirklich wollen
 dotnet_diagnostic.VSTHRD002.severity = error
 dotnet_diagnostic.VSTHRD103.severity = error
+# Kein "Async" am Methodennamen: vor dem Namen steht schon "async Task"
 dotnet_diagnostic.VSTHRD200.severity = none
 dotnet_diagnostic.VSTHRD111.severity = none
 dotnet_diagnostic.VSTHRD100.severity = warning
 dotnet_diagnostic.VSTHRD110.severity = warning
 dotnet_diagnostic.VSTHRD003.severity = none
+
+# if, else, for, foreach, while, using und lock immer mit geschweiften Klammern
+csharp_prefer_braces = true:error
+dotnet_diagnostic.IDE0011.severity = error
+
+# Namespaces als Block
+csharp_style_namespace_declarations = block_scoped:error
+dotnet_diagnostic.IDE0160.severity = error
+
+# CA1725: Parameternamen sollen zu Basismethode/Interface passen
+dotnet_diagnostic.CA1725.severity = warning
+dotnet_code_quality.CA1725.api_surface = public, internal, private
+
+# Private Methoden: lowerCamelCase
+dotnet_naming_symbols.private_methods.applicable_kinds = method
+dotnet_naming_symbols.private_methods.applicable_accessibilities = private
+dotnet_naming_style.lower_camel_case.capitalization = camel_case
+dotnet_naming_rule.private_methods_should_be_lower_camel_case.symbols = private_methods
+dotnet_naming_rule.private_methods_should_be_lower_camel_case.style = lower_camel_case
+dotnet_naming_rule.private_methods_should_be_lower_camel_case.severity = error
+
+# Private Felder: _camelCase (Konstanten ausgenommen)
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_rule.constants_should_be_pascal_case.symbols = constants
+dotnet_naming_rule.constants_should_be_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_should_be_pascal_case.severity = none
+dotnet_naming_rule.private_fields_should_be_underscore_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_underscore_camel_case.style = underscore_camel_case
+dotnet_naming_rule.private_fields_should_be_underscore_camel_case.severity = error
+
+# Namensverstöße als Build-/Editor-Fehler behandeln
+dotnet_diagnostic.IDE1006.severity = error
