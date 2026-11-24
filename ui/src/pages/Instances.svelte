@@ -7,13 +7,14 @@
   import Segmented from '../lib/components/Segmented.svelte';
   import { loaderName, ago, duration } from '../lib/util/format';
   import { artLayers } from '../lib/util/art';
+  import { orderInstances, moveId } from '../lib/util/order';
   import { upload } from '../lib/util/files';
   import { flip } from 'svelte/animate';
-  import { fadeSlide, fadeOut, pop, stagger, reducedMotion, DUR } from '../lib/util/motion';
+  import { fadeOnly } from '../lib/util/motion';
+  import { fadeSlide, reducedMotion, DUR } from '../lib/util/motion';
   import type { InstanceSort, InstanceSummary } from '../lib/types';
 
-  const delay = stagger(30, 12);
-  const flipMs = reducedMotion() ? 0 : DUR.slow;
+  const flipMs = reducedMotion() ? 0 : 220;
 
   let view = $state<'grid' | 'list'>(app.ui?.views.instances ?? 'grid');
   let size = $state(app.ui?.views.instancesSize ?? 0.5);
@@ -25,19 +26,23 @@
   // Nur Loader als Filter anbieten, die es in den eigenen Instanzen gibt
   const loaders = $derived([...new Set(app.instances.map((i) => i.loader))].sort());
 
-  const sorters: Record<InstanceSort, (a: InstanceSummary, b: InstanceSummary) => number> = {
-    recent: (a, b) => (b.lastPlayed ?? b.createdAt).localeCompare(a.lastPlayed ?? a.createdAt),
-    name: (a, b) => a.name.localeCompare(b.name, 'de'),
-    playtime: (a, b) => b.totalSeconds - a.totalSeconds,
-    mods: (a, b) => b.modCount - a.modCount
-  };
+  // Ziehen zum Sortieren: solange gezogen wird, gilt diese Reihenfolge (die Karten weichen per flip aus)
+  let dragId = $state<string | null>(null);
+  let liveOrder = $state<string[] | null>(null);
+  // Nur die ungefilterte Liste lässt sich umsortieren, sonst wären Positionen nicht eindeutig
+  const canDrag = $derived(filter === 'all' && !query.trim());
 
+  const ordered = $derived(orderInstances(app.instances, app.ui, sort));
   const list = $derived.by(() => {
     const q = query.trim().toLowerCase();
-    return app.instances
+    let base = ordered;
+    if (liveOrder) {
+      const pos = new Map(liveOrder.map((id, i) => [id, i]));
+      base = [...ordered].sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
+    }
+    return base
       .filter((i) => filter === 'all' || (filter === 'favorites' ? favorites.has(i.id) : i.loader === filter))
-      .filter((i) => !q || (i.name + ' ' + i.minecraftVersion + ' ' + loaderName(i.loader)).toLowerCase().includes(q))
-      .sort((a, b) => Number(favorites.has(b.id)) - Number(favorites.has(a.id)) || sorters[sort](a, b));
+      .filter((i) => !q || (i.name + ' ' + i.minecraftVersion + ' ' + loaderName(i.loader)).toLowerCase().includes(q));
   });
 
   // Kachelbreite bzw. Zeilenhöhe folgen dem Regler (0 = klein, 1 = groß)
@@ -52,6 +57,7 @@
 
   function setSort(value: InstanceSort) {
     sort = value;
+    if (app.ui) app.ui.sort.instances = value;
     app.updateUiState({ sortInstances: value });
   }
 
@@ -66,8 +72,45 @@
     app.updateUiState({ favorite: id });
   }
 
+  function ondragstart(e: DragEvent, id: string) {
+    if (!canDrag) return;
+    dragId = id;
+    liveOrder = list.map((i) => i.id);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', id);
+    }
+  }
+
+  function ondragover(e: DragEvent, target: string) {
+    if (!dragId || !liveOrder) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    if (target === dragId) return;
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const after = view === 'grid' ? e.clientX > box.left + box.width / 2 : e.clientY > box.top + box.height / 2;
+    const next = moveId(liveOrder, dragId, target, after);
+    if (next.join() !== liveOrder.join()) liveOrder = next;
+  }
+
+  function finishDrag() {
+    if (!dragId || !liveOrder) return;
+    const order = liveOrder;
+    const changed = order.join() !== ordered.map((i) => i.id).join();
+    if (changed) {
+      if (app.ui) {
+        app.ui.instanceOrder = order;
+        app.ui.sort.instances = 'custom';
+      }
+      sort = 'custom';
+      app.updateUiState({ sortInstances: 'custom', order });
+    }
+    dragId = null;
+    liveOrder = null;
+  }
+
   function art(i: InstanceSummary) {
-    return i.hasIcon ? `url('${i.iconUrl}')` : artLayers(i.id, i.minecraftVersion, app.settings?.appearance.versionPanorama ?? true);
+    return artLayers(i.id, i.minecraftVersion, app.settings?.appearance.versionPanorama ?? true);
   }
 
   function badge(i: InstanceSummary) {
@@ -87,6 +130,10 @@
     }
     if (app.ui) app.ui.lastInstance = i.id;
     app.launch(i.id);
+  }
+
+  function open(id: string) {
+    if (!dragId) app.navigate({ page: 'instance', id });
   }
 
   function importFile() {
@@ -120,7 +167,7 @@
   </header>
 
   {#if app.instances.length === 0}
-    <div class="empty" in:fadeSlide={{ y: 10, duration: DUR.slow }}>
+    <div class="empty" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
       <img src="/img/logo.svg" alt="" width="72" height="72" />
       <h2 class="display">{t('instances.emptyTitle')}</h2>
       <p>{t('instances.emptyText')}</p>
@@ -146,7 +193,7 @@
       <Segmented
         value={sort}
         label={t('instances.sortLabel')}
-        options={(['recent', 'name', 'playtime', 'mods'] as const).map((k) => ({ value: k, label: t(`instances.sort.${k}`) }))}
+        options={(['custom', 'recent', 'name', 'playtime', 'mods'] as const).map((k) => ({ value: k, label: t(`instances.sort.${k}`) }))}
         onchange={(v) => setSort(v as InstanceSort)} />
       <label class="sizer" title={view === 'grid' ? t('instances.gridSize') : t('instances.listSize')}>
         <i class="a"></i>
@@ -162,24 +209,29 @@
         ]}
         onchange={(v) => app.updateUiState({ instances: v })} />
     </div>
+    {#if canDrag}<p class="drag-hint">{t('instances.dragHint')}</p>{/if}
 
     {#if list.length === 0}
       <p class="none">{query.trim() ? t('instances.noMatch', { query: query.trim() }) : filter === 'favorites' ? t('instances.noFavorites') : t('instances.noLoader')}</p>
     {:else if view === 'grid'}
-      <div class="grid" style="--min: {tileMin}px; --k: {size}">
-        {#each list as i, n (i.id)}
+      <div class="grid" style="--min: {tileMin}px; --k: {size}" in:fadeOnly={{ duration: 160 }}>
+        {#each list as i (i.id)}
           <div
             class="card"
-            class:pixel={!i.hasIcon}
+            class:dragging={dragId === i.id}
+            class:draggable={canDrag}
             role="button"
             tabindex="0"
+            draggable={canDrag}
             aria-label={t('instances.open', { name: i.name })}
             style="background-image: {art(i)}"
-            onclick={() => app.navigate({ page: 'instance', id: i.id })}
-            onkeydown={(e) => e.key === 'Enter' && app.navigate({ page: 'instance', id: i.id })}
-            animate:flip={{ duration: flipMs }}
-            in:fadeSlide|global={{ delay: delay(n), y: -6 }}
-            out:pop={{ scale: 0.94, duration: DUR.med }}>
+            onclick={() => open(i.id)}
+            onkeydown={(e) => e.key === 'Enter' && open(i.id)}
+            ondragstart={(e) => ondragstart(e, i.id)}
+            ondragover={(e) => ondragover(e, i.id)}
+            ondrop={(e) => { e.preventDefault(); finishDrag(); }}
+            ondragend={finishDrag}
+            animate:flip={{ duration: flipMs }}>
             <span class="badge" class:live={app.running.includes(i.id)}>{badge(i)}</span>
             <button
               class="fav"
@@ -190,6 +242,7 @@
               <Icon name={favorites.has(i.id) ? 'starFill' : 'star'} size={15} />
             </button>
             <span class="info">
+              {#if i.hasIcon}<img class="ico" src={i.iconUrl} alt="" draggable="false" />{/if}
               <span class="txt">
                 <b class="name">{i.name}</b>
                 <small>{i.minecraftVersion} · {loaderName(i.loader)}{i.modCount ? ' · ' + t('instances.mods', { count: i.modCount }) : ''}{i.totalSeconds ? ' · ' + duration(i.totalSeconds) : ''}</small>
@@ -206,7 +259,7 @@
         {/each}
       </div>
     {:else}
-      <section class="list" style="--rh: {rowHeight}px; --k: {size}">
+      <section class="list" style="--rh: {rowHeight}px; --k: {size}" in:fadeOnly={{ duration: 160 }}>
         <div class="lrow hd">
           <span></span><span></span>
           {#each columns as c (c.label)}
@@ -219,17 +272,22 @@
           <span></span>
         </div>
         <div class="rows">
-          {#each list as i, n (i.id)}
+          {#each list as i (i.id)}
             <div
               class="lrow"
+              class:dragging={dragId === i.id}
+              class:draggable={canDrag}
               role="button"
               tabindex="0"
+              draggable={canDrag}
               aria-label={t('instances.open', { name: i.name })}
-              onclick={() => app.navigate({ page: 'instance', id: i.id })}
-              onkeydown={(e) => e.key === 'Enter' && app.navigate({ page: 'instance', id: i.id })}
-              animate:flip={{ duration: flipMs }}
-              in:fadeSlide|global={{ delay: delay(n), y: -6 }}
-              out:fadeOut={{ duration: DUR.med }}>
+              onclick={() => open(i.id)}
+              onkeydown={(e) => e.key === 'Enter' && open(i.id)}
+              ondragstart={(e) => ondragstart(e, i.id)}
+              ondragover={(e) => ondragover(e, i.id)}
+              ondrop={(e) => { e.preventDefault(); finishDrag(); }}
+              ondragend={finishDrag}
+              animate:flip={{ duration: flipMs }}>
               <button
                 class="fav"
                 class:on={favorites.has(i.id)}
@@ -238,7 +296,9 @@
                 onclick={(e) => { e.stopPropagation(); toggleFavorite(i.id); }}>
                 <Icon name={favorites.has(i.id) ? 'starFill' : 'star'} size={15} />
               </button>
-              <span class="thumb" class:pixel={!i.hasIcon} style="background-image: {art(i)}"></span>
+              <span class="thumb" style="background-image: {art(i)}">
+                {#if i.hasIcon}<img src={i.iconUrl} alt="" draggable="false" />{/if}
+              </span>
               <span class="nm"><b class="truncate">{i.name}</b><small class="truncate">{badge(i)}</small></span>
               <span class="c m">{i.minecraftVersion}</span>
               <span class="c">{loaderName(i.loader)}</span>
@@ -395,8 +455,12 @@
     cursor: pointer;
     transition: transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) ease;
   }
-  .card.pixel {
-    image-rendering: pixelated;
+  .card.draggable {
+    cursor: grab;
+  }
+  .card.dragging,
+  .lrow.dragging {
+    opacity: 0.45;
   }
   .card::after {
     content: '';
@@ -576,6 +640,7 @@
     color: var(--text-strong);
   }
   .thumb {
+    position: relative;
     display: block;
     width: var(--th);
     aspect-ratio: 16 / 9;
@@ -584,8 +649,32 @@
     background-size: cover;
     background-position: center;
   }
-  .thumb.pixel {
-    image-rendering: pixelated;
+  .thumb img {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    width: 40%;
+    max-width: 30px;
+    aspect-ratio: 1;
+    border-radius: 4px;
+    object-fit: cover;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  }
+  .lrow.draggable {
+    cursor: grab;
+  }
+  .ico {
+    width: calc(30px + var(--k) * 14px);
+    height: calc(30px + var(--k) * 14px);
+    border-radius: var(--radius-s);
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+  .drag-hint {
+    margin: -10px 0 -6px;
+    font-size: 12px;
+    color: var(--faint);
   }
   .nm {
     min-width: 0;

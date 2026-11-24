@@ -18,7 +18,7 @@
 
   --bg: #0a0b0d;
   --surface: #0f1012;
-  --glass: rgba(16, 17, 20, 0.8);
+  --glass: rgba(16, 17, 20, 0.88);
   --glass-strong: rgba(20, 21, 25, 0.94);
   --panel: #16171b;
   --panel-2: #1b1c21;
@@ -129,7 +129,7 @@ input[type="range"]:focus-visible { outline: 2px solid var(--focus) !important; 
 
 /* Karten und Abschnitte */
 .panel { border-radius: var(--radius-l); background: var(--panel); }
-.glass-panel { border-radius: var(--radius-l); background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(14px); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35); }
+.glass-panel { border-radius: var(--radius-l); background: var(--glass); border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35); }
 .section-label { font-family: var(--display); font-size: 14px; font-weight: 600; color: var(--muted-2); text-transform: uppercase; letter-spacing: 0.1em; }
 /* Bühne-Typografie */
 .display { font-family: var(--display); font-weight: 700; text-transform: uppercase; line-height: 0.95; color: var(--text-strong); letter-spacing: 0.005em; }

@@ -10,7 +10,7 @@ public static partial class Handlers
 
     private sealed record StateData(string? Instances, string? LocalServers, string? Modpacks, string? SortModpacks, string? SortAddMods,
         string? Content = null, double? ContentGridSize = null, double? ContentListSize = null,
-        double? InstancesSize = null, string? SortInstances = null, string? Favorite = null);
+        double? InstancesSize = null, string? SortInstances = null, string? Favorite = null, string[]? Order = null);
 
     private sealed record AccentData(string From, string To, int Angle);
 
@@ -36,7 +36,7 @@ public static partial class Handlers
             static string? View(string? v) => v is "grid" or "list" ? v : null;
             static string? Sort(string? v) => v is "popular" or "relevance" or "newest" or "updated" ? v : null;
             static double? Size(double? v) => v is { } n && double.IsFinite(n) ? Math.Clamp(n, 0, 1) : null;
-            static string? InstanceSort(string? v) => v is "recent" or "name" or "playtime" or "mods" ? v : null;
+            static string? InstanceSort(string? v) => v is "recent" or "name" or "playtime" or "mods" or "custom" ? v : null;
             await host.Settings.UpdateStateAsync(s =>
             {
                 s.Views.Instances = View(d.Instances) ?? s.Views.Instances;
@@ -54,6 +54,9 @@ public static partial class Handlers
                 {
                     if (!s.Favorites.Remove(fav) && s.Favorites.Count < 200) s.Favorites.Add(fav);
                 }
+                // Eigene Reihenfolge: nur plausible IDs, ohne Doppelte, höchstens 500
+                if (d.Order is { Length: <= 500 } order)
+                    s.InstanceOrder = order.Where(id => id is { Length: > 0 and <= 64 }).Distinct().ToList();
             });
             return host.Settings.State;
         });

@@ -60,9 +60,10 @@ export interface UiState {
   sort: { modpacks: SearchSort; addMods: SearchSort; instances: InstanceSort };
   contentSource: { addMods: string; modpacks: string };
   favorites: string[];
+  instanceOrder: string[];
 }
 
-export type InstanceSort = 'recent' | 'name' | 'playtime' | 'mods';
+export type InstanceSort = 'recent' | 'name' | 'playtime' | 'mods' | 'custom';
 
 export interface AccountView {
   uuid: string;

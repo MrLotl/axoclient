@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fadeOnly } from '../../lib/util/motion';
   import { artLayers } from '../../lib/util/art';
   import { onMount } from 'svelte';
   import { app } from '../../lib/stores/app.svelte';
@@ -178,7 +179,7 @@
     </nav>
 
     {#key tab}
-    <div class="tab-body" in:fadeSlide={{ x: dir * 14, y: dir === 0 ? 6 : 0, duration: DUR.med + 20 }}>
+    <div class="tab-body" in:fadeOnly={{ duration: 150 }}>
       {#if tab === 'overview'}
         <Overview {details} />
       {:else if tab === 'mods'}

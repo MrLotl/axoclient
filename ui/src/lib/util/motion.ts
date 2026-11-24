@@ -40,6 +40,11 @@ export function fadeOut(node: Element, { delay = 0, duration = DUR.fast }: Opts 
   return { delay, duration, easing: cubicOut, css: (t) => `opacity: ${t * opacity}` };
 }
 
+/** Reines Überblenden ohne Bewegung (rein und raus) – für ruhige Seiten- und Hintergrundwechsel */
+export function fadeOnly(node: Element, opts: Opts = {}): TransitionConfig {
+  return fadeOut(node, { duration: DUR.med, ...opts });
+}
+
 /** Aufploppen mit leichter Skalierung – Dialoge, Menüs, Badges */
 export function pop(node: Element, { delay = 0, duration = DUR.fast + 40, scale = 0.96, y = 0, origin }: Opts = {}): TransitionConfig {
   if (reducedMotion()) return { duration: 0 };

@@ -38,8 +38,8 @@
 
 <section class="hero" aria-label={label} style="height: {height}px">
   <ImageBox
-    url={bannerUrl ?? iconUrl}
-    blur={!bannerUrl}
+    url={bannerUrl}
+    blur={false}
     width="100%"
     height="100%"
     radius={10}
@@ -52,7 +52,7 @@
     editLabel={t('instance.editBanner')}
     removeLabel={t('instance.settings.bannerAuto')}
     onchange={onbanner}>
-    {#if !bannerUrl && !iconUrl && fallbackArt}<div class="art" style="background-image: {fallbackArt}"></div>{/if}
+    {#if !bannerUrl && fallbackArt}<div class="art" style="background-image: {fallbackArt}"></div>{/if}
     <div class="shade"></div>
     <div class="content" class:has-top={!!top}>
       {@render top?.()}
@@ -90,7 +90,6 @@
     inset: 0;
     background-size: cover;
     background-position: center 70%;
-    image-rendering: pixelated;
   }
   .shade {
     position: absolute;

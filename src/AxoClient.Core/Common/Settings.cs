@@ -192,7 +192,7 @@ public sealed class SortState
     public string Modpacks { get; set; } = "popular";
     public string AddMods { get; set; } = "popular";
 
-    /// <summary>Instanzen-Seite: recent, name, playtime oder mods</summary>
+    /// <summary>Instanzen-Seite: recent, name, playtime, mods oder custom (eigene Reihenfolge)</summary>
     public string Instances { get; set; } = "recent";
 }
 
@@ -213,6 +213,9 @@ public sealed class UiState : IVersionedDocument
 
     /// <summary>Als Favorit markierte Instanzen (stehen immer oben)</summary>
     public List<string> Favorites { get; set; } = [];
+
+    /// <summary>Eigene Reihenfolge der Instanzen (IDs), gilt bei Sortierung „custom“</summary>
+    public List<string> InstanceOrder { get; set; } = [];
 
     [JsonIgnore]
     public static readonly string[] ViewModes = ["grid", "list"];

@@ -4,7 +4,7 @@
   import { t, tr } from '../i18n';
   import Icon from './Icon.svelte';
   import TweenNumber from './TweenNumber.svelte';
-  import { fadeSlide, DUR } from '../util/motion';
+  import { fadeOnly } from '../util/motion';
 
   let { instanceId, height = 56, compact = false }: { instanceId: string | null; height?: number; compact?: boolean } = $props();
 
@@ -47,7 +47,7 @@
     <span class="shine"></span>
   {/if}
   {#key mode}
-    <span class="play-label" in:fadeSlide={{ y: 8, duration: DUR.med }}>
+    <span class="play-label" in:fadeOnly={{ duration: 150 }}>
       {#if job}
         <span class="stage truncate">{job.status ? tr(job.status) : t('launch.starting')}</span>
         {#if pct !== null}<span class="pct"><TweenNumber value={pct} /> %</span>{/if}
@@ -95,7 +95,6 @@
   .play.busy {
     background: rgba(255, 255, 255, 0.14);
     color: var(--text-strong);
-    backdrop-filter: blur(8px);
   }
   .play.running {
     background: var(--green);

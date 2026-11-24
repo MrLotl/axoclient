@@ -82,7 +82,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <header class="titlebar" class:minimal {onmousedown}>
   <div class="brand">
-    <i class="mark" aria-hidden="true"></i>
+    <img class="logo" src="/img/logo.svg" alt="" width="30" height="30" draggable="false" />
     <span class="word">AXOCLIENT</span>
     {#if minimal}<span class="ver">v{app.shortVersion}</span>{/if}
   </div>
@@ -209,10 +209,10 @@
     gap: 10px;
     flex-shrink: 0;
   }
-  .mark {
-    width: 10px;
-    height: 10px;
-    background: var(--accent-light);
+  .logo {
+    width: 30px;
+    height: 30px;
+    display: block;
   }
   .word {
     font-family: var(--display);

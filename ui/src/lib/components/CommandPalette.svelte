@@ -5,7 +5,6 @@
   import Icon from './Icon.svelte';
   import Head from './Head.svelte';
   import { versionLabel } from '../util/format';
-  import { landscape } from '../util/art';
   import { fadeSlide, pop, DUR } from '../util/motion';
 
   // Schnellsuche (Strg + K): Instanzen starten, Freunden nachjoinen, Seiten und Aktionen öffnen.
@@ -34,7 +33,8 @@
         label: i.name,
         sub: versionLabel(i.minecraftVersion, i.loader) + (i.modCount ? ' · ' + t('instances.mods', { count: i.modCount }) : ''),
         act: 'palette.acts.play',
-        img: i.hasIcon ? i.iconUrl : landscape(i.id),
+        img: i.hasIcon ? i.iconUrl : undefined,
+        icon: 'instances',
         run: () => {
           if (app.ui) app.ui.lastInstance = i.id;
           app.launch(i.id);
@@ -254,7 +254,6 @@
     height: 27px;
     border-radius: 4px;
     object-fit: cover;
-    image-rendering: pixelated;
     flex-shrink: 0;
   }
   .headwrap,

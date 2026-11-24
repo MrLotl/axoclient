@@ -16,7 +16,10 @@
   import ServerPanel from './home/ServerPanel.svelte';
   import { loaderName, ago, duration } from '../lib/util/format';
   import { artLayers } from '../lib/util/art';
-  import { fadeSlide, DUR } from '../lib/util/motion';
+  import { orderInstances, moveId } from '../lib/util/order';
+  import { fadeOnly } from '../lib/util/motion';
+  import { flip } from 'svelte/animate';
+  import { fadeSlide, reducedMotion, DUR } from '../lib/util/motion';
   import type { MojangProfile } from '../lib/types';
 
   let skinAnimation = $state<'idle' | 'wave'>('idle');
@@ -37,8 +40,12 @@
   let leftHeight = $state(700);
 
   // Regal: zuletzt gespielte Instanzen zuerst
+  // Regal: gleiche Reihenfolge wie auf der Instanzen-Seite (auch die eigene, per Ziehen festgelegte)
+  let dragId = $state<string | null>(null);
+  let liveOrder = $state<string[] | null>(null);
+  const ordered = $derived(orderInstances(app.instances, app.ui));
   const shelf = $derived(
-    [...app.instances].sort((a, b) => (b.lastPlayed ?? b.createdAt).localeCompare(a.lastPlayed ?? a.createdAt))
+    liveOrder ? [...ordered].sort((a, b) => liveOrder!.indexOf(a.id) - liveOrder!.indexOf(b.id)) : ordered
   );
   const selectedId = $derived(
     app.ui?.lastInstance && app.instances.some((i) => i.id === app.ui!.lastInstance) ? app.ui.lastInstance : (shelf[0]?.id ?? null)
@@ -98,6 +105,36 @@
     }
   }
 
+  function onTileDragStart(e: DragEvent, id: string) {
+    dragId = id;
+    liveOrder = shelf.map((i) => i.id);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', id);
+    }
+  }
+  function onTileDragOver(e: DragEvent, target: string) {
+    if (!dragId || !liveOrder) return;
+    e.preventDefault();
+    if (target === dragId) return;
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const next = moveId(liveOrder, dragId, target, e.clientX > box.left + box.width / 2);
+    if (next.join() !== liveOrder.join()) liveOrder = next;
+  }
+  function onTileDragEnd() {
+    if (dragId && liveOrder && liveOrder.join() !== ordered.map((i) => i.id).join()) {
+      const order = liveOrder;
+      if (app.ui) {
+        app.ui.instanceOrder = order;
+        app.ui.sort.instances = 'custom';
+      }
+      app.updateUiState({ sortInstances: 'custom', order });
+    }
+    dragId = null;
+    liveOrder = null;
+  }
+  const flipMs = reducedMotion() ? 0 : 220;
+
   const activeCape = $derived(profile?.capes.find((c) => c.active)?.url ?? null);
 </script>
 
@@ -120,7 +157,7 @@
 
     {#if current}
       {#key current.id}
-        <div class="hero" in:fadeSlide={{ y: 12, duration: DUR.slow }}>
+        <div class="hero" in:fadeOnly={{ duration: 180 }}>
           <span class="eyebrow">{current.lastPlayed ? t('home.continue', { when: ago(current.lastPlayed) }) : t('home.neverPlayed')}</span>
           <h1 class="display title">{current.name}</h1>
           <p class="meta">
@@ -139,7 +176,6 @@
           <div class="actions">
             <div class="play"><PlayButton instanceId={current.id} height={54} /></div>
             <button class="btn btn-ghost lg" onclick={() => app.navigate({ page: 'instance', id: current!.id })}>{t('home.details')}</button>
-            <button class="btn btn-ghost lg" onclick={() => app.navigate({ page: 'instance', id: current!.id, tab: 'mods' })}>{t('home.addMods')}</button>
           </div>
         </div>
       {/key}
@@ -159,9 +195,23 @@
       <div class="shelf-head" style="max-width: calc(100% - {skinWidth}px)"><b>{t('home.yourInstances')}</b><span>{t('home.keysHint')}</span></div>
       <div class="shelf" role="listbox" aria-label={t('home.chooseInstance')} style="max-width: calc(100% - {skinWidth - 8}px)" onwheel={onShelfWheel}>
         {#each shelf as inst, n (inst.id)}
-          <button class="tile" class:on={inst.id === selectedId} role="option" aria-selected={inst.id === selectedId} onclick={() => pick(inst.id)} title={inst.name}>
-            <span class="art" class:pixel={!inst.hasIcon} style="background-image: {inst.hasIcon ? `url('${inst.iconUrl}')` : artLayers(inst.id, inst.minecraftVersion, app.settings?.appearance.versionPanorama ?? true)}">
+          <button
+            class="tile"
+            class:on={inst.id === selectedId}
+            class:dragging={dragId === inst.id}
+            role="option"
+            aria-selected={inst.id === selectedId}
+            draggable="true"
+            onclick={() => pick(inst.id)}
+            ondragstart={(e) => onTileDragStart(e, inst.id)}
+            ondragover={(e) => onTileDragOver(e, inst.id)}
+            ondrop={(e) => { e.preventDefault(); onTileDragEnd(); }}
+            ondragend={onTileDragEnd}
+            title={inst.name}
+            animate:flip={{ duration: flipMs }}>
+            <span class="art" style="background-image: {artLayers(inst.id, inst.minecraftVersion, app.settings?.appearance.versionPanorama ?? true)}">
               {#if n < 9}<i class="key">{n + 1}</i>{/if}
+              {#if inst.hasIcon}<img class="ico" src={inst.iconUrl} alt="" draggable="false" />{/if}
               {#if inst.running}<i class="live">{t('common.running')}</i>{/if}
             </span>
             <b class="truncate">{inst.name}</b>
@@ -175,7 +225,7 @@
     {/if}
   </div>
 
-  <aside class="side" in:fadeSlide|global={{ x: 16, y: 0, delay: 80, duration: DUR.slow }}>
+  <aside class="side">
     <FriendsPanel />
     <ServerPanel instanceId={current?.id ?? null} />
   </aside>
@@ -321,10 +371,20 @@
     background-size: cover;
     background-position: center;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-    transition: width var(--dur-med) var(--ease-out), height var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) ease;
+    transition: transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) ease;
   }
-  .art.pixel {
-    image-rendering: pixelated;
+  .ico {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  }
+  .tile.dragging {
+    opacity: 0.45;
   }
   .tile b {
     font-size: 12.5px;
@@ -334,12 +394,8 @@
   .tile:hover .art {
     transform: translateY(-3px);
   }
-  .tile.on {
-    width: 168px;
-  }
+  /* Auswahl ohne Größenänderung: nichts im Regal verrutscht beim Wechseln */
   .tile.on .art {
-    width: 168px;
-    height: 94px;
     box-shadow: 0 0 0 2px var(--text-strong), 0 0 34px color-mix(in srgb, var(--accent-light) 50%, transparent);
   }
   .tile.on b {
@@ -391,7 +447,6 @@
   .side :global(.panel) {
     background: var(--glass);
     border: 1px solid var(--line);
-    backdrop-filter: blur(14px);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   }
   @media (max-width: 1240px) {

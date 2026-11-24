@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../stores/app.svelte';
+  import { fadeOnly } from '../util/motion';
   import { artLayers, grain } from '../util/art';
 
   // Die Bühne zeigt die Welt der gerade gewählten Instanz hinter der ganzen Oberfläche.
@@ -15,17 +16,14 @@
   const panorama = $derived(app.settings?.appearance.versionPanorama ?? true);
   const motion = $derived(app.settings?.appearance.stageMotion ?? true);
 
-  // Eigenes Banner > Panorama der Minecraft-Version (aus den Spieldateien) > Instanzbild weichgezeichnet > Pixel-Landschaft
-  const bg = $derived.by(() => {
-    if (current?.bannerUrl) return { css: `url('${current.bannerUrl}')`, kind: 'photo' };
-    if (current?.hasIcon && !panorama) return { css: `url('${current.iconUrl}')`, kind: 'icon' };
-    return { css: artLayers(current?.id ?? 'axoclient', current?.minecraftVersion, panorama), kind: 'pixel' };
-  });
+  // Eigenes Banner > Panorama der Minecraft-Version (aus den Spieldateien) > Farbverlauf
+  const bg = $derived(current?.bannerUrl ? `url('${current.bannerUrl}')` : artLayers(current?.id ?? 'axoclient', current?.minecraftVersion, panorama));
 </script>
 
 <div class="stage" class:dim class:still={!motion} aria-hidden="true">
-  {#key bg.css}
-    <div class="bg {bg.kind}" style="background-image: {bg.css}"></div>
+  <!-- Alter und neuer Hintergrund blenden ineinander, statt kurz schwarz zu werden -->
+  {#key bg}
+    <div class="bg" style="background-image: {bg}" in:fadeOnly={{ duration: 600 }} out:fadeOnly={{ duration: 600 }}></div>
   {/key}
   <div class="shade"></div>
   <div class="grain" style="background-image: url('{grain()}')"></div>
@@ -46,16 +44,8 @@
     inset: 0;
     background-size: cover;
     background-position: center 80%;
-    animation:
-      stage-fade 0.7s ease-out,
-      stage-kb 46s ease-in-out infinite alternate;
-  }
-  .bg.pixel {
-    image-rendering: pixelated;
-  }
-  .bg.icon {
-    inset: -60px;
-    filter: blur(36px) saturate(1.15);
+    animation: stage-kb 60s ease-in-out infinite alternate;
+    will-change: transform;
   }
   .shade {
     position: absolute;
@@ -72,8 +62,7 @@
   .grain {
     position: absolute;
     inset: 0;
-    opacity: 0.08;
-    mix-blend-mode: overlay;
+    opacity: 0.045;
     background-size: 160px 160px;
   }
   .vignette {
@@ -82,7 +71,7 @@
     background: radial-gradient(ellipse at 40% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
   }
   .still .bg {
-    animation: stage-fade 0.7s ease-out;
+    animation: none;
   }
   @media (prefers-reduced-motion: reduce) {
     .bg {

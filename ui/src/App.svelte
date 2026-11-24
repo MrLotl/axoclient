@@ -21,7 +21,8 @@
   import WelcomeBack from './pages/WelcomeBack.svelte';
   import GlobalDialogs from './dialogs/GlobalDialogs.svelte';
   import { trackFileDrag } from './lib/util/drop';
-  import { fadeSlide, fadeOut, DUR } from './lib/util/motion';
+  import { fadeOnly } from './lib/util/motion';
+  import { fadeSlide, DUR } from './lib/util/motion';
 
   let failed = $state(false);
 
@@ -79,7 +80,7 @@
       <main class="content">
         {#key app.route.page + (app.route.id ?? '')}
           <!-- Alte und neue Seite liegen kurz übereinander: die alte blendet aus, die neue gleitet herein -->
-          <div class="page-slot" in:fadeSlide={{ y: 8, duration: DUR.med + 20 }} out:fadeOut={{ duration: DUR.fast }}>
+          <div class="page-slot" in:fadeOnly={{ duration: 170, delay: 40 }} out:fadeOnly={{ duration: 120 }}>
           {#if app.route.page === 'home'}
             <Home />
           {:else if app.route.page === 'instances'}
