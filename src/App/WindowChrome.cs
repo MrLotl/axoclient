@@ -54,7 +54,7 @@ namespace AxoClient.App
         private const uint WmGetMinMaxInfo = 0x0024;
         private const uint WmNcCalcSize = 0x0083;
         private const int GwlStyle = -16;
-        private const long WsThickFrame = 0x00040000, WsMinimizeBox = 0x00020000, WsMaximizeBox = 0x00010000, WsSysMenu = 0x00080000;
+        private const long WsThickFrame = 0x00040000, WsMinimizeBox = 0x00020000, WsMaximizeBox = 0x00010000, WsSysMenu = 0x00080000, WsCaption = 0x00C00000;
         private const uint SwpFrameChanged = 0x0020, SwpNoMove = 0x0002, SwpNoSize = 0x0001, SwpNoZOrder = 0x0004, SwpNoOwnerZOrder = 0x0200, SwpNoActivate = 0x0010;
 
         [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
@@ -163,7 +163,9 @@ namespace AxoClient.App
 
             // Stile für Aero Snap ergänzen und Windows den Rahmen neu berechnen lassen
             var style = GetWindowLongPtr(hwnd, GwlStyle).ToInt64();
-            var wanted = style | WsThickFrame | WsMinimizeBox | WsMaximizeBox | WsSysMenu;
+            // WS_CAPTION: ohne diesen Stil animiert Windows Maximieren/Wiederherstellen nicht (das Fenster springt).
+            // Sichtbar wird davon nichts, weil WM_NCCALCSIZE die ganze Fläche der Oberfläche gibt.
+            var wanted = style | WsThickFrame | WsMinimizeBox | WsMaximizeBox | WsSysMenu | WsCaption;
             if (wanted != style)
             {
                 SetWindowLongPtr(hwnd, GwlStyle, new IntPtr(wanted));
