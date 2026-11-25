@@ -1,12 +1,12 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
-// Die gebaute Oberfläche wird in die App eingebettet (siehe AxoClient.App.csproj).
+// Die gebaute Oberfläche wird in die App eingebettet (siehe App.csproj).
 export default defineConfig({
   plugins: [svelte()],
   base: './',
   build: {
-    outDir: '../src/AxoClient.App/wwwroot',
+    outDir: '../src/App/wwwroot',
     emptyOutDir: true,
     target: 'es2022',
     assetsInlineLimit: 0,

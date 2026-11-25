@@ -5,13 +5,14 @@
   import DropOverlay from '../lib/components/DropOverlay.svelte';
   import Icon from '../lib/components/Icon.svelte';
   import Segmented from '../lib/components/Segmented.svelte';
+  import Select from '../lib/components/Select.svelte';
   import { loaderName, ago, duration } from '../lib/util/format';
   import { backdrop } from '../lib/util/art';
   import { orderInstances, moveId } from '../lib/util/order';
   import { upload } from '../lib/util/files';
   import { flip } from 'svelte/animate';
   import { fadeOnly } from '../lib/util/motion';
-  import { fadeSlide, reducedMotion, DUR } from '../lib/util/motion';
+  import { fadeSlide, reducedMotion, pop, DUR } from '../lib/util/motion';
   import type { InstanceSort, InstanceSummary } from '../lib/types';
 
   const flipMs = reducedMotion() ? 0 : 220;
@@ -21,6 +22,7 @@
   let sort = $state<InstanceSort>(app.ui?.sort.instances ?? 'recent');
   let filter = $state<string>('all');
   let query = $state('');
+  let menu = $state<'new' | 'view' | null>(null);
 
   const favorites = $derived(new Set(app.ui?.favorites ?? []));
   // Nur Loader als Filter anbieten, die es in den eigenen Instanzen gibt
@@ -44,6 +46,16 @@
       .filter((i) => filter === 'all' || (filter === 'favorites' ? favorites.has(i.id) : i.loader === filter))
       .filter((i) => !q || (i.name + ' ' + i.minecraftVersion + ' ' + loaderName(i.loader)).toLowerCase().includes(q));
   });
+
+  // Die zuletzt gespielten Instanzen stehen als größere Kacheln über der Liste (nur ungefiltert, Kachelansicht)
+  const recent = $derived(
+    view === 'grid' && canDrag && app.instances.length >= 4
+      ? app.instances
+          .filter((i) => i.lastPlayed)
+          .sort((a, b) => String(b.lastPlayed).localeCompare(String(a.lastPlayed)))
+          .slice(0, 2)
+      : []
+  );
 
   // Kachelbreite bzw. Zeilenhöhe folgen dem Regler (0 = klein, 1 = groß)
   const tileMin = $derived(Math.round(190 + size * 190));
@@ -154,18 +166,39 @@
   ];
 </script>
 
-<div class="page">
-  <header class="head">
-    <div>
-      <span class="eyebrow">{t('instances.library', { count: app.instances.length })}</span>
-      <h1>{t('instances.title')}</h1>
-    </div>
-    <div class="grow"></div>
-    <button class="btn btn-tool" onclick={() => app.navigate({ page: 'modpacks' })}><Icon name="download" />{t('instances.modpacks')}</button>
-    <button class="btn btn-tool" onclick={importFile}><Icon name="import" />{t('instances.import')}</button>
-    <button class="btn btn-grad" onclick={() => app.navigate({ page: 'instanceCreate' })}><Icon name="plus" stroke={2} />{t('instances.new')}</button>
-  </header>
+{#snippet tileBody(i: InstanceSummary)}
+  <span class="badge" class:live={app.running.includes(i.id)}>{badge(i)}</span>
+  <button
+    class="fav"
+    class:on={favorites.has(i.id)}
+    aria-pressed={favorites.has(i.id)}
+    aria-label={favorites.has(i.id) ? t('instances.unfavorite', { name: i.name }) : t('instances.favorite', { name: i.name })}
+    onclick={(e) => { e.stopPropagation(); toggleFavorite(i.id); }}>
+    <Icon name={favorites.has(i.id) ? 'starFill' : 'star'} size={15} />
+  </button>
+  <span class="info">
+    {#if i.hasIcon}<img class="ico" src={i.iconUrl} alt="" draggable="false" />{/if}
+    <span class="txt">
+      <b class="name">{i.name}</b>
+      <span class="tags">
+        <span class="tag">{loaderName(i.loader)}</span>
+        <span class="tag">{i.minecraftVersion}</span>
+        {#if i.modCount}<small>{t('instances.mods', { count: i.modCount })}{i.totalSeconds ? ' · ' + duration(i.totalSeconds) : ''}</small>{/if}
+      </span>
+    </span>
+    <button
+      class="pl"
+      class:stop={app.running.includes(i.id)}
+      aria-label={app.running.includes(i.id) ? t('home.stopGame') : t('common.play')}
+      onclick={(e) => { e.stopPropagation(); playOrStop(i); }}>
+      <Icon name={app.running.includes(i.id) ? 'stop' : 'play'} size={15} />
+    </button>
+  </span>
+{/snippet}
 
+<svelte:window onmousedown={(e) => { if (menu && !(e.target as HTMLElement).closest('.pw')) menu = null; }} />
+
+<div class="page">
   {#if app.instances.length === 0}
     <div class="empty" in:fadeSlide={{ y: 0, duration: DUR.slow }}>
       <img src="/img/logo.svg" alt="" width="72" height="72" />
@@ -183,32 +216,73 @@
         <input bind:value={query} placeholder={t('instances.search')} aria-label={t('instances.search')} />
       </label>
       <div class="filters" role="group" aria-label={t('common.view')}>
-        <button class:on={filter === 'all'} onclick={() => (filter = 'all')}>{t('instances.all')}</button>
+        <button class:on={filter === 'all'} onclick={() => (filter = 'all')}>{t('instances.all')} {app.instances.length}</button>
         <button class:on={filter === 'favorites'} onclick={() => (filter = 'favorites')}>{t('instances.favorites')}</button>
         {#each loaders as l (l)}
           <button class:on={filter === l} onclick={() => (filter = l)}>{loaderName(l)}</button>
         {/each}
       </div>
       <div class="grow"></div>
-      <Segmented
+      <Select
         value={sort}
         label={t('instances.sortLabel')}
+        width="150px"
         options={(['custom', 'recent', 'name', 'playtime', 'mods'] as const).map((k) => ({ value: k, label: t(`instances.sort.${k}`) }))}
         onchange={(v) => setSort(v as InstanceSort)} />
-      <label class="sizer" title={view === 'grid' ? t('instances.gridSize') : t('instances.listSize')}>
-        <i class="a"></i>
-        <input type="range" min="0" max="1" step="0.01" bind:value={size} oninput={onSize} aria-label={view === 'grid' ? t('instances.gridSize') : t('instances.listSize')} />
-        <i class="b"></i>
-      </label>
-      <Segmented
-        bind:value={view}
-        label={t('common.view')}
-        options={[
-          { value: 'grid', icon: 'grid', aria: t('common.gridView') },
-          { value: 'list', icon: 'list', aria: t('common.listView') }
-        ]}
-        onchange={(v) => app.updateUiState({ instances: v })} />
+      <div class="pw">
+        <button class="btn btn-tool" aria-haspopup="menu" aria-expanded={menu === 'view'} aria-label={t('common.view')} onclick={() => (menu = menu === 'view' ? null : 'view')}>
+          <Icon name={view === 'grid' ? 'grid' : 'list'} size={16} /><Icon name="chevronDown" size={14} />
+        </button>
+        {#if menu === 'view'}
+          <div class="menu popup" in:pop={{ origin: 'top right', scale: 0.96, y: -6, duration: DUR.med }}>
+            <Segmented
+              bind:value={view}
+              label={t('common.view')}
+              options={[
+                { value: 'grid', icon: 'grid', aria: t('common.gridView') },
+                { value: 'list', icon: 'list', aria: t('common.listView') }
+              ]}
+              onchange={(v) => app.updateUiState({ instances: v })} />
+            <label class="sizer" title={view === 'grid' ? t('instances.gridSize') : t('instances.listSize')}>
+              <i class="a"></i>
+              <input type="range" min="0" max="1" step="0.01" bind:value={size} oninput={onSize} aria-label={view === 'grid' ? t('instances.gridSize') : t('instances.listSize')} />
+              <i class="b"></i>
+            </label>
+          </div>
+        {/if}
+      </div>
+      <div class="pw">
+        <button class="btn btn-grad" aria-haspopup="menu" aria-expanded={menu === 'new'} onclick={() => (menu = menu === 'new' ? null : 'new')}>
+          <Icon name="plus" stroke={2} />{t('instances.new')}<Icon name="chevronDown" size={14} />
+        </button>
+        {#if menu === 'new'}
+          <div class="menu popup items" role="menu" in:pop={{ origin: 'top right', scale: 0.96, y: -6, duration: DUR.med }}>
+            <button role="menuitem" onclick={() => { menu = null; app.navigate({ page: 'instanceCreate' }); }}><Icon name="plus" size={15} />{t('instances.createNew')}</button>
+            <button role="menuitem" onclick={() => { menu = null; importFile(); }}><Icon name="import" size={15} />{t('instances.import')}</button>
+            <button role="menuitem" onclick={() => { menu = null; app.navigate({ page: 'modpacks' }); }}><Icon name="download" size={15} />{t('instances.browseModpacks')}</button>
+          </div>
+        {/if}
+      </div>
     </div>
+
+    {#if recent.length}
+      <h2 class="sec">{t('instances.recentTitle')}</h2>
+      <div class="hero" in:fadeOnly={{ duration: 160 }}>
+        {#each recent as i (i.id)}
+          <div
+            class="card"
+            role="button"
+            tabindex="0"
+            aria-label={t('instances.open', { name: i.name })}
+            style="background-image: {art(i)}"
+            onclick={() => open(i.id)}
+            onkeydown={(e) => e.key === 'Enter' && open(i.id)}>
+            {@render tileBody(i)}
+          </div>
+        {/each}
+      </div>
+      <h2 class="sec">{t('instances.allTitle')}</h2>
+    {/if}
 
     {#if list.length === 0}
       <p class="none">{query.trim() ? t('instances.noMatch', { query: query.trim() }) : filter === 'favorites' ? t('instances.noFavorites') : t('instances.noLoader')}</p>
@@ -231,29 +305,7 @@
             ondrop={(e) => { e.preventDefault(); finishDrag(); }}
             ondragend={finishDrag}
             animate:flip={{ duration: flipMs }}>
-            <span class="badge" class:live={app.running.includes(i.id)}>{badge(i)}</span>
-            <button
-              class="fav"
-              class:on={favorites.has(i.id)}
-              aria-pressed={favorites.has(i.id)}
-              aria-label={favorites.has(i.id) ? t('instances.unfavorite', { name: i.name }) : t('instances.favorite', { name: i.name })}
-              onclick={(e) => { e.stopPropagation(); toggleFavorite(i.id); }}>
-              <Icon name={favorites.has(i.id) ? 'starFill' : 'star'} size={15} />
-            </button>
-            <span class="info">
-              {#if i.hasIcon}<img class="ico" src={i.iconUrl} alt="" draggable="false" />{/if}
-              <span class="txt">
-                <b class="name">{i.name}</b>
-                <small>{i.minecraftVersion} · {loaderName(i.loader)}{i.modCount ? ' · ' + t('instances.mods', { count: i.modCount }) : ''}{i.totalSeconds ? ' · ' + duration(i.totalSeconds) : ''}</small>
-              </span>
-              <button
-                class="pl"
-                class:stop={app.running.includes(i.id)}
-                aria-label={app.running.includes(i.id) ? t('home.stopGame') : t('common.play')}
-                onclick={(e) => { e.stopPropagation(); playOrStop(i); }}>
-                <Icon name={app.running.includes(i.id) ? 'stop' : 'play'} size={15} />
-              </button>
-            </span>
+            {@render tileBody(i)}
           </div>
         {/each}
       </div>
@@ -332,20 +384,73 @@
     flex-direction: column;
     gap: 18px;
   }
-  .head {
-    display: flex;
-    align-items: flex-end;
+  .sec {
+    margin: 0 0 -8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .hero .card {
+    aspect-ratio: 21 / 9;
+  }
+  .pw {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .pw .menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 20;
+    min-width: 190px;
+    padding: 10px;
+    display: grid;
     gap: 10px;
   }
-  h1 {
-    font-family: var(--display);
-    font-size: 44px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
-    color: var(--text-strong);
-    margin-top: 4px;
+  .pw .menu.items {
+    padding: 6px;
+    gap: 2px;
+  }
+  .pw .menu.items button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--radius-s);
+    background: transparent;
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+  .pw .menu.items button:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .tags {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--text);
   }
   .toolbar {
     display: flex;
